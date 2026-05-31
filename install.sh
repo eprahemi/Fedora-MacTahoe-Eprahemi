@@ -175,22 +175,6 @@ install_mactahoe_theme() {
     gtk-update-icon-cache "$HOME/.local/share/icons/$icon/" 2>/dev/null || true
   done
 
-  # Fix hicolor index.theme to include scalable/actions for media icons
-  if [ -d "$HOME/.local/share/icons/hicolor" ]; then
-    local hicolor_theme="$theme_src/hicolor/index.theme"
-    if [ -f "$hicolor_theme" ]; then
-      cp "$hicolor_theme" "$HOME/.local/share/icons/hicolor/index.theme"
-      mkdir -p "$HOME/.local/share/icons/hicolor/scalable/actions"
-      # Symlink MacTahoe symbolic icons as scalable for fallback
-      if [ -d "$HOME/.local/share/icons/MacTahoe-dark-Eprahemi/actions/symbolic" ]; then
-        for f in "$HOME/.local/share/icons/MacTahoe-dark-Eprahemi/actions/symbolic/"*.svg; do
-          ln -sf "$f" "$HOME/.local/share/icons/hicolor/scalable/actions/" 2>/dev/null || true
-        done
-      fi
-      gtk-update-icon-cache "$HOME/.local/share/icons/hicolor/"
-    fi
-  fi
-
   ok "Icon themes installed (MacTahoe-Eprahemi + MacTahoe-dark-Eprahemi)"
 }
 
@@ -465,14 +449,15 @@ install_sounds() {
     ok "macOS Big Sur sounds installed ($(ls "$sound_src/stereo/"*.oga 2>/dev/null | wc -l) files)"
   else
     warn "Sounds not bundled — building from source instead"
-    git clone --depth 1 https://github.com/gxanshu/macos-bigsur-sound-theme-linux.git /tmp/mac-sounds
-    cd /tmp/mac-sounds
-    git clone --depth 1 https://github.com/ThisIsNoahEvans/BigSurSounds.git
-    git clone --depth 1 https://github.com/KDE/ocean-sound-theme.git
-    make build 2>/dev/null
-    make install 2>/dev/null
-    cd /tmp
-    rm -rf /tmp/mac-sounds
+    if git clone --depth 1 https://github.com/gxanshu/macos-bigsur-sound-theme-linux.git /tmp/mac-sounds 2>/dev/null; then
+      cd /tmp/mac-sounds
+      git clone --depth 1 https://github.com/ThisIsNoahEvans/BigSurSounds.git 2>/dev/null || true
+      git clone --depth 1 https://github.com/KDE/ocean-sound-theme.git 2>/dev/null || true
+      make build 2>/dev/null || true
+      make install 2>/dev/null || true
+      cd /tmp
+      rm -rf /tmp/mac-sounds
+    fi
     gsettings set org.gnome.desktop.sound theme-name "bigsur"
     gsettings set org.gnome.desktop.sound event-sounds true
     ok "macOS Big Sur sounds built from source"
@@ -619,6 +604,7 @@ install_flatpaks
 install_mactahoe_theme
 install_custom_icons
 install_font
+install_extensions
 apply_desktop_entries
 apply_configs
 apply_dconf
@@ -627,5 +613,4 @@ setup_gdm
 install_sounds
 setup_terminal
 setup_shell
-install_extensions
 finalize
