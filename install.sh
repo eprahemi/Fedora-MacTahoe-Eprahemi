@@ -225,7 +225,7 @@ install_font() {
   if [ -f "$font_src" ]; then
     mkdir -p "$HOME/.local/share/fonts"
     cp "$font_src" "$HOME/.local/share/fonts/"
-    fc-cache -fv 2>/dev/null
+    fc-cache -fv 2>/dev/null || true
     ok "SF Pro Display font installed"
   else
     warn "SF-Pro-Display-Regular.otf not found in bundle — place it in fonts/ manually"
@@ -385,6 +385,17 @@ apply_dconf() {
   if [ -f "$dconf_file" ]; then
     dconf load /org/gnome/shell/extensions/ < "$dconf_file" 2>/dev/null || true
     ok "Extension settings restored from backup"
+  fi
+
+  # Re-apply GTK settings.ini AFTER dconf/gsettings (GNOME daemon overwrites it)
+  local cfg="$BUNDLE/configs"
+  if [ -f "$cfg/gtk-3.0/settings.ini" ]; then
+    mkdir -p "$HOME/.config/gtk-3.0"
+    cp "$cfg/gtk-3.0/settings.ini" "$HOME/.config/gtk-3.0/"
+  fi
+  if [ -f "$cfg/gtk-4.0/settings.ini" ]; then
+    mkdir -p "$HOME/.config/gtk-4.0"
+    cp "$cfg/gtk-4.0/settings.ini" "$HOME/.config/gtk-4.0/"
   fi
 
   ok "dconf settings applied"
