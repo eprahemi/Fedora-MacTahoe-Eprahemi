@@ -164,10 +164,10 @@ install_mactahoe_theme() {
   # Purge any upstream MacTahoe-Dark that might conflict
   rm -rf "$HOME/.themes/MacTahoe-Dark" \
          "$HOME/.themes/MacTahoe" \
-         "$HOME/.themes/MacTahoe-Darker" \
-         "/usr/share/themes/MacTahoe-Dark" \
-         "/usr/share/themes/MacTahoe" \
-         "/usr/share/themes/MacTahoe-Darker"
+         "$HOME/.themes/MacTahoe-Darker"
+  sudo rm -rf "/usr/share/themes/MacTahoe-Dark" \
+              "/usr/share/themes/MacTahoe" \
+              "/usr/share/themes/MacTahoe-Darker" 2>/dev/null || true
 
   # GTK Theme (force overwrite)
   mkdir -p "$HOME/.themes"
