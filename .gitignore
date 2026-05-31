@@ -11,36 +11,3 @@
 # Temporary files
 /tmp/
 
-# Large icon theme dirs that can be re-generated
-themes/MacTahoe-dark-Eprahemi/actions/16/
-themes/MacTahoe-dark-Eprahemi/actions/22/
-themes/MacTahoe-dark-Eprahemi/actions/24/
-themes/MacTahoe-dark-Eprahemi/actions/32/
-themes/MacTahoe-dark-Eprahemi/actions/48/
-themes/MacTahoe-dark-Eprahemi/actions/64/
-themes/MacTahoe-dark-Eprahemi/status/16/
-themes/MacTahoe-dark-Eprahemi/status/22/
-themes/MacTahoe-dark-Eprahemi/status/24/
-themes/MacTahoe-dark-Eprahemi/status/32/
-themes/MacTahoe-dark-Eprahemi/status/48/
-themes/MacTahoe-dark-Eprahemi/status/64/
-themes/MacTahoe-dark-Eprahemi/apps/
-themes/MacTahoe-dark-Eprahemi/categories/
-themes/MacTahoe-dark-Eprahemi/devices/
-themes/MacTahoe-dark-Eprahemi/emblems/
-themes/MacTahoe-dark-Eprahemi/mimes/
-themes/MacTahoe-dark-Eprahemi/places/
-themes/MacTahoe-dark-Eprahemi/animations/
-themes/MacTahoe-dark-Eprahemi/emotes/
-themes/MacTahoe-dark-Eprahemi/preferences/
-themes/MacTahoe-Eprahemi/actions/
-themes/MacTahoe-Eprahemi/status/
-themes/MacTahoe-Eprahemi/apps/
-themes/MacTahoe-Eprahemi/categories/
-themes/MacTahoe-Eprahemi/devices/
-themes/MacTahoe-Eprahemi/emblems/
-themes/MacTahoe-Eprahemi/mimes/
-themes/MacTahoe-Eprahemi/places/
-themes/MacTahoe-Eprahemi/animations/
-themes/MacTahoe-Eprahemi/emotes/
-themes/MacTahoe-Eprahemi/preferences/
