@@ -201,9 +201,11 @@ install_custom_icons() {
     convert "$png" -trim +repage -resize 256x256 -gravity center -background transparent -extent 256x256 "$png"
   done
 
-  gtk-update-icon-cache "$HOME/.local/share/icons/MacTahoe-dark-Eprahemi/"
-  gtk-update-icon-cache "$HOME/.local/share/icons/MacTahoe-Eprahemi/"
-  gtk-update-icon-cache "$HOME/.local/share/icons/hicolor/"
+  gtk-update-icon-cache "$HOME/.local/share/icons/MacTahoe-dark-Eprahemi/" 2>/dev/null || true
+  gtk-update-icon-cache "$HOME/.local/share/icons/MacTahoe-Eprahemi/" 2>/dev/null || true
+  if [ -f "$HOME/.local/share/icons/hicolor/index.theme" ]; then
+    gtk-update-icon-cache "$HOME/.local/share/icons/hicolor/" 2>/dev/null || true
+  fi
 
   ok "Custom icons installed ($(ls "$icon_src"/*.png 2>/dev/null | wc -l) icons)"
 }
