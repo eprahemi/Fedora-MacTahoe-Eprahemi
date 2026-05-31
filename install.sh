@@ -179,7 +179,7 @@ install_mactahoe_theme() {
   for icon in MacTahoe-Eprahemi MacTahoe-dark-Eprahemi; do
     mkdir -p "$HOME/.local/share/icons"
     rm -rf "$HOME/.local/share/icons/$icon"
-    cp -r "$theme_src/$icon" "$HOME/.local/share/icons/"
+    cp -rL "$theme_src/$icon" "$HOME/.local/share/icons/"
     gtk-update-icon-cache "$HOME/.local/share/icons/$icon/" 2>/dev/null || true
   done
 
