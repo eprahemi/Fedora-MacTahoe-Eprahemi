@@ -5,9 +5,9 @@ Comment=Eprahemi Edition — MacOS Tahoe style Gtk+ theme
 Encoding=UTF-8
 
 [X-GNOME-Metatheme]
-GtkTheme=MacTahoe-Dark
-MetacityTheme=MacTahoe-Dark
+GtkTheme=MacTahoe-Dark-Eprahemi
+MetacityTheme=MacTahoe-Dark-Eprahemi
 IconTheme=MacTahoe-dark-Eprahemi
-CursorTheme=MACTAHOE-cursors
+CursorTheme=MacTahoe-dark-Eprahemi
 ButtonLayout=close,minimize,maximize:menu
 

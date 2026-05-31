@@ -161,6 +161,14 @@ install_mactahoe_theme() {
 
   local theme_src="$BUNDLE/themes"
 
+  # Purge any upstream MacTahoe-Dark that might conflict
+  rm -rf "$HOME/.themes/MacTahoe-Dark" \
+         "$HOME/.themes/MacTahoe" \
+         "$HOME/.themes/MacTahoe-Darker" \
+         "/usr/share/themes/MacTahoe-Dark" \
+         "/usr/share/themes/MacTahoe" \
+         "/usr/share/themes/MacTahoe-Darker"
+
   # GTK Theme (force overwrite)
   mkdir -p "$HOME/.themes"
   rm -rf "$HOME/.themes/MacTahoe-Dark-Eprahemi"
