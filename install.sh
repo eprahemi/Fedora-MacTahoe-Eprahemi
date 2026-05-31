@@ -344,19 +344,19 @@ apply_dconf() {
   gsettings set org.gnome.desktop.wm.keybindings close "['<Super>q']" 2>/dev/null || true
 
   # ── Custom keybindings ──
-  gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/']"
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ name 'Kitty'
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ binding '<Super>t'
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ command 'kitty'
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/ name 'Nautilus'
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/ binding '<Super>e'
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/ command 'nautilus'
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/ name 'Task Manager'
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/ binding '<Shift><Control>Escape'
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/ command 'gnome-system-monitor'
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/ name 'Volume'
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/ binding '<Control><Alt>v'
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/ command 'pavucontrol'
+  gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/']" 2/dev/null || true
+  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ name 'Kitty' 2/dev/null || true
+  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ binding '<Super>t' 2/dev/null || true
+  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ command 'kitty' 2/dev/null || true
+  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/ name 'Nautilus' 2/dev/null || true
+  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/ binding '<Super>e' 2/dev/null || true
+  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/ command 'nautilus' 2/dev/null || true
+  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/ name 'Task Manager' 2/dev/null || true
+  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/ binding '<Shift><Control>Escape' 2/dev/null || true
+  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/ command 'gnome-system-monitor' 2/dev/null || true
+  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/ name 'Volume' 2/dev/null || true
+  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/ binding '<Control><Alt>v' 2/dev/null || true
+  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/ command 'pavucontrol' 2/dev/null || true
 
   # ── Nautilus ──
   gsettings set org.gnome.nautilus.icon-view default-zoom-level "'large'" 2>/dev/null || true
@@ -390,9 +390,9 @@ apply_wallpapers() {
 
   if [ -f "$wp/Himeno Fedora.jpg" ]; then
     cp "$wp/Himeno Fedora.jpg" "$HOME/.config/Wallpapers/"
-    gsettings set org.gnome.desktop.background picture-uri "file://$HOME/.config/Wallpapers/Himeno Fedora.jpg"
-    gsettings set org.gnome.desktop.background picture-uri-dark "file://$HOME/.config/Wallpapers/Himeno Fedora.jpg"
-    gsettings set org.gnome.desktop.background picture-options "zoom"
+    gsettings set org.gnome.desktop.background picture-uri "file://$HOME/.config/Wallpapers/Himeno Fedora.jpg" 2/dev/null || true
+    gsettings set org.gnome.desktop.background picture-uri-dark "file://$HOME/.config/Wallpapers/Himeno Fedora.jpg" 2/dev/null || true
+    gsettings set org.gnome.desktop.background picture-options "zoom" 2/dev/null || true
     ok "Desktop wallpaper set"
   else
     warn "Wallpaper file not found"
@@ -446,8 +446,8 @@ install_sounds() {
     mkdir -p "$HOME/.local/share/sounds"
     rm -rf "$HOME/.local/share/sounds/bigsur"
     cp -r "$sound_src" "$HOME/.local/share/sounds/"
-    gsettings set org.gnome.desktop.sound theme-name "bigsur"
-    gsettings set org.gnome.desktop.sound event-sounds true
+    gsettings set org.gnome.desktop.sound theme-name "bigsur" 2/dev/null || true
+    gsettings set org.gnome.desktop.sound event-sounds true 2/dev/null || true
     ok "macOS Big Sur sounds installed ($(ls "$sound_src/stereo/"*.oga 2>/dev/null | wc -l) files)"
   else
     warn "Sounds not bundled — building from source instead"
@@ -460,8 +460,8 @@ install_sounds() {
       cd /tmp
       rm -rf /tmp/mac-sounds
     fi
-    gsettings set org.gnome.desktop.sound theme-name "bigsur"
-    gsettings set org.gnome.desktop.sound event-sounds true
+    gsettings set org.gnome.desktop.sound theme-name "bigsur" 2/dev/null || true
+    gsettings set org.gnome.desktop.sound event-sounds true 2/dev/null || true
     ok "macOS Big Sur sounds built from source"
   fi
 }
@@ -472,9 +472,9 @@ setup_terminal() {
   next_step "Kitty as Default Terminal"
 
   sudo dnf remove -y ptyxis 2>/dev/null || true
-  sudo ln -sf /usr/bin/kitty /usr/bin/gnome-terminal
-  sudo ln -sf /usr/bin/kitty /usr/bin/x-terminal-emulator
-  gsettings set org.gnome.desktop.default-applications.terminal exec 'kitty'
+  sudo ln -sf /usr/bin/kitty /usr/bin/gnome-terminal 2/dev/null || true
+  sudo ln -sf /usr/bin/kitty /usr/bin/x-terminal-emulator 2/dev/null || true
+  gsettings set org.gnome.desktop.default-applications.terminal exec 'kitty' 2/dev/null || true
   sudo rm -f /usr/share/applications/org.gnome.Ptyxis.desktop
   sudo rm -f /usr/share/applications/org.gnome.Console.desktop
   ok "Kitty is now the default terminal"
@@ -534,19 +534,19 @@ install_extensions() {
   done
 
   # Configure dash2dock-lite
-  dconf write /org/gnome/shell/extensions/dash2dock-lite/autohide-dash true
-  dconf write /org/gnome/shell/extensions/dash2dock-lite/click-action "'minimize-or-previews'"
-  dconf write /org/gnome/shell/extensions/dash2dock-lite/icon-size 0.25
-  dconf write /org/gnome/shell/extensions/dash2dock-lite/running-indicator-style 4
-  dconf write /org/gnome/shell/extensions/dash2dock-lite/show-favorites true
-  dconf write /org/gnome/shell/extensions/dash2dock-lite/show-running true
-  dconf write /org/gnome/shell/extensions/dash2dock-lite/dock-padding 0.5
-  dconf write /org/gnome/shell/extensions/dash2dock-lite/border-radius 3.0
-  dconf write /org/gnome/shell/extensions/dash2dock-lite/label-border-radius 3.0
-  dconf write /org/gnome/shell/extensions/dash2dock-lite/customize-label true
+  dconf write /org/gnome/shell/extensions/dash2dock-lite/autohide-dash true 2/dev/null || true
+  dconf write /org/gnome/shell/extensions/dash2dock-lite/click-action "'minimize-or-previews'" 2/dev/null || true
+  dconf write /org/gnome/shell/extensions/dash2dock-lite/icon-size 0.25 2/dev/null || true
+  dconf write /org/gnome/shell/extensions/dash2dock-lite/running-indicator-style 4 2/dev/null || true
+  dconf write /org/gnome/shell/extensions/dash2dock-lite/show-favorites true 2/dev/null || true
+  dconf write /org/gnome/shell/extensions/dash2dock-lite/show-running true 2/dev/null || true
+  dconf write /org/gnome/shell/extensions/dash2dock-lite/dock-padding 0.5 2/dev/null || true
+  dconf write /org/gnome/shell/extensions/dash2dock-lite/border-radius 3.0 2/dev/null || true
+  dconf write /org/gnome/shell/extensions/dash2dock-lite/label-border-radius 3.0 2/dev/null || true
+  dconf write /org/gnome/shell/extensions/dash2dock-lite/customize-label true 2/dev/null || true
 
   # Disable Fedora default extensions
-  gsettings set org.gnome.shell disabled-extensions "['background-logo@fedorahosted.org', 'apps-menu@gnome-shell-extensions.gcampax.github.com']"
+  gsettings set org.gnome.shell disabled-extensions "['background-logo@fedorahosted.org', 'apps-menu@gnome-shell-extensions.gcampax.github.com']" 2/dev/null || true
 
   ok "Extensions installed & configured"
 }
