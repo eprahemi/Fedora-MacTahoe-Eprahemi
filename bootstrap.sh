@@ -10,13 +10,9 @@ echo "  One-click installer"
 echo "=========================================="
 echo ""
 
-if [ ! -d "$TMP" ]; then
-  echo "Downloading bundle..."
-  git clone --depth 1 "$REPO" "$TMP"
-else
-  echo "Updating bundle..."
-  cd "$TMP" && git pull
-fi
+rm -rf "$TMP"
+echo "Downloading bundle..."
+git clone --depth 1 "$REPO" "$TMP"
 
 cd "$TMP"
 bash install.sh
