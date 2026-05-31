@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Terminal
+GenericName=Terminal emulator
+Comment=Fast, feature-rich terminal emulator
+TryExec=kitty
+Exec=kitty %F
+Icon=kitty
+Categories=System;TerminalEmulator;
+StartupNotify=true
+X-KDE-StartupNotify=true

@@ -1,0 +1,17 @@
+[Desktop Entry]
+Version=1.0
+Name=Whatsapp
+Comment[pt_BR]=WhatsApp Desktop para Linux
+Comment=WhatsApp Desktop for Linux
+Exec=/usr/bin/flatpak run --branch=stable --arch=x86_64 --command=zapzap --file-forwarding com.rtosta.zapzap @@u %u @@
+Icon=whatsapp
+Type=Application
+Categories=Chat;Network;InstantMessaging;Qt;
+Keywords=WhatsApp;Chat;ZapZap;
+StartupWMClass=zapzap
+MimeType=x-scheme-handler/whatsapp
+Terminal=false
+SingleMainWindow=true
+X-GNOME-UsesNotifications=true
+X-GNOME-SingleWindow=true
+X-Flatpak=com.rtosta.zapzap
