@@ -17,4 +17,4 @@ set -gx ANI_CLI_PLAYER vlc
 
 
 # opencode
-fish_add_path /home/eprahemi/.opencode/bin
+fish_add_path "$HOME/.opencode/bin"

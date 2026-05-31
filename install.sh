@@ -290,7 +290,13 @@ apply_configs() {
   # Fastfetch
   if [ -d "$cfg/fastfetch" ] && [ "$(ls -A "$cfg/fastfetch" 2>/dev/null)" ]; then
     mkdir -p "$HOME/.config/fastfetch"
-    cp -r "$cfg/fastfetch/"* "$HOME/.config/fastfetch/"
+    if [ -f "$cfg/fastfetch/config.jsonc" ]; then
+      sed "s|PLACEHOLDER_USER_HOME|$HOME|g" "$cfg/fastfetch/config.jsonc" > "$HOME/.config/fastfetch/config.jsonc"
+      cp "$cfg/fastfetch/"*.png "$HOME/.config/fastfetch/" 2>/dev/null || true
+      cp "$cfg/fastfetch/"*.gif "$HOME/.config/fastfetch/" 2>/dev/null || true
+    else
+      cp -r "$cfg/fastfetch/"* "$HOME/.config/fastfetch/"
+    fi
     ok "Fastfetch"
   fi
 }

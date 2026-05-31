@@ -10,8 +10,8 @@ function refresh
     echo -e "          [!] INITIATING NUKE SYSTEM REFRESH...\033[0m"
     
     # 1. Clean up broken scripts
-    if test -f /home/eprahemi/.local/share/nautilus-python/extensions/kitty_open.py
-        rm /home/eprahemi/.local/share/nautilus-python/extensions/kitty_open.py 2>/dev/null
+    if test -f "$HOME/.local/share/nautilus-python/extensions/kitty_open.py"
+        rm "$HOME/.local/share/nautilus-python/extensions/kitty_open.py" 2>/dev/null
     end
     
     # 2. Reset Graphics & UI logic

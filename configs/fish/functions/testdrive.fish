@@ -33,7 +33,7 @@ function testdrive
     switch $drive_type
         case disk ext
             if test "$drive_type" = "disk"
-                set test_file "$HOME/eprahemi_test_bin"
+                set test_file "$HOME/"(whoami)"_test_bin"
                 set target_name "INTERNAL_SYSTEM_DRIVE"
                 echo -e "🚀 \033[1;32mTARGET: $target_name\033[0m"
             else
@@ -55,14 +55,14 @@ function testdrive
                     if test "$choice" -ge 1 -a "$choice" -le "$drive_count"
                         set -l target_raw $drives[$choice]
                         set -l ext_path (echo $target_raw | awk '{print $1}')
-                        set test_file "$ext_path/eprahemi_test_bin"
+                        set test_file "$ext_path/"(whoami)"_test_bin"
                         echo -e "📂 \033[1;32mTARGET LOCKED: $ext_path\033[0m"
                     else
                         echo -e "❌ \033[1;31mInvalid selection.\033[0m" ; return 1
                     end
                 else
                     set -l ext_path (echo $drives[1] | awk '{print $1}')
-                    set test_file "$ext_path/eprahemi_test_bin"
+                    set test_file "$ext_path/"(whoami)"_test_bin"
                     echo -e "📂 \033[1;34mTARGET: $ext_path\033[0m"
                 end
             end
@@ -136,7 +136,7 @@ function testdrive
             return 1
     end
     
-    echo -e "\n\033[1;37m[ STATUS: SUCCESS - USER: EPRAHEMI ]\033[0m"
+    echo -e "\n\033[1;37m[ STATUS: SUCCESS - USER: "(echo $USER | string upper)" ]\033[0m"
     echo -e "\033[1;30m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
     echo -e "\033[1;33m📂 ALL AVAILABLE COMMANDS:\033[0m"
     echo -e "  ➤ \033[36mtestdrive disk\033[0m   : Internal Storage Speed & Grading"
