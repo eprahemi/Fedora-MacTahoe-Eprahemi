@@ -68,8 +68,10 @@ function testdrive
             end
 
             # --- UNIVERSAL DRIVE ANALYSIS ---
-            set -l dev_name (df $test_file | tail -1 | awk '{print $1}' | sed 's/[0-9]*$//' | sed 's/p$//')
-            set -l is_ssd (cat /sys/block/(basename $dev_name)/queue/rotational 2>/dev/null)
+            touch $test_file 2>/dev/null
+            set -l dev_name (df $test_file 2>/dev/null | tail -1 | awk '{print $1}' | sed 's/[0-9]*$//' | sed 's/p$//')
+            set -l dev_base (basename $dev_name 2>/dev/null)
+            set -l is_ssd (cat /sys/block/$dev_base/queue/rotational 2>/dev/null)
             set -l tech_label "UNKNOWN"
             if test "$is_ssd" = "0"
                 if string match -q "*nvme*" $dev_name; set tech_label "NVMe (High-Speed)"; else; set tech_label "SATA SSD"; end
