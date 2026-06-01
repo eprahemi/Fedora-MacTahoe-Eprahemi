@@ -16,7 +16,7 @@ ok()   { echo -e "  ${GREEN}✓${NC} $1"; }
 warn() { echo -e "  ${YELLOW}⚠${NC} $1"; }
 fail() { echo -e "  ${RED}✗${NC} $1"; exit 1; }
 
-TOTAL_STEPS=21
+TOTAL_STEPS=20
 STEP=0
 
 next_step() {
@@ -157,32 +157,54 @@ install_flatpaks() {
 # ── PHASE 3: THEMES ──────────────────────────────────────────
 
 install_mactahoe_theme() {
-  next_step "MacTahoe GTK Theme + Icons (bundled)"
+  next_step "MacTahoe GTK Theme (compiled from source)"
+
+  local repo="/tmp/mactahoe-build"
+  local gtk_version
+  gtk_version=$(gnome-shell --version 2>/dev/null | grep -oP '\d+\.\d+' | head -1 || echo "unknown")
+
+  # Purge leftovers
+  rm -rf "$HOME/.themes/MacTahoe"* "$HOME/.local/share/themes/MacTahoe"*
+  sudo rm -rf /usr/share/themes/MacTahoe* 2>/dev/null || true
+
+  # Clone and compile for current GNOME version
+  log "Cloning MacTahoe source (GNOME $gtk_version)..."
+  rm -rf "$repo"
+  git clone --depth 1 https://github.com/vinceliuice/MacTahoe-gtk-theme.git "$repo" 2>/dev/null || {
+    warn "Clone failed — falling back to bundled pre-compiled theme"
+    local fallback="$BUNDLE/themes/MacTahoe-Dark-Eprahemi"
+    if [ -d "$fallback" ]; then
+      mkdir -p "$HOME/.themes" "$HOME/.local/share/themes" "$HOME/.config/gtk-4.0"
+      cp -r "$fallback" "$HOME/.themes/"
+      cp -r "$fallback" "$HOME/.local/share/themes/"
+      cp -r "$fallback/gtk-4.0/"* "$HOME/.config/gtk-4.0/" 2>/dev/null || true
+      ok "Bundled MacTahoe-Dark-Eprahemi installed as fallback"
+    else
+      warn "No fallback available — theme not installed"
+    fi
+    return
+  }
+
+  log "Compiling all theme variants with blur + libadwaita..."
+  "$repo/install.sh" -t all -b -l 2>&1 || {
+    warn "Compilation failed — theme not installed"
+    return
+  }
+
+  # XDG compat: also available in ~/.local/share/themes/
+  mkdir -p "$HOME/.local/share/themes"
+  for d in "$HOME/.themes/MacTahoe"*; do
+    [ -d "$d" ] || continue
+    local base; base=$(basename "$d")
+    rm -rf "$HOME/.local/share/themes/$base"
+    cp -a "$d" "$HOME/.local/share/themes/$base"
+  done
+
+  ok "MacTahoe theme compiled & installed for GNOME $gtk_version"
+
+  # ── Icon themes (always from bundle, never change) ─────────
 
   local theme_src="$BUNDLE/themes"
-
-  # Purge any upstream MacTahoe-Dark that might conflict
-  rm -rf "$HOME/.themes/MacTahoe-Dark" \
-         "$HOME/.themes/MacTahoe" \
-         "$HOME/.themes/MacTahoe-Darker"
-  sudo rm -rf "/usr/share/themes/MacTahoe-Dark" \
-              "/usr/share/themes/MacTahoe" \
-              "/usr/share/themes/MacTahoe-Darker" 2>/dev/null || true
-
-  # GTK Theme — install to BOTH legacy + XDG standard path
-  # Nautilus (libadwaita/GTK4) reads from ~/.local/share/themes/ not ~/.themes/
-  mkdir -p "$HOME/.themes" "$HOME/.local/share/themes"
-  rm -rf "$HOME/.themes/MacTahoe-Dark-Eprahemi" "$HOME/.local/share/themes/MacTahoe-Dark-Eprahemi"
-  cp -r "$theme_src/MacTahoe-Dark-Eprahemi" "$HOME/.themes/"
-  cp -r "$theme_src/MacTahoe-Dark-Eprahemi" "$HOME/.local/share/themes/"
-
-  # Libadwaita integration: GTK4 theme CSS → ~/.config/gtk-4.0/
-  mkdir -p "$HOME/.config/gtk-4.0"
-  cp -r "$theme_src/MacTahoe-Dark-Eprahemi/gtk-4.0/"* "$HOME/.config/gtk-4.0/" 2>/dev/null || true
-
-  ok "GTK theme installed (MacTahoe-Dark-Eprahemi)"
-
-  # Icon themes (force overwrite)
   for icon in MacTahoe-Eprahemi MacTahoe-dark-Eprahemi; do
     mkdir -p "$HOME/.local/share/icons"
     rm -rf "$HOME/.local/share/icons/$icon"
@@ -191,38 +213,31 @@ install_mactahoe_theme() {
   done
 
   ok "Icon themes installed (MacTahoe-Eprahemi + MacTahoe-dark-Eprahemi)"
-}
 
-install_custom_icons() {
-  next_step "Custom macOS App Icons"
-
+  # Custom macOS app icons (PNGs)
   local icon_src="$BUNDLE/icons/256x256"
-  local icon_dest="$HOME/.local/share/icons/MacTahoe-dark-Eprahemi/apps/scalable"
-  local icon_dest2="$HOME/.local/share/icons/MacTahoe-Eprahemi/apps/scalable"
-  local hicolor="$HOME/.local/share/icons/hicolor/256x256/apps"
-
-  mkdir -p "$icon_dest" "$icon_dest2" "$hicolor"
-
-  for png in "$icon_src"/*.png; do
-    f=$(basename "$png")
-    cp "$png" "$icon_dest/$f"
-    cp "$png" "$icon_dest2/$f"
-    cp "$png" "$hicolor/$f"
-  done
-
-  # Trim transparent padding
-  for png in "$icon_dest"/*.png; do
-    magick "$png" -trim +repage -resize 256x256 -gravity center -background transparent -extent 256x256 "$png" 2>/dev/null || \
-    convert "$png" -trim +repage -resize 256x256 -gravity center -background transparent -extent 256x256 "$png"
-  done
-
-  gtk-update-icon-cache "$HOME/.local/share/icons/MacTahoe-dark-Eprahemi/" 2>/dev/null || true
-  gtk-update-icon-cache "$HOME/.local/share/icons/MacTahoe-Eprahemi/" 2>/dev/null || true
-  if [ -f "$HOME/.local/share/icons/hicolor/index.theme" ]; then
-    gtk-update-icon-cache "$HOME/.local/share/icons/hicolor/" 2>/dev/null || true
+  if [ -d "$icon_src" ] && [ "$(ls -A "$icon_src"/*.png 2>/dev/null)" ]; then
+    local icon_dest="$HOME/.local/share/icons/MacTahoe-dark-Eprahemi/apps/scalable"
+    local icon_dest2="$HOME/.local/share/icons/MacTahoe-Eprahemi/apps/scalable"
+    local hicolor="$HOME/.local/share/icons/hicolor/256x256/apps"
+    mkdir -p "$icon_dest" "$icon_dest2" "$hicolor"
+    for png in "$icon_src"/*.png; do
+      f=$(basename "$png")
+      cp "$png" "$icon_dest/$f"
+      cp "$png" "$icon_dest2/$f"
+      cp "$png" "$hicolor/$f"
+    done
+    for png in "$icon_dest"/*.png; do
+      magick "$png" -trim +repage -resize 256x256 -gravity center -background transparent -extent 256x256 "$png" 2>/dev/null || \
+      convert "$png" -trim +repage -resize 256x256 -gravity center -background transparent -extent 256x256 "$png"
+    done
+    gtk-update-icon-cache "$HOME/.local/share/icons/MacTahoe-dark-Eprahemi/" 2>/dev/null || true
+    gtk-update-icon-cache "$HOME/.local/share/icons/MacTahoe-Eprahemi/" 2>/dev/null || true
+    if [ -f "$HOME/.local/share/icons/hicolor/index.theme" ]; then
+      gtk-update-icon-cache "$HOME/.local/share/icons/hicolor/" 2>/dev/null || true
+    fi
+    ok "Custom macOS app icons installed ($(ls "$icon_src"/*.png 2>/dev/null | wc -l) icons)"
   fi
-
-  ok "Custom icons installed ($(ls "$icon_src"/*.png 2>/dev/null | wc -l) icons)"
 }
 
 install_font() {
@@ -314,11 +329,11 @@ apply_dconf() {
   local dconf_file="$BUNDLE/configs/dconf/full-backup.ini"
 
   # ── Theme ──
-  gsettings set org.gnome.desktop.interface gtk-theme "MacTahoe-Dark-Eprahemi" 2>/dev/null || true
+  gsettings set org.gnome.desktop.interface gtk-theme "MacTahoe-Dark" 2>/dev/null || true
   gsettings set org.gnome.desktop.interface icon-theme "MacTahoe-dark-Eprahemi" 2>/dev/null || true
   gsettings set org.gnome.desktop.interface cursor-theme "MacTahoe-dark-Eprahemi" 2>/dev/null || true
-  dconf write /org/gnome/shell/extensions/user-theme/name "'MacTahoe-Dark-Eprahemi'" 2>/dev/null || true
-  gsettings set org.gnome.desktop.wm.preferences theme "MacTahoe-Dark-Eprahemi" 2>/dev/null || true
+  dconf write /org/gnome/shell/extensions/user-theme/name "'MacTahoe-Dark'" 2>/dev/null || true
+  gsettings set org.gnome.desktop.wm.preferences theme "MacTahoe-Dark" 2>/dev/null || true
 
   # ── Interface ──
   gsettings set org.gnome.desktop.interface font-name "SF Pro Display 11" 2>/dev/null || true
@@ -490,14 +505,14 @@ setup_firefox_theme() {
 }
 
 setup_flatpak_theme() {
-  next_step "Flatpak GTK Runtime (org.gtk.Gtk3theme.MacTahoe-Dark-Eprahemi)"
+  next_step "Flatpak GTK Runtime (org.gtk.Gtk3theme.MacTahoe-Dark)"
 
   sudo dnf install -y ostree libappstream-glib 2>/dev/null || {
     warn "Could not install ostree/appstream-glib — Flatpak theme skipped"
     return
   }
 
-  local THEME="MacTahoe-Dark-Eprahemi"
+  local THEME="MacTahoe-Dark"
   local GTK3_VER="3.22"
   local cache="${XDG_CACHE_HOME:-$HOME/.cache}"
   local pkg_cache="$cache/pakitheme/$THEME"
@@ -722,7 +737,7 @@ finalize() {
   echo ""
   echo "  - GDM login screen themed (custom wallpaper + GTK theme + icons)"
   echo "  - Firefox macOS userChrome.css theme active"
-  echo "  - Flatpak GTK runtime installed (org.gtk.Gtk3theme.MacTahoe-Dark-Eprahemi)"
+  echo "  - Flatpak GTK runtime installed (org.gtk.Gtk3theme.MacTahoe-Dark)"
   echo ""
 
   read -rp "Reboot now? [y/N] " reply
@@ -740,7 +755,7 @@ finalize() {
 echo ""
 echo -e "${GREEN}══════════════════════════════════════════════════${NC}"
 echo -e "${GREEN}   Fedora MacTahoe — Eprahemi Edition             ${NC}"
-echo -e "${GREEN}   Fully self-contained — no external repos       ${NC}"
+echo -e "${GREEN}   Compiles theme for your GNOME version            ${NC}"
 echo -e "${GREEN}   Automated Installer                            ${NC}"
 echo -e "${GREEN}══════════════════════════════════════════════════${NC}"
 echo ""
@@ -752,7 +767,6 @@ install_rpm_packages
 install_browsers
 install_flatpaks
 install_mactahoe_theme
-install_custom_icons
 install_font
 install_extensions
 apply_desktop_entries
