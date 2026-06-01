@@ -16,7 +16,7 @@ ok()   { echo -e "  ${GREEN}✓${NC} $1"; }
 warn() { echo -e "  ${YELLOW}⚠${NC} $1"; }
 fail() { echo -e "  ${RED}✗${NC} $1"; exit 1; }
 
-TOTAL_STEPS=20
+TOTAL_STEPS=21
 STEP=0
 
 next_step() {
@@ -489,6 +489,92 @@ setup_firefox_theme() {
   "$repo/tweaks.sh" -f 2>&1 || warn "Firefox theming skipped — is Firefox installed and initialized?"
 }
 
+setup_flatpak_theme() {
+  next_step "Flatpak GTK Runtime (org.gtk.Gtk3theme.MacTahoe-Dark-Eprahemi)"
+
+  sudo dnf install -y ostree libappstream-glib 2>/dev/null || {
+    warn "Could not install ostree/appstream-glib — Flatpak theme skipped"
+    return
+  }
+
+  local THEME="MacTahoe-Dark-Eprahemi"
+  local GTK3_VER="3.22"
+  local cache="${XDG_CACHE_HOME:-$HOME/.cache}"
+  local pkg_cache="$cache/pakitheme/$THEME"
+  local repo_dir="$pkg_cache/repo"
+  local build_dir="$pkg_cache/build"
+  local app_id="org.gtk.Gtk3theme.$THEME"
+  local theme_path=""
+
+  for loc in "$HOME/.local/share/themes" "$HOME/.themes" /usr/share/themes; do
+    if [ -d "$loc/$THEME" ]; then
+      theme_path="$loc/$THEME"; break
+    fi
+  done
+
+  if [ -z "$theme_path" ]; then
+    warn "Theme '$THEME' not found in any theme directory"
+    return
+  fi
+
+  rm -rf "$pkg_cache"
+  mkdir -p "$repo_dir"
+
+  ostree --repo="$repo_dir" init --mode=archive || true
+  ostree --repo="$repo_dir" config set core.min-free-space-percent 0 || true
+
+  rm -rf "$build_dir"
+  mkdir -p "$build_dir/files"
+  cp -a "$theme_path/gtk-3.0/"{gtk.css,gtk-dark.css,thumbnail.png,assets,windows-assets} "$build_dir/files" 2>/dev/null || true
+
+  mkdir -p "$build_dir/files/share/appdata"
+  cat >"$build_dir/files/share/appdata/$app_id.appdata.xml" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="runtime">
+  <id>$app_id</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <name>$THEME Gtk theme</name>
+  <summary>$THEME Gtk theme for flatpak</summary>
+</component>
+EOF
+
+  appstream-compose --prefix="$build_dir/files" --basename="$app_id" --origin=flatpak "$app_id" 2>/dev/null || true
+  ostree --repo="$repo_dir" commit -b base --tree=dir="$build_dir" || true
+
+  local bundles=()
+  while IFS= read -r arch; do
+    [ -z "$arch" ] && continue
+    bundle="$pkg_cache/$app_id-$arch.flatpak"
+    rm -rf "$build_dir"
+    ostree --repo="$repo_dir" checkout -U base "$build_dir" || continue
+
+    read -rd '' metadata <<EOF ||:
+[Runtime]
+name=$app_id
+runtime=$app_id/$arch/$GTK3_VER
+sdk=$app_id/$arch/$GTK3_VER
+EOF
+    echo -n "$metadata" > "$build_dir/metadata"
+
+    ostree --repo="$repo_dir" commit -b "runtime/$app_id/$arch/$GTK3_VER" \
+      --add-metadata-string "xa.metadata=$(cat "$build_dir/metadata")" --link-checkout-speedup "$build_dir" || continue
+    flatpak build-bundle --runtime "$repo_dir" "$bundle" "$app_id" "$GTK3_VER" || continue
+    bundles+=("$bundle")
+  done < <(flatpak list --runtime --columns=arch:f 2>/dev/null | sort -u)
+
+  if [ ${#bundles[@]} -eq 0 ]; then
+    warn "No Flatpak architectures found — no runtime bundles built"
+    return
+  fi
+
+  for bundle in "${bundles[@]}"; do
+    sudo flatpak install -y --system "$bundle" 2>/dev/null || true
+    rm -f "$bundle" 2>/dev/null || true
+  done
+
+  ok "Flatpak runtime '$app_id' installed (${#bundles[@]} arch(s))"
+}
+
 install_sounds() {
   next_step "macOS Big Sur System Sounds"
 
@@ -635,6 +721,8 @@ finalize() {
   echo "    - macOS Big Sur sounds will play"
   echo ""
   echo "  - GDM login screen themed (custom wallpaper + GTK theme + icons)"
+  echo "  - Firefox macOS userChrome.css theme active"
+  echo "  - Flatpak GTK runtime installed (org.gtk.Gtk3theme.MacTahoe-Dark-Eprahemi)"
   echo ""
 
   read -rp "Reboot now? [y/N] " reply
@@ -673,6 +761,7 @@ apply_dconf
 apply_wallpapers
 setup_gdm
 setup_firefox_theme
+setup_flatpak_theme
 install_sounds
 setup_terminal
 setup_shell
