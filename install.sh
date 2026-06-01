@@ -483,6 +483,9 @@ setup_firefox_theme() {
     }
   fi
 
+  # Kill Firefox so tweaks.sh doesn't skip the install (pick up theme on next launch)
+  killall firefox firefox-bin 2>/dev/null || true
+
   "$repo/tweaks.sh" -f 2>&1 || warn "Firefox theming skipped — is Firefox installed and initialized?"
 }
 
