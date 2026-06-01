@@ -169,10 +169,17 @@ install_mactahoe_theme() {
               "/usr/share/themes/MacTahoe" \
               "/usr/share/themes/MacTahoe-Darker" 2>/dev/null || true
 
-  # GTK Theme (force overwrite)
-  mkdir -p "$HOME/.themes"
-  rm -rf "$HOME/.themes/MacTahoe-Dark-Eprahemi"
+  # GTK Theme — install to BOTH legacy + XDG standard path
+  # Nautilus (libadwaita/GTK4) reads from ~/.local/share/themes/ not ~/.themes/
+  mkdir -p "$HOME/.themes" "$HOME/.local/share/themes"
+  rm -rf "$HOME/.themes/MacTahoe-Dark-Eprahemi" "$HOME/.local/share/themes/MacTahoe-Dark-Eprahemi"
   cp -r "$theme_src/MacTahoe-Dark-Eprahemi" "$HOME/.themes/"
+  cp -r "$theme_src/MacTahoe-Dark-Eprahemi" "$HOME/.local/share/themes/"
+
+  # Libadwaita integration: GTK4 theme CSS → ~/.config/gtk-4.0/
+  mkdir -p "$HOME/.config/gtk-4.0"
+  cp -r "$theme_src/MacTahoe-Dark-Eprahemi/gtk-4.0/"* "$HOME/.config/gtk-4.0/" 2>/dev/null || true
+
   ok "GTK theme installed (MacTahoe-Dark-Eprahemi)"
 
   # Icon themes (force overwrite)
@@ -539,9 +546,18 @@ install_extensions() {
     "appindicatorsupport@rgcjonas.gmail.com"
   )
 
-  # Install from EGO
+  # Install from EGO using API (CLI install $uuid requires browser session)
+  local shell_version
+  shell_version=$(gnome-shell --version 2>/dev/null | grep -oP '\d+\.\d+' | head -1 || echo "50")
   for uuid in "${extensions[@]}"; do
-    gnome-extensions install "$uuid" 2>/dev/null || true
+    local dl_url
+    dl_url=$(curl -s "https://extensions.gnome.org/extension-info/?uuid=$uuid&shell_version=$shell_version" | jq -r '.download_url // empty' 2>/dev/null)
+    if [ -n "$dl_url" ]; then
+      rm -f /tmp/ext-"$uuid".zip
+      curl -sL "https://extensions.gnome.org$dl_url" -o /tmp/ext-"$uuid".zip 2>/dev/null
+      gnome-extensions install --force /tmp/ext-"$uuid".zip 2>/dev/null || true
+      rm -f /tmp/ext-"$uuid".zip
+    fi
   done
 
   # Enable all installed extensions
