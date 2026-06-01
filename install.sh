@@ -16,7 +16,7 @@ ok()   { echo -e "  ${GREEN}✓${NC} $1"; }
 warn() { echo -e "  ${YELLOW}⚠${NC} $1"; }
 fail() { echo -e "  ${RED}✗${NC} $1"; exit 1; }
 
-TOTAL_STEPS=20
+TOTAL_STEPS=21
 STEP=0
 
 next_step() {
@@ -101,12 +101,18 @@ install_rpm_packages() {
     discord kdenlive pavucontrol alacarte \
     nautilus-python gnome-tweaks \
     ImageMagick fzf ripgrep jq unzip curl wget git \
-    ffmpeg-free
+    ffmpeg-free \
+    libreoffice-writer libreoffice-calc libreoffice-impress
   ok "RPM packages installed"
 }
 
 install_browsers() {
-  next_step "Browsers (Chrome, Edge, Spotify)"
+  next_step "Browsers (Firefox, Chrome, Edge, VS Code)"
+
+  # Firefox
+  if ! rpm -q firefox &>/dev/null; then
+    sudo dnf install -y firefox
+  fi
 
   # Chrome
   if ! rpm -q google-chrome-stable &>/dev/null; then
@@ -131,7 +137,7 @@ install_browsers() {
     sudo dnf install -y code
   fi
 
-  ok "Browsers + VS Code installed (Spotify is installed via Flatpak)"
+  ok "Browsers + VS Code installed (Spotify via Flatpak)"
 }
 
 install_flatpaks() {
@@ -172,13 +178,13 @@ install_mactahoe_theme() {
   rm -rf "$repo"
   git clone --depth 1 https://github.com/vinceliuice/MacTahoe-gtk-theme.git "$repo" 2>/dev/null || {
     warn "Clone failed — falling back to bundled pre-compiled theme"
-    local fallback="$BUNDLE/themes/MacTahoe-Dark-Eprahemi"
-    if [ -d "$fallback" ]; then
+    local fallback_dir="$BUNDLE/themes/MacTahoe-Dark"
+    if [ -d "$fallback_dir" ]; then
       mkdir -p "$HOME/.themes" "$HOME/.local/share/themes" "$HOME/.config/gtk-4.0"
-      cp -r "$fallback" "$HOME/.themes/"
-      cp -r "$fallback" "$HOME/.local/share/themes/"
-      cp -r "$fallback/gtk-4.0/"* "$HOME/.config/gtk-4.0/" 2>/dev/null || true
-      ok "Bundled MacTahoe-Dark-Eprahemi installed as fallback"
+      cp -r "$fallback_dir" "$HOME/.themes/"
+      cp -r "$fallback_dir" "$HOME/.local/share/themes/"
+      cp -r "$fallback_dir/gtk-4.0/"* "$HOME/.config/gtk-4.0/" 2>/dev/null || true
+      ok "Bundled MacTahoe-Dark installed as fallback"
     else
       warn "No fallback available — theme not installed"
     fi
@@ -422,6 +428,8 @@ apply_dconf() {
   gsettings set org.gnome.nautilus.preferences show-image-thumbnails "'always'" 2>/dev/null || true
   gsettings set org.gnome.nautilus.preferences show-directory-item-counts "'always'" 2>/dev/null || true
 
+  gsettings set org.gnome.nautilus.window-state maximized true 2>/dev/null || true
+
   # ── Night Light ──
   gsettings set org.gnome.settings-daemon.plugins.color night-light-enabled false 2>/dev/null || true
   gsettings set org.gnome.settings-daemon.plugins.color night-light-schedule-automatic false 2>/dev/null || true
@@ -430,6 +438,15 @@ apply_dconf() {
   # ── Power ──
   gsettings set org.gnome.settings-daemon.plugins.power power-button-action "'suspend'" 2>/dev/null || true
   gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-timeout uint32 4800 2>/dev/null || true
+
+  # ── Dock favorites ──
+  gsettings set org.gnome.shell favorite-apps "['org.gnome.Nautilus.desktop', 'org.mozilla.firefox.desktop', 'google-chrome.desktop', 'microsoft-edge.desktop', 'discord.desktop', 'kitty.desktop', 'org.gnome.Software.desktop']" 2>/dev/null || true
+
+  # ── Session (never sleep) ──
+  gsettings set org.gnome.desktop.session idle-delay 0 2>/dev/null || true
+
+  # ── Privacy ──
+  gsettings set org.gnome.desktop.privacy report-technical-problems false 2>/dev/null || true
 
   # ── Extension dconf restore ──
   if [ -f "$dconf_file" ]; then
@@ -520,10 +537,12 @@ setup_firefox_theme() {
     }
   fi
 
-  # Kill Firefox so tweaks.sh doesn't skip the install (pick up theme on next launch)
   killall firefox firefox-bin 2>/dev/null || true
 
-  "$repo/tweaks.sh" -f 2>&1 || warn "Firefox theming skipped — is Firefox installed and initialized?"
+  if ! "$repo/tweaks.sh" -f 2>&1; then
+    warn "Firefox theming skipped — not yet initialized"
+    FIREFOX_THEME_FAILED=1
+  fi
 }
 
 setup_flatpak_theme() {
@@ -651,7 +670,57 @@ setup_terminal() {
   gsettings set org.gnome.desktop.default-applications.terminal exec 'kitty' 2>/dev/null || true
   sudo rm -f /usr/share/applications/org.gnome.Ptyxis.desktop
   sudo rm -f /usr/share/applications/org.gnome.Console.desktop
-  ok "Kitty is now the default terminal"
+
+  # Ensure wtype is available for keyboard simulation on Wayland
+  sudo dnf install -y wtype 2>/dev/null || true
+
+  # Create wrapper script that forces Kitty to ALWAYS open maximized
+  sudo tee /usr/local/bin/kitty-maximized >/dev/null <<'WRAPPER'
+#!/bin/bash
+/usr/bin/kitty "$@" &
+KITTY_PID=$!
+sleep 0.5
+# Maximize via D-Bus (Wayland) — targets only the Kitty window
+busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval s \
+  "global.get_window_actors().forEach(a => { if (a.meta_window.get_wm_class() === 'kitty') a.meta_window.maximize(3); })" \
+  2>/dev/null || wtype -M Super_L -k Up -m Super_L 2>/dev/null || true
+wait $KITTY_PID
+WRAPPER
+  sudo chmod +x /usr/local/bin/kitty-maximized
+
+  # Override desktop entry to use the maximized wrapper
+  mkdir -p "$HOME/.local/share/applications"
+  cp /usr/share/applications/kitty.desktop "$HOME/.local/share/applications/kitty.desktop" 2>/dev/null
+  sed -i 's|^Exec=kitty|Exec=/usr/local/bin/kitty-maximized|' "$HOME/.local/share/applications/kitty.desktop" 2>/dev/null
+  sed -i 's|^TryExec=kitty|TryExec=/usr/local/bin/kitty-maximized|' "$HOME/.local/share/applications/kitty.desktop" 2>/dev/null
+
+  ok "Kitty is now the default terminal (always maximized)"
+}
+
+setup_nautilus_maximized() {
+  next_step "Nautilus Always Maximized"
+
+  # Create wrapper script that forces Nautilus to ALWAYS open maximized
+  sudo tee /usr/local/bin/nautilus-maximized >/dev/null <<'WRAPPER'
+#!/bin/bash
+/usr/bin/nautilus "$@" &
+NAUT_PID=$!
+sleep 0.5
+busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval s \
+  "global.get_window_actors().forEach(a => { if (a.meta_window.get_wm_class() === 'nautilus') a.meta_window.maximize(3); })" \
+  2>/dev/null || wtype -M Super_L -k Up -m Super_L 2>/dev/null || true
+wait $NAUT_PID
+WRAPPER
+  sudo chmod +x /usr/local/bin/nautilus-maximized
+
+  # Override desktop entry
+  mkdir -p "$HOME/.local/share/applications"
+  cp /usr/share/applications/org.gnome.Nautilus.desktop "$HOME/.local/share/applications/org.gnome.Nautilus.desktop" 2>/dev/null
+  sed -i 's|^Exec=nautilus|Exec=/usr/local/bin/nautilus-maximized|' "$HOME/.local/share/applications/org.gnome.Nautilus.desktop" 2>/dev/null
+  sed -i 's|^Exec=org.gnome.Nautilus|Exec=/usr/local/bin/nautilus-maximized|' "$HOME/.local/share/applications/org.gnome.Nautilus.desktop" 2>/dev/null
+
+  gsettings set org.gnome.nautilus.window-state maximized true 2>/dev/null || true
+  ok "Nautilus always opens maximized"
 }
 
 setup_shell() {
@@ -702,19 +771,19 @@ install_extensions() {
     fi
   done
 
-  # Enable all installed extensions
-  local enabled
-  enabled=$(gsettings get org.gnome.shell enabled-extensions)
-  enabled="${enabled:1:${#enabled}-2}"  # strip brackets
-
+  # Enable all installed extensions via direct gsettings (no D-Bus needed)
+  local -a ext_list
   for uuid in "${extensions[@]}"; do
-    if ! echo "$enabled" | grep -q "$uuid"; then
-      # Check if extension is installed
-      if [ -d "$HOME/.local/share/gnome-shell/extensions/$uuid" ] || [ -d "/usr/share/gnome-shell/extensions/$uuid" ]; then
-        gnome-extensions enable "$uuid" 2>/dev/null || true
-      fi
+    if [ -d "$HOME/.local/share/gnome-shell/extensions/$uuid" ] || [ -d "/usr/share/gnome-shell/extensions/$uuid" ]; then
+      ext_list+=("'$uuid'")
     fi
   done
+  if [ ${#ext_list[@]} -gt 0 ]; then
+    gsettings set org.gnome.shell enabled-extensions "[$(IFS=,; echo "${ext_list[*]}")]" 2>/dev/null || true
+  fi
+
+  # Also mark Fedora defaults as disabled
+  gsettings set org.gnome.shell disabled-extensions "['background-logo@fedorahosted.org', 'apps-menu@gnome-shell-extensions.gcampax.github.com']" 2>/dev/null || true
 
   # Configure dash2dock-lite
   dconf write /org/gnome/shell/extensions/dash2dock-lite/autohide-dash true 2>/dev/null || true
@@ -727,9 +796,6 @@ install_extensions() {
   dconf write /org/gnome/shell/extensions/dash2dock-lite/border-radius 3.0 2>/dev/null || true
   dconf write /org/gnome/shell/extensions/dash2dock-lite/label-border-radius 3.0 2>/dev/null || true
   dconf write /org/gnome/shell/extensions/dash2dock-lite/customize-label true 2>/dev/null || true
-
-  # Disable Fedora default extensions
-  gsettings set org.gnome.shell disabled-extensions "['background-logo@fedorahosted.org', 'apps-menu@gnome-shell-extensions.gcampax.github.com']" 2>/dev/null || true
 
   ok "Extensions installed & configured"
 }
@@ -759,9 +825,12 @@ finalize() {
   echo "    - Fish will be the default shell (after logout)"
   echo "    - All custom keybindings will work"
   echo "    - macOS Big Sur sounds will play"
+  if [ "${FIREFOX_THEME_FAILED:-0}" = 1 ]; then
+    echo "  ${YELLOW}⚠ Firefox not themed — log into your user, launch Firefox once,${NC}"
+    echo "  ${YELLOW}  then re-run: bash install.sh (skips completed steps)${NC}"
+  fi
   echo ""
   echo "  - GDM login screen themed (custom wallpaper + GTK theme + icons)"
-  echo "  - Firefox macOS userChrome.css theme active"
   echo "  - Flatpak GTK runtime installed (org.gtk.Gtk3theme.MacTahoe-Dark)"
   echo ""
 
@@ -803,5 +872,6 @@ setup_firefox_theme
 setup_flatpak_theme
 install_sounds
 setup_terminal
+setup_nautilus_maximized
 setup_shell
 finalize

@@ -10,7 +10,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe
 
 | Category | Details |
 |---|---|
-| **GTK Theme** | MacTahoe-Dark-Eprahemi (gnome-shell, gtk-3.0, gtk-4.0, metacity, cinnamon) |
+| **GTK Theme** | MacTahoe-Dark (compiled from upstream for your GNOME version) |
 | **Icon Themes** | MacTahoe-Eprahemi (base, 143MB), MacTahoe-dark-Eprahemi (dark variant, 76MB) |
 | **Custom Icons** | 21 macOS-style app PNGs |
 | **Font** | SF Pro Display |

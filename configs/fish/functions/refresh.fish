@@ -49,5 +49,5 @@ function refresh
     # sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches' 
     echo -e "\033[1;32mCOMPLETE\033[0m"
     
-    echo -e "\n\033[1;36m✨ EPRAHEMI HARDWARE & INTERFACE FULLY RESTORED\033[0m"
+    echo -e "\n\033[1;36m✨ "(echo $USER | string upper)" HARDWARE & INTERFACE FULLY RESTORED\033[0m"
 end

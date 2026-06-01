@@ -1,12 +1,12 @@
 [Desktop Entry]
 Type=X-GNOME-Metatheme
-Name=MacTahoe-Dark-Eprahemi
-Comment=Eprahemi Edition — MacOS Tahoe style Gtk+ theme
+Name=MacTahoe-Dark
+Comment=MacOS Tahoe style Gtk+ theme (Eprahemi Edition)
 Encoding=UTF-8
 
 [X-GNOME-Metatheme]
-GtkTheme=MacTahoe-Dark-Eprahemi
-MetacityTheme=MacTahoe-Dark-Eprahemi
+GtkTheme=MacTahoe-Dark
+MetacityTheme=MacTahoe-Dark
 IconTheme=MacTahoe-dark-Eprahemi
 CursorTheme=MacTahoe-dark-Eprahemi
 ButtonLayout=close,minimize,maximize:menu

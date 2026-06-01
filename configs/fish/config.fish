@@ -15,6 +15,3 @@ set -gx TERMINAL kitty
 set -gx TERM kitty
 set -gx ANI_CLI_PLAYER vlc
 
-
-# opencode
-fish_add_path "$HOME/.opencode/bin"
