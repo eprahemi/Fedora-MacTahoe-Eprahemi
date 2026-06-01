@@ -214,23 +214,45 @@ install_mactahoe_theme() {
 
   ok "Icon themes installed (MacTahoe-Eprahemi + MacTahoe-dark-Eprahemi)"
 
-  # Custom macOS app icons (PNGs)
+  # Custom macOS app icons (PNGs) — short names + Flatpak ID aliases
   local icon_src="$BUNDLE/icons/256x256"
   if [ -d "$icon_src" ] && [ "$(ls -A "$icon_src"/*.png 2>/dev/null)" ]; then
-    local icon_dest="$HOME/.local/share/icons/MacTahoe-dark-Eprahemi/apps/scalable"
-    local icon_dest2="$HOME/.local/share/icons/MacTahoe-Eprahemi/apps/scalable"
-    local hicolor="$HOME/.local/share/icons/hicolor/256x256/apps"
-    mkdir -p "$icon_dest" "$icon_dest2" "$hicolor"
+    local targets=(
+      "$HOME/.local/share/icons/MacTahoe-dark-Eprahemi/apps/scalable"
+      "$HOME/.local/share/icons/MacTahoe-Eprahemi/apps/scalable"
+      "$HOME/.local/share/icons/hicolor/256x256/apps"
+    )
+    mkdir -p "${targets[@]}"
+
+    # Copy original short-name PNG into every target dir
     for png in "$icon_src"/*.png; do
       f=$(basename "$png")
-      cp "$png" "$icon_dest/$f"
-      cp "$png" "$icon_dest2/$f"
-      cp "$png" "$hicolor/$f"
+      for t in "${targets[@]}"; do cp "$png" "$t/$f"; done
     done
-    for png in "$icon_dest"/*.png; do
-      magick "$png" -trim +repage -resize 256x256 -gravity center -background transparent -extent 256x256 "$png" 2>/dev/null || \
-      convert "$png" -trim +repage -resize 256x256 -gravity center -background transparent -extent 256x256 "$png"
+
+    # Flatpak app IDs need their full reverse-DNS name to get themed
+    # Map short name → Flatpak ID so both native and Flatpak installs pick it up
+    declare -A fp_aliases=(
+      [spotify.png]="com.spotify.Client.png"
+      [discord.png]="com.discordapp.Discord.png"
+      [vlc.png]="org.videolan.VLC.png"
+      [code.png]="com.visualstudio.code.png"
+    )
+    for png in "$icon_src"/*.png; do
+      local base; base=$(basename "$png")
+      local alias="${fp_aliases[$base]:-}"
+      [ -z "$alias" ] && continue
+      for t in "${targets[@]}"; do cp "$png" "$t/$alias"; done
     done
+
+    # Trim padding + resize to 256×256
+    for t in "${targets[@]}"; do
+      for png in "$t"/*.png; do
+        magick "$png" -trim +repage -resize 256x256 -gravity center -background transparent -extent 256x256 "$png" 2>/dev/null || \
+        convert "$png" -trim +repage -resize 256x256 -gravity center -background transparent -extent 256x256 "$png"
+      done
+    done
+
     gtk-update-icon-cache "$HOME/.local/share/icons/MacTahoe-dark-Eprahemi/" 2>/dev/null || true
     gtk-update-icon-cache "$HOME/.local/share/icons/MacTahoe-Eprahemi/" 2>/dev/null || true
     if [ -f "$HOME/.local/share/icons/hicolor/index.theme" ]; then
