@@ -16,7 +16,7 @@ ok()   { echo -e "  ${GREEN}✓${NC} $1"; }
 warn() { echo -e "  ${YELLOW}⚠${NC} $1"; }
 fail() { echo -e "  ${RED}✗${NC} $1"; exit 1; }
 
-TOTAL_STEPS=19
+TOTAL_STEPS=20
 STEP=0
 
 next_step() {
@@ -470,6 +470,22 @@ setup_gdm() {
   fi
 }
 
+setup_firefox_theme() {
+  next_step "Firefox macOS Theme (userChrome.css)"
+
+  local repo="/tmp/mactahoe-gtk"
+  if [ ! -f "$repo/tweaks.sh" ]; then
+    warn "MacTahoe repo not found — cloning fresh"
+    rm -rf "$repo"
+    git clone --depth 1 https://github.com/vinceliuice/MacTahoe-gtk-theme.git "$repo" 2>/dev/null || {
+      warn "Could not clone MacTahoe repo — Firefox theme not applied"
+      return
+    }
+  fi
+
+  "$repo/tweaks.sh" -f 2>&1 || warn "Firefox theming skipped — is Firefox installed and initialized?"
+}
+
 install_sounds() {
   next_step "macOS Big Sur System Sounds"
 
@@ -653,6 +669,7 @@ apply_configs
 apply_dconf
 apply_wallpapers
 setup_gdm
+setup_firefox_theme
 install_sounds
 setup_terminal
 setup_shell
