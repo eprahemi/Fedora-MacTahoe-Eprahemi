@@ -739,8 +739,11 @@ install_extensions() {
 finalize() {
   next_step "Cleanup & Reboot"
 
-  # Clean temporary files
-  rm -rf /tmp/mactahoe-* /tmp/mac-sounds 2>/dev/null || true
+  # Clean every temporary file and cache this script created
+  rm -rf /tmp/mactahoe-* /tmp/mac-sounds /tmp/ext-* 2>/dev/null || true
+  rm -rf "$HOME/.cache/pakitheme" 2>/dev/null || true
+  rm -rf "$HOME/.cache/thumbnails/" 2>/dev/null || true
+  sudo dnf clean all 2>/dev/null || true
 
   echo ""
   echo -e "${GREEN}══════════════════════════════════════════════════${NC}"
