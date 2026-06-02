@@ -288,9 +288,17 @@ install_mactahoe_theme() {
     # ALWAYS rebuild icon cache last (ensures custom icons override any conflicts)
     gtk-update-icon-cache "$HOME/.local/share/icons/MacTahoe-dark/" 2>/dev/null || true
     gtk-update-icon-cache "$HOME/.local/share/icons/MacTahoe/" 2>/dev/null || true
-    if [ -f "$HOME/.local/share/icons/hicolor/index.theme" ]; then
-      gtk-update-icon-cache "$HOME/.local/share/icons/hicolor/" 2>/dev/null || true
+    # Ensure hicolor has an index.theme so gtk-update-icon-cache works
+    if [ ! -f "$HOME/.local/share/icons/hicolor/index.theme" ]; then
+      cat > "$HOME/.local/share/icons/hicolor/index.theme" <<-EOF
+[Icon Theme]
+Name=Hicolor
+Comment=Fallback icon theme (local overrides)
+Hidden=true
+Directories=256x256/apps
+EOF
     fi
+    gtk-update-icon-cache "$HOME/.local/share/icons/hicolor/" 2>/dev/null || true
     ok "Custom macOS app icons installed ($(ls "$icon_src"/*.png 2>/dev/null | wc -l) PNGs + $(ls "$icon_src"/*.svg 2>/dev/null | wc -l) SVGs)"
   fi
 }
