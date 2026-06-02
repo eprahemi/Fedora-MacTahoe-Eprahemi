@@ -7,7 +7,7 @@ Encoding=UTF-8
 [X-GNOME-Metatheme]
 GtkTheme=MacTahoe-Dark
 MetacityTheme=MacTahoe-Dark
-IconTheme=MacTahoe-dark-Eprahemi
-CursorTheme=MacTahoe-dark-Eprahemi
+IconTheme=MacTahoe-dark
+CursorTheme=MacTahoe-dark
 ButtonLayout=close,minimize,maximize:menu
 

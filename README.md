@@ -15,7 +15,7 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe
 | Category | Details |
 |---|---|
 | **GTK Theme** | MacTahoe-Dark — compiled from upstream source for your GNOME version |
-| **Icon Themes** | MacTahoe-Eprahemi (light, 143 MB), MacTahoe-dark-Eprahemi (dark, 76 MB) |
+| **Icon Themes** | MacTahoe (light, 143 MB), MacTahoe-dark (dark, 76 MB) |
 | **Custom Icons** | 21 macOS-style application icons (native + Flatpak aliases) |
 | **Font** | SF Pro Display |
 | **Sounds** | macOS Big Sur (45 system event sounds) |
