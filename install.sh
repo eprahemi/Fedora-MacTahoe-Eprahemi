@@ -497,8 +497,9 @@ apply_dconf() {
   gsettings set org.gnome.desktop.interface show-battery-percentage false 2>/dev/null || true
   gsettings set org.gnome.desktop.interface enable-animations true 2>/dev/null || true
 
-  # ── Window buttons ──
+  # ── Window buttons + double-click behavior ──
   gsettings set org.gnome.desktop.wm.preferences button-layout "close,minimize,maximize:appmenu" 2>/dev/null || true
+  gsettings set org.gnome.desktop.wm.preferences action-double-click-titlebar "'toggle-maximize'" 2>/dev/null || true
 
   # ── Peripherals ──
   gsettings set org.gnome.desktop.peripherals.touchpad tap-to-click true 2>/dev/null || true
@@ -546,8 +547,6 @@ apply_dconf() {
   gsettings set org.gnome.nautilus.preferences recursive-search "'always'" 2>/dev/null || true
   gsettings set org.gnome.nautilus.preferences show-image-thumbnails "'always'" 2>/dev/null || true
   gsettings set org.gnome.nautilus.preferences show-directory-item-counts "'always'" 2>/dev/null || true
-
-  gsettings set org.gnome.nautilus.window-state maximized true 2>/dev/null || true
 
   # ── Night Light ──
   gsettings set org.gnome.settings-daemon.plugins.color night-light-enabled false 2>/dev/null || true
@@ -798,11 +797,15 @@ setup_terminal() {
 #!/bin/bash
 /usr/bin/kitty "$@" &
 KITTY_PID=$!
-sleep 0.5
-# Maximize via D-Bus (Wayland) — targets only the Kitty window
-busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval s \
-  "global.get_window_actors().forEach(a => { if (a.meta_window.get_wm_class() === 'kitty') a.meta_window.maximize(3); })" \
-  2>/dev/null || wtype -M Super_L -k Up -m Super_L 2>/dev/null || true
+
+# Retry maximize up to 10 times (0.3s intervals = 3s total) — handles slow startups
+for i in $(seq 1 10); do
+  sleep 0.3
+  busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval s \
+    "global.get_window_actors().filter(a => a.meta_window && a.meta_window.get_wm_class()?.toLowerCase() === 'kitty').forEach(a => a.meta_window.maximize(3))" \
+    2>/dev/null && break
+done 2>/dev/null || true
+
 wait $KITTY_PID
 WRAPPER
   sudo chmod +x /usr/local/bin/kitty-maximized
@@ -813,33 +816,7 @@ WRAPPER
   sed -i 's|^Exec=kitty|Exec=/usr/local/bin/kitty-maximized|' "$HOME/.local/share/applications/kitty.desktop" 2>/dev/null
   sed -i 's|^TryExec=kitty|TryExec=/usr/local/bin/kitty-maximized|' "$HOME/.local/share/applications/kitty.desktop" 2>/dev/null
 
-  ok "Kitty is now the default terminal (always maximized)"
-}
-
-setup_nautilus_maximized() {
-  next_step "Nautilus Always Maximized"
-
-  # Create wrapper script that forces Nautilus to ALWAYS open maximized
-  sudo tee /usr/local/bin/nautilus-maximized >/dev/null <<'WRAPPER'
-#!/bin/bash
-/usr/bin/nautilus "$@" &
-NAUT_PID=$!
-sleep 0.5
-busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval s \
-  "global.get_window_actors().forEach(a => { if (a.meta_window.get_wm_class() === 'nautilus') a.meta_window.maximize(3); })" \
-  2>/dev/null || wtype -M Super_L -k Up -m Super_L 2>/dev/null || true
-wait $NAUT_PID
-WRAPPER
-  sudo chmod +x /usr/local/bin/nautilus-maximized
-
-  # Override desktop entry
-  mkdir -p "$HOME/.local/share/applications"
-  cp /usr/share/applications/org.gnome.Nautilus.desktop "$HOME/.local/share/applications/org.gnome.Nautilus.desktop" 2>/dev/null
-  sed -i 's|^Exec=nautilus|Exec=/usr/local/bin/nautilus-maximized|' "$HOME/.local/share/applications/org.gnome.Nautilus.desktop" 2>/dev/null
-  sed -i 's|^Exec=org.gnome.Nautilus|Exec=/usr/local/bin/nautilus-maximized|' "$HOME/.local/share/applications/org.gnome.Nautilus.desktop" 2>/dev/null
-
-  gsettings set org.gnome.nautilus.window-state maximized true 2>/dev/null || true
-  ok "Nautilus always opens maximized"
+  ok "Kitty is now the default terminal (opens maximized)"
 }
 
 setup_shell() {
@@ -991,6 +968,5 @@ setup_firefox_theme
 setup_flatpak_theme
 install_sounds
 setup_terminal
-setup_nautilus_maximized
 setup_shell
 finalize
