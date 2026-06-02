@@ -31,8 +31,29 @@ preflight() {
   next_step "Preflight checks"
 
   # ── OS check ──
+  local detected_os="Unknown Linux"
+  if [ -f /etc/os-release ]; then
+    detected_os=$(grep -oP '^NAME="?\K[^"]+' /etc/os-release 2>/dev/null || echo "Unknown Linux")
+  fi
   if [ ! -f /etc/fedora-release ]; then
-    fail "This script is designed for Fedora Linux only."
+    echo ""
+    echo "  ╔══════════════════════════════════════════════════════════════╗"
+    echo "  ║            INCOMPATIBLE OPERATING SYSTEM                    ║"
+    echo "  ╠══════════════════════════════════════════════════════════════╣"
+    echo "  ║  Detected OS :  $detected_os"
+    echo "  ║  Required OS :  Fedora Linux (Workstation edition)"  
+    echo "  ║                                                              ║"
+    echo "  ║  Fedora MacTahoe — Eprahemi Edition is designed exclusively  ║"
+    echo "  ║  for Fedora Linux with the GNOME desktop environment. It     ║"
+    echo "  ║  relies on Fedora-specific package managers (dnf), RPM       ║"
+    echo "  ║  repositories (RPM Fusion), and system paths that do not     ║"
+    echo "  ║  exist on other distributions.                               ║"
+    echo "  ║                                                              ║"
+    echo "  ║  To use this theme, install Fedora Workstation from:         ║"
+    echo "  ║  https://fedoraproject.org/workstation/                      ║"
+    echo "  ╚══════════════════════════════════════════════════════════════╝"
+    echo ""
+    exit 1
   fi
   ok "Fedora detected"
 
@@ -41,16 +62,59 @@ preflight() {
   if command -v gnome-shell &>/dev/null; then
     gnome_ok=true
   fi
+  # Detect actual desktop (for error messages)
+  local detected_desk="${XDG_CURRENT_DESKTOP:-}"
+  if [ -z "$detected_desk" ]; then
+    detected_desk="${GDMSESSION:-}"
+  fi
+  if [ -z "$detected_desk" ]; then
+    detected_desk="${DESKTOP_SESSION:-}"
+  fi
+  if [ -z "$detected_desk" ]; then
+    detected_desk="none (TTY / no graphical session detected)"
+  fi
   # If a desktop session is running, double-check it's actually GNOME
   if [ -n "${XDG_CURRENT_DESKTOP:-}" ]; then
     if echo "$XDG_CURRENT_DESKTOP" | grep -qi "gnome"; then
       gnome_ok=true
     else
-      fail "GNOME desktop not detected (found: $XDG_CURRENT_DESKTOP). This script only supports Fedora Workstation (GNOME)."
+      echo ""
+      echo "  ╔══════════════════════════════════════════════════════════════╗"
+      echo "  ║            INCOMPATIBLE DESKTOP ENVIRONMENT                 ║"
+      echo "  ╠══════════════════════════════════════════════════════════════╣"
+      echo "  ║  Detected DE :  ${detected_desk}"
+      echo "  ║  Required DE :  GNOME (default Fedora Workstation desktop)"  
+      echo "  ║                                                              ║"
+      echo "  ║  Fedora MacTahoe — Eprahemi Edition integrates deeply       ║"
+      echo "  ║  with GNOME Shell extensions, dconf/gsettings schemas,      ║"
+      echo "  ║  and GNOME-specific D-Bus APIs. These components are not    ║"
+      echo "  ║  available on other desktop environments.                   ║"
+      echo "  ║                                                              ║"
+      echo "  ║  Switch to Fedora Workstation (GNOME) or install GNOME:     ║"
+      echo "  ║    sudo dnf groupinstall 'Fedora Workstation'               ║"
+      echo "  ╚══════════════════════════════════════════════════════════════╝"
+      echo ""
+      exit 1
     fi
   fi
   if [ "$gnome_ok" = false ]; then
-    fail "This script requires the GNOME desktop environment (Fedora Workstation). Install it with: sudo dnf groupinstall 'Fedora Workstation'"
+    echo ""
+    echo "  ╔══════════════════════════════════════════════════════════════╗"
+    echo "  ║            GNOME SHELL NOT FOUND                            ║"
+    echo "  ╠══════════════════════════════════════════════════════════════╣"
+    echo "  ║  Detected DE :  ${detected_desk}"
+    echo "  ║  Required DE :  GNOME (default Fedora Workstation desktop)"  
+    echo "  ║                                                              ║"
+    echo "  ║  The gnome-shell binary is not installed on this system.     ║"
+    echo "  ║  This script cannot proceed without it.                      ║"
+    echo "  ║                                                              ║"
+    echo "  ║  To install GNOME on Fedora, run:                            ║"
+    echo "  ║    sudo dnf groupinstall 'Fedora Workstation'                ║"
+    echo "  ║    sudo systemctl set-default graphical.target                ║"
+    echo "  ║    sudo reboot                                               ║"
+    echo "  ╚══════════════════════════════════════════════════════════════╝"
+    echo ""
+    exit 1
   fi
   ok "GNOME desktop detected"
 
