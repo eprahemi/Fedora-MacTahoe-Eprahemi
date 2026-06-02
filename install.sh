@@ -187,6 +187,12 @@ install_rpm_packages() {
     ImageMagick fzf ripgrep jq unzip curl wget git \
     ffmpeg-free \
     libreoffice-writer libreoffice-calc libreoffice-impress
+
+  # Starship prompt (not in Fedora repos — install via official script)
+  if ! command -v starship &>/dev/null; then
+    curl -fsSL https://starship.rs/install.sh | sh -s -- -y 2>/dev/null || true
+  fi
+
   ok "RPM packages installed"
 }
 
