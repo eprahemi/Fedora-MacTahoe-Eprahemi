@@ -8,7 +8,8 @@ development environment — all in one portable bundle.
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/bootstrap.sh)"
 ```
 
-> **⚠️ Compatibility warning:** This installer is purpose-built for **Fedora Linux with the GNOME desktop environment**. It relies on Fedora-specific package managers (`dnf`, RPM Fusion), GNOME Shell extension APIs, and systemd integration points that are not present on other distributions or desktop environments. **It will not function correctly on Debian, Arch, Ubuntu, or any non-GNOME desktop.**
+> [!WARNING]
+> This installer is purpose-built for **Fedora Linux with the GNOME desktop environment**. It relies on Fedora-specific package managers (`dnf`, RPM Fusion), GNOME Shell extension APIs, and systemd integration points that are not present on other distributions or desktop environments. **It will not function correctly on Debian, Arch, Ubuntu, or any non-GNOME desktop.**
 
 ---
 
