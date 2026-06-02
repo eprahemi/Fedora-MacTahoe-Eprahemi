@@ -58,6 +58,13 @@ MinSize=16
 MaxSize=512
 Type=Scalable
 
+[actions/scalable]
+Size=64
+Context=Actions
+MinSize=16
+MaxSize=512
+Type=Scalable
+
 [animations/16]
 Size=16
 Context=Animations
@@ -305,6 +312,14 @@ MaxSize=256
 
 [actions@2x/symbolic]
 Size=16
+Scale=2
+Context=Actions
+MinSize=16
+MaxSize=512
+Type=Scalable
+
+[actions@2x/scalable]
+Size=64
 Scale=2
 Context=Actions
 MinSize=16
