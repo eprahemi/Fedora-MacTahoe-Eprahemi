@@ -30,26 +30,46 @@ next_step() {
 preflight() {
   next_step "Preflight checks"
 
+  # ── OS check ──
   if [ ! -f /etc/fedora-release ]; then
     fail "This script is designed for Fedora Linux only."
   fi
   ok "Fedora detected"
 
+  # ── Desktop environment check ──
+  local gnome_ok=false
+  if command -v gnome-shell &>/dev/null; then
+    gnome_ok=true
+  fi
+  # If a desktop session is running, double-check it's actually GNOME
+  if [ -n "${XDG_CURRENT_DESKTOP:-}" ]; then
+    if echo "$XDG_CURRENT_DESKTOP" | grep -qi "gnome"; then
+      gnome_ok=true
+    else
+      fail "GNOME desktop not detected (found: $XDG_CURRENT_DESKTOP). This script only supports Fedora Workstation (GNOME)."
+    fi
+  fi
+  if [ "$gnome_ok" = false ]; then
+    fail "This script requires the GNOME desktop environment (Fedora Workstation). Install it with: sudo dnf groupinstall 'Fedora Workstation'"
+  fi
+  ok "GNOME desktop detected"
+
+  # ── User check ──
   if [ "$EUID" -eq 0 ]; then
     fail "Do NOT run as root. Run as your normal user — sudo prompts will appear."
   fi
   ok "Running as normal user"
 
+  # ── Network check ──
   if ! ping -c1 -W2 google.com &>/dev/null && ! ping -c1 -W2 github.com &>/dev/null; then
     fail "No internet connection detected."
   fi
   ok "Internet connection"
 
+  # ── Sudo check ──
   if ! sudo -n true 2>/dev/null; then
     warn "You will be prompted for sudo password shortly."
   fi
-
-  # Ensure sudo works
   sudo echo "Sudo OK" >/dev/null || fail "Sudo required"
   ok "Sudo access granted"
 }
