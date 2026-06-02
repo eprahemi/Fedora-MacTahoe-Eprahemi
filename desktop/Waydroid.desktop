@@ -2,7 +2,7 @@
 Type=Application
 Name=Android
 Exec=waydroid
-Icon=distributor-logo-android
+Icon=waydroid
 Categories=X-WayDroid-App;Utility;
 Actions=stop;initialize;
 X-Purism-FormFactor=Workstation;Mobile;
