@@ -211,29 +211,42 @@ install_mactahoe_theme() {
   # ── Icon themes (always from bundle, never change) ─────────
 
   local theme_src="$BUNDLE/themes"
-  for icon in MacTahoe-Eprahemi MacTahoe-dark-Eprahemi; do
+
+  # Clean stale icon theme directories/symlinks from previous installs
+  for stale in MacTahoe MacTahoe-dark MacTahoe-light MacTahoe-Eprahemi MacTahoe-dark-Eprahemi; do
+    rm -rf "$HOME/.local/share/icons/$stale" 2>/dev/null || true
+  done
+
+  for icon in MacTahoe MacTahoe-dark; do
     mkdir -p "$HOME/.local/share/icons"
-    rm -rf "$HOME/.local/share/icons/$icon"
     cp -a "$theme_src/$icon" "$HOME/.local/share/icons/"
     gtk-update-icon-cache "$HOME/.local/share/icons/$icon/" 2>/dev/null || true
   done
 
-  ok "Icon themes installed (MacTahoe-Eprahemi + MacTahoe-dark-Eprahemi)"
+  ok "Icon themes installed (MacTahoe + MacTahoe-dark)"
 
-  # Custom macOS app icons (PNGs) — short names + Flatpak ID aliases
+  # Custom macOS app icons (SVG+PNG) — ALWAYS OVERRIDE on conflict
   local icon_src="$BUNDLE/icons/256x256"
-  if [ -d "$icon_src" ] && [ "$(ls -A "$icon_src"/*.png 2>/dev/null)" ]; then
+  if [ -d "$icon_src" ] && [ "$(ls -A "$icon_src"/*.png "$icon_src"/*.svg 2>/dev/null)" ]; then
     local targets=(
-      "$HOME/.local/share/icons/MacTahoe-dark-Eprahemi/apps/scalable"
-      "$HOME/.local/share/icons/MacTahoe-Eprahemi/apps/scalable"
+      "$HOME/.local/share/icons/MacTahoe-dark/apps/scalable"
+      "$HOME/.local/share/icons/MacTahoe/apps/scalable"
       "$HOME/.local/share/icons/hicolor/256x256/apps"
     )
     mkdir -p "${targets[@]}"
 
-    # Copy original short-name PNG into every target dir
+    # Copy SVGs first (preferred format for scalable)
+    for svg in "$icon_src"/*.svg; do
+      [ -f "$svg" ] || continue
+      f=$(basename "$svg")
+      for t in "${targets[@]}"; do cp -f "$svg" "$t/$f"; done
+    done
+
+    # Also copy PNGs as fallback for older apps
     for png in "$icon_src"/*.png; do
+      [ -f "$png" ] || continue
       f=$(basename "$png")
-      for t in "${targets[@]}"; do cp "$png" "$t/$f"; done
+      for t in "${targets[@]}"; do cp -f "$png" "$t/$f"; done
     done
 
     # Flatpak app IDs need their full reverse-DNS name to get themed
@@ -244,27 +257,41 @@ install_mactahoe_theme() {
       [vlc.png]="org.videolan.VLC.png"
       [code.png]="com.visualstudio.code.png"
     )
+    # SVG aliases
+    for svg in "$icon_src"/*.svg; do
+      [ -f "$svg" ] || continue
+      local base; base=$(basename "$svg")
+      local base_noext="${base%.svg}"
+      local alias_svg="${fp_aliases[${base_noext}.png]:-}"
+      [ -z "$alias_svg" ] && continue
+      local alias_svg_name="${alias_svg%.png}.svg"
+      for t in "${targets[@]}"; do cp -f "$svg" "$t/$alias_svg_name"; done
+    done
+    # PNG aliases
     for png in "$icon_src"/*.png; do
+      [ -f "$png" ] || continue
       local base; base=$(basename "$png")
-      local alias="${fp_aliases[$base]:-}"
-      [ -z "$alias" ] && continue
-      for t in "${targets[@]}"; do cp "$png" "$t/$alias"; done
+      local alias_png="${fp_aliases[$base]:-}"
+      [ -z "$alias_png" ] && continue
+      for t in "${targets[@]}"; do cp -f "$png" "$t/$alias_png"; done
     done
 
-    # Trim padding + resize to 256×256
+    # Trim padding + resize to 256×256 (PNGs only — SVGs are already correct)
     for t in "${targets[@]}"; do
       for png in "$t"/*.png; do
+        [ -f "$png" ] || continue
         magick "$png" -trim +repage -resize 256x256 -gravity center -background transparent -extent 256x256 "$png" 2>/dev/null || \
         convert "$png" -trim +repage -resize 256x256 -gravity center -background transparent -extent 256x256 "$png"
       done
     done
 
-    gtk-update-icon-cache "$HOME/.local/share/icons/MacTahoe-dark-Eprahemi/" 2>/dev/null || true
-    gtk-update-icon-cache "$HOME/.local/share/icons/MacTahoe-Eprahemi/" 2>/dev/null || true
+    # ALWAYS rebuild icon cache last (ensures custom icons override any conflicts)
+    gtk-update-icon-cache "$HOME/.local/share/icons/MacTahoe-dark/" 2>/dev/null || true
+    gtk-update-icon-cache "$HOME/.local/share/icons/MacTahoe/" 2>/dev/null || true
     if [ -f "$HOME/.local/share/icons/hicolor/index.theme" ]; then
       gtk-update-icon-cache "$HOME/.local/share/icons/hicolor/" 2>/dev/null || true
     fi
-    ok "Custom macOS app icons installed ($(ls "$icon_src"/*.png 2>/dev/null | wc -l) icons)"
+    ok "Custom macOS app icons installed ($(ls "$icon_src"/*.png 2>/dev/null | wc -l) PNGs + $(ls "$icon_src"/*.svg 2>/dev/null | wc -l) SVGs)"
   fi
 }
 
@@ -358,8 +385,8 @@ apply_dconf() {
 
   # ── Theme ──
   gsettings set org.gnome.desktop.interface gtk-theme "MacTahoe-Dark" 2>/dev/null || true
-  gsettings set org.gnome.desktop.interface icon-theme "MacTahoe-dark-Eprahemi" 2>/dev/null || true
-  gsettings set org.gnome.desktop.interface cursor-theme "MacTahoe-dark-Eprahemi" 2>/dev/null || true
+  gsettings set org.gnome.desktop.interface icon-theme "MacTahoe-dark" 2>/dev/null || true
+  gsettings set org.gnome.desktop.interface cursor-theme "MacTahoe-dark" 2>/dev/null || true
   dconf write /org/gnome/shell/extensions/user-theme/name "'MacTahoe-Dark'" 2>/dev/null || true
   gsettings set org.gnome.desktop.wm.preferences theme "MacTahoe-Dark" 2>/dev/null || true
 
