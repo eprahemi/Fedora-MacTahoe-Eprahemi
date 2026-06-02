@@ -200,10 +200,13 @@ install_browsers() {
 
   # Chrome
   if ! rpm -q google-chrome-stable &>/dev/null; then
-    sudo dnf install -y fedora-workstation-repositories
-    sudo dnf config-manager --set-enabled google-chrome 2>/dev/null || true
-    sudo dnf install -y google-chrome-stable --nogpgcheck 2>/dev/null || \
-    sudo dnf install -y google-chrome-stable
+    sudo dnf install -y fedora-workstation-repositories 2>/dev/null || true
+    # Fedora 41+ dropped the Chrome repo from fedora-workstation-repositories
+    # Use Google's official RPM repo directly
+    sudo rpm --import https://dl.google.com/linux/linux_signing_key.pub 2>/dev/null || true
+    sudo dnf config-manager addrepo --from-repofile="https://dl.google.com/linux/chrome/rpm/stable/x86_64" 2>/dev/null || true
+    sudo dnf install -y google-chrome-stable 2>/dev/null || \
+    sudo dnf install -y https://dl.google.com/linux/direct/google-chrome-stable_current_x86_64.rpm
   fi
 
   # Edge
