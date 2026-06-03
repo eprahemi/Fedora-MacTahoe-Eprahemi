@@ -918,11 +918,48 @@ install_extensions() {
 finalize() {
   next_step "Cleanup & Reboot"
 
-  # Clean every temporary file and cache this script created
+  # ── 1. Temporary files from this installer ──
+  log "Cleaning installer temporary files..."
   rm -rf /tmp/mactahoe-* /tmp/mac-sounds /tmp/ext-* 2>/dev/null || true
+  rm -f /tmp/*.rpm 2>/dev/null || true
+
+  # ── 2. Flatpak theme build cache ──
+  log "Cleaning Flatpak theme build cache..."
   rm -rf "$HOME/.cache/pakitheme" 2>/dev/null || true
-  rm -rf "$HOME/.cache/thumbnails/" 2>/dev/null || true
+
+  # ── 3. Thumbnail cache ──
+  log "Cleaning thumbnail cache..."
+  rm -rf "$HOME/.cache/thumbnails/"* 2>/dev/null || true
+
+  # ── 4. Fontconfig cache (safe — rebuilds on next font render) ──
+  log "Cleaning fontconfig cache..."
+  rm -rf "$HOME/.cache/fontconfig/"* 2>/dev/null || true
+
+  # ── 5. Mesa shader cache (safe — rebuilds on next GL/Vulkan app) ──
+  log "Cleaning Mesa shader cache..."
+  rm -rf "$HOME/.cache/mesa_shader_cache/"* 2>/dev/null || true
+
+  # ── 6. DNF metadata cache ──
+  log "Cleaning DNF metadata cache..."
   sudo dnf clean all 2>/dev/null || true
+
+  # ── 7. Unused Flatpak runtimes ──
+  log "Removing unused Flatpak runtimes..."
+  flatpak uninstall --unused -y 2>/dev/null || true
+
+  # ── 8. Orphaned RPM packages (dependencies no longer needed) ──
+  log "Removing orphaned RPM packages..."
+  sudo dnf autoremove -y 2>/dev/null || true
+
+  # ── 9. Old system journal logs (keep last 3 days) ──
+  log "Trimming old system logs (keeping 3 days)..."
+  sudo journalctl --vacuum-time=3d 2>/dev/null || true
+
+  # ── 10. Trash ──
+  log "Emptying trash..."
+  find "$HOME/.local/share/Trash" -mindepth 1 -delete 2>/dev/null || true
+
+  ok "System cleaned and polished"
 
   echo ""
   echo -e "${GREEN}══════════════════════════════════════════════════${NC}"
