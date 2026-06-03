@@ -254,6 +254,48 @@ preflight() {
   ok "Sudo access granted"
 }
 
+# ── PTYXIS REMOVAL ───────────────────────────────────────────
+
+remove_ptyxis() {
+  next_step "Remove Ptyxis (system terminal)"
+
+  if rpm -q ptyxis &>/dev/null; then
+    log "Removing Ptyxis package..."
+    sudo dnf remove -y ptyxis 2>&1 | tail -1 || true
+    ok "Ptyxis package removed"
+  else
+    ok "Ptyxis not installed — nothing to remove"
+  fi
+
+  # User config
+  rm -rf "$HOME/.config/org.gnome.Ptyxis" 2>/dev/null || true
+  # User data (palettes, sessions)
+  rm -rf "$HOME/.local/share/org.gnome.Ptyxis" 2>/dev/null || true
+  # GNOME Software cache icons
+  find "$HOME/.cache/gnome-software" -name "*ptyxi*" -delete 2>/dev/null || true
+  # Dconf profiles and settings
+  dconf reset -f /org/gnome/Ptyxis/ 2>/dev/null || true
+  # Desktop entry
+  sudo rm -f /usr/share/applications/org.gnome.Ptyxis.desktop 2>/dev/null || true
+  sudo rm -f /usr/share/applications/org.gnome.Console.desktop 2>/dev/null || true
+  # MacTahoe theme icon for Ptyxis
+  find "$HOME/.local/share/icons" -path "*MacTahoe*ptyxis*" -delete 2>/dev/null || true
+  # Symlinks that may point to Ptyxis
+  sudo rm -f /usr/bin/gnome-terminal 2>/dev/null || true
+  sudo rm -f /usr/bin/x-terminal-emulator 2>/dev/null || true
+
+  # Verify no traces remain
+  local leftover_config leftover_data leftover_dconf
+  leftover_config=$(find "$HOME/.config" -maxdepth 1 -name "*Ptyxis*" 2>/dev/null)
+  leftover_data=$(find "$HOME/.local/share" -maxdepth 1 -name "*Ptyxis*" 2>/dev/null)
+  leftover_dconf=$(dconf dump /org/gnome/Ptyxis/ 2>/dev/null)
+  if [ -z "$leftover_config" ] && [ -z "$leftover_data" ] && [ -z "$leftover_dconf" ]; then
+    ok "All Ptyxis traces cleaned"
+  else
+    warn "Some Ptyxis traces may remain — manual check recommended"
+  fi
+}
+
 # ── PHASE 1: SYSTEM FOUNDATIONS ──────────────────────────────
 
 install_rpmfusion() {
@@ -915,12 +957,10 @@ install_sounds() {
 setup_terminal() {
   next_step "Kitty as Default Terminal"
 
-  sudo dnf remove -y ptyxis 2>/dev/null || true
+  # Ptyxis already removed earlier in remove_ptyxis()
   sudo ln -sf /usr/bin/kitty /usr/bin/gnome-terminal 2>/dev/null || true
   sudo ln -sf /usr/bin/kitty /usr/bin/x-terminal-emulator 2>/dev/null || true
   gsettings set org.gnome.desktop.default-applications.terminal exec 'kitty' 2>/dev/null || true
-  sudo rm -f /usr/share/applications/org.gnome.Ptyxis.desktop
-  sudo rm -f /usr/share/applications/org.gnome.Console.desktop
 
   # Copy desktop entry with Name=Terminal (from repo, fallback to system)
   mkdir -p "$HOME/.local/share/applications"
@@ -1109,6 +1149,8 @@ echo -e "  ${CYAN}╚═══════════════════�
 echo ""
 
 preflight
+
+remove_ptyxis
 
 phase_divider "PHASE 1 : SYSTEM FOUNDATIONS"
 install_rpmfusion
