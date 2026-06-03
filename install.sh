@@ -415,6 +415,14 @@ install_font() {
 apply_desktop_entries() {
   next_step "Custom Desktop Entries (App Renames)"
 
+  # Clean up any leftover nautilus-maximized references (wrapper was removed)
+  if [ -f "$HOME/.local/share/applications/org.gnome.Nautilus.desktop" ]; then
+    if grep -q "nautilus-maximized" "$HOME/.local/share/applications/org.gnome.Nautilus.desktop" 2>/dev/null; then
+      rm -f "$HOME/.local/share/applications/org.gnome.Nautilus.desktop"
+      ok "Nautilus desktop entry cleaned (was referencing deleted wrapper)"
+    fi
+  fi
+
   local desktop_src="$BUNDLE/desktop"
   if [ -d "$desktop_src" ] && [ "$(ls -A "$desktop_src" 2>/dev/null)" ]; then
     mkdir -p "$HOME/.local/share/applications"
