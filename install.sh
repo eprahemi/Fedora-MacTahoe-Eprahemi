@@ -48,13 +48,22 @@ preflight() {
 
   # ── Terminal check (must be running in Kitty) ──
   if [ -z "${KITTY_PID:-}" ]; then
-    # Walk up the process tree to find the terminal emulator
-    local term_pid term_comm
-    term_pid=$(cat /proc/$PPID/status 2>/dev/null | awk '/^PPid:/{print $2}')
-    term_comm=$(cat /proc/"$term_pid"/comm 2>/dev/null || echo "unknown")
+    # Walk up the process tree until we find a known terminal emulator
+    local detected_term="" walk_pid=$PPID
+    while [ "$walk_pid" -gt 1 ] 2>/dev/null; do
+      local comm
+      comm=$(cat /proc/"$walk_pid"/comm 2>/dev/null || echo "")
+      case "$comm" in
+        ptyxis|gnome-ptyxis|kgx|gnome-terminal-|kitty|alacritty|wezterm|foot|urxvt|st|xterm)
+          detected_term=$comm
+          break
+          ;;
+      esac
+      walk_pid=$(cat /proc/"$walk_pid"/status 2>/dev/null | awk '/^PPid:/{print $2}')
+    done
 
     # Block Ptyxis (it gets removed during installation)
-    if [ "$term_comm" = "ptyxis" ] || [ "$term_comm" = "gnome-ptyxis" ]; then
+    if [ "$detected_term" = "ptyxis" ] || [ "$detected_term" = "gnome-ptyxis" ]; then
       echo ""
       echo "  ╔══════════════════════════════════════════════════════════════╗"
       echo "  ║           UNSUPPORTED TERMINAL DETECTED                     ║"
