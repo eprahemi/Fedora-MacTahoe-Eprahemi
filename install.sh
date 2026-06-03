@@ -30,6 +30,13 @@ next_step() {
 preflight() {
   next_step "Preflight checks"
 
+  # ── Terminal check (must be running in Kitty) ──
+  if [ -z "${KITTY_PID:-}" ]; then
+    warn "You are not using Kitty terminal."
+    warn "Kitty is highly recommended for the best experience."
+    warn "Continuing anyway..."
+  fi
+
   # ── OS check ──
   local detected_os="Unknown Linux"
   if [ -f /etc/os-release ]; then
@@ -806,35 +813,12 @@ setup_terminal() {
   sudo rm -f /usr/share/applications/org.gnome.Ptyxis.desktop
   sudo rm -f /usr/share/applications/org.gnome.Console.desktop
 
-  # Ensure wtype is available for keyboard simulation on Wayland
-  sudo dnf install -y wtype 2>/dev/null || true
-
-  # Create wrapper script that forces Kitty to ALWAYS open maximized
-  sudo tee /usr/local/bin/kitty-maximized >/dev/null <<'WRAPPER'
-#!/bin/bash
-/usr/bin/kitty "$@" &
-KITTY_PID=$!
-
-# Retry maximize up to 10 times (0.3s intervals = 3s total) — handles slow startups
-for i in $(seq 1 10); do
-  sleep 0.3
-  busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval s \
-    "global.get_window_actors().filter(a => a.meta_window && a.meta_window.get_wm_class()?.toLowerCase() === 'kitty').forEach(a => a.meta_window.maximize(3))" \
-    2>/dev/null && break
-done 2>/dev/null || true
-
-wait $KITTY_PID
-WRAPPER
-  sudo chmod +x /usr/local/bin/kitty-maximized
-
-  # Override desktop entry to use the maximized wrapper (use repo file for Name=Terminal)
+  # Copy desktop entry with Name=Terminal (from repo, fallback to system)
   mkdir -p "$HOME/.local/share/applications"
   cp "$BUNDLE/desktop/kitty.desktop" "$HOME/.local/share/applications/kitty.desktop" 2>/dev/null || \
     cp /usr/share/applications/kitty.desktop "$HOME/.local/share/applications/kitty.desktop" 2>/dev/null
-  sed -i 's|^Exec=kitty|Exec=/usr/local/bin/kitty-maximized|' "$HOME/.local/share/applications/kitty.desktop" 2>/dev/null
-  sed -i 's|^TryExec=kitty|TryExec=/usr/local/bin/kitty-maximized|' "$HOME/.local/share/applications/kitty.desktop" 2>/dev/null
 
-  ok "Kitty is now the default terminal (opens maximized)"
+  ok "Kitty is now the default terminal"
 }
 
 setup_shell() {
