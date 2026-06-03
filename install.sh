@@ -32,6 +32,29 @@ preflight() {
 
   # ── Terminal check (must be running in Kitty) ──
   if [ -z "${KITTY_PID:-}" ]; then
+    # Walk up the process tree to find the terminal emulator
+    local term_pid term_comm
+    term_pid=$(cat /proc/$PPID/status 2>/dev/null | awk '/^PPid:/{print $2}')
+    term_comm=$(cat /proc/"$term_pid"/comm 2>/dev/null || echo "unknown")
+
+    # Block Ptyxis (it gets removed during installation)
+    if [ "$term_comm" = "ptyxis" ] || [ "$term_comm" = "gnome-ptyxis" ]; then
+      echo ""
+      echo "  ╔══════════════════════════════════════════════════════════════╗"
+      echo "  ║           UNSUPPORTED TERMINAL DETECTED                     ║"
+      echo "  ╠══════════════════════════════════════════════════════════════╣"
+      echo "  ║  You are running inside Ptyxis, which this script will      ║"
+      echo "  ║  remove during installation. Running the installer from      ║"
+      echo "  ║  inside a terminal that gets uninstalled will crash your    ║"
+      echo "  ║  session.                                                   ║"
+      echo "  ║                                                              ║"
+      echo "  ║  Please switch to Kitty terminal and re-run:                 ║"
+      echo "  ║    bash install.sh                                           ║"
+      echo "  ╚══════════════════════════════════════════════════════════════╝"
+      echo ""
+      exit 1
+    fi
+
     warn "You are not using Kitty terminal."
     warn "Kitty is highly recommended for the best experience."
     warn "Continuing anyway..."
