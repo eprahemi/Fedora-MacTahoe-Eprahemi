@@ -11,10 +11,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUNDLE="$SCRIPT_DIR"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
-log()  { echo -e "${CYAN}[$(date +%H:%M:%S)]${NC} $1"; }
-ok()   { echo -e "  ${GREEN}✓${NC} $1"; }
-warn() { echo -e "  ${YELLOW}⚠${NC} $1"; }
-fail() { echo -e "  ${RED}✗${NC} $1"; exit 1; }
+BOLD='\033[1m'; WHITE='\033[1;37m'; DIM='\033[2m'
+
+log()   { echo -e "  ${CYAN}${DIM}┊${NC} ${CYAN}$(date +%H:%M:%S)${NC} ${DIM}┊${NC} $1"; }
+ok()    { echo -e "  ${GREEN}✓${NC} $1"; }
+warn()  { echo -e "  ${YELLOW}⚠${NC} $1"; }
+fail()  { echo -e "  ${RED}✗${NC} $1"; exit 1; }
 
 TOTAL_STEPS=21
 STEP=0
@@ -22,7 +24,21 @@ STEP=0
 next_step() {
   STEP=$((STEP + 1))
   echo ""
-  echo -e "${YELLOW}[${STEP}/${TOTAL_STEPS}]${NC} $1"
+  echo -e "  ${CYAN}◆${NC}  ${YELLOW}${BOLD}Step ${STEP}/${TOTAL_STEPS}${NC}  ${WHITE}${BOLD}$1${NC}"
+  echo -e "  ${DIM}───────────────────────────────────────────────────────────${NC}"
+}
+
+phase_divider() {
+  echo ""
+  echo -e "  ${DIM}╭─${NC} ${CYAN}$1${NC} ${DIM}${NC}"
+  echo -e "  ${DIM}├──────────────────────────────────────────────────────────${NC}"
+}
+
+banner() {
+  echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}${WHITE}$1${NC}"
+  echo -e "  ${CYAN}║${NC}  ${DIM}$2${NC}"
+  echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
 }
 
 # ── PREFLIGHT ────────────────────────────────────────────────
@@ -979,26 +995,26 @@ finalize() {
   ok "System cleaned and polished"
 
   echo ""
-  echo -e "${GREEN}══════════════════════════════════════════════════${NC}"
-  echo -e "${GREEN}  Fedora MacTahoe — Eprahemi Edition              ${NC}"
-  echo -e "${GREEN}  Setup complete!                                  ${NC}"
-  echo -e "${GREEN}══════════════════════════════════════════════════${NC}"
-  echo ""
-  echo "  ${YELLOW}⚠ Recommended: Reboot now to apply all changes${NC}"
-  echo ""
-  echo "  After reboot:"
-  echo "    - All themes, icons, fonts will be active"
-  echo "    - Kitty will be the default terminal"
-  echo "    - Fish will be the default shell (after logout)"
-  echo "    - All custom keybindings will work"
-  echo "    - macOS Big Sur sounds will play"
+  echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+  echo -e "  ${CYAN}║${NC}  ${GREEN}${BOLD}✓  INSTALLATION COMPLETE  ✓${NC}                            ${CYAN}║${NC}"
+  echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}${WHITE}Fedora MacTahoe  ◆  Eprahemi Edition${NC}                       ${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}                                                             ${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${YELLOW}◆${NC}  All themes, icons, fonts are active                   ${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${YELLOW}◆${NC}  Kitty is the default terminal                          ${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${YELLOW}◆${NC}  Fish will be the default shell (after logout)          ${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${YELLOW}◆${NC}  All custom keybindings are active                      ${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${YELLOW}◆${NC}  macOS Big Sur sounds will play                         ${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${YELLOW}◆${NC}  GDM login screen themed                                ${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${YELLOW}◆${NC}  Flatpak GTK runtime installed                          ${CYAN}║${NC}"
   if [ "${FIREFOX_THEME_FAILED:-0}" = 1 ]; then
-    echo "  ${YELLOW}⚠ Firefox not themed — log into your user, launch Firefox once,${NC}"
-    echo "  ${YELLOW}  then re-run: bash install.sh (skips completed steps)${NC}"
+    echo -e "  ${CYAN}║${NC}                                                             ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}  ${YELLOW}⚠${NC}  Firefox not themed — log in, launch Firefox once,        ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}  ${YELLOW}⚠${NC}  then re-run: bash install.sh (skips done steps)        ${CYAN}║${NC}"
   fi
-  echo ""
-  echo "  - GDM login screen themed (custom wallpaper + GTK theme + icons)"
-  echo "  - Flatpak GTK runtime installed (org.gtk.Gtk3theme.MacTahoe-Dark)"
+  echo -e "  ${CYAN}║${NC}                                                             ${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}${YELLOW}⚠  Recommended: Reboot now to apply all changes${NC}          ${CYAN}║${NC}"
+  echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
   echo ""
 
   read -rp "Reboot now? [y/N] " reply
@@ -1014,21 +1030,34 @@ finalize() {
 # ─────────────────────────────────────────────────────────────
 
 echo ""
-echo -e "${GREEN}══════════════════════════════════════════════════${NC}"
-echo -e "${GREEN}   Fedora MacTahoe — Eprahemi Edition             ${NC}"
-echo -e "${GREEN}   Compiles theme for your GNOME version            ${NC}"
-echo -e "${GREEN}   Automated Installer                            ${NC}"
-echo -e "${GREEN}══════════════════════════════════════════════════${NC}"
+echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+echo -e "  ${CYAN}║${NC}  ${BOLD}${WHITE}Fedora MacTahoe  ◆  Eprahemi Edition${NC}                        ${CYAN}║${NC}"
+echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+echo -e "  ${CYAN}║${NC}  ◆  Automated Installer                                   ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ◆  Compiles theme for your GNOME ${BOLD}$(gnome-shell --version 2>/dev/null | grep -oP '\d+\.\d+')${NC}                ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ◆  ${DIM}Sets up Kitty, Fish, icons, fonts, sounds${NC}                    ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ◆  ${DIM}macOS desktop transformation${NC}                                 ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}                                                             ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ${YELLOW}Press Ctrl+C at any time to cancel${NC}                           ${CYAN}║${NC}"
+echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
 preflight
+
+phase_divider "PHASE 1 : SYSTEM FOUNDATIONS"
 install_rpmfusion
 install_nvidia
+
+phase_divider "PHASE 2 : PACKAGES"
 install_rpm_packages
 install_browsers
 install_flatpaks
+
+phase_divider "PHASE 3 : THEMES"
 install_mactahoe_theme
 install_font
+
+phase_divider "PHASE 4 : CONFIGURATION"
 install_extensions
 apply_desktop_entries
 apply_configs
@@ -1038,6 +1067,10 @@ setup_gdm
 setup_firefox_theme
 setup_flatpak_theme
 install_sounds
+
+phase_divider "PHASE 5 : TERMINAL & SHELL"
 setup_terminal
 setup_shell
+
+phase_divider "PHASE 6 : FINALIZE"
 finalize
