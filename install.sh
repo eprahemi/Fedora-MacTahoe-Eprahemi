@@ -955,10 +955,6 @@ finalize() {
   log "Trimming old system logs (keeping 3 days)..."
   sudo journalctl --vacuum-time=3d 2>/dev/null || true
 
-  # ── 10. Trash ──
-  log "Emptying trash..."
-  find "$HOME/.local/share/Trash" -mindepth 1 -delete 2>/dev/null || true
-
   ok "System cleaned and polished"
 
   echo ""
