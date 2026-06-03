@@ -56,9 +56,21 @@ preflight() {
       exit 1
     fi
 
-    warn "You are not using Kitty terminal."
-    warn "Kitty is highly recommended for the best experience."
-    warn "Continuing anyway..."
+    echo ""
+    echo "  ┌─────────────────────────────────────────────────────────────┐"
+    echo "  │  ✦  PREMIUM TERMINAL RECOMMENDED  ✦                       │"
+    echo "  ├─────────────────────────────────────────────────────────────┤"
+    echo "  │  You're running in a standard terminal emulator.           │"
+    echo "  │  The MacTahoe experience is built for Kitty — with native  │"
+    echo "  │  true-color, GPU-accelerated rendering, and glass-blur     │"
+    echo "  │  integration that matches the macOS aesthetic.             │"
+    echo "  │                                                             │"
+    echo "  │  Install Kitty for the full experience:                    │"
+    echo "  │    sudo dnf install kitty                                  │"
+    echo "  │                                                             │"
+    echo "  │  → Continuing with current terminal (limited visuals)      │"
+    echo "  └─────────────────────────────────────────────────────────────┘"
+    echo ""
   fi
 
   # ── OS check ──
