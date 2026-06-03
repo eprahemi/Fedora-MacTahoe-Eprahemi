@@ -101,19 +101,20 @@ preflight() {
     echo "  │    sudo dnf install kitty                                   │"
     echo "  │    kitty -e bash install.sh                                 │"
     echo "  │                                                             │"
-    echo "  │  Press SPACE twice to continue with current terminal        │"
+    echo "  │  Press SPACE to acknowledge and continue                      │"
     echo "  │  or press Ctrl+C to cancel and switch to Kitty first.       │"
     echo "  └─────────────────────────────────────────────────────────────┘"
     echo ""
-    # Wait for two space-bar presses (silent, any key accepted)
-    for _ in 1 2; do
-      while true; do
-        read -r -s -n 1 key
-        if [ "$key" = " " ]; then
-          echo -n "."
-          break
-        fi
-      done
+    # First space: acknowledge the warning
+    while true; do
+      read -r -s -n 1 key
+      if [ "$key" = " " ]; then break; fi
+    done
+    # Second space: confirm you really want to proceed
+    echo -n "  ── Are you sure you want to continue without Kitty? [SPACE] ──"
+    while true; do
+      read -r -s -n 1 key
+      if [ "$key" = " " ]; then break; fi
     done
     echo ""
   fi
