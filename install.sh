@@ -93,8 +93,20 @@ preflight() {
     echo "  │  Install Kitty for the full experience:                    │"
     echo "  │    sudo dnf install kitty                                  │"
     echo "  │                                                             │"
-    echo "  │  → Continuing with current terminal (limited visuals)      │"
+    echo "  │  Press SPACE twice to continue with current terminal        │"
+    echo "  │  (or Ctrl+C to cancel and install Kitty first)              │"
     echo "  └─────────────────────────────────────────────────────────────┘"
+    echo ""
+    # Wait for two space-bar presses (silent, any key accepted)
+    for _ in 1 2; do
+      while true; do
+        read -r -s -n 1 key
+        if [ "$key" = " " ]; then
+          echo -n "."
+          break
+        fi
+      done
+    done
     echo ""
   fi
 
