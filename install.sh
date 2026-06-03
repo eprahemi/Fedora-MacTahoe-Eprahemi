@@ -49,9 +49,8 @@ preflight() {
   # ── Terminal check (must be running in Kitty) ──
   if [ -z "${KITTY_PID:-}" ]; then
     # Walk up the process tree until we find a known terminal emulator
-    local detected_term="" walk_pid=$PPID
+    local detected_term="" walk_pid=$PPID comm
     while [ "$walk_pid" -gt 1 ] 2>/dev/null; do
-      local comm
       comm=$(cat /proc/"$walk_pid"/comm 2>/dev/null || echo "")
       case "$comm" in
         ptyxis|gnome-ptyxis|kgx|gnome-terminal-|kitty|alacritty|wezterm|foot|urxvt|st|xterm)
@@ -65,18 +64,33 @@ preflight() {
     # Block Ptyxis (it gets removed during installation)
     if [ "$detected_term" = "ptyxis" ] || [ "$detected_term" = "gnome-ptyxis" ]; then
       echo ""
-      echo "  ╔══════════════════════════════════════════════════════════════╗"
-      echo "  ║           UNSUPPORTED TERMINAL DETECTED                     ║"
-      echo "  ╠══════════════════════════════════════════════════════════════╣"
-      echo "  ║  You are running inside Ptyxis, which this script will      ║"
-      echo "  ║  remove during installation. Running the installer from      ║"
-      echo "  ║  inside a terminal that gets uninstalled will crash your    ║"
-      echo "  ║  session.                                                   ║"
-      echo "  ║                                                              ║"
-      echo "  ║  Install Kitty first, then re-run:                            ║"
-      echo "  ║    sudo dnf install kitty                                     ║"
-      echo "  ║    kitty -e bash install.sh                                   ║"
-      echo "  ╚══════════════════════════════════════════════════════════════╝"
+      echo -e "  ╔══════════════════════════════════════════════════════════════╗"
+      echo -e "  ║            ⛔  UNSUPPORTED TERMINAL DETECTED                  ║"
+      echo -e "  ╠══════════════════════════════════════════════════════════════╣"
+      echo -e "  ║                                                              ║"
+      echo -e "  ║  You are currently running inside ${BOLD}Ptyxis${NC}, the default          ║"
+      echo -e "  ║  Fedora terminal emulator. This installer is designed to      ║"
+      echo -e "  ║  completely replace Ptyxis with Kitty as the system terminal  ║"
+      echo -e "  ║  and will ${BOLD}${RED}remove${NC} Ptyxis during the installation process.         ║"
+      echo -e "  ║                                                              ║"
+      echo -e "  ║  ${YELLOW}╳${NC}  Running the installer from inside Ptyxis would:            ║"
+      echo -e "  ║     • Uninstall the terminal you are currently using          ║"
+      echo -e "  ║     • Crash the installation process mid-way                  ║"
+      echo -e "  ║     • Potentially corrupt your session or lose unsaved work  ║"
+      echo -e "  ║                                                              ║"
+      echo -e "  ║  ${GREEN}✓${NC}  To proceed with the installation:                          ║"
+      echo -e "  ║                                                              ║"
+      echo -e "  ║  ${BOLD}Step 1${NC}  Install Kitty terminal:                                 ║"
+      echo -e "  ║       sudo dnf install kitty                                 ║"
+      echo -e "  ║                                                              ║"
+      echo -e "  ║  ${BOLD}Step 2${NC}  Launch Kitty and re-run the installer:                   ║"
+      echo -e "  ║       kitty -e bash install.sh                               ║"
+      echo -e "  ║                                                              ║"
+      echo -e "  ║  ${YELLOW}Note:${NC} You can keep Ptyxis as a secondary terminal if you wish,   ║"
+      echo -e "  ║  but Kitty is required as the primary terminal for the       ║"
+      echo -e "  ║  MacTahoe experience to function correctly.                  ║"
+      echo -e "  ║                                                              ║"
+      echo -e "  ╚══════════════════════════════════════════════════════════════╝"
       echo ""
       exit 1
     fi
@@ -111,12 +125,25 @@ preflight() {
       if [ "$key" = " " ]; then break; fi
     done
     # Second space: confirm you really want to proceed
-    echo -n "  ── Are you sure you want to continue without Kitty? [SPACE] ──"
+    echo ""
+    echo -e "  ┌─────────────────────────────────────────────────────────────┐"
+    echo -e "  │  ${BOLD}${YELLOW}⚠  Confirm Installation Without Kitty${NC}                        │"
+    echo -e "  ├─────────────────────────────────────────────────────────────┤"
+    echo -e "  │  You are about to proceed without the recommended terminal. │"
+    echo -e "  │  Some visual features may not render as intended, and the   │"
+    echo -e "  │  overall experience may differ from the MacTahoe design.    │"
+    echo -e "  │                                                             │"
+    echo -e "  │  Press ${BOLD}SPACE${NC} to confirm and continue                              │"
+    echo -e "  │  Press ${BOLD}Ctrl+C${NC} to cancel and install Kitty first                     │"
+    echo -e "  └─────────────────────────────────────────────────────────────┘"
+    echo -n "  ${DIM}Waiting for confirmation...${NC} "
     while true; do
       read -r -s -n 1 key
-      if [ "$key" = " " ]; then break; fi
+      if [ "$key" = " " ]; then
+        echo -e "${GREEN}confirmed${NC}"
+        break
+      fi
     done
-    echo ""
   fi
 
   # ── OS check ──
