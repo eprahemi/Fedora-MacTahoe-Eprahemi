@@ -48,8 +48,9 @@ preflight() {
       echo "  ║  inside a terminal that gets uninstalled will crash your    ║"
       echo "  ║  session.                                                   ║"
       echo "  ║                                                              ║"
-      echo "  ║  Please switch to Kitty terminal and re-run:                 ║"
-      echo "  ║    bash install.sh                                           ║"
+      echo "  ║  Install Kitty first, then re-run:                            ║"
+      echo "  ║    sudo dnf install kitty                                     ║"
+      echo "  ║    kitty -e bash install.sh                                   ║"
       echo "  ╚══════════════════════════════════════════════════════════════╝"
       echo ""
       exit 1
