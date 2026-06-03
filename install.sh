@@ -514,9 +514,9 @@ apply_dconf() {
   gsettings set org.gnome.desktop.interface show-battery-percentage false 2>/dev/null || true
   gsettings set org.gnome.desktop.interface enable-animations true 2>/dev/null || true
 
-  # ── Window buttons + double-click behavior ──
+  # ── Window buttons (no double-click toggle) ──
   gsettings set org.gnome.desktop.wm.preferences button-layout "close,minimize,maximize:appmenu" 2>/dev/null || true
-  gsettings set org.gnome.desktop.wm.preferences action-double-click-titlebar "'toggle-maximize'" 2>/dev/null || true
+  gsettings set org.gnome.desktop.wm.preferences action-double-click-titlebar "'none'" 2>/dev/null || true
 
   # ── Peripherals ──
   gsettings set org.gnome.desktop.peripherals.touchpad tap-to-click true 2>/dev/null || true
