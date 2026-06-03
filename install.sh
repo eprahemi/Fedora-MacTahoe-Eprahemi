@@ -827,9 +827,10 @@ wait $KITTY_PID
 WRAPPER
   sudo chmod +x /usr/local/bin/kitty-maximized
 
-  # Override desktop entry to use the maximized wrapper
+  # Override desktop entry to use the maximized wrapper (use repo file for Name=Terminal)
   mkdir -p "$HOME/.local/share/applications"
-  cp /usr/share/applications/kitty.desktop "$HOME/.local/share/applications/kitty.desktop" 2>/dev/null
+  cp "$BUNDLE/desktop/kitty.desktop" "$HOME/.local/share/applications/kitty.desktop" 2>/dev/null || \
+    cp /usr/share/applications/kitty.desktop "$HOME/.local/share/applications/kitty.desktop" 2>/dev/null
   sed -i 's|^Exec=kitty|Exec=/usr/local/bin/kitty-maximized|' "$HOME/.local/share/applications/kitty.desktop" 2>/dev/null
   sed -i 's|^TryExec=kitty|TryExec=/usr/local/bin/kitty-maximized|' "$HOME/.local/share/applications/kitty.desktop" 2>/dev/null
 
