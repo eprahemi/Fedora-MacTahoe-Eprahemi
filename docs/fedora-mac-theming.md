@@ -223,7 +223,7 @@
 | 15 | 🦊 Firefox | `killall firefox; ./tweaks.sh -f` | Warn → manual | ✅ |
 | 16 | 📦 Flatpak Runtime | `ostree init → build → bundle → install` | Skip if exists | ✅ |
 | 17 | 🔊 Sounds | `cp -r sounds/ ~/.local/share/sounds/` | Clone from git | ✅ |
-| 18 | 🖥️ Kitty Max'd | D-Bus wrapper → `/usr/local/bin/kitty-maximized` | wtype fallback | ✅ |
+| 18 | 🖥️ Kitty Desktop   | `Name=Terminal` entry, `hide_window_decorations yes` | Simplified — no wrapper | ✅ |
 | 19 | 📁 Nautilus Max'd | D-Bus wrapper → `/usr/local/bin/nautilus-maximized` | wtype fallback | ✅ |
 | 20 | 🐟 Fish Default | `chsh -s $(which fish)` | Skip if fish | ✅ |
 | 21 | 🧹 Cleanup | `rm -rf /tmp/mactahoe* ~/.cache/pakitheme/` | Always safe | ✅ |
@@ -1103,119 +1103,55 @@ echo "  then re-run: bash install.sh (skips completed steps)"
 
 <a name="10-maximized-window-wrappers-steps-18-19"></a>
 
-## 10. 🪟 Maximized Window Wrappers (Steps 18–19)
+## 10. 🪟 Kitty Desktop Entry & Clean Look
 
-### 🧠 The Core Constraint
+### 🧠 The Core Design
 
-> **Kitty and Nautilus must always launch maximized.** No remembered position,
-> no remembered size — always maximized, every single time, regardless of how
-> the user opens them.
+> **Kitty replaces Ptyxis as the default terminal.** The desktop entry is named
+> `Terminal` to match what users expect. Window decorations are hidden via
+> `kitty.conf` for a clean macOS-style look. No maximized wrapper scripts —
+> the D-Bus `Eval` approach was abandoned (broken since GNOME 45+).
 
-### 💡 The Solution Architecture
+### ✅ Current Implementation
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    MAXIMIZED WINDOW — RUNTIME ARCHITECTURE                  │
-│                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  USER ACTIONS                                                        │   │
-│  │                                                                      │   │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐                           │   │
-│  │  │  Dock    │  │  Super+T │  │  Terminal│                           │   │
-│  │  │  Click   │  │  (kbd)   │  │  Search  │                           │   │
-│  │  └────┬─────┘  └────┬─────┘  └────┬─────┘                           │   │
-│  │       │             │             │                                 │   │
-│  └───────┼─────────────┼─────────────┼─────────────────────────────────┘   │
-│          │             │             │                                     │
-│          ▼             ▼             ▼                                     │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  DESKTOP ENTRY (Overridden)                                        │   │
-│  │  ─────────────────────────────────────────────────────────────────  │   │
-│  │  File: ~/.local/share/applications/kitty.desktop                  │   │
-│  │  ┌─────────────────────────────────────────────────────────────┐  │   │
-│  │  │  [Desktop Entry]                                            │  │   │
-│  │  │  Name=Kitty                                                 │  │   │
-│  │  │  Exec=/usr/local/bin/kitty-maximized                        │  │   │
-│  │  │  TryExec=/usr/local/bin/kitty-maximized                     │  │   │
-│  │  └─────────────────────────────────────────────────────────────┘  │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                       │
-│                                    ▼                                       │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  WRAPPER SCRIPT: /usr/local/bin/kitty-maximized                    │   │
-│  │  ─────────────────────────────────────────────────────────────────  │   │
-│  │                                                                      │   │
-│  │  ┌─────────────────────────────────────────────────────────────────┐ │   │
-│  │  │  #!/bin/bash                                                    │ │   │
-│  │  │  /usr/bin/kitty "$@" &                    # Launch in background│ │   │
-│  │  │  KITTY_PID=$!                              # Capture PID        │ │   │
-│  │  │  sleep 0.5                                 # Wait for window     │ │   │
-│  │  │                                                                  │ │   │
-│  │  │  # ── Primary: D-Bus eval on GNOME Shell ──                    │ │   │
-│  │  │  busctl --user call org.gnome.Shell \                          │ │   │
-│  │  │    /org/gnome/Shell org.gnome.Shell.Eval s \                   │ │   │
-│  │  │    "global.get_window_actors().forEach(a => {                  │ │   │
-│  │  │       if (a.meta_window.get_wm_class() === 'kitty')           │ │   │
-│  │  │         a.meta_window.maximize(3);                             │ │   │
-│  │  │     })" 2>/dev/null || \                                       │ │   │
-│  │  │                                                                  │ │   │
-│  │  │  # ── Fallback: Keyboard shortcut ──                           │ │   │
-│  │  │  wtype -M Super_L -k Up -m Super_L 2>/dev/null || true         │ │   │
-│  │  │                                                                  │ │   │
-│  │  │  wait $KITTY_PID                          # Block until exit   │ │   │
-│  │  └─────────────────────────────────────────────────────────────────┘ │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+| Aspect | Detail |
+|--------|--------|
+| **Desktop Entry** | `~/.local/share/applications/kitty.desktop` with `Name=Terminal` |
+| **Exec** | `kitty %F` — direct, no wrapper |
+| **TryExec** | `kitty` — binary must exist or GNOME hides the entry |
+| **Window Decorations** | `hide_window_decorations yes` in `kitty.conf` |
+| **Ptyxis Removal** | Fully removed in `remove_ptyxis()` before Kitty is installed |
 
-### ⚙️ Component Breakdown
+### 🏁 Desktop Entry
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  COMPONENT          │ ROLE                              │ FALLBACK          │
-│  ───────────────────┼───────────────────────────────────┼────────────────── │
-│  busctl             │ D-Bus client — sends JS eval     │ wtype keyboard    │
-│                     │ to GNOME Shell                   │ simulation        │
-│  global.get_window_ │ GNOME Shell's internal list of   │ —                 │
-│    actors()         │ all open windows                 │                   │
-│  meta_window.       │ Maximize both H + V directions   │ Super+Up          │
-│    maximize(3)      │ (3 = HORIZONTAL | VERTICAL)     │ keyboard shortcut  │
-│  sleep 0.5          │ Wait for window to appear        │ —                 │
-│                     │ before trying to maximize        │                   │
-│  wtype -M Super_L   │ Keyboard shortcut simulation     │ —                 │
-│    -k Up            │ for non-GNOME environments       │                   │
-│  || true            │ Gracefully handle failures       │ —                 │
-│                     │ (Wayland/KDE/Xfce)              │                   │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-### 🏁 Desktop Entry Override
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                    DESKTOP ENTRY OVERRIDE                                   │
+│                    KITTY DESKTOP ENTRY                                       │
 │                                                                             │
-│  Before (system):                    After (user override):                │
-│  /usr/share/applications/kitty       ~/.local/share/applications/kitty     │
-│      .desktop                            .desktop                          │
-│  ┌─────────────────────┐             ┌────────────────────────────────┐   │
-│  │  Exec=kitty         │             │  Exec=/usr/local/bin/kitty-   │   │
-│  │                     │             │        maximized              │   │
-│  │  TryExec=kitty      │  ──────▶    │  TryExec=/usr/local/bin/     │   │
-│  │                     │             │        kitty-maximized       │   │
-│  └─────────────────────┘             └────────────────────────────────┘   │
-│                                                                             │
-│  Additionally, kitty.conf explicitly removes window memory:                │
+│  File: ~/.local/share/applications/kitty.desktop                          │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  # kitty.conf — explicitly excluded                                │   │
-│  │  remember_window_size no                                           │   │
-│  │  # (initial_window_size also removed)                              │   │
+│  │  [Desktop Entry]                                                    │   │
+│  │  Name=Terminal         ← Replaces "Kitty" to match Ptyxis naming    │   │
+│  │  Exec=kitty %F         ← Direct launch, no wrapper                  │   │
+│  │  TryExec=kitty         ← GNOME checks this exists before showing    │   │
+│  │  Icon=kitty                                                         │   │
 │  └─────────────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 🔍 How `maximize(3)` Works
+### 🔧 Kitty Config — Hide Decorations
+
+```
+# kitty.conf
+hide_window_decorations yes
+```
+
+### 🗑️ Why the Maximized Wrapper Was Removed
+
+The previous approach used `org.gnome.Shell.Eval` via D-Bus to maximize Kitty
+programmatically. This stopped working in GNOME 45+ due to `MetaContext.unsafeMode`
+restrictions. The wrapper script at `/usr/local/bin/kitty-maximized` was deleted
+and the desktop entry simplified to launch `kitty` directly.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -1600,7 +1536,7 @@ grep -rn "/home/" install.sh configs/ desktop/
 ~/.config/gtk-4.0/gtk.css                 ← Libadwaita override
 ~/.local/share/gnome-shell/extensions/    ← Installed extensions
 ~/.local/share/applications/              ← Desktop entry overrides
-/usr/local/bin/kitty-maximized            ← Kitty wrapper script
+~/.local/share/applications/kitty.desktop ← Kitty desktop entry (Name=Terminal)
 /usr/local/bin/nautilus-maximized         ← Nautilus wrapper script
 ~/.local/share/sounds/bigsur/             ← macOS sound theme
 ```
