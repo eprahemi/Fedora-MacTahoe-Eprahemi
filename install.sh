@@ -1016,6 +1016,15 @@ finalize() {
   echo -e "  ${CYAN}║${NC}  ${BOLD}${YELLOW}⚠  Recommended: Reboot now to apply all changes${NC}          ${CYAN}║${NC}"
   echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
   echo ""
+  echo -e "  ${DIM}╭─${NC} ${BOLD}${WHITE}✦  More from Eprahemi${NC} ${DIM}────────────────────────────────────────╮${NC}"
+  echo -e "  ${DIM}│${NC}                                                                 ${DIM}│${NC}"
+  echo -e "  ${DIM}│${NC}  ${CYAN}🐙${NC}  GitHub         ${CYAN}→${NC}  ${BOLD}https://github.com/eprahemi${NC}                ${DIM}│${NC}"
+  echo -e "  ${DIM}│${NC}  ${CYAN}🖥${NC}   MacTahoe Site  ${CYAN}→${NC}  ${BOLD}https://fedora-config.pages.dev${NC}          ${DIM}│${NC}"
+  echo -e "  ${DIM}│${NC}  ${CYAN}🖼${NC}   Wallpapers     ${CYAN}→${NC}  ${BOLD}https://wallvault.pages.dev/home${NC}        ${DIM}│${NC}"
+  echo -e "  ${DIM}│${NC}                                                                 ${DIM}│${NC}"
+  echo -e "  ${DIM}│${NC}  ${DIM}If you enjoyed this project, consider starring ⭐ on GitHub${NC}   ${DIM}│${NC}"
+  echo -e "  ${DIM}╰${NC}${DIM}─────────────────────────────────────────────────────────────────╯${NC}"
+  echo ""
 
   read -rp "Reboot now? [y/N] " reply
   if [[ "$reply" =~ ^[Yy]$ ]]; then
