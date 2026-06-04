@@ -967,6 +967,26 @@ setup_terminal() {
   cp "$BUNDLE/desktop/kitty.desktop" "$HOME/.local/share/applications/kitty.desktop" 2>/dev/null || \
     cp /usr/share/applications/kitty.desktop "$HOME/.local/share/applications/kitty.desktop" 2>/dev/null
 
+  # Scan all users for stale kitty.desktop referencing deleted kitty-maximized wrapper
+  # or with Name=kitty (won't match GNOME "Terminal" search)
+  local desktop_src
+  desktop_src="$BUNDLE/desktop/kitty.desktop"
+  [ -f "$desktop_src" ] || desktop_src="/usr/share/applications/kitty.desktop"
+  if [ -f "$desktop_src" ]; then
+    for _h in /home/*; do
+      _entry="$_h/.local/share/applications/kitty.desktop"
+      if [ -f "$_entry" ] && grep -q "kitty-maximized\|^Name=kitty$" "$_entry" 2>/dev/null; then
+        _owner=$(stat -c '%U' "$_h" 2>/dev/null || echo root)
+        if [ "$_owner" != "root" ]; then
+          cp "$desktop_src" "$_entry" 2>/dev/null && chown "$_owner:" "$_entry" 2>/dev/null
+          log "Fixed stale kitty.desktop for $_owner"
+        fi
+      fi
+      unset _entry _owner
+    done
+  fi
+  unset desktop_src _h
+
   ok "Kitty is now the default terminal"
 }
 
