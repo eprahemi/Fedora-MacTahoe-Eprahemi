@@ -490,6 +490,11 @@ install_mactahoe_theme() {
   for icon in MacTahoe MacTahoe-dark; do
     mkdir -p "$HOME/.local/share/icons"
     cp -a "$theme_src/$icon" "$HOME/.local/share/icons/"
+    # Ensure Adwaita is in the inheritance chain (needed for ui/ icons like checkboxes)
+    if ! grep -q "Adwaita" "$HOME/.local/share/icons/$icon/index.theme" 2>/dev/null; then
+      sed -i 's/Inherits=hicolor,breeze/Inherits=hicolor,breeze,Adwaita/' \
+        "$HOME/.local/share/icons/$icon/index.theme"
+    fi
     gtk-update-icon-cache "$HOME/.local/share/icons/$icon/" 2>/dev/null || true
   done
 
