@@ -1,7 +1,7 @@
 [Icon Theme]
 Name=MacTahoe
 Comment=MacOSX Tahoe style icon theme
-Inherits=hicolor,breeze
+Inherits=hicolor,breeze,Adwaita
 Example=folder
 
 # KDE/Plasma Stuff

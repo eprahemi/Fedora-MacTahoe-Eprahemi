@@ -84,7 +84,7 @@ preflight() {
       echo -e "  ║       sudo dnf install kitty                                 ║"
       echo -e "  ║                                                              ║"
       echo -e "  ║  ${BOLD}Step 2${NC}  Launch Kitty and re-run the installer:                   ║"
-      echo -e "  ║       kitty -e bash install.sh                               ║"
+      echo -e "  ║       kitty -e bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/bootstrap.sh)\" ║"
       echo -e "  ║                                                              ║"
       echo -e "  ║  ${YELLOW}Note:${NC} You can keep Ptyxis as a secondary terminal if you wish,   ║"
       echo -e "  ║  but Kitty is required as the primary terminal for the       ║"
@@ -113,7 +113,7 @@ preflight() {
     echo "  │                                                             │"
     echo "  │  Install Kitty and re-run the installer:                    │"
     echo "  │    sudo dnf install kitty                                   │"
-    echo "  │    kitty -e bash install.sh                                 │"
+    echo "  │    kitty -e bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/bootstrap.sh)\" │"
     echo "  │                                                             │"
     echo "  │  Press SPACE to acknowledge and continue                      │"
     echo "  │  or press Ctrl+C to cancel and switch to Kitty first.       │"
@@ -362,28 +362,47 @@ install_browsers() {
     sudo dnf install -y firefox
   fi
 
-  # Chrome
+  # Chrome — create repo file directly (--from-repofile not supported by Google)
   if ! rpm -q google-chrome-stable &>/dev/null; then
-    sudo dnf install -y fedora-workstation-repositories 2>/dev/null || true
-    # Fedora 41+ dropped the Chrome repo from fedora-workstation-repositories
-    # Use Google's official RPM repo directly
     sudo rpm --import https://dl.google.com/linux/linux_signing_key.pub 2>/dev/null || true
-    sudo dnf config-manager addrepo --from-repofile="https://dl.google.com/linux/chrome/rpm/stable/x86_64" 2>/dev/null || true
+    sudo tee /etc/yum.repos.d/google-chrome.repo > /dev/null <<-EOF
+[google-chrome]
+name=google-chrome
+baseurl=https://dl.google.com/linux/chrome/rpm/stable/x86_64
+enabled=1
+gpgcheck=1
+gpgkey=https://dl.google.com/linux/linux_signing_key.pub
+EOF
+    # Install from repo, with direct RPM as offline fallback
     sudo dnf install -y google-chrome-stable 2>/dev/null || \
     sudo dnf install -y https://dl.google.com/linux/direct/google-chrome-stable_current_x86_64.rpm
   fi
 
-  # Edge
+  # Edge — create repo file directly (--from-repofile URL is non-standard)
   if ! rpm -q microsoft-edge-stable &>/dev/null; then
     sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc 2>/dev/null || true
-    sudo dnf config-manager addrepo --from-repofile="https://packages.microsoft.com/yumrepos/edge/config" 2>/dev/null || true
+    sudo tee /etc/yum.repos.d/microsoft-edge.repo > /dev/null <<-EOF
+[microsoft-edge]
+name=microsoft-edge
+baseurl=https://packages.microsoft.com/yumrepos/edge-stable
+enabled=1
+gpgcheck=1
+gpgkey=https://packages.microsoft.com/keys/microsoft.asc
+EOF
     sudo dnf install -y microsoft-edge-stable 2>/dev/null || true
   fi
 
-  # VS Code
+  # VS Code — repo file (existing working approach)
   if ! rpm -q code &>/dev/null; then
     sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc 2>/dev/null || true
-    sudo sh -c 'echo -e "[code]\nname=Visual Studio Code\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\nenabled=1\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" > /etc/yum.repos.d/vscode.repo' 2>/dev/null || true
+    sudo tee /etc/yum.repos.d/vscode.repo > /dev/null <<-EOF
+[code]
+name=Visual Studio Code
+baseurl=https://packages.microsoft.com/yumrepos/vscode
+enabled=1
+gpgcheck=1
+gpgkey=https://packages.microsoft.com/keys/microsoft.asc
+EOF
     sudo dnf check-update 2>/dev/null || true
     sudo dnf install -y code
   fi
