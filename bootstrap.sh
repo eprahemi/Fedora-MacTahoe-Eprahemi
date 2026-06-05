@@ -57,7 +57,10 @@ if [ -z "${KITTY_PID:-}" ]; then
 fi
 
 # ── NVIDIA warning (before download) ──
-if lspci 2>/dev/null | grep -qi nvidia; then
+nvidia_found=false
+lspci 2>/dev/null | grep -qi nvidia && nvidia_found=true
+lsmod 2>/dev/null | grep -qi nouveau && nvidia_found=true
+if [ "$nvidia_found" = true ]; then
   echo ""
   echo -e "  ${YELLOW}╔══════════════════════════════════════════════════════════════╗${NC}"
   echo -e "  ${YELLOW}║${NC}  ${BOLD}NVIDIA DETECTED${NC}                                               ${YELLOW}║${NC}"

@@ -324,7 +324,10 @@ install_rpmfusion() {
 install_nvidia() {
   next_step "NVIDIA Drivers (auto-detect)"
 
-  if lspci | grep -qi nvidia; then
+  nvidia_found=false
+  lspci 2>/dev/null | grep -qi nvidia && nvidia_found=true
+  lsmod 2>/dev/null | grep -qi nouveau && nvidia_found=true
+  if [ "$nvidia_found" = true ]; then
     echo ""
     echo -e "  ${YELLOW}╔══════════════════════════════════════════════════════════════╗${NC}"
     echo -e "  ${YELLOW}║${NC}  ${BOLD}NVIDIA DETECTED${NC}                                               ${YELLOW}║${NC}"
