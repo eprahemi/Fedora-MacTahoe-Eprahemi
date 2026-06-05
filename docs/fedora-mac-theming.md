@@ -15,7 +15,7 @@
 
 <p align="center">
   <strong>Version:</strong> 1.0 &nbsp;·&nbsp;
-  <strong>Script:</strong> 1,316 lines · 21 steps · Zero hardcoded paths &nbsp;·&nbsp;
+  <strong>Script:</strong> 1,450 lines · 22 steps · Zero hardcoded paths &nbsp;·&nbsp;
   <strong>License:</strong> Open Source
 </p>
 
@@ -151,13 +151,13 @@
 
 | Phase | Steps | Description | Approx Time |
 |-------|-------|-------------|-------------|
-| 🖥️ System Prep | 1–3 | Preflight, RPM Fusion, NVIDIA | 2–5 min |
-| 📦 Packages | 4–6 | RPMs, Browsers, Flatpaks | 5–15 min |
-| 🎨 Theming | 7–9 | Theme compile, Font, Extensions | 5–10 min |
-| ⚙️ Config | 10–13 | Entries, Configs, dconf, Wallpaper | ~2 min |
-| ✨ Enhancement | 14–17 | GDM, Firefox, Flatpak runtime, Sounds | 3–8 min |
-| 🐚 Shell | 18–21 | Kitty/Nautilus max, Fish default, Clean | ~1 min |
-| **Total** | **21** | **Full transformation** | **15–45 min** |
+| 🖥️ System Prep | 1–4 | Preflight, Ptyxis removal, RPM Fusion, NVIDIA | 2–5 min |
+| 📦 Packages | 5–7 | RPMs, Browsers, Flatpaks | 5–15 min |
+| 🎨 Theming | 8–9 | Theme compile, Font | 5–10 min |
+| ⚙️ Config | 10–15 | Extensions, Desktop Entries, Configs, dconf, Wallpaper, Avatars | ~3 min |
+| ✨ Enhancement | 16–19 | GDM (theme + logo hide), Firefox, Flatpak runtime, Sounds | 3–8 min |
+| 🐚 Shell | 20–22 | Kitty default, Fish default, Cleanup & Reboot | ~1 min |
+| **Total** | **22** | **Full transformation** | **15–45 min** |
 
 ---
 
