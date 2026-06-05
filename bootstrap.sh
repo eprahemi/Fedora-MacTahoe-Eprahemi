@@ -56,6 +56,37 @@ if [ -z "${KITTY_PID:-}" ]; then
   fi
 fi
 
+# ── NVIDIA warning (before download) ──
+if lspci 2>/dev/null | grep -qi nvidia; then
+  echo ""
+  echo -e "  ${YELLOW}╔══════════════════════════════════════════════════════════════╗${NC}"
+  echo -e "  ${YELLOW}║${NC}  ${BOLD}NVIDIA DETECTED${NC}                                               ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}╠══════════════════════════════════════════════════════════════╣${NC}"
+  echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}  On a ${BOLD}fresh Fedora install${NC}, running this installer before         ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}  a full system update can cause display issues (800×600,      ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}  poor refresh) once the NVIDIA driver is installed.            ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}  ${BOLD}Recommended before running this script:${NC}                       ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}    1. Connect to ethernet or WiFi (ethernet recommended)        ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}    2. ${BOLD}sudo dnf upgrade${NC}                                        ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}    3. Reboot                                                    ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}    4. Run installer again                                        ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}  ${GREEN}✓${NC}  If you already did that, press SPACE to proceed.              ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}  ${YELLOW}Ctrl+C${NC} to cancel and update first.                             ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}╚══════════════════════════════════════════════════════════════╝${NC}"
+  echo ""
+  echo -n "  ${DIM}Press SPACE to continue...${NC} "
+  while true; do
+    read -r -s -n 1 key
+    if [ "$key" = " " ]; then
+      echo -e "${GREEN}continuing${NC}"
+      break
+    fi
+  done
+fi
+
 echo "=========================================="
 echo "  Fedora MacTahoe — Eprahemi Edition"
 echo "  One-click installer"
