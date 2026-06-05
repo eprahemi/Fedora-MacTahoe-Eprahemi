@@ -845,21 +845,71 @@ apply_wallpapers() {
   next_step "Wallpaper + Login Screen"
 
   local wp="$BUNDLE/wallpapers"
+  local wp_dest="/usr/share/backgrounds/Wallvault Wallpapers"
   mkdir -p "$HOME/.config/Wallpapers"
 
   # ── Nuke stock GNOME wallpapers, replace with custom ──
   if [ -d /usr/share/backgrounds ]; then
     sudo rm -rf /usr/share/backgrounds/*/ 2>/dev/null || true
+    sudo rm -f /usr/share/backgrounds/*.jpg /usr/share/backgrounds/*.jxl /usr/share/backgrounds/*.png 2>/dev/null || true
     ok "Stock system wallpapers removed"
   fi
 
-  local custom_count=0
+  sudo mkdir -p "$wp_dest"
+  local count=0
+
+  # Copy desktop wallpapers
   for img in "$wp/desktop/"*; do
     [ -f "$img" ] || continue
-    sudo cp "$img" /usr/share/backgrounds/ 2>/dev/null || true
-    custom_count=$((custom_count + 1))
+    sudo cp "$img" "$wp_dest/" 2>/dev/null || true
+    count=$((count + 1))
   done
-  [ "$custom_count" -gt 0 ] && ok "$custom_count custom wallpapers installed to /usr/share/backgrounds/"
+
+  # Copy additional background wallpapers
+  for img in "$wp/backgrounds/"*; do
+    [ -f "$img" ] || continue
+    sudo cp "$img" "$wp_dest/" 2>/dev/null || true
+    count=$((count + 1))
+  done
+
+  [ "$count" -gt 0 ] && ok "$count custom wallpapers installed to $wp_dest"
+
+  # ── Register wallpapers in GNOME background properties XML ──
+  local gnome_xml_dir="/usr/share/gnome-background-properties"
+  sudo mkdir -p "$gnome_xml_dir/stock-backup"
+  local xml="$gnome_xml_dir/wallvault.xml"
+  sudo rm -f "$xml"
+  {
+    echo '<?xml version="1.0" encoding="UTF-8"?>'
+    echo '<!DOCTYPE wallpapers SYSTEM "gnome-wp-list.dtd">'
+    echo '<wallpapers>'
+    for img in "$wp_dest/"*; do
+      [ -f "$img" ] || continue
+      local bname
+      bname=$(basename "$img")
+      local bname_noext="${bname%.*}"
+      cat << EOF
+    <wallpaper deleted="false">
+        <name>${bname_noext}</name>
+        <filename>${img}</filename>
+        <options>zoom</options>
+        <shade_type>solid</shade_type>
+        <pcolor>#000000</pcolor>
+        <scolor>#000000</scolor>
+    </wallpaper>
+EOF
+    done
+    echo '</wallpapers>'
+  } | sudo tee "$xml" > /dev/null
+  ok "Wallpapers registered in GNOME background picker"
+
+  # ── Remove stock XML background definitions so they don't show broken entries ──
+  for sx in "$gnome_xml_dir"/*.xml; do
+    [ -f "$sx" ] || continue
+    [ "$sx" = "$xml" ] && continue
+    sudo mv "$sx" "$gnome_xml_dir/stock-backup/" 2>/dev/null || true
+  done
+  [ -d "$gnome_xml_dir/stock-backup" ] && ok "Stock background XMLs backed up to stock-backup/"
 
   if [ -f "$wp/desktop/Himeno Fedora.jpg" ]; then
     cp "$wp/desktop/Himeno Fedora.jpg" "$HOME/.config/Wallpapers/"
@@ -894,23 +944,33 @@ install_custom_avatars() {
     ok "Stock avatars removed"
   fi
 
-  # Copy custom avatars
+  # Copy custom avatars — convert to exact 512x512 JPEG
   local count=0
+  local tmp_dir
+  tmp_dir="$(mktemp -d)"
+
   for img in "$src/"*; do
     [ -f "$img" ] || continue
-    local ext="${img##*.}"
-    # Convert any format (png, gif, etc.) to 512x512 jpg
+    local base
+    base=$(basename "${img%.*}")
+    local tmp_out="$tmp_dir/${base}.jpg"
+
     if command -v magick &>/dev/null; then
-      magick "$img" -resize 512x512 -quality 92 "${face_dir}/$(basename "${img%.*}.jpg")" 2>/dev/null || \
-      magick "$img" -resize 512x512 -quality 92 "${face_dir}/$(basename "${img%.*}.jpg")" 2>/dev/null || true
+      magick "$img" -resize 512x512^ -gravity center -extent 512x512 -quality 92 "$tmp_out" 2>/dev/null || true
     elif command -v convert &>/dev/null; then
-      convert "$img" -resize 512x512 -quality 92 "${face_dir}/$(basename "${img%.*}.jpg")" 2>/dev/null || true
+      convert "$img" -resize 512x512^ -gravity center -extent 512x512 -quality 92 "$tmp_out" 2>/dev/null || true
     else
       warn "ImageMagick not found — skipping avatar conversion"
       break
     fi
-    count=$((count + 1))
+
+    if [ -f "$tmp_out" ]; then
+      sudo cp "$tmp_out" "$face_dir/" 2>/dev/null || true
+      count=$((count + 1))
+    fi
   done
+
+  rm -rf "$tmp_dir"
 
   if [ "$count" -gt 0 ]; then
     sudo chmod 644 "$face_dir"/*.jpg 2>/dev/null || true
