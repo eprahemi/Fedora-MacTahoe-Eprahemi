@@ -90,21 +90,64 @@ if [ "$nvidia_found" = true ]; then
   done
 fi
 
-echo "=========================================="
-echo "  Fedora MacTahoe — Eprahemi Edition"
-echo "  One-click installer"
-echo "=========================================="
-echo ""
+# ── Capture GNOME version ──
+GNOME_VER=$(gnome-shell --version 2>/dev/null | grep -oP '\d+\.\d+' || echo "?")
 
-# Ensure git is available (not included in Fedora Workstation by default)
+# ── ASCII Banner ──
+echo ""
+echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+echo -e "  ${CYAN}║${NC}"'                                                              '"${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}"'      ______                 __                   _           '"${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}"'     / ____/___  _________ _/ /_  ___  ____ ___  (_)          '"${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}"'    / __/ / __ \/ ___/ __ `/ __ \/ _ \/ __ `__ \/ /           '"${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}"'   / /___/ /_/ / /  / /_/ / / / /  __/ / / / / / /            '"${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}"'  /_____/ .___/_/   \__,_/_/ /_/\___/_/ /_/ /_/_/             '"${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}"'       /_/                                                     '"${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}"'                                                              '"${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}"'  '"${BOLD}${WHITE}"'◆  Fedora MacTahoe  —  Eprahemi Edition'"${NC}"'                      '"${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}"'  '"${BOLD}"'◆  Automated macOS Desktop Transformation'"${NC}"'              '"${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}"'                                                              '"${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ${DIM}GNOME${NC} ${GNOME_VER}  ${DIM}◆  Kitty Terminal  ◆  Fish Shell${NC}           ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}"'                                                              '"${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ${YELLOW}◆  Press SPACE to begin installation${NC}                      ${CYAN}║${NC}"
+echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+echo -n "  ${DIM}Waiting...${NC} "
+while true; do
+  read -r -s -n 1 key
+  if [ "$key" = " " ]; then
+    echo -e "${GREEN}proceeding${NC}"
+    break
+  fi
+done
+
+# ── Ensure git is available ──
 if ! command -v git &>/dev/null; then
-  echo "Git not found — installing..."
+  echo -e "  ${CYAN}◆${NC}  Git not found — installing..."
   sudo dnf install -y git
 fi
 
+# ── Download bundle ──
+echo ""
+echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+echo -e "  ${CYAN}║${NC}             ${BOLD}${WHITE}📦  Downloading Bundle${NC}                              ${CYAN}║${NC}"
+echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  Repository:  ${BOLD}Fedora-MacTahoe-Eprahemi${NC}                    ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  Destination: ${BOLD}$TMP${NC}                    ${CYAN}║${NC}"
+echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
 rm -rf "$TMP"
-echo "Downloading bundle..."
-git clone --depth 1 "$REPO" "$TMP"
+if git clone --depth 1 "$REPO" "$TMP" 2>&1; then
+  echo ""
+  echo -e "  ${GREEN}╔══════════════════════════════════════════════════════════════╗${NC}"
+  echo -e "  ${GREEN}║${NC}              ${BOLD}✅  Download Complete${NC}                               ${GREEN}║${NC}"
+  echo -e "  ${GREEN}╚══════════════════════════════════════════════════════════════╝${NC}"
+else
+  echo ""
+  echo -e "  ${RED}╔══════════════════════════════════════════════════════════════╗${NC}"
+  echo -e "  ${RED}║${NC}           ${BOLD}⛔  Download Failed — Check Connection${NC}              ${RED}║${NC}"
+  echo -e "  ${RED}╚══════════════════════════════════════════════════════════════╝${NC}"
+  exit 1
+fi
+echo ""
 
 cd "$TMP"
 bash install.sh

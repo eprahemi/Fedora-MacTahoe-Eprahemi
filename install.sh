@@ -1213,19 +1213,32 @@ finalize() {
   fi
 }
 
+# ── Capture GNOME version ──
+GNOME_VER=$(gnome-shell --version 2>/dev/null | grep -oP '\d+\.\d+' || echo "?")
+
 # ─────────────────────────────────────────────────────────────
 #  MAIN
 # ─────────────────────────────────────────────────────────────
 
 echo ""
 echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-echo -e "  ${CYAN}║${NC}  ${BOLD}${WHITE}Fedora MacTahoe  ◆  Eprahemi Edition${NC}                        ${CYAN}║${NC}"
-echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
-echo -e "  ${CYAN}║${NC}  ◆  Automated Installer                                   ${CYAN}║${NC}"
-echo -e "  ${CYAN}║${NC}  ◆  Compiles theme for your GNOME ${BOLD}$(gnome-shell --version 2>/dev/null | grep -oP '\d+\.\d+')${NC}                ${CYAN}║${NC}"
-echo -e "  ${CYAN}║${NC}  ◆  ${DIM}Sets up Kitty, Fish, icons, fonts, sounds${NC}                    ${CYAN}║${NC}"
-echo -e "  ${CYAN}║${NC}  ◆  ${DIM}macOS desktop transformation${NC}                                 ${CYAN}║${NC}"
-echo -e "  ${CYAN}║${NC}                                                             ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}"'                                                              '"${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}"'      ______                 __                   _           '"${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}"'     / ____/___  _________ _/ /_  ___  ____ ___  (_)          '"${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}"'    / __/ / __ \/ ___/ __ `/ __ \/ _ \/ __ `__ \/ /           '"${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}"'   / /___/ /_/ / /  / /_/ / / / /  __/ / / / / / /            '"${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}"'  /_____/ .___/_/   \__,_/_/ /_/\___/_/ /_/ /_/_/             '"${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}"'       /_/                                                     '"${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}"'                                                              '"${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}"'  '"${BOLD}${WHITE}"'◆  Fedora MacTahoe  —  Eprahemi Edition'"${NC}"'                      '"${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}"'  '"${BOLD}"'◆  Automated macOS Desktop Transformation'"${NC}"'              '"${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}"'                                                              '"${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ${DIM}GNOME${NC} ${GNOME_VER}  ${DIM}◆  Kitty Terminal  ◆  Fish Shell${NC}           ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}"'                                                              '"${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  21-Step Installer    ${DIM}◆${NC}  Auto-detects your system    ${DIM}◆${NC}  ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  Theme compiles for your GNOME ${BOLD}${GNOME_VER}${NC}                         ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  Sets up Kitty, Fish, icons, fonts, sounds${NC}                 ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}"'                                                              '"${CYAN}║${NC}"
 echo -e "  ${CYAN}║${NC}  ${YELLOW}Press Ctrl+C at any time to cancel${NC}                           ${CYAN}║${NC}"
 echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
 echo ""
