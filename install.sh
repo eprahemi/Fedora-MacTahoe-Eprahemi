@@ -1022,6 +1022,12 @@ setup_gdm() {
     warn "  git clone https://github.com/vinceliuice/MacTahoe-gtk-theme.git /tmp/mactahoe-gtk"
     warn "  sudo /tmp/mactahoe-gtk/tweaks.sh -g -nb -nd -b /path/to/wallpaper.jpg"
   fi
+
+  # Hide Fedora logo on GDM login screen (runs regardless of theme)
+  sudo mkdir -p /etc/dconf/db/gdm.d
+  echo -e "[org/gnome/login-screen]\nlogo=''" | sudo tee /etc/dconf/db/gdm.d/01-logo > /dev/null
+  sudo dconf update
+  ok "Fedora logo hidden from GDM login screen"
 }
 
 setup_firefox_theme() {
