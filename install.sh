@@ -129,19 +129,19 @@ preflight() {
     echo "  │  Get it:  sudo dnf install kitty                            │"
     echo "  │  Then:    kitty -e bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/bootstrap.sh)\" │"
     echo "  │                                                             │"
-    echo "  │  Hit SPACE to keep going with what you've got               │"
+    echo "  │  Press any key to continue                                 │"
     echo "  │  or Ctrl+C to grab Kitty first (recommended)                │"
     echo "  └─────────────────────────────────────────────────────────────┘"
     echo ""
-    # First space: acknowledge
+    # First press: acknowledge
     while true; do
       read -r -s -n 1 key || true
-      if [ "$key" = " " ]; then
+      if [ -n "$key" ]; then
         echo -e "  ${DIM}ok, one more thing...${NC}"
         break
       fi
     done
-    # Second space: confirm
+    # Second press: confirm
     echo ""
     echo -e "  ┌─────────────────────────────────────────────────────────────┐"
     echo -e "  │  ${BOLD}${YELLOW}⚠  FOR REAL? NO KITTY?${NC}                                    │"
@@ -150,13 +150,13 @@ preflight() {
     echo -e "  │  thing was designed for. Some stuff might look off,         │"
     echo -e "  │  and you'll miss out on the best parts. Your call.          │"
     echo -e "  │                                                             │"
-    echo -e "  │  Press ${BOLD}SPACE${NC} to proceed (no judgment)                              │"
+    echo -e "  │  Press ${BOLD}any key${NC} to proceed (no judgment)                              │"
     echo -e "  │  Press ${BOLD}Ctrl+C${NC} to install Kitty first (smart move)                  │"
     echo -e "  └─────────────────────────────────────────────────────────────┘"
     echo -en "  ${DIM}Waiting on you...${NC} "
     while true; do
       read -r -s -n 1 key || true
-      if [ "$key" = " " ]; then
+      if [ -n "$key" ]; then
         echo -e "${GREEN}let's roll${NC}"
         break
       fi
@@ -360,14 +360,14 @@ install_nvidia() {
     echo -e "  ${YELLOW}║${NC}    3. Reboot                                                    ${YELLOW}║${NC}"
     echo -e "  ${YELLOW}║${NC}    4. Run this thing again                                       ${YELLOW}║${NC}"
     echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
-    echo -e "  ${YELLOW}║${NC}  ${GREEN}✓${NC}  Already updated? Hit SPACE to roll.                        ${YELLOW}║${NC}"
-    echo -e "  ${YELLOW}║${NC}  ${YELLOW}Ctrl+C${NC} to go update first.                                   ${YELLOW}║${NC}"
-    echo -e "  ${YELLOW}╚══════════════════════════════════════════════════════════════╝${NC}"
-    echo ""
-    echo -en "  ${DIM}Hit SPACE to keep going...${NC} "
+  echo -e "  ${YELLOW}║${NC}  ${GREEN}✓${NC}  Already updated? Press any key to roll.                      ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}  ${YELLOW}Ctrl+C${NC} to go update first.                                   ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}╚══════════════════════════════════════════════════════════════╝${NC}"
+  echo ""
+  echo -en "  ${DIM}Press any key to continue...${NC} "
     while true; do
       read -r -s -n 1 key || true
-      if [ "$key" = " " ]; then
+      if [ -n "$key" ]; then
         echo -e "${GREEN}let's go${NC}"
         break
       fi
