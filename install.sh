@@ -847,19 +847,74 @@ apply_wallpapers() {
   local wp="$BUNDLE/wallpapers"
   mkdir -p "$HOME/.config/Wallpapers"
 
-  if [ -f "$wp/Himeno Fedora.jpg" ]; then
-    cp "$wp/Himeno Fedora.jpg" "$HOME/.config/Wallpapers/"
+  # ── Nuke stock GNOME wallpapers, replace with custom ──
+  if [ -d /usr/share/backgrounds ]; then
+    sudo rm -rf /usr/share/backgrounds/*/ 2>/dev/null || true
+    ok "Stock system wallpapers removed"
+  fi
+
+  local custom_count=0
+  for img in "$wp/desktop/"*; do
+    [ -f "$img" ] || continue
+    sudo cp "$img" /usr/share/backgrounds/ 2>/dev/null || true
+    custom_count=$((custom_count + 1))
+  done
+  [ "$custom_count" -gt 0 ] && ok "$custom_count custom wallpapers installed to /usr/share/backgrounds/"
+
+  if [ -f "$wp/desktop/Himeno Fedora.jpg" ]; then
+    cp "$wp/desktop/Himeno Fedora.jpg" "$HOME/.config/Wallpapers/"
     gsettings set org.gnome.desktop.background picture-uri "file://$HOME/.config/Wallpapers/Himeno Fedora.jpg" 2>/dev/null || true
     gsettings set org.gnome.desktop.background picture-uri-dark "file://$HOME/.config/Wallpapers/Himeno Fedora.jpg" 2>/dev/null || true
     gsettings set org.gnome.desktop.background picture-options "zoom" 2>/dev/null || true
     ok "Desktop wallpaper set"
   else
-    warn "Wallpaper file not found"
+    warn "Desktop wallpaper file not found"
   fi
 
-  if [ -f "$wp/Himeno Fedora LoginScreen.jpg" ]; then
-    cp "$wp/Himeno Fedora LoginScreen.jpg" "$HOME/.config/Wallpapers/"
+  if [ -f "$wp/login/Himeno Fedora LoginScreen.jpg" ]; then
+    cp "$wp/login/Himeno Fedora LoginScreen.jpg" "$HOME/.config/Wallpapers/"
     ok "Login screen wallpaper copied to ~/.config/Wallpapers/"
+  fi
+}
+
+install_custom_avatars() {
+  next_step "Custom Profile Pictures (Avatars)"
+
+  local face_dir="/usr/share/pixmaps/faces"
+  local src="$BUNDLE/assets/faces"
+
+  if [ ! -d "$src" ] || [ -z "$(ls -A "$src" 2>/dev/null)" ]; then
+    warn "No custom avatars found in assets/faces/ — skipping"
+    return
+  fi
+
+  # Nuke stock avatars
+  if [ -d "$face_dir" ]; then
+    sudo rm -f "$face_dir"/*.jpg 2>/dev/null || true
+    ok "Stock avatars removed"
+  fi
+
+  # Copy custom avatars
+  local count=0
+  for img in "$src/"*; do
+    [ -f "$img" ] || continue
+    local ext="${img##*.}"
+    # Convert any format (png, gif, etc.) to 512x512 jpg
+    if command -v magick &>/dev/null; then
+      magick "$img" -resize 512x512 -quality 92 "${face_dir}/$(basename "${img%.*}.jpg")" 2>/dev/null || \
+      magick "$img" -resize 512x512 -quality 92 "${face_dir}/$(basename "${img%.*}.jpg")" 2>/dev/null || true
+    elif command -v convert &>/dev/null; then
+      convert "$img" -resize 512x512 -quality 92 "${face_dir}/$(basename "${img%.*}.jpg")" 2>/dev/null || true
+    else
+      warn "ImageMagick not found — skipping avatar conversion"
+      break
+    fi
+    count=$((count + 1))
+  done
+
+  if [ "$count" -gt 0 ]; then
+    sudo chmod 644 "$face_dir"/*.jpg 2>/dev/null || true
+    ok "$count custom avatars installed to $face_dir"
   fi
 }
 
@@ -869,10 +924,10 @@ setup_gdm() {
   local wp="$BUNDLE/wallpapers"
   local bg=""
 
-  if [ -f "$wp/Himeno Fedora LoginScreen.jpg" ]; then
-    bg="$wp/Himeno Fedora LoginScreen.jpg"
-  elif [ -f "$wp/Himeno Fedora.jpg" ]; then
-    bg="$wp/Himeno Fedora.jpg"
+  if [ -f "$wp/login/Himeno Fedora LoginScreen.jpg" ]; then
+    bg="$wp/login/Himeno Fedora LoginScreen.jpg"
+  elif [ -f "$wp/desktop/Himeno Fedora.jpg" ]; then
+    bg="$wp/desktop/Himeno Fedora.jpg"
   fi
 
   # Clone MacTahoe repo to get tweaks.sh then apply to GDM (force fresh clone)
@@ -1303,6 +1358,7 @@ apply_desktop_entries
 apply_configs
 apply_dconf
 apply_wallpapers
+install_custom_avatars
 setup_gdm
 setup_firefox_theme
 setup_flatpak_theme
