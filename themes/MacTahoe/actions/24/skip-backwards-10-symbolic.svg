@@ -1,0 +1,14 @@
+<svg version="1.1" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+ <defs>
+  <style id="current-color-scheme" type="text/css">.ColorScheme-Text {
+        color:#dedede;
+      }</style>
+ </defs>
+ <g class="ColorScheme-Text" fill="currentColor">
+  <!-- Curved rewind arrow -->
+  <path d="m7.5 2c-3.0375 0-5.5 2.4625-5.5 5.5s2.4625 5.5 5.5 5.5c1.6189 0 3.0747-0.7 4.0781-1.8125l-0.71875-0.6875c-0.8092 0.92-2.0226 1.5-3.3594 1.5-2.4929 0-4.5-2.0071-4.5-4.5s2.0071-4.5 4.5-4.5c1.8598 0 3.4586 1.1198 4.0938 2.7188l-1.4688-0.03125-0.09375 1 2.7188 0.0625 0.75-2.6562-0.96875-0.28125-0.375 1.3438c-0.8308-1.6271-2.5568-2.6562-4.6562-2.6562z"/>
+  <!-- 10 indicator -->
+  <rect x="3" y="2" width="1" height="4" rx="0.3"/>
+  <path d="m4.2 2v4h1v-3.2l1.6 1.6 0.6-0.6-2.2-2.2-1 0.4z"/>
+ </g>
+</svg>

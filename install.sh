@@ -495,6 +495,15 @@ install_mactahoe_theme() {
       sed -i 's/Inherits=hicolor,breeze/Inherits=hicolor,breeze,Adwaita/' \
         "$HOME/.local/share/icons/$icon/index.theme"
     fi
+    # Provide Showtime skip-10-second icons with proper currentColor
+    # (Showtime bundles its own but they use hardcoded #222222 fill — invisible on dark overlay)
+    for dir in "actions/symbolic" "actions/24"; do
+      mkdir -p "$HOME/.local/share/icons/$icon/$dir"
+      for f in "$theme_src/$icon/$dir/skip-backwards-10-symbolic.svg" \
+               "$theme_src/$icon/$dir/skip-forward-10-symbolic.svg"; do
+        [ -f "$f" ] && cp -f "$f" "$HOME/.local/share/icons/$icon/$dir/"
+      done
+    done
     gtk-update-icon-cache "$HOME/.local/share/icons/$icon/" 2>/dev/null || true
   done
 
