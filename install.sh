@@ -18,7 +18,7 @@ ok()    { echo -e "  ${GREEN}  ┊ ✓ ${NC}  $1"; }
 warn()  { echo -e "  ${YELLOW}  ┊ ⚠ ${NC}  $1"; }
 fail()  { echo -e "  ${RED}  ┊ ✗ ${NC}  $1"; exit 1; }
 
-TOTAL_STEPS=21
+TOTAL_STEPS=22
 STEP=0
 
 next_step() {
@@ -1398,7 +1398,7 @@ echo -e "  ${CYAN}║${NC}"'                                                    
 gnome_text="  GNOME ${GNOME_VER}  ◆  Kitty Terminal  ◆  Fish Shell"
 echo -e "  ${CYAN}║${NC}  ${DIM}GNOME${NC} ${GNOME_VER}  ${DIM}◆  Kitty Terminal  ◆  Fish Shell${NC}$(printf '%*s' $((62 - ${#gnome_text})) '')${CYAN}║${NC}"
 echo -e "  ${CYAN}║${NC}"'                                                              '"${CYAN}║${NC}"
-echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  21-Step Installer    ${DIM}◆${NC}  Auto-detects your system    ${DIM}◆${NC}    ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  22-Step Installer    ${DIM}◆${NC}  Auto-detects your system    ${DIM}◆${NC}    ${CYAN}║${NC}"
 theme_text="  ◆  Theme compiles for your GNOME ${GNOME_VER}"
 echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  Theme compiles for your GNOME ${BOLD}${GNOME_VER}${NC}$(printf '%*s' $((62 - ${#theme_text})) '')${CYAN}║${NC}"
 echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  Sets up Kitty, Fish, icons, fonts, sounds${NC}                ${CYAN}║${NC}"
@@ -1424,7 +1424,7 @@ phase_divider "PHASE 3 : THEMES" 8 9
 install_mactahoe_theme
 install_font
 
-phase_divider "PHASE 4 : CONFIGURATION" 10 18
+phase_divider "PHASE 4 : CONFIGURATION" 10 19
 install_extensions
 apply_desktop_entries
 apply_configs
@@ -1436,9 +1436,9 @@ setup_firefox_theme
 setup_flatpak_theme
 install_sounds
 
-phase_divider "PHASE 5 : TERMINAL & SHELL" 19 20
+phase_divider "PHASE 5 : TERMINAL & SHELL" 20 21
 setup_terminal
 setup_shell
 
-phase_divider "PHASE 6 : FINALIZE" 21 21
+phase_divider "PHASE 6 : FINALIZE" 22 22
 finalize
