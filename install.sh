@@ -387,13 +387,18 @@ install_rpm_packages() {
   # ── Discord optional prompt ──
   if [ -z "${INSTALL_DISCORD:-}" ]; then
     echo ""
-    echo -e "  ┌─────────────────────────────────────────────────────────────┐"
-    echo -e "  │  ${BOLD}${WHITE}Install Discord?${NC}                                              │"
-    echo -e "  ├─────────────────────────────────────────────────────────────┤"
-    echo -e "  │  Discord chat client — ~100 MB. Skip if you don't need it.  │"
-    echo -e "  │                                                             │"
-    echo -e "  │  ${BOLD}Y${NC}es / ${BOLD}n${NC}o  (or set INSTALL_DISCORD=false to skip silently)            │"
-    echo -e "  └─────────────────────────────────────────────────────────────┘"
+    echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "  ${CYAN}║${NC}            ${BOLD}${WHITE}◆  INSTALL DISCORD?${NC}  ${DIM}◆${NC}                             ${CYAN}║${NC}"
+    echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}  Discord chat client — about 100 MB.                          ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}  Skip it if you don't need it.                                ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}    ${BOLD}${GREEN}Y${NC}${BOLD}es${NC}  — Install Discord                                       ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}n${NC}${BOLD}o${NC}   — Skip it                                               ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}  ${DIM}Tip: set INSTALL_DISCORD=false to skip silently${NC}               ${CYAN}║${NC}"
+    echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
     echo -en "  ${DIM}Discord? (Y/n):${NC} "
     read -r -n 1 key </dev/tty || true
     echo ""
@@ -402,6 +407,7 @@ install_rpm_packages() {
       echo -e "  ${DIM}→ Skipping Discord${NC}"
     else
       INSTALL_DISCORD="true"
+      echo -e "  ${GREEN}→ Discord will be installed${NC}"
     fi
   fi
 
