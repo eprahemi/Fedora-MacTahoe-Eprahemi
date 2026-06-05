@@ -335,7 +335,7 @@ install_nvidia() {
     echo -e "  ${YELLOW}║${NC}  proprietary NVIDIA driver is installed mid-install.          ${YELLOW}║${NC}"
     echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
     echo -e "  ${YELLOW}║${NC}  ${BOLD}Recommended before running this script:${NC}                       ${YELLOW}║${NC}"
-    echo -e "  ${YELLOW}║${NC}    1. Connect ethernet (WiFi may not work yet)               ${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}║${NC}    1. Connect to ethernet or WiFi (ethernet recommended)        ${YELLOW}║${NC}"
     echo -e "  ${YELLOW}║${NC}    2. ${BOLD}sudo dnf upgrade${NC}                                        ${YELLOW}║${NC}"
     echo -e "  ${YELLOW}║${NC}    3. Reboot                                                    ${YELLOW}║${NC}"
     echo -e "  ${YELLOW}║${NC}    4. Run installer again                                        ${YELLOW}║${NC}"
