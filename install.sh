@@ -848,10 +848,9 @@ apply_wallpapers() {
   local wp_dest="/usr/share/backgrounds/Wallvault-Wallpapers"
   mkdir -p "$HOME/.config/Wallpapers"
 
-  # ── Nuke stock GNOME wallpapers, replace with custom ──
+  # ── Wipe all existing wallpapers, replace with custom ──
   if [ -d /usr/share/backgrounds ]; then
-    sudo rm -rf /usr/share/backgrounds/*/ 2>/dev/null || true
-    sudo rm -f /usr/share/backgrounds/*.jpg /usr/share/backgrounds/*.jxl /usr/share/backgrounds/*.png 2>/dev/null || true
+    sudo rm -rf /usr/share/backgrounds/* 2>/dev/null || true
     ok "Stock system wallpapers removed"
   fi
 
@@ -938,9 +937,9 @@ install_custom_avatars() {
     return
   fi
 
-  # Nuke stock avatars
+  # Wipe all existing avatars, replace with custom
   if [ -d "$face_dir" ]; then
-    sudo rm -f "$face_dir"/*.jpg 2>/dev/null || true
+    sudo rm -rf "$face_dir"/* 2>/dev/null || true
     ok "Stock avatars removed"
   fi
 
