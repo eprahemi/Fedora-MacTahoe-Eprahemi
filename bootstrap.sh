@@ -173,6 +173,25 @@ while true; do
   fi
 done
 
+# ── Discord optional prompt ──
+echo ""
+echo -e "  ┌─────────────────────────────────────────────────────────────┐"
+echo -e "  │  ${BOLD}${WHITE}Install Discord?${NC}                                              │"
+echo -e "  ├─────────────────────────────────────────────────────────────┤"
+echo -e "  │  Discord chat client — ~100 MB. Skip if you don't need it.  │"
+echo -e "  │                                                             │"
+echo -e "  │  ${BOLD}Y${NC}es / ${BOLD}n${NC}o  (or set INSTALL_DISCORD=false to skip silently)            │"
+echo -e "  └─────────────────────────────────────────────────────────────┘"
+echo -en "  ${DIM}Discord? (Y/n):${NC} "
+read -r -n 1 key </dev/tty || true
+echo ""
+if [ "$key" = "n" ] || [ "$key" = "N" ]; then
+  export INSTALL_DISCORD="false"
+  echo -e "  ${DIM}→ Skipping Discord${NC}"
+else
+  export INSTALL_DISCORD="true"
+fi
+
 # ── Ensure git is available ──
 if ! command -v git &>/dev/null; then
   echo -e "  ${CYAN}◆${NC}  Git's not here — grabbing it real quick..."

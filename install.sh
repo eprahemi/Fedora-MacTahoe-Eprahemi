@@ -384,14 +384,40 @@ install_nvidia() {
 install_rpm_packages() {
   next_step "RPM Packages"
 
-  sudo dnf install -y \
-    fish kitty fastfetch figlet lolcat eza \
+  # ── Discord optional prompt ──
+  if [ -z "${INSTALL_DISCORD:-}" ]; then
+    echo ""
+    echo -e "  ┌─────────────────────────────────────────────────────────────┐"
+    echo -e "  │  ${BOLD}${WHITE}Install Discord?${NC}                                              │"
+    echo -e "  ├─────────────────────────────────────────────────────────────┤"
+    echo -e "  │  Discord chat client — ~100 MB. Skip if you don't need it.  │"
+    echo -e "  │                                                             │"
+    echo -e "  │  ${BOLD}Y${NC}es / ${BOLD}n${NC}o  (or set INSTALL_DISCORD=false to skip silently)            │"
+    echo -e "  └─────────────────────────────────────────────────────────────┘"
+    echo -en "  ${DIM}Discord? (Y/n):${NC} "
+    read -r -n 1 key </dev/tty || true
+    echo ""
+    if [ "$key" = "n" ] || [ "$key" = "N" ]; then
+      INSTALL_DISCORD="false"
+      echo -e "  ${DIM}→ Skipping Discord${NC}"
+    else
+      INSTALL_DISCORD="true"
+    fi
+  fi
+
+  local pkgs="fish kitty fastfetch figlet lolcat eza \
     celluloid vlc \
-    discord kdenlive pavucontrol alacarte \
+    kdenlive pavucontrol alacarte \
     nautilus-python gnome-tweaks \
     ImageMagick fzf ripgrep jq unzip curl wget git \
     ffmpeg-free \
-    libreoffice-writer libreoffice-calc libreoffice-impress
+    libreoffice-writer libreoffice-calc libreoffice-impress"
+
+  if [ "$INSTALL_DISCORD" = "true" ]; then
+    pkgs="discord $pkgs"
+  fi
+
+  sudo dnf install -y $pkgs
 
   # Starship prompt (not in Fedora repos — install via official script)
   if ! command -v starship &>/dev/null; then
@@ -584,10 +610,12 @@ install_mactahoe_theme() {
     # Map short name → Flatpak ID so both native and Flatpak installs pick it up
     declare -A fp_aliases=(
       [spotify.png]="com.spotify.Client.png"
-      [discord.png]="com.discordapp.Discord.png"
       [vlc.png]="org.videolan.VLC.png"
       [code.png]="com.visualstudio.code.png"
     )
+    if [ "${INSTALL_DISCORD:-true}" = "true" ]; then
+      fp_aliases[discord.png]="com.discordapp.Discord.png"
+    fi
     # SVG aliases
     for svg in "$icon_src"/*.svg; do
       [ -f "$svg" ] || continue
@@ -813,7 +841,11 @@ apply_dconf() {
   gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-timeout uint32 4800 2>/dev/null || true
 
   # ── Dock favorites ──
-  gsettings set org.gnome.shell favorite-apps "['org.gnome.Nautilus.desktop', 'org.mozilla.firefox.desktop', 'google-chrome.desktop', 'microsoft-edge.desktop', 'discord.desktop', 'kitty.desktop', 'org.gnome.Software.desktop']" 2>/dev/null || true
+  local favorites="['org.gnome.Nautilus.desktop', 'org.mozilla.firefox.desktop', 'google-chrome.desktop', 'microsoft-edge.desktop', 'kitty.desktop', 'org.gnome.Software.desktop']"
+  if [ "${INSTALL_DISCORD:-true}" = "true" ]; then
+    favorites="['org.gnome.Nautilus.desktop', 'org.mozilla.firefox.desktop', 'google-chrome.desktop', 'microsoft-edge.desktop', 'discord.desktop', 'kitty.desktop', 'org.gnome.Software.desktop']"
+  fi
+  gsettings set org.gnome.shell favorite-apps "$favorites" 2>/dev/null || true
 
   # ── Session (never sleep) ──
   gsettings set org.gnome.desktop.session idle-delay 0 2>/dev/null || true
