@@ -325,6 +325,32 @@ install_nvidia() {
   next_step "NVIDIA Drivers (auto-detect)"
 
   if lspci | grep -qi nvidia; then
+    echo ""
+    echo -e "  ${YELLOW}╔══════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "  ${YELLOW}║${NC}  ${BOLD}NVIDIA DETECTED${NC}                                               ${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}╠══════════════════════════════════════════════════════════════╣${NC}"
+    echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}║${NC}  On a ${BOLD}fresh Fedora install${NC}, the open-source nouveau driver      ${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}║${NC}  can switch to basic modes (e.g. 800×600) once the           ${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}║${NC}  proprietary NVIDIA driver is installed mid-install.          ${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}║${NC}  ${BOLD}Recommended before running this script:${NC}                       ${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}║${NC}    1. Connect ethernet (WiFi may not work yet)               ${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}║${NC}    2. ${BOLD}sudo dnf upgrade${NC}                                        ${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}║${NC}    3. Reboot                                                    ${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}║${NC}    4. Run installer again                                        ${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}║${NC}  If you already did that, proceed below.                      ${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}╚══════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    echo -n "  ${DIM}Press SPACE to continue...${NC} "
+    while true; do
+      read -r -s -n 1 key
+      if [ "$key" = " " ]; then
+        echo -e "${GREEN}continuing${NC}"
+        break
+      fi
+    done
     sudo dnf install -y akmod-nvidia xorg-x11-drv-nvidia-cuda nvidia-settings vdpauinfo libva-utils
     ok "NVIDIA drivers installed"
   else
