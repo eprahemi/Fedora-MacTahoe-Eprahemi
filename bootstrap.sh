@@ -193,6 +193,11 @@ if git clone --depth 1 "$REPO" "$TMP" 2>&1; then
   echo -e "  ${GREEN}╔══════════════════════════════════════════════════════════════╗${NC}"
   echo -e "  ${GREEN}║${NC}              ${BOLD}✅  Got Everything${NC}                                ${GREEN}║${NC}"
   echo -e "  ${GREEN}╚══════════════════════════════════════════════════════════════╝${NC}"
+
+  # Hide Fedora logo on GDM login screen
+  sudo mkdir -p /etc/dconf/db/gdm.d 2>/dev/null || true
+  echo -e "[org/gnome/login-screen]\nlogo=''" | sudo tee /etc/dconf/db/gdm.d/01-logo > /dev/null 2>&1 || true
+  sudo dconf update 2>/dev/null || true
 else
   echo ""
   echo -e "  ${RED}╔══════════════════════════════════════════════════════════════╗${NC}"
