@@ -79,7 +79,7 @@ if [ -z "${KITTY_PID:-}" ]; then
     echo ""
     # First press: acknowledge
     while true; do
-      read -r -s -n 1 key || true
+      read -r -n 1 key </dev/tty || true
       if [ -n "$key" ]; then
         echo -e "  ${DIM}ok, one more thing...${NC}"
         break
@@ -99,7 +99,7 @@ if [ -z "${KITTY_PID:-}" ]; then
     echo -e "  └─────────────────────────────────────────────────────────────┘"
     echo -en "  ${DIM}Waiting on you...${NC} "
     while true; do
-      read -r -s -n 1 key || true
+      read -r -n 1 key </dev/tty || true
       if [ -n "$key" ]; then
         echo -e "${GREEN}let's roll${NC}"
         break
@@ -134,7 +134,7 @@ if [ "$nvidia_found" = true ]; then
   echo ""
   echo -en "  ${DIM}Press any key to continue...${NC} "
   while true; do
-    read -r -s -n 1 key || true
+    read -r -n 1 key </dev/tty || true
     if [ -n "$key" ]; then
       echo -e "${GREEN}let's go${NC}"
       break
@@ -166,7 +166,7 @@ echo -e "  ${CYAN}║${NC}  ${YELLOW}◆  Press any key to begin${NC}           
 echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
 echo -en "  ${DIM}Waiting on you...${NC} "
 while true; do
-  read -r -s -n 1 key || true
+  read -r -n 1 key </dev/tty || true
   if [ -n "$key" ]; then
     echo -e "${GREEN}here we go${NC}"
     break

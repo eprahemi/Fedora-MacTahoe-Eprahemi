@@ -135,7 +135,7 @@ preflight() {
     echo ""
     # First press: acknowledge
     while true; do
-      read -r -s -n 1 key || true
+      read -r -n 1 key </dev/tty || true
       if [ -n "$key" ]; then
         echo -e "  ${DIM}ok, one more thing...${NC}"
         break
@@ -155,7 +155,7 @@ preflight() {
     echo -e "  └─────────────────────────────────────────────────────────────┘"
     echo -en "  ${DIM}Waiting on you...${NC} "
     while true; do
-      read -r -s -n 1 key || true
+      read -r -n 1 key </dev/tty || true
       if [ -n "$key" ]; then
         echo -e "${GREEN}let's roll${NC}"
         break
@@ -366,7 +366,7 @@ install_nvidia() {
   echo ""
   echo -en "  ${DIM}Press any key to continue...${NC} "
     while true; do
-      read -r -s -n 1 key || true
+      read -r -n 1 key </dev/tty || true
       if [ -n "$key" ]; then
         echo -e "${GREEN}let's go${NC}"
         break
