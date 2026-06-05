@@ -875,9 +875,9 @@ apply_wallpapers() {
 
   # ── Register wallpapers in GNOME background properties XML ──
   local gnome_xml_dir="/usr/share/gnome-background-properties"
-  sudo mkdir -p "$gnome_xml_dir/stock-backup"
   local xml="$gnome_xml_dir/wallvault.xml"
-  sudo rm -f "$xml"
+
+  # Generate fresh wallvault.xml first
   {
     echo '<?xml version="1.0" encoding="UTF-8"?>'
     echo '<!DOCTYPE wallpapers SYSTEM "gnome-wp-list.dtd">'
@@ -900,15 +900,14 @@ EOF
     done
     echo '</wallpapers>'
   } | sudo tee "$xml" > /dev/null
-  ok "Wallpapers registered in GNOME background picker"
 
-  # ── Remove stock XML background definitions so they don't show broken entries ──
+  # Then delete ALL stock XMLs — keep only our wallvault.xml
   for sx in "$gnome_xml_dir"/*.xml; do
     [ -f "$sx" ] || continue
     [ "$sx" = "$xml" ] && continue
-    sudo mv "$sx" "$gnome_xml_dir/stock-backup/" 2>/dev/null || true
+    sudo rm -f "$sx" 2>/dev/null || true
   done
-  [ -d "$gnome_xml_dir/stock-backup" ] && ok "Stock background XMLs backed up to stock-backup/"
+  ok "Wallpapers registered in GNOME background picker (stock XMLs deleted)"
 
   if [ -f "$wp/desktop/Himeno Fedora.jpg" ]; then
     cp "$wp/desktop/Himeno Fedora.jpg" "$HOME/.config/Wallpapers/"
