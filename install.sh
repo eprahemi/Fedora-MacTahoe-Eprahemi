@@ -14,24 +14,42 @@ RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC
 BOLD='\033[1m'; WHITE='\033[1;37m'; DIM='\033[2m'
 
 log()   { echo -e "  ${CYAN}${DIM}┊${NC} ${CYAN}$(date +%H:%M:%S)${NC} ${DIM}┊${NC} $1"; }
-ok()    { echo -e "  ${GREEN}✓${NC} $1"; }
-warn()  { echo -e "  ${YELLOW}⚠${NC} $1"; }
-fail()  { echo -e "  ${RED}✗${NC} $1"; exit 1; }
+ok()    { echo -e "  ${GREEN}  ┊ ✓ ${NC}  $1"; }
+warn()  { echo -e "  ${YELLOW}  ┊ ⚠ ${NC}  $1"; }
+fail()  { echo -e "  ${RED}  ┊ ✗ ${NC}  $1"; exit 1; }
 
 TOTAL_STEPS=21
 STEP=0
 
 next_step() {
   STEP=$((STEP + 1))
+  local pct=$((STEP * 100 / TOTAL_STEPS))
+  local filled=$((STEP * 30 / TOTAL_STEPS))
+  local empty=$((30 - filled))
+  
   echo ""
-  echo -e "  ${CYAN}◆${NC}  ${YELLOW}${BOLD}Step ${STEP}/${TOTAL_STEPS}${NC}  ${WHITE}${BOLD}$1${NC}"
-  echo -e "  ${DIM}───────────────────────────────────────────────────────────${NC}"
+  echo -e "  ${CYAN}┌──${NC} ${YELLOW}${BOLD}Step ${STEP}/${TOTAL_STEPS}${NC}  ${WHITE}${BOLD}$1${NC}  ${CYAN}──┐${NC}"
+  local bar_filled=$(printf '%*s' "$filled" '' | tr ' ' '▰')
+  local bar_empty=$(printf '%*s' "$empty" '' | tr ' ' '▱')
+  printf "  ${CYAN}│${NC}  ${GREEN}%s${NC}${DIM}%s${NC}  ${YELLOW}%3d%%${NC}  ${CYAN}│${NC}\n" "$bar_filled" "$bar_empty" "$pct"
+  echo -e "  ${CYAN}└──────────────────────────────────────────────────────────┘${NC}"
 }
 
 phase_divider() {
+  local title="$1" start="$2" end="$3"
+  local ph="◈◈◈  ${title}  ◈◈◈"
+  local range
+  [ "$start" = "$end" ] && range="Step ${start} of ${TOTAL_STEPS}" || range="Steps ${start}–${end} of ${TOTAL_STEPS}"
+  
   echo ""
-  echo -e "  ${DIM}╭─${NC} ${CYAN}$1${NC} ${DIM}${NC}"
-  echo -e "  ${DIM}├──────────────────────────────────────────────────────────${NC}"
+  echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+  echo -e "  ${CYAN}║${NC}"'                                                              '"${CYAN}║${NC}"
+  printf "  ${CYAN}║${NC}  ${BOLD}${WHITE}%s${NC}%*s  ${CYAN}║${NC}\n" "$ph" $((62 - ${#ph})) ""
+  echo -e "  ${CYAN}║${NC}"'                                                              '"${CYAN}║${NC}"
+  printf "  ${CYAN}║${NC}  ${DIM}%s${NC}%*s  ${CYAN}║${NC}\n" "$range" $((62 - ${#range})) ""
+  echo -e "  ${CYAN}║${NC}"'                                                              '"${CYAN}║${NC}"
+  echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+  echo ""
 }
 
 banner() {
@@ -58,37 +76,36 @@ preflight() {
           break
           ;;
       esac
-      walk_pid=$(cat /proc/"$walk_pid"/status 2>/dev/null | awk '/^PPid:/{print $2}')
+      walk_pid=$(cat /proc/"$walk_pid"/status 2>/dev/null | awk '/^PPid:/{print $2}') || true
     done
 
     # Block Ptyxis (it gets removed during installation)
     if [ "$detected_term" = "ptyxis" ] || [ "$detected_term" = "gnome-ptyxis" ]; then
       echo ""
       echo -e "  ╔══════════════════════════════════════════════════════════════╗"
-      echo -e "  ║            ⛔  UNSUPPORTED TERMINAL DETECTED                  ║"
+      echo -e "  ║            ⛔  WOAH — PTYXIS DETECTED                        ║"
       echo -e "  ╠══════════════════════════════════════════════════════════════╣"
       echo -e "  ║                                                              ║"
-      echo -e "  ║  You are currently running inside ${BOLD}Ptyxis${NC}, the default          ║"
-      echo -e "  ║  Fedora terminal emulator. This installer is designed to      ║"
-      echo -e "  ║  completely replace Ptyxis with Kitty as the system terminal  ║"
-      echo -e "  ║  and will ${BOLD}${RED}remove${NC} Ptyxis during the installation process.         ║"
+      echo -e "  ║  You're in ${BOLD}Ptyxis${NC} right now. Bad news — this installer         ║"
+      echo -e "  ║  ${BOLD}${RED}yeets Ptyxis into the void${NC} during setup.                     ║"
       echo -e "  ║                                                              ║"
-      echo -e "  ║  ${YELLOW}╳${NC}  Running the installer from inside Ptyxis would:            ║"
-      echo -e "  ║     • Uninstall the terminal you are currently using          ║"
-      echo -e "  ║     • Crash the installation process mid-way                  ║"
-      echo -e "  ║     • Potentially corrupt your session or lose unsaved work  ║"
+      echo -e "  ║  Running from inside it would be like trying to renovate     ║"
+      echo -e "  ║  your kitchen while you're standing in the middle of it.     ║"
       echo -e "  ║                                                              ║"
-      echo -e "  ║  ${GREEN}✓${NC}  To proceed with the installation:                          ║"
+      echo -e "  ║  ${YELLOW}╳${NC}  The installer would:                                         ║"
+      echo -e "  ║     • Delete the terminal you're currently typing in         ║"
+      echo -e "  ║     • Crash halfway through (bye-bye progress)               ║"
+      echo -e "  ║     • Potentially mess up your whole session                 ║"
       echo -e "  ║                                                              ║"
-      echo -e "  ║  ${BOLD}Step 1${NC}  Install Kitty terminal:                                 ║"
-      echo -e "  ║       sudo dnf install kitty                                 ║"
+      echo -e "  ║  ${GREEN}✓${NC}  Here's the right way to do it:                              ║"
       echo -e "  ║                                                              ║"
-      echo -e "  ║  ${BOLD}Step 2${NC}  Launch Kitty and re-run the installer:                   ║"
+      echo -e "  ║  ${BOLD}1${NC}  Install Kitty:  sudo dnf install kitty                        ║"
+      echo -e "  ║                                                              ║"
+      echo -e "  ║  ${BOLD}2${NC}  Launch Kitty and re-run:                                      ║"
       echo -e "  ║       kitty -e bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/bootstrap.sh)\" ║"
       echo -e "  ║                                                              ║"
-      echo -e "  ║  ${YELLOW}Note:${NC} You can keep Ptyxis as a secondary terminal if you wish,   ║"
-      echo -e "  ║  but Kitty is required as the primary terminal for the       ║"
-      echo -e "  ║  MacTahoe experience to function correctly.                  ║"
+      echo -e "  ║  You can keep Ptyxis as a backup if you want, but            ║"
+      echo -e "  ║  Kitty needs to be the main ride for this to work.           ║"
       echo -e "  ║                                                              ║"
       echo -e "  ╚══════════════════════════════════════════════════════════════╝"
       echo ""
@@ -97,50 +114,50 @@ preflight() {
 
     echo ""
     echo "  ┌─────────────────────────────────────────────────────────────┐"
-    echo "  │  ✦  PREMIUM TERMINAL RECOMMENDED  ✦                       │"
+    echo "  │  ✦  KITTY = THE REAL DEAL  ✦                              │"
     echo "  ├─────────────────────────────────────────────────────────────┤"
-    echo "  │  You are currently running inside a standard terminal       │"
-    echo "  │  emulator. The Fedora MacTahoe experience is engineered     │"
-    echo "  │  and tested exclusively on Kitty terminal for the most      │"
-    echo "  │  authentic macOS-like desktop transformation.               │"
+    echo "  │  You're in a regular terminal right now. That's cool,       │"
+    echo "  │  but the full MacTahoe experience really shines in Kitty.   │"
     echo "  │                                                             │"
-    echo "  │  By switching to Kitty, you gain access to:                 │"
-    echo "  │  ◆ Native true-color support for accurate color rendering   │"
-    echo "  │  ◆ GPU-accelerated rendering for buttery-smooth scrolling   │"
-    echo "  │  ◆ Seamless glass-blur integration with the GNOME desktop   │"
-    echo "  │  ◆ Custom tab bar styling that matches the MacTahoe theme   │"
-    echo "  │  ◆ Keyboard-driven nature with sane defaults and ligatures  │"
+    echo "  │  Why Kitty over your current setup?                         │"
+    echo "  │  ◆ True colors — no washed-out nonsense                     │"
+    echo "  │  ◆ GPU rendering — scrolling is buttery smooth              │"
+    echo "  │  ◆ Blur & transparency that match the theme                 │"
+    echo "  │  ◆ Tab bar that looks like it belongs on a Mac              │"
+    echo "  │  ◆ Keyboard shortcuts that just make sense                  │"
     echo "  │                                                             │"
-    echo "  │  Install Kitty and re-run the installer:                    │"
-    echo "  │    sudo dnf install kitty                                   │"
-    echo "  │    kitty -e bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/bootstrap.sh)\" │"
+    echo "  │  Get it:  sudo dnf install kitty                            │"
+    echo "  │  Then:    kitty -e bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/bootstrap.sh)\" │"
     echo "  │                                                             │"
-    echo "  │  Press SPACE to acknowledge and continue                      │"
-    echo "  │  or press Ctrl+C to cancel and switch to Kitty first.       │"
+    echo "  │  Hit SPACE to keep going with what you've got               │"
+    echo "  │  or Ctrl+C to grab Kitty first (recommended)                │"
     echo "  └─────────────────────────────────────────────────────────────┘"
     echo ""
-    # First space: acknowledge the warning
+    # First space: acknowledge
     while true; do
-      read -r -s -n 1 key
-      if [ "$key" = " " ]; then break; fi
+      read -r -s -n 1 key || true
+      if [ "$key" = " " ]; then
+        echo -e "  ${DIM}ok, one more thing...${NC}"
+        break
+      fi
     done
-    # Second space: confirm you really want to proceed
+    # Second space: confirm
     echo ""
     echo -e "  ┌─────────────────────────────────────────────────────────────┐"
-    echo -e "  │  ${BOLD}${YELLOW}⚠  Confirm Installation Without Kitty${NC}                        │"
+    echo -e "  │  ${BOLD}${YELLOW}⚠  FOR REAL? NO KITTY?${NC}                                    │"
     echo -e "  ├─────────────────────────────────────────────────────────────┤"
-    echo -e "  │  You are about to proceed without the recommended terminal. │"
-    echo -e "  │  Some visual features may not render as intended, and the   │"
-    echo -e "  │  overall experience may differ from the MacTahoe design.    │"
+    echo -e "  │  You're about to run without the terminal this whole        │"
+    echo -e "  │  thing was designed for. Some stuff might look off,         │"
+    echo -e "  │  and you'll miss out on the best parts. Your call.          │"
     echo -e "  │                                                             │"
-    echo -e "  │  Press ${BOLD}SPACE${NC} to confirm and continue                              │"
-    echo -e "  │  Press ${BOLD}Ctrl+C${NC} to cancel and install Kitty first                     │"
+    echo -e "  │  Press ${BOLD}SPACE${NC} to proceed (no judgment)                              │"
+    echo -e "  │  Press ${BOLD}Ctrl+C${NC} to install Kitty first (smart move)                  │"
     echo -e "  └─────────────────────────────────────────────────────────────┘"
-    echo -n "  ${DIM}Waiting for confirmation...${NC} "
+    echo -en "  ${DIM}Waiting on you...${NC} "
     while true; do
-      read -r -s -n 1 key
+      read -r -s -n 1 key || true
       if [ "$key" = " " ]; then
-        echo -e "${GREEN}confirmed${NC}"
+        echo -e "${GREEN}let's roll${NC}"
         break
       fi
     done
@@ -171,7 +188,7 @@ preflight() {
     echo ""
     exit 1
   fi
-  ok "Fedora detected"
+  ok "Fedora detected — you're in the right place"
 
   # ── Desktop environment check ──
   local gnome_ok=false
@@ -232,7 +249,7 @@ preflight() {
     echo ""
     exit 1
   fi
-  ok "GNOME desktop detected"
+  ok "GNOME desktop — right where we need to be"
 
   # ── User check ──
   if [ "$EUID" -eq 0 ]; then
@@ -242,13 +259,13 @@ preflight() {
 
   # ── Network check ──
   if ! ping -c1 -W2 google.com &>/dev/null && ! ping -c1 -W2 github.com &>/dev/null; then
-    fail "No internet connection detected."
+    fail "No internet — can't reach the outside world."
   fi
-  ok "Internet connection"
+  ok "Internet — we're online"
 
   # ── Sudo check ──
   if ! sudo -n true 2>/dev/null; then
-    warn "You will be prompted for sudo password shortly."
+    warn "Sudo coming up — have your password ready."
   fi
   sudo echo "Sudo OK" >/dev/null || fail "Sudo required"
   ok "Sudo access granted"
@@ -302,7 +319,7 @@ install_rpmfusion() {
   next_step "RPM Fusion + Codecs"
 
   local release
-  release=$(rpm -E %fedora)
+  release=$(rpm -E %fedora 2>/dev/null) || release="40"
 
   sudo dnf install -y \
     "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${release}.noarch.rpm" \
@@ -330,34 +347,35 @@ install_nvidia() {
   if [ "$nvidia_found" = true ]; then
     echo ""
     echo -e "  ${YELLOW}╔══════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "  ${YELLOW}║${NC}  ${BOLD}NVIDIA DETECTED${NC}                                               ${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}║${NC}  ${BOLD}HEADS UP — NVIDIA DETECTED${NC}                                    ${YELLOW}║${NC}"
     echo -e "  ${YELLOW}╠══════════════════════════════════════════════════════════════╣${NC}"
     echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
-    echo -e "  ${YELLOW}║${NC}  On a ${BOLD}fresh Fedora install${NC}, the open-source nouveau driver      ${YELLOW}║${NC}"
-    echo -e "  ${YELLOW}║${NC}  can switch to basic modes (e.g. 800×600) once the           ${YELLOW}║${NC}"
-    echo -e "  ${YELLOW}║${NC}  proprietary NVIDIA driver is installed mid-install.          ${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}║${NC}  You've got NVIDIA gear. On a ${BOLD}fresh install${NC}, running this           ${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}║${NC}  before a full system update can mess up your display.       ${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}║${NC}  Think 800×600 resolution and laggy refresh. Not fun.         ${YELLOW}║${NC}"
     echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
-    echo -e "  ${YELLOW}║${NC}  ${BOLD}Recommended before running this script:${NC}                       ${YELLOW}║${NC}"
-    echo -e "  ${YELLOW}║${NC}    1. Connect to ethernet or WiFi (ethernet recommended)        ${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}║${NC}  ${BOLD}Save yourself the headache — do this first:${NC}                  ${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}║${NC}    1. Get online (ethernet > WiFi if you can)                   ${YELLOW}║${NC}"
     echo -e "  ${YELLOW}║${NC}    2. ${BOLD}sudo dnf upgrade${NC}                                        ${YELLOW}║${NC}"
     echo -e "  ${YELLOW}║${NC}    3. Reboot                                                    ${YELLOW}║${NC}"
-    echo -e "  ${YELLOW}║${NC}    4. Run installer again                                        ${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}║${NC}    4. Run this thing again                                       ${YELLOW}║${NC}"
     echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
-    echo -e "  ${YELLOW}║${NC}  If you already did that, proceed below.                      ${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}║${NC}  ${GREEN}✓${NC}  Already updated? Hit SPACE to roll.                        ${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}║${NC}  ${YELLOW}Ctrl+C${NC} to go update first.                                   ${YELLOW}║${NC}"
     echo -e "  ${YELLOW}╚══════════════════════════════════════════════════════════════╝${NC}"
     echo ""
-    echo -n "  ${DIM}Press SPACE to continue...${NC} "
+    echo -en "  ${DIM}Hit SPACE to keep going...${NC} "
     while true; do
-      read -r -s -n 1 key
+      read -r -s -n 1 key || true
       if [ "$key" = " " ]; then
-        echo -e "${GREEN}continuing${NC}"
+        echo -e "${GREEN}let's go${NC}"
         break
       fi
     done
     sudo dnf install -y akmod-nvidia xorg-x11-drv-nvidia-cuda nvidia-settings vdpauinfo libva-utils
-    ok "NVIDIA drivers installed"
+    ok "NVIDIA drivers installed — fingers crossed"
   else
-    warn "No NVIDIA GPU detected — skipping"
+    warn "No NVIDIA gear found — moving on"
   fi
 }
 
@@ -1091,7 +1109,7 @@ install_extensions() {
   shell_version=$(gnome-shell --version 2>/dev/null | grep -oP '\d+\.\d+' | head -1 || echo "50")
   for uuid in "${extensions[@]}"; do
     local dl_url
-    dl_url=$(curl -s "https://extensions.gnome.org/extension-info/?uuid=$uuid&shell_version=$shell_version" | jq -r '.download_url // empty' 2>/dev/null)
+    dl_url=$(curl -s "https://extensions.gnome.org/extension-info/?uuid=$uuid&shell_version=$shell_version" | jq -r '.download_url // empty' 2>/dev/null) || true
     if [ -n "$dl_url" ]; then
       rm -f /tmp/ext-"$uuid".zip
       curl -sL "https://extensions.gnome.org$dl_url" -o /tmp/ext-"$uuid".zip 2>/dev/null
@@ -1174,26 +1192,39 @@ finalize() {
   ok "System cleaned and polished"
 
   echo ""
-  echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-  echo -e "  ${CYAN}║${NC}  ${GREEN}${BOLD}✓  INSTALLATION COMPLETE  ✓${NC}                            ${CYAN}║${NC}"
-  echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}${WHITE}Fedora MacTahoe  ◆  Eprahemi Edition${NC}                       ${CYAN}║${NC}"
-  echo -e "  ${CYAN}║${NC}                                                             ${CYAN}║${NC}"
-  echo -e "  ${CYAN}║${NC}  ${YELLOW}◆${NC}  All themes, icons, fonts are active                   ${CYAN}║${NC}"
-  echo -e "  ${CYAN}║${NC}  ${YELLOW}◆${NC}  Kitty is the default terminal                          ${CYAN}║${NC}"
-  echo -e "  ${CYAN}║${NC}  ${YELLOW}◆${NC}  Fish will be the default shell (after logout)          ${CYAN}║${NC}"
-  echo -e "  ${CYAN}║${NC}  ${YELLOW}◆${NC}  All custom keybindings are active                      ${CYAN}║${NC}"
-  echo -e "  ${CYAN}║${NC}  ${YELLOW}◆${NC}  macOS Big Sur sounds will play                         ${CYAN}║${NC}"
-  echo -e "  ${CYAN}║${NC}  ${YELLOW}◆${NC}  GDM login screen themed                                ${CYAN}║${NC}"
-  echo -e "  ${CYAN}║${NC}  ${YELLOW}◆${NC}  Flatpak GTK runtime installed                          ${CYAN}║${NC}"
+  echo -e "  ${GREEN}╔══════════════════════════════════════════════════════════════╗${NC}"
+  echo -e "  ${GREEN}║${NC}                                                              ${GREEN}║${NC}"
+  echo -e "  ${GREEN}║${NC}"'      ______                 __                   _           '"${GREEN}║${NC}"
+  echo -e "  ${GREEN}║${NC}"'     / ____/___  _________ _/ /_  ___  ____ ___  (_)          '"${GREEN}║${NC}"
+  echo -e "  ${GREEN}║${NC}"'    / __/ / __ \/ ___/ __ `/ __ \/ _ \/ __ `__ \/ /           '"${GREEN}║${NC}"
+  echo -e "  ${GREEN}║${NC}"'   / /___/ /_/ / /  / /_/ / / / /  __/ / / / / / /            '"${GREEN}║${NC}"
+  echo -e "  ${GREEN}║${NC}"'  /_____/ .___/_/   \__,_/_/ /_/\___/_/ /_/ /_/_/             '"${GREEN}║${NC}"
+  echo -e "  ${GREEN}║${NC}"'       /_/                                                     '"${GREEN}║${NC}"
+  echo -e "  ${GREEN}║${NC}"'                                                              '"${GREEN}║${NC}"
+  echo -e "  ${GREEN}║${NC}"'            '"${BOLD}${WHITE}"'✅  YOU DID IT!${NC}''                                     '"${GREEN}║${NC}"
+  echo -e "  ${GREEN}║${NC}"'                                                              '"${GREEN}║${NC}"
+  echo -e "  ${GREEN}╠══════════════════════════════════════════════════════════════╣${NC}"
+  echo -e "  ${GREEN}║${NC}  "${BOLD}${WHITE}"◆  Fedora MacTahoe  —  Eprahemi Edition${NC}"'                      '"${GREEN}║${NC}"
+  echo -e "  ${GREEN}║${NC}"'                                                              '"${GREEN}║${NC}"
+  echo -e "  ${GREEN}║${NC}  ${YELLOW}◆${NC}  All themes, icons, fonts are active                   ${GREEN}║${NC}"
+  echo -e "  ${GREEN}║${NC}  ${YELLOW}◆${NC}  Kitty is the default terminal                          ${GREEN}║${NC}"
+  echo -e "  ${GREEN}║${NC}  ${YELLOW}◆${NC}  Fish will be the default shell (after logout)          ${GREEN}║${NC}"
+  echo -e "  ${GREEN}║${NC}  ${YELLOW}◆${NC}  All custom keybindings are active                      ${GREEN}║${NC}"
+  echo -e "  ${GREEN}║${NC}  ${YELLOW}◆${NC}  macOS Big Sur sounds will play                         ${GREEN}║${NC}"
+  echo -e "  ${GREEN}║${NC}  ${YELLOW}◆${NC}  GDM login screen themed                                ${GREEN}║${NC}"
+  echo -e "  ${GREEN}║${NC}  ${YELLOW}◆${NC}  Flatpak GTK runtime installed                          ${GREEN}║${NC}"
   if [ "${FIREFOX_THEME_FAILED:-0}" = 1 ]; then
-    echo -e "  ${CYAN}║${NC}                                                             ${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}  ${YELLOW}⚠${NC}  Firefox not themed — log in, launch Firefox once,        ${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}  ${YELLOW}⚠${NC}  then re-run: bash install.sh (skips done steps)        ${CYAN}║${NC}"
+    echo -e "  ${GREEN}║${NC}                                                             ${GREEN}║${NC}"
+    echo -e "  ${GREEN}║${NC}  ${YELLOW}⚠${NC}  Firefox not themed — log in, launch Firefox once,        ${GREEN}║${NC}"
+    echo -e "  ${GREEN}║${NC}  ${YELLOW}⚠${NC}  then re-run: bash install.sh (skips done steps)        ${GREEN}║${NC}"
   fi
-  echo -e "  ${CYAN}║${NC}                                                             ${CYAN}║${NC}"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}${YELLOW}⚠  Recommended: Reboot now to apply all changes${NC}          ${CYAN}║${NC}"
-  echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+  echo -e "  ${GREEN}║${NC}                                                              ${GREEN}║${NC}"
+  echo -e "  ${GREEN}╠══════════════════════════════════════════════════════════════╣${NC}"
+  echo -e "  ${GREEN}║${NC}                                                              ${GREEN}║${NC}"
+  echo -e "  ${GREEN}║${NC}  ${DIM}┊${NC}  ${BOLD}©  Made by Eprahemi${NC}                                    ${GREEN}║${NC}"
+  echo -e "  ${GREEN}║${NC}  ${DIM}┊${NC}  ${BOLD}${WHITE}Fedora MacTahoe${NC}  ${DIM}—${NC}  Open-source Mac vibes for Fedora${GREEN}║${NC}"
+  echo -e "  ${GREEN}║${NC}                                                              ${GREEN}║${NC}"
+  echo -e "  ${GREEN}╚══════════════════════════════════════════════════════════════╝${NC}"
   echo ""
   echo -e "  ${DIM}╭─${NC} ${BOLD}${WHITE}✦  More from Eprahemi${NC} ${DIM}────────────────────────────────────────╮${NC}"
   echo -e "  ${DIM}│${NC}                                                                 ${DIM}│${NC}"
@@ -1204,12 +1235,16 @@ finalize() {
   echo -e "  ${DIM}│${NC}  ${DIM}If you enjoyed this project, consider starring ⭐ on GitHub${NC}   ${DIM}│${NC}"
   echo -e "  ${DIM}╰${NC}${DIM}─────────────────────────────────────────────────────────────────╯${NC}"
   echo ""
-
-  read -rp "Reboot now? [y/N] " reply
+  echo -e "  ${YELLOW}╔══════════════════════════════════════════════════════════════╗${NC}"
+  echo -e "  ${YELLOW}║${NC}  ${BOLD}${WHITE}⚡  Time to reboot${NC}  ${DIM}All the good stuff kicks in after restart${NC}    ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}╚══════════════════════════════════════════════════════════════╝${NC}"
+  echo ""
+  read -rp "  Reboot now? [y/N] " reply || true
   if [[ "$reply" =~ ^[Yy]$ ]]; then
+    echo -e "  ${GREEN}See you on the other side! Rebooting...${NC}"
     sudo reboot
   else
-    echo "Reboot later to apply all changes."
+    echo -e "  ${DIM}No worries — just remember to reboot before everything clicks into place.${NC}"
   fi
 }
 
@@ -1228,18 +1263,20 @@ echo -e "  ${CYAN}║${NC}"'     / ____/___  _________ _/ /_  ___  ____ ___  (_)
 echo -e "  ${CYAN}║${NC}"'    / __/ / __ \/ ___/ __ `/ __ \/ _ \/ __ `__ \/ /           '"${CYAN}║${NC}"
 echo -e "  ${CYAN}║${NC}"'   / /___/ /_/ / /  / /_/ / / / /  __/ / / / / / /            '"${CYAN}║${NC}"
 echo -e "  ${CYAN}║${NC}"'  /_____/ .___/_/   \__,_/_/ /_/\___/_/ /_/ /_/_/             '"${CYAN}║${NC}"
-echo -e "  ${CYAN}║${NC}"'       /_/                                                     '"${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}"'       /_/                                                    '"${CYAN}║${NC}"
 echo -e "  ${CYAN}║${NC}"'                                                              '"${CYAN}║${NC}"
-echo -e "  ${CYAN}║${NC}"'  '"${BOLD}${WHITE}"'◆  Fedora MacTahoe  —  Eprahemi Edition'"${NC}"'                      '"${CYAN}║${NC}"
-echo -e "  ${CYAN}║${NC}"'  '"${BOLD}"'◆  Automated macOS Desktop Transformation'"${NC}"'              '"${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}"'  '"${BOLD}${WHITE}"'◆  Fedora MacTahoe  —  Eprahemi Edition'"${NC}"'                     '"${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}"'  '"${BOLD}"'◆  Make your Fedora look like a Mac — the fun way'"${NC}"'           '"${CYAN}║${NC}"
 echo -e "  ${CYAN}║${NC}"'                                                              '"${CYAN}║${NC}"
-echo -e "  ${CYAN}║${NC}  ${DIM}GNOME${NC} ${GNOME_VER}  ${DIM}◆  Kitty Terminal  ◆  Fish Shell${NC}           ${CYAN}║${NC}"
+gnome_text="  GNOME ${GNOME_VER}  ◆  Kitty Terminal  ◆  Fish Shell"
+echo -e "  ${CYAN}║${NC}  ${DIM}GNOME${NC} ${GNOME_VER}  ${DIM}◆  Kitty Terminal  ◆  Fish Shell${NC}$(printf '%*s' $((62 - ${#gnome_text})) '')${CYAN}║${NC}"
 echo -e "  ${CYAN}║${NC}"'                                                              '"${CYAN}║${NC}"
-echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  21-Step Installer    ${DIM}◆${NC}  Auto-detects your system    ${DIM}◆${NC}  ${CYAN}║${NC}"
-echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  Theme compiles for your GNOME ${BOLD}${GNOME_VER}${NC}                         ${CYAN}║${NC}"
-echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  Sets up Kitty, Fish, icons, fonts, sounds${NC}                 ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  21-Step Installer    ${DIM}◆${NC}  Auto-detects your system    ${DIM}◆${NC}    ${CYAN}║${NC}"
+theme_text="  ◆  Theme compiles for your GNOME ${GNOME_VER}"
+echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  Theme compiles for your GNOME ${BOLD}${GNOME_VER}${NC}$(printf '%*s' $((62 - ${#theme_text})) '')${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  Sets up Kitty, Fish, icons, fonts, sounds${NC}                ${CYAN}║${NC}"
 echo -e "  ${CYAN}║${NC}"'                                                              '"${CYAN}║${NC}"
-echo -e "  ${CYAN}║${NC}  ${YELLOW}Press Ctrl+C at any time to cancel${NC}                           ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ${YELLOW}Ctrl+C anytime to bail${NC}                                      ${CYAN}║${NC}"
 echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
@@ -1247,20 +1284,20 @@ preflight
 
 remove_ptyxis
 
-phase_divider "PHASE 1 : SYSTEM FOUNDATIONS"
+phase_divider "PHASE 1 : SYSTEM FOUNDATIONS" 3 4
 install_rpmfusion
 install_nvidia
 
-phase_divider "PHASE 2 : PACKAGES"
+phase_divider "PHASE 2 : PACKAGES" 5 7
 install_rpm_packages
 install_browsers
 install_flatpaks
 
-phase_divider "PHASE 3 : THEMES"
+phase_divider "PHASE 3 : THEMES" 8 9
 install_mactahoe_theme
 install_font
 
-phase_divider "PHASE 4 : CONFIGURATION"
+phase_divider "PHASE 4 : CONFIGURATION" 10 18
 install_extensions
 apply_desktop_entries
 apply_configs
@@ -1271,9 +1308,9 @@ setup_firefox_theme
 setup_flatpak_theme
 install_sounds
 
-phase_divider "PHASE 5 : TERMINAL & SHELL"
+phase_divider "PHASE 5 : TERMINAL & SHELL" 19 20
 setup_terminal
 setup_shell
 
-phase_divider "PHASE 6 : FINALIZE"
+phase_divider "PHASE 6 : FINALIZE" 21 21
 finalize

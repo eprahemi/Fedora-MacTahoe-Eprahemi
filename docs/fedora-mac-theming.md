@@ -15,7 +15,7 @@
 
 <p align="center">
   <strong>Version:</strong> 1.0 &nbsp;·&nbsp;
-  <strong>Script:</strong> 877 lines · 21 steps · Zero hardcoded paths &nbsp;·&nbsp;
+  <strong>Script:</strong> 1,316 lines · 21 steps · Zero hardcoded paths &nbsp;·&nbsp;
   <strong>License:</strong> Open Source
 </p>
 
@@ -86,7 +86,7 @@
                                       │
                                       ▼
 ┌═════════════════════════════════════════════════════════════════════════════┐
-║                            install.sh  (877 lines)                         ║
+║                            install.sh  (1,316 lines)                        ║
 ║                                                                             ║
 ║  ┌──────────────────────────────────────────────────────────────────────┐  ║
 ║  │  PHASE 1: SYSTEM PREPARATION (Steps 1-3)                             │  ║
@@ -1400,7 +1400,7 @@ gsettings set org.gnome.desktop.sound event-sounds true
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  📦 Fedora-MacTahoe-Eprahemi/                                              │
 │                                                                             │
-│  ├── 📄 install.sh                   # Main installer (877 lines, 21 steps)│
+│  ├── 📄 install.sh                   # Main installer (1,316 lines, 21 steps)│
 │  │                                    #  → Entry point for transformation  │
 │  │                                                                          │
 │  ├── 📄 bootstrap.sh                 # One-liner entry:                    │

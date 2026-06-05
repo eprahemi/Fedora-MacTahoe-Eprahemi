@@ -25,34 +25,86 @@ if [ -z "${KITTY_PID:-}" ]; then
   if [ "$detected_term" = "ptyxis" ] || [ "$detected_term" = "gnome-ptyxis" ]; then
     echo ""
     echo -e "  ╔══════════════════════════════════════════════════════════════╗"
-    echo -e "  ║            ⛔  UNSUPPORTED TERMINAL DETECTED                  ║"
+    echo -e "  ║            ⛔  WOAH — PTYXIS DETECTED                        ║"
     echo -e "  ╠══════════════════════════════════════════════════════════════╣"
     echo -e "  ║                                                              ║"
-    echo -e "  ║  You are currently running inside ${BOLD}Ptyxis${NC}, the default          ║"
-    echo -e "  ║  Fedora terminal emulator. This installer is designed to      ║"
-    echo -e "  ║  completely replace Ptyxis with Kitty as the system terminal  ║"
-    echo -e "  ║  and will ${BOLD}${RED}remove${NC} Ptyxis during the installation process.         ║"
+    echo -e "  ║  You're in ${BOLD}Ptyxis${NC} right now. Bad news — this installer         ║"
+    echo -e "  ║  ${BOLD}${RED}yeets Ptyxis into the void${NC} during setup.                     ║"
     echo -e "  ║                                                              ║"
-    echo -e "  ║  ${YELLOW}╳${NC}  Running the installer from inside Ptyxis would:            ║"
-    echo -e "  ║     • Uninstall the terminal you are currently using          ║"
-    echo -e "  ║     • Crash the installation process mid-way                  ║"
-    echo -e "  ║     • Potentially corrupt your session or lose unsaved work  ║"
+    echo -e "  ║  Running from inside it would be like trying to renovate     ║"
+    echo -e "  ║  your kitchen while you're standing in the middle of it.     ║"
     echo -e "  ║                                                              ║"
-    echo -e "  ║  ${GREEN}✓${NC}  To proceed with the installation:                          ║"
+    echo -e "  ║  ${YELLOW}╳${NC}  The installer would:                                         ║"
+    echo -e "  ║     • Delete the terminal you're currently typing in         ║"
+    echo -e "  ║     • Crash halfway through (bye-bye progress)               ║"
+    echo -e "  ║     • Potentially mess up your whole session                 ║"
     echo -e "  ║                                                              ║"
-    echo -e "  ║  ${BOLD}Step 1${NC}  Install Kitty terminal:                                 ║"
-    echo -e "  ║       sudo dnf install kitty                                 ║"
+    echo -e "  ║  ${GREEN}✓${NC}  Here's the right way to do it:                              ║"
     echo -e "  ║                                                              ║"
-    echo -e "  ║  ${BOLD}Step 2${NC}  Launch Kitty and re-run the installer:                   ║"
+    echo -e "  ║  ${BOLD}1${NC}  Install Kitty:  sudo dnf install kitty                        ║"
+    echo -e "  ║                                                              ║"
+    echo -e "  ║  ${BOLD}2${NC}  Launch Kitty and re-run:                                      ║"
     echo -e "  ║       kitty -e bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/bootstrap.sh)\" ║"
     echo -e "  ║                                                              ║"
-    echo -e "  ║  ${YELLOW}Note:${NC} You can keep Ptyxis as a secondary terminal if you wish,   ║"
-    echo -e "  ║  but Kitty is required as the primary terminal for the       ║"
-    echo -e "  ║  MacTahoe experience to function correctly.                  ║"
+    echo -e "  ║  You can keep Ptyxis as a backup if you want, but            ║"
+    echo -e "  ║  Kitty needs to be the main ride for this to work.           ║"
     echo -e "  ║                                                              ║"
     echo -e "  ╚══════════════════════════════════════════════════════════════╝"
     echo ""
     exit 1
+  fi
+
+  # ── Kitty recommendation for non-Kitty terminals ──
+  if [ "$detected_term" != "kitty" ]; then
+    echo ""
+    echo "  ┌─────────────────────────────────────────────────────────────┐"
+    echo "  │  ✦  KITTY = THE REAL DEAL  ✦                              │"
+    echo "  ├─────────────────────────────────────────────────────────────┤"
+    echo "  │  You're in a regular terminal right now. That's cool,       │"
+    echo "  │  but the full MacTahoe experience really shines in Kitty.   │"
+    echo "  │                                                             │"
+    echo "  │  Why Kitty over your current setup?                         │"
+    echo "  │  ◆ True colors — no washed-out nonsense                     │"
+    echo "  │  ◆ GPU rendering — scrolling is buttery smooth              │"
+    echo "  │  ◆ Blur & transparency that match the theme                 │"
+    echo "  │  ◆ Tab bar that looks like it belongs on a Mac              │"
+    echo "  │  ◆ Keyboard shortcuts that just make sense                  │"
+    echo "  │                                                             │"
+    echo "  │  Get it:  sudo dnf install kitty                            │"
+    echo "  │  Then:    kitty -e bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/bootstrap.sh)\" │"
+    echo "  │                                                             │"
+    echo "  │  Hit SPACE to keep going with what you've got               │"
+    echo "  │  or Ctrl+C to grab Kitty first (recommended)                │"
+    echo "  └─────────────────────────────────────────────────────────────┘"
+    echo ""
+    # First space: acknowledge
+    while true; do
+      read -r -s -n 1 key || true
+      if [ "$key" = " " ]; then
+        echo -e "  ${DIM}ok, one more thing...${NC}"
+        break
+      fi
+    done
+    # Second space: confirm
+    echo ""
+    echo -e "  ┌─────────────────────────────────────────────────────────────┐"
+    echo -e "  │  ${BOLD}${YELLOW}⚠  FOR REAL? NO KITTY?${NC}                                    │"
+    echo -e "  ├─────────────────────────────────────────────────────────────┤"
+    echo -e "  │  You're about to run without the terminal this whole        │"
+    echo -e "  │  thing was designed for. Some stuff might look off,         │"
+    echo -e "  │  and you'll miss out on the best parts. Your call.          │"
+    echo -e "  │                                                             │"
+    echo -e "  │  Press ${BOLD}SPACE${NC} to proceed (no judgment)                              │"
+    echo -e "  │  Press ${BOLD}Ctrl+C${NC} to install Kitty first (smart move)                  │"
+    echo -e "  └─────────────────────────────────────────────────────────────┘"
+    echo -en "  ${DIM}Waiting on you...${NC} "
+    while true; do
+      read -r -s -n 1 key || true
+      if [ "$key" = " " ]; then
+        echo -e "${GREEN}let's roll${NC}"
+        break
+      fi
+    done
   fi
 fi
 
@@ -63,28 +115,28 @@ lsmod 2>/dev/null | grep -qi nouveau && nvidia_found=true
 if [ "$nvidia_found" = true ]; then
   echo ""
   echo -e "  ${YELLOW}╔══════════════════════════════════════════════════════════════╗${NC}"
-  echo -e "  ${YELLOW}║${NC}  ${BOLD}NVIDIA DETECTED${NC}                                               ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}  ${BOLD}HEADS UP — NVIDIA DETECTED${NC}                                    ${YELLOW}║${NC}"
   echo -e "  ${YELLOW}╠══════════════════════════════════════════════════════════════╣${NC}"
   echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
-  echo -e "  ${YELLOW}║${NC}  On a ${BOLD}fresh Fedora install${NC}, running this installer before         ${YELLOW}║${NC}"
-  echo -e "  ${YELLOW}║${NC}  a full system update can cause display issues (800×600,      ${YELLOW}║${NC}"
-  echo -e "  ${YELLOW}║${NC}  poor refresh) once the NVIDIA driver is installed.            ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}  You've got NVIDIA gear. On a ${BOLD}fresh install${NC}, running this           ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}  before a full system update can mess up your display.       ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}  Think 800×600 resolution and laggy refresh. Not fun.         ${YELLOW}║${NC}"
   echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
-  echo -e "  ${YELLOW}║${NC}  ${BOLD}Recommended before running this script:${NC}                       ${YELLOW}║${NC}"
-  echo -e "  ${YELLOW}║${NC}    1. Connect to ethernet or WiFi (ethernet recommended)        ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}  ${BOLD}Save yourself the headache — do this first:${NC}                  ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}    1. Get online (ethernet > WiFi if you can)                   ${YELLOW}║${NC}"
   echo -e "  ${YELLOW}║${NC}    2. ${BOLD}sudo dnf upgrade${NC}                                        ${YELLOW}║${NC}"
   echo -e "  ${YELLOW}║${NC}    3. Reboot                                                    ${YELLOW}║${NC}"
-  echo -e "  ${YELLOW}║${NC}    4. Run installer again                                        ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}    4. Run this thing again                                       ${YELLOW}║${NC}"
   echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
-  echo -e "  ${YELLOW}║${NC}  ${GREEN}✓${NC}  If you already did that, press SPACE to proceed.              ${YELLOW}║${NC}"
-  echo -e "  ${YELLOW}║${NC}  ${YELLOW}Ctrl+C${NC} to cancel and update first.                             ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}  ${GREEN}✓${NC}  Already updated? Hit SPACE to roll.                        ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}  ${YELLOW}Ctrl+C${NC} to go update first.                                   ${YELLOW}║${NC}"
   echo -e "  ${YELLOW}╚══════════════════════════════════════════════════════════════╝${NC}"
   echo ""
-  echo -n "  ${DIM}Press SPACE to continue...${NC} "
+  echo -en "  ${DIM}Hit SPACE to keep going...${NC} "
   while true; do
-    read -r -s -n 1 key
+    read -r -s -n 1 key || true
     if [ "$key" = " " ]; then
-      echo -e "${GREEN}continuing${NC}"
+      echo -e "${GREEN}let's go${NC}"
       break
     fi
   done
@@ -105,31 +157,32 @@ echo -e "  ${CYAN}║${NC}"'  /_____/ .___/_/   \__,_/_/ /_/\___/_/ /_/ /_/_/   
 echo -e "  ${CYAN}║${NC}"'       /_/                                                     '"${CYAN}║${NC}"
 echo -e "  ${CYAN}║${NC}"'                                                              '"${CYAN}║${NC}"
 echo -e "  ${CYAN}║${NC}"'  '"${BOLD}${WHITE}"'◆  Fedora MacTahoe  —  Eprahemi Edition'"${NC}"'                      '"${CYAN}║${NC}"
-echo -e "  ${CYAN}║${NC}"'  '"${BOLD}"'◆  Automated macOS Desktop Transformation'"${NC}"'              '"${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}"'  '"${BOLD}"'◆  Make your Fedora look like a Mac — the fun way'"${NC}"'           '"${CYAN}║${NC}"
 echo -e "  ${CYAN}║${NC}"'                                                              '"${CYAN}║${NC}"
-echo -e "  ${CYAN}║${NC}  ${DIM}GNOME${NC} ${GNOME_VER}  ${DIM}◆  Kitty Terminal  ◆  Fish Shell${NC}           ${CYAN}║${NC}"
+gnome_text="  GNOME ${GNOME_VER}  ◆  Kitty Terminal  ◆  Fish Shell"
+echo -e "  ${CYAN}║${NC}  ${DIM}GNOME${NC} ${GNOME_VER}  ${DIM}◆  Kitty Terminal  ◆  Fish Shell${NC}$(printf '%*s' $((62 - ${#gnome_text})) '')${CYAN}║${NC}"
 echo -e "  ${CYAN}║${NC}"'                                                              '"${CYAN}║${NC}"
-echo -e "  ${CYAN}║${NC}  ${YELLOW}◆  Press SPACE to begin installation${NC}                      ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ${YELLOW}◆  SPACE to start the party${NC}                                 ${CYAN}║${NC}"
 echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
-echo -n "  ${DIM}Waiting...${NC} "
+echo -en "  ${DIM}Waiting on you...${NC} "
 while true; do
-  read -r -s -n 1 key
+  read -r -s -n 1 key || true
   if [ "$key" = " " ]; then
-    echo -e "${GREEN}proceeding${NC}"
+    echo -e "${GREEN}here we go${NC}"
     break
   fi
 done
 
 # ── Ensure git is available ──
 if ! command -v git &>/dev/null; then
-  echo -e "  ${CYAN}◆${NC}  Git not found — installing..."
+  echo -e "  ${CYAN}◆${NC}  Git's not here — grabbing it real quick..."
   sudo dnf install -y git
 fi
 
 # ── Download bundle ──
 echo ""
 echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-echo -e "  ${CYAN}║${NC}             ${BOLD}${WHITE}📦  Downloading Bundle${NC}                              ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}             ${BOLD}${WHITE}📦  Grabbing the Goods${NC}                            ${CYAN}║${NC}"
 echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
 echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  Repository:  ${BOLD}Fedora-MacTahoe-Eprahemi${NC}                    ${CYAN}║${NC}"
 echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  Destination: ${BOLD}$TMP${NC}                    ${CYAN}║${NC}"
@@ -138,7 +191,7 @@ rm -rf "$TMP"
 if git clone --depth 1 "$REPO" "$TMP" 2>&1; then
   echo ""
   echo -e "  ${GREEN}╔══════════════════════════════════════════════════════════════╗${NC}"
-  echo -e "  ${GREEN}║${NC}              ${BOLD}✅  Download Complete${NC}                               ${GREEN}║${NC}"
+  echo -e "  ${GREEN}║${NC}              ${BOLD}✅  Got Everything${NC}                                ${GREEN}║${NC}"
   echo -e "  ${GREEN}╚══════════════════════════════════════════════════════════════╝${NC}"
 else
   echo ""

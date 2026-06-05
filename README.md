@@ -1,31 +1,33 @@
-# Fedora MacTahoe — Eprahemi Edition
+# 🍎 Fedora MacTahoe — Eprahemi Edition
 
-A complete, automated Fedora desktop transformation. macOS-style GTK theme, icon themes,
-SF Pro font, Big Sur sounds, GNOME extensions, custom keybindings, and a pre-configured
-development environment — all in one portable bundle.
+Make your Fedora look like a Mac — the fun way. GTK theme, icon themes, SF Pro font,
+Big Sur sounds, GNOME extensions, custom keybindings, a terminal that actually looks
+good, and a pre-configured dev environment — all in one portable bundle.
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/bootstrap.sh)"
 ```
 
 > [!WARNING]
-> This installer is purpose-built for **Fedora Linux with the GNOME desktop environment**. It relies on Fedora-specific package managers (`dnf`, RPM Fusion), GNOME Shell extension APIs, and systemd integration points that are not present on other distributions or desktop environments. **It will not function correctly on Debian, Arch, Ubuntu, or any non-GNOME desktop.**
+> Built for **Fedora Linux with GNOME**. Uses `dnf`, RPM Fusion, GNOME Shell APIs, and
+> systemd stuff that doesn't exist on Debian, Arch, Ubuntu, or non-GNOME desktops.
+> **It won't work there.** Don't try.
 
 ---
 
-## Features
+## What You Get
 
 | Category | Details |
 |---|---|
-| **GTK Theme** | MacTahoe-Dark — compiled from upstream source for your GNOME version |
-| **Icon Themes** | MacTahoe (light, 143 MB), MacTahoe-dark (dark, 76 MB) |
-| **Custom Icons** | 21 macOS-style application icons (native + Flatpak aliases) |
+| **GTK Theme** | MacTahoe-Dark — compiled fresh for your GNOME version |
+| **Icon Themes** | MacTahoe (light), MacTahoe-dark (dark) |
+| **Custom Icons** | 25+ macOS-style app icons (native + Flatpak aliases) |
 | **Font** | SF Pro Display |
-| **Sounds** | macOS Big Sur (45 system event sounds) |
-| **Terminal** | Kitty — set as default, always opens maximized |
-| **Shell** | Fish — with 17 custom functions and Starship prompt |
+| **Sounds** | macOS Big Sur — 45 system event sounds |
+| **Terminal** | Kitty — default, maximized on launch, GPU-accelerated |
+| **Shell** | Fish — 17 custom functions + Starship prompt |
 | **Extensions** | 14 GNOME Shell extensions (Blur My Shell, Dash2Dock Lite, Coverflow Alt+Tab, and more) |
-| **GDM** | Themed login screen with custom wallpaper |
+| **GDM** | Themed login screen with your wallpaper |
 | **Flatpak** | org.gtk.Gtk3theme.MacTahoe-Dark runtime built automatically |
 | **Keybindings** | Super+T → kitty · Super+E → nautilus · Ctrl+Shift+Esc → system monitor · Ctrl+Alt+V → volume control · Super+1-9 → workspace switch |
 | **Apps** | Firefox, Chrome, Edge, VS Code, Spotify, Discord, Obsidian, Proton VPN, VLC, Kdenlive, HandBrake, Celluloid, LibreOffice, and more |
@@ -53,36 +55,47 @@ cd Fedora-MacTahoe-Eprahemi
 bash install.sh
 ```
 
-The script walks through 21 steps and handles everything: RPM Fusion, multimedia codecs,
-NVIDIA drivers (auto-detected), RPM and Flatpak applications, theme compilation, GNOME
-configuration, extensions, and shell setup.
+The script walks through **21 steps** — everything from RPM Fusion + codecs to NVIDIA
+drivers (auto-detected), apps, theme compilation, GNOME config, extensions, and shell
+setup. It pauses with clear SPACE-prompt boxes at key points, so nothing happens
+without you saying "go."
+
+### Terminal notes
+
+- **Kitty** is the recommended terminal — GPU rendering, true colors, blur,
+  and a tab bar that actually belongs. The installer recommends it but
+  doesn't force it.
+- **Ptyxis** is blocked — the installer removes it. Run from Kitty or any
+  other terminal (GNOME Terminal, Alacritty, etc.) and you're fine.
+- Works from **bash, fish, zsh** — just run `bash install.sh` or the one-liner.
+  The shebang is `#!/usr/bin/env bash`, no assumptions about your interactive shell.
 
 ### Post-Install — Firefox
 
-Firefox cannot be themed headless. After first login:
+Firefox can't be themed headless. After first login:
 
 1. Launch Firefox once to create a profile
 2. Re-run `bash install.sh` — the Firefox macOS theme step will complete
 
 ## Idempotency
 
-The script is safe to re-run. Each step handles existing state gracefully:
-- Already-installed packages are skipped
-- Theme directories are purged and rebuilt
-- GNOME settings are re-applied
-- Fish shell is detected and left unchanged if already active
+Safe to re-run whenever you want. Each step handles existing state:
+
+- Already-installed packages get skipped
+- Theme directories get purged and rebuilt
+- GNOME settings get re-applied
+- Fish shell is detected and left alone if it's already your default
 
 ## Portability
 
-Every path and username is dynamic. The bundle works on any Fedora machine with any
-username — no hardcoded `/home/` references, no hardcoded user names.
+Every path and username is dynamic. Works on any Fedora machine, any username —
+zero hardcoded `/home/` or hardcoded user names in sight.
 
 ## License
 
-This project is free and open source. You are permitted to use, copy, modify, merge,
-publish, and distribute this software, in whole or in part, for any purpose, without
-restriction, provided that the original copyright notice is included.
+Free and open source. Use it, copy it, modify it, share it — just keep the
+original copyright notice around.
 
 ## Copyright
 
-© 2026 Eprahemi. All rights reserved.
+© 2026 Eprahemi. Made on Fedora, for Fedora.
