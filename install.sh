@@ -397,11 +397,13 @@ install_rpm_packages() {
     echo -e "  ${CYAN}║${NC}    ${BOLD}${GREEN}Y${NC}${BOLD}es${NC}  — Install Discord                                       ${CYAN}║${NC}"
     echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}n${NC}${BOLD}o${NC}   — Skip it                                               ${CYAN}║${NC}"
     echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}  ${DIM}Press Enter for default (Yes)${NC}                              ${CYAN}║${NC}"
     echo -e "  ${CYAN}║${NC}  ${DIM}Tip: set INSTALL_DISCORD=false to skip silently${NC}               ${CYAN}║${NC}"
     echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
-    echo -en "  ${DIM}Discord? (Y/n):${NC} "
+    echo -en "  ${DIM}Discord? [Y/n]:${NC} "
     read -r -n 1 key </dev/tty || true
     echo ""
+    # Default Yes — only explicit n/N says no
     if [ "$key" = "n" ] || [ "$key" = "N" ]; then
       INSTALL_DISCORD="false"
       echo -e "  ${DIM}→ Skipping Discord${NC}"
