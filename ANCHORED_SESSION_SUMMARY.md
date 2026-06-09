@@ -39,6 +39,7 @@ These caused (or would cause) the script to abort silently on edge cases.
 | 20 | 18 | install.sh | `WALLPAPER_18_URL` used `drive.google.com/uc?export=download&id=...` which returns HTML (virus scan warning page), not the zip | Changed to `drive.usercontent.google.com/download?id=...&export=download&confirm=t` — direct download, verified working |
 | 21 | 20 | install.sh | Same bug for `FACES_18_URL` — also returned HTML | Same fix applied |
 | 22 | 1033–1036, 1197–1200 | install.sh | 18+ zip files have nested subdirectories (`backgrounds+18/`, `faces+18/`). Old `for img in "$extract_tmp/"*; [ -f "$img" ] || continue` skipped directories — all files silently lost | Replaced with `while IFS= read -r -d '' img; do ... done < <(find "$extract_tmp" -type f -print0)` — recursive, finds files at any depth |
+| 23 | 1194–1216 | install.sh | 18+ faces installed ONLY to `faces +18/` — GNOME avatar picker scans `/usr/share/pixmaps/faces/` but NOT `faces +18/`. Result: zero avatars visible when 18+ chosen. | Added `sudo mkdir -p "$face_dir"` + second `sudo cp "$img" "$face_dir/"` in same loop + `sudo chmod 644 "$face_dir"/*` + AccountsService icon update for current user |
 
 ### 🟠 CLASS C: CONTENT / UX ISSUES
 
@@ -69,7 +70,7 @@ These caused (or would cause) the script to abort silently on edge cases.
 
 ## Current State
 
-- **install.sh**: 1686 lines, 22 steps, 6 phases
+- **install.sh**: 1703 lines, 22 steps, 6 phases
 - **bootstrap.sh**: 288 lines
 - Both pass `bash -n` syntax check
 - All bugs listed above are FIXED and PUSHED to GitHub
@@ -95,6 +96,7 @@ These caused (or would cause) the script to abort silently on edge cases.
 2. **18+ zips have nested subdirs** (`backgrounds+18/`, `faces+18/`). Never use `for f in "$dir/"*; [ -f "$f" ]` — always use `find -type f -print0` for zip extraction loops.
 3. **Icons must install system-wide** (`/usr/share/icons/hicolor/256x256/apps`) AND per-user (`$HOME/.local/share/icons/`) so all users get themed icons.
 4. **Zero hardcoded paths** — all `$HOME`, `$(whoami)`, `$USER`.
+5. **GNOME avatar picker only reads from `/usr/share/pixmaps/faces/`** — `faces +18/` is invisible. When installing 18+ faces, always copy to BOTH directories + update AccountsService icon.
 
 ## To Resume
 
