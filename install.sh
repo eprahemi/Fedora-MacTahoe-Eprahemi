@@ -950,8 +950,8 @@ apply_wallpapers() {
   local wp_dest="/usr/share/backgrounds/Wallvault-Wallpapers"
   mkdir -p "$HOME/.config/Wallpapers"
 
-  # ── Wipe all existing wallpapers, replace with custom ──
-  if [ -d /usr/share/backgrounds ]; then
+  # ── Wipe only if backgrounds are being installed ──
+  if [ "${INSTALL_BACKGROUNDS:-true}" = "true" ] && [ -d /usr/share/backgrounds ]; then
     sudo rm -rf /usr/share/backgrounds/* 2>/dev/null || true
     ok "Stock system wallpapers removed"
   fi
@@ -980,40 +980,43 @@ apply_wallpapers() {
   [ "$count" -gt 0 ] && ok "$count custom wallpapers installed to $wp_dest"
 
   # ── Register wallpapers in GNOME background properties XML ──
-  local gnome_xml_dir="/usr/share/gnome-background-properties"
-  local xml="$gnome_xml_dir/wallvault.xml"
+  # Only run if we actually installed something
+  if [ "$count" -gt 0 ]; then
+    local gnome_xml_dir="/usr/share/gnome-background-properties"
+    local xml="$gnome_xml_dir/wallvault.xml"
 
-  # Generate fresh wallvault.xml (only for files actually in wp_dest)
-  {
-    echo '<?xml version="1.0" encoding="UTF-8"?>'
-    echo '<!DOCTYPE wallpapers SYSTEM "gnome-wp-list.dtd">'
-    echo '<wallpapers>'
-    for img in "$wp_dest/"*; do
-      [ -f "$img" ] || continue
-      local bname
-      bname=$(basename "$img")
-      local bname_noext="${bname%.*}"
-      cat << EOF
-    <wallpaper deleted="false">
-        <name>${bname_noext}</name>
-        <filename>${img}</filename>
-        <options>zoom</options>
-        <shade_type>solid</shade_type>
-        <pcolor>#000000</pcolor>
-        <scolor>#000000</scolor>
-    </wallpaper>
+    # Generate fresh wallvault.xml (only for files actually in wp_dest)
+    {
+      echo '<?xml version="1.0" encoding="UTF-8"?>'
+      echo '<!DOCTYPE wallpapers SYSTEM "gnome-wp-list.dtd">'
+      echo '<wallpapers>'
+      for img in "$wp_dest/"*; do
+        [ -f "$img" ] || continue
+        local bname
+        bname=$(basename "$img")
+        local bname_noext="${bname%.*}"
+        cat << EOF
+      <wallpaper deleted="false">
+          <name>${bname_noext}</name>
+          <filename>${img}</filename>
+          <options>zoom</options>
+          <shade_type>solid</shade_type>
+          <pcolor>#000000</pcolor>
+          <scolor>#000000</scolor>
+      </wallpaper>
 EOF
-    done
-    echo '</wallpapers>'
-  } | sudo tee "$xml" > /dev/null
+      done
+      echo '</wallpapers>'
+    } | sudo tee "$xml" > /dev/null
 
-  # Then delete ALL stock XMLs — keep only our wallvault.xml
-  for sx in "$gnome_xml_dir"/*.xml; do
-    [ -f "$sx" ] || continue
-    [ "$sx" = "$xml" ] && continue
-    sudo rm -f "$sx" 2>/dev/null || true
-  done
-  ok "Wallpapers registered in GNOME background picker (stock XMLs deleted)"
+    # Then delete ALL stock XMLs — keep only our wallvault.xml
+    for sx in "$gnome_xml_dir"/*.xml; do
+      [ -f "$sx" ] || continue
+      [ "$sx" = "$xml" ] && continue
+      sudo rm -f "$sx" 2>/dev/null || true
+    done
+    ok "Wallpapers registered in GNOME background picker (stock XMLs deleted)"
+  fi
 
   # Set active desktop wallpaper (only if desktop wallpaper was installed)
   if [ "${INSTALL_DESKTOP_WALLPAPER:-true}" = "true" ] && [ -f "$wp/desktop/Himeno Fedora.jpg" ]; then
