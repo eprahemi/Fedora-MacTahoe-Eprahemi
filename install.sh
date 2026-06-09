@@ -505,6 +505,7 @@ install_flatpaks() {
   flatpak install -y flathub md.obsidian.Obsidian 2>/dev/null || true
   flatpak install -y flathub com.protonvpn.www 2>/dev/null || true
   flatpak install -y flathub com.spotify.Client 2>/dev/null || true
+  flatpak install -y flathub org.localsend.localsend_app 2>/dev/null || true
 
   sudo flatpak override --filesystem=xdg-config/gtk-3.0 2>/dev/null || true
   sudo flatpak override --filesystem=xdg-config/gtk-4.0 2>/dev/null || true
@@ -620,6 +621,7 @@ install_mactahoe_theme() {
       [spotify.png]="com.spotify.Client.png"
       [vlc.png]="org.videolan.VLC.png"
       [code.png]="com.visualstudio.code.png"
+      [localsend.png]="org.localsend.localsend_app.png"
     )
     if [ "${INSTALL_DISCORD:-true}" = "true" ]; then
       fp_aliases[discord.png]="com.discordapp.Discord.png"
