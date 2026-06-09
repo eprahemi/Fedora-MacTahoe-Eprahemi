@@ -36,6 +36,9 @@ These caused (or would cause) the script to abort silently on edge cases.
 | 17 | 494-512 | install.sh | LocalSend not in Flatpak install list | Added `flatpak install -y flathub org.localsend.localsend_app` |
 | 18 | 524-525 | install.sh | Old MacTahoe themes from other installers are NOT cleaned on re-run — they ARE (intentional wipe) | Verified: `rm -rf $HOME/.themes/MacTahoe*` + `sudo rm -rf /usr/share/themes/MacTahoe*` |
 | 19 | 567-568 | install.sh | Old MacTahoe icon themes from other installers cleaned on re-run | Verified: `rm -rf $HOME/.local/share/icons/MacTahoe*` |
+| 20 | 18 | install.sh | `WALLPAPER_18_URL` used `drive.google.com/uc?export=download&id=...` which returns HTML (virus scan warning page), not the zip | Changed to `drive.usercontent.google.com/download?id=...&export=download&confirm=t` — direct download, verified working |
+| 21 | 20 | install.sh | Same bug for `FACES_18_URL` — also returned HTML | Same fix applied |
+| 22 | 1033–1036, 1197–1200 | install.sh | 18+ zip files have nested subdirectories (`backgrounds+18/`, `faces+18/`). Old `for img in "$extract_tmp/"*; [ -f "$img" ] || continue` skipped directories — all files silently lost | Replaced with `while IFS= read -r -d '' img; do ... done < <(find "$extract_tmp" -type f -print0)` — recursive, finds files at any depth |
 
 ### 🟠 CLASS C: CONTENT / UX ISSUES
 
@@ -66,10 +69,10 @@ These caused (or would cause) the script to abort silently on edge cases.
 
 ## Current State
 
-- **install.sh**: 1492 lines, 22 steps, 6 phases
-- **bootstrap.sh**: 230 lines
+- **install.sh**: 1686 lines, 22 steps, 6 phases
+- **bootstrap.sh**: 288 lines
 - Both pass `bash -n` syntax check
-- All 33 bugs listed above are FIXED and PUSHED to GitHub
+- All bugs listed above are FIXED and PUSHED to GitHub
 
 ## Key Files
 
@@ -79,12 +82,19 @@ These caused (or would cause) the script to abort silently on edge cases.
 | `bootstrap.sh` | One-liner downloader — curl-pipe-bash entry point |
 | `ANCHORED_SESSION_SUMMARY.md` | This file — session log + bug registry |
 | `icons/256x256/` | Custom macOS app icons (PNG + SVG) |
+| `wallpapers/background-normal/` | 30 custom Mac-themed wallpapers |
 | `wallpapers/desktop/` | Desktop wallpapers |
 | `wallpapers/login/` | GDM login wallpaper |
-| `wallpapers/backgrounds/` | Additional backgrounds (30 files) |
-| `assets/faces/` | Custom profile pictures (16 files, 512×512 JPEG) |
+| `assets/normal-faces/` | Custom profile pictures (7 JPEGs) |
 | `configs/` | Kitty, Fish, Starship, GTK configs |
 | `themes/` | Bundled MacTahoe-Dark fallback theme |
+
+## Crucial Lessons — Never Forget
+
+1. **Google Drive 18+ zips** return HTML (virus warning) from `drive.google.com/uc`. Use `drive.usercontent.google.com/download` with `confirm=t` instead.
+2. **18+ zips have nested subdirs** (`backgrounds+18/`, `faces+18/`). Never use `for f in "$dir/"*; [ -f "$f" ]` — always use `find -type f -print0` for zip extraction loops.
+3. **Icons must install system-wide** (`/usr/share/icons/hicolor/256x256/apps`) AND per-user (`$HOME/.local/share/icons/`) so all users get themed icons.
+4. **Zero hardcoded paths** — all `$HOME`, `$(whoami)`, `$USER`.
 
 ## To Resume
 
