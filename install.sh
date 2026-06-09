@@ -883,6 +883,66 @@ apply_dconf() {
   ok "dconf settings applied"
 }
 
+# ── Optional wallpaper prompts (run before Phase 1) ──
+
+prompt_optional_wallpapers() {
+
+  # ── Desktop wallpaper prompt ──
+  if [ -z "${INSTALL_DESKTOP_WALLPAPER:-}" ]; then
+    echo ""
+    echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "  ${CYAN}║${NC}        ${BOLD}${WHITE}◆  DESKTOP WALLPAPER?${NC}  ${DIM}◆${NC}                              ${CYAN}║${NC}"
+    echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}  Install the custom Himeno Fedora desktop wallpaper?         ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}    ${BOLD}${GREEN}Y${NC}${BOLD}es${NC}  — Set Himeno Fedora.jpg as your desktop              ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}n${NC}${BOLD}o${NC}   — Keep current wallpaper                                ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}  ${DIM}(Login screen wallpaper is always applied)${NC}                  ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}  ${DIM}Press Enter for default (Yes)${NC}                               ${CYAN}║${NC}"
+    echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+    echo -en "  ${DIM}Desktop wallpaper? [Y/n]:${NC} "
+    read -r -n 1 key </dev/tty || true
+    echo ""
+    if [ "$key" = "n" ] || [ "$key" = "N" ]; then
+      INSTALL_DESKTOP_WALLPAPER="false"
+      echo -e "  ${DIM}→ Skipping desktop wallpaper${NC}"
+    else
+      INSTALL_DESKTOP_WALLPAPER="true"
+      echo -e "  ${GREEN}→ Desktop wallpaper will be installed${NC}"
+    fi
+  fi
+
+  # ── Additional backgrounds prompt ──
+  if [ -z "${INSTALL_BACKGROUNDS:-}" ]; then
+    echo ""
+    echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "  ${CYAN}║${NC}       ${BOLD}${WHITE}◆  BACKGROUND WALLPAPERS?${NC}  ${DIM}◆${NC}                           ${CYAN}║${NC}"
+    echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}  Install 30 additional wallpapers for the GNOME picker?      ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}  (30 images, ~50 MB total)                                   ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}    ${BOLD}${GREEN}Y${NC}${BOLD}es${NC}  — Add all 30 backgrounds to your wallpaper picker       ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}n${NC}${BOLD}o${NC}   — Skip them                                                ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}  ${DIM}(Login screen wallpaper is always applied)${NC}                  ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}  ${DIM}Press Enter for default (Yes)${NC}                               ${CYAN}║${NC}"
+    echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+    echo -en "  ${DIM}Background wallpapers? [Y/n]:${NC} "
+    read -r -n 1 key </dev/tty || true
+    echo ""
+    if [ "$key" = "n" ] || [ "$key" = "N" ]; then
+      INSTALL_BACKGROUNDS="false"
+      echo -e "  ${DIM}→ Skipping additional backgrounds${NC}"
+    else
+      INSTALL_BACKGROUNDS="true"
+      echo -e "  ${GREEN}→ All 30 backgrounds will be installed${NC}"
+    fi
+  fi
+}
+
 apply_wallpapers() {
   next_step "Wallpaper + Login Screen"
 
@@ -899,19 +959,23 @@ apply_wallpapers() {
   sudo mkdir -p "$wp_dest"
   local count=0
 
-  # Copy desktop wallpapers
-  for img in "$wp/desktop/"*; do
-    [ -f "$img" ] || continue
-    sudo cp "$img" "$wp_dest/" 2>/dev/null || true
-    count=$((count + 1))
-  done
+  # Copy desktop wallpaper (optional)
+  if [ "${INSTALL_DESKTOP_WALLPAPER:-true}" = "true" ]; then
+    for img in "$wp/desktop/"*; do
+      [ -f "$img" ] || continue
+      sudo cp "$img" "$wp_dest/" 2>/dev/null || true
+      count=$((count + 1))
+    done
+  fi
 
-  # Copy additional background wallpapers
-  for img in "$wp/backgrounds/"*; do
-    [ -f "$img" ] || continue
-    sudo cp "$img" "$wp_dest/" 2>/dev/null || true
-    count=$((count + 1))
-  done
+  # Copy additional background wallpapers (optional)
+  if [ "${INSTALL_BACKGROUNDS:-true}" = "true" ]; then
+    for img in "$wp/backgrounds/"*; do
+      [ -f "$img" ] || continue
+      sudo cp "$img" "$wp_dest/" 2>/dev/null || true
+      count=$((count + 1))
+    done
+  fi
 
   [ "$count" -gt 0 ] && ok "$count custom wallpapers installed to $wp_dest"
 
@@ -919,7 +983,7 @@ apply_wallpapers() {
   local gnome_xml_dir="/usr/share/gnome-background-properties"
   local xml="$gnome_xml_dir/wallvault.xml"
 
-  # Generate fresh wallvault.xml first
+  # Generate fresh wallvault.xml (only for files actually in wp_dest)
   {
     echo '<?xml version="1.0" encoding="UTF-8"?>'
     echo '<!DOCTYPE wallpapers SYSTEM "gnome-wp-list.dtd">'
@@ -951,16 +1015,18 @@ EOF
   done
   ok "Wallpapers registered in GNOME background picker (stock XMLs deleted)"
 
-  if [ -f "$wp/desktop/Himeno Fedora.jpg" ]; then
+  # Set active desktop wallpaper (only if desktop wallpaper was installed)
+  if [ "${INSTALL_DESKTOP_WALLPAPER:-true}" = "true" ] && [ -f "$wp/desktop/Himeno Fedora.jpg" ]; then
     cp "$wp/desktop/Himeno Fedora.jpg" "$HOME/.config/Wallpapers/"
     gsettings set org.gnome.desktop.background picture-uri "file://$HOME/.config/Wallpapers/Himeno Fedora.jpg" 2>/dev/null || true
     gsettings set org.gnome.desktop.background picture-uri-dark "file://$HOME/.config/Wallpapers/Himeno Fedora.jpg" 2>/dev/null || true
     gsettings set org.gnome.desktop.background picture-options "zoom" 2>/dev/null || true
     ok "Desktop wallpaper set"
-  else
+  elif [ "${INSTALL_DESKTOP_WALLPAPER:-true}" = "true" ]; then
     warn "Desktop wallpaper file not found"
   fi
 
+  # GDM login wallpaper — ALWAYS copied (mandatory)
   if [ -f "$wp/login/Himeno Fedora LoginScreen.jpg" ]; then
     cp "$wp/login/Himeno Fedora LoginScreen.jpg" "$HOME/.config/Wallpapers/"
     ok "Login screen wallpaper copied to ~/.config/Wallpapers/"
@@ -1458,6 +1524,8 @@ echo ""
 preflight
 
 remove_ptyxis
+
+prompt_optional_wallpapers
 
 phase_divider "PHASE 1 : SYSTEM FOUNDATIONS" 3 4
 install_rpmfusion
