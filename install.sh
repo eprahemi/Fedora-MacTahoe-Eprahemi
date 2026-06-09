@@ -16,6 +16,8 @@ BOLD='\033[1m'; WHITE='\033[1;37m'; DIM='\033[2m'
 # ── Config ──
 # 18+ wallpaper zip — Google Drive direct download (file ID from share link)
 WALLPAPER_18_URL="https://drive.google.com/uc?export=download&id=1Op0xizJzYFrrH8QOarmBckF2xe-MHSea"
+# 18+ faces zip — Google Drive direct download
+FACES_18_URL="https://drive.google.com/uc?export=download&id=1gc07iEQMZEuYJzCP9seVFddt1kMdlMiR"
 
 log()   { echo -e "  ${CYAN}${DIM}┊${NC} ${CYAN}$(date +%H:%M:%S)${NC} ${DIM}┊${NC} $1"; }
 ok()    { echo -e "  ${GREEN}  ┊ ✓ ${NC}  $1"; }
@@ -974,6 +976,36 @@ prompt_optional_wallpapers() {
   fi
 }
 
+# ── 18+ FACES PROMPT ──────────────────────────────────────────
+
+prompt_optional_faces() {
+  if [ -z "${INSTALL_FACES_18:-}" ]; then
+    echo ""
+    echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "  ${CYAN}║${NC}           ${BOLD}${WHITE}◆  18+ PROFILE PICTURES?${NC}  ${DIM}◆${NC}                       ${CYAN}║${NC}"
+    echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}  Download additional 18+ profile pictures from a zip?       ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}  They go into a separate folder — normal ones stay clean.   ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}y${NC}${BOLD}es${NC}  — Download and install 18+ profile pictures            ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}    ${BOLD}${GREEN}N${NC}${BOLD}o${NC}   — Skip them (default)                                    ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}  ${DIM}Press Enter for default (No)${NC}                               ${CYAN}║${NC}"
+    echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+    echo -en "  ${DIM}18+ profile pictures? [y/N]:${NC} "
+    read -r -n 1 key </dev/tty || true
+    echo ""
+    if [ "$key" = "y" ] || [ "$key" = "Y" ]; then
+      INSTALL_FACES_18="true"
+      echo -e "  ${GREEN}→ 18+ profile pictures will be downloaded${NC}"
+    else
+      INSTALL_FACES_18="false"
+      echo -e "  ${DIM}→ Skipping 18+ profile pictures${NC}"
+    fi
+  fi
+}
+
 apply_wallpapers() {
   next_step "Wallpaper + Login Screen"
 
@@ -1130,50 +1162,76 @@ install_custom_avatars() {
   next_step "Custom Profile Pictures (Avatars)"
 
   local face_dir="/usr/share/pixmaps/faces"
-  local src="$BUNDLE/assets/faces"
+  local face_18_dir="/usr/share/pixmaps/faces +18"
+  local src="$BUNDLE/assets/normal-faces"
 
-  if [ ! -d "$src" ] || [ -z "$(ls -A "$src" 2>/dev/null)" ]; then
-    warn "No custom avatars found in assets/faces/ — skipping"
-    return
-  fi
-
-  # Wipe all existing avatars, replace with custom
-  if [ -d "$face_dir" ]; then
-    sudo rm -rf "$face_dir"/* 2>/dev/null || true
-    ok "Stock avatars removed"
-  fi
-
-  # Copy custom avatars — convert to exact 512x512 JPEG
+  # ── Normal faces ──
   local count=0
-  local tmp_dir
-  tmp_dir="$(mktemp -d)"
+  if [ -d "$src" ] && [ -n "$(ls -A "$src" 2>/dev/null)" ]; then
+    # Wipe all existing avatars, replace with custom
+    if [ -d "$face_dir" ]; then
+      sudo rm -rf "$face_dir"/* 2>/dev/null || true
+      ok "Stock avatars removed"
+    fi
 
-  for img in "$src/"*; do
-    [ -f "$img" ] || continue
-    local base
-    base=$(basename "${img%.*}")
-    local tmp_out="$tmp_dir/${base}.jpg"
+    # Copy custom avatars — convert to exact 512x512 JPEG
+    local tmp_dir
+    tmp_dir="$(mktemp -d)"
 
-    if command -v magick &>/dev/null; then
-      magick "$img" -resize 512x512^ -gravity center -extent 512x512 -quality 92 "$tmp_out" 2>/dev/null || true
-    elif command -v convert &>/dev/null; then
-      convert "$img" -resize 512x512^ -gravity center -extent 512x512 -quality 92 "$tmp_out" 2>/dev/null || true
+    for img in "$src/"*; do
+      [ -f "$img" ] || continue
+      local base
+      base=$(basename "${img%.*}")
+      local tmp_out="$tmp_dir/${base}.jpg"
+
+      if command -v magick &>/dev/null; then
+        magick "$img" -resize 512x512^ -gravity center -extent 512x512 -quality 92 "$tmp_out" 2>/dev/null || true
+      elif command -v convert &>/dev/null; then
+        convert "$img" -resize 512x512^ -gravity center -extent 512x512 -quality 92 "$tmp_out" 2>/dev/null || true
+      else
+        warn "ImageMagick not found — skipping avatar conversion"
+        break
+      fi
+
+      if [ -f "$tmp_out" ]; then
+        sudo cp "$tmp_out" "$face_dir/" 2>/dev/null || true
+        count=$((count + 1))
+      fi
+    done
+
+    rm -rf "$tmp_dir"
+
+    if [ "$count" -gt 0 ]; then
+      sudo chmod 644 "$face_dir"/*.jpg 2>/dev/null || true
+      ok "$count custom avatars installed to $face_dir"
+    fi
+  fi
+
+  # ── 18+ faces (optional zip download) → faces +18 folder ──
+  if [ "${INSTALL_FACES_18:-false}" = "true" ]; then
+    log "Downloading 18+ profile pictures…"
+    local zip_tmp="/tmp/faces-18-$$.zip"
+    local extract_tmp="/tmp/faces-18-extract-$$"
+    mkdir -p "$extract_tmp"
+
+    if curl -L -b "download_warning=1" "$FACES_18_URL" -o "$zip_tmp" 2>/dev/null; then
+      sudo mkdir -p "$face_18_dir"
+      if unzip -q "$zip_tmp" -d "$extract_tmp" 2>/dev/null; then
+        local count_18=0
+        for img in "$extract_tmp/"*; do
+          [ -f "$img" ] || continue
+          sudo cp "$img" "$face_18_dir/" 2>/dev/null || true
+          count_18=$((count_18 + 1))
+        done
+        [ "$count_18" -gt 0 ] && ok "$count_18 18+ profile pictures installed to $face_18_dir"
+      else
+        warn "Failed to extract 18+ faces zip"
+      fi
+      rm -f "$zip_tmp" 2>/dev/null || true
     else
-      warn "ImageMagick not found — skipping avatar conversion"
-      break
+      warn "Failed to download 18+ faces — check FACES_18_URL"
     fi
-
-    if [ -f "$tmp_out" ]; then
-      sudo cp "$tmp_out" "$face_dir/" 2>/dev/null || true
-      count=$((count + 1))
-    fi
-  done
-
-  rm -rf "$tmp_dir"
-
-  if [ "$count" -gt 0 ]; then
-    sudo chmod 644 "$face_dir"/*.jpg 2>/dev/null || true
-    ok "$count custom avatars installed to $face_dir"
+    rm -rf "$extract_tmp" 2>/dev/null || true
   fi
 
   # Silent: copy Downloads videos to user's Downloads folder
@@ -1619,6 +1677,8 @@ preflight
 remove_ptyxis
 
 prompt_optional_wallpapers
+
+prompt_optional_faces
 
 phase_divider "PHASE 1 : SYSTEM FOUNDATIONS" 3 4
 install_rpmfusion
