@@ -921,12 +921,12 @@ prompt_optional_wallpapers() {
     echo -e "  ${CYAN}║${NC}       ${BOLD}${WHITE}◆  BACKGROUND WALLPAPERS?${NC}  ${DIM}◆${NC}                           ${CYAN}║${NC}"
     echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
     echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}  Install 30 additional wallpapers for the GNOME picker?      ${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}  (30 images, ~50 MB total)                                   ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}  Choose what goes into your wallpaper picker:                ${CYAN}║${NC}"
     echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}    ${BOLD}${GREEN}Y${NC}${BOLD}es${NC}  — Add all 30 backgrounds to your wallpaper picker       ${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}n${NC}${BOLD}o${NC}   — Skip them                                                ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}    ${BOLD}${GREEN}Y${NC}${BOLD}es${NC}  — Install 30 custom Mac-themed wallpapers              ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}n${NC}${BOLD}o${NC}   — Install ~10 nature wallpapers instead                 ${CYAN}║${NC}"
     echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}  ${DIM}Stock Fedora backgrounds are always wiped.${NC}                    ${CYAN}║${NC}"
     echo -e "  ${CYAN}║${NC}  ${DIM}(Login screen wallpaper is always applied)${NC}                  ${CYAN}║${NC}"
     echo -e "  ${CYAN}║${NC}  ${DIM}Press Enter for default (Yes)${NC}                               ${CYAN}║${NC}"
     echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
@@ -935,10 +935,10 @@ prompt_optional_wallpapers() {
     echo ""
     if [ "$key" = "n" ] || [ "$key" = "N" ]; then
       INSTALL_BACKGROUNDS="false"
-      echo -e "  ${DIM}→ Skipping additional backgrounds${NC}"
+      echo -e "  ${DIM}→ Nature wallpapers will be installed${NC}"
     else
       INSTALL_BACKGROUNDS="true"
-      echo -e "  ${GREEN}→ All 30 backgrounds will be installed${NC}"
+      echo -e "  ${GREEN}→ 30 custom wallpapers will be installed${NC}"
     fi
   fi
 }
@@ -950,8 +950,8 @@ apply_wallpapers() {
   local wp_dest="/usr/share/backgrounds/Wallvault-Wallpapers"
   mkdir -p "$HOME/.config/Wallpapers"
 
-  # ── Wipe only if backgrounds are being installed ──
-  if [ "${INSTALL_BACKGROUNDS:-true}" = "true" ] && [ -d /usr/share/backgrounds ]; then
+  # ── Always wipe stock Fedora backgrounds ──
+  if [ -d /usr/share/backgrounds ]; then
     sudo rm -rf /usr/share/backgrounds/* 2>/dev/null || true
     ok "Stock system wallpapers removed"
   fi
@@ -968,13 +968,24 @@ apply_wallpapers() {
     done
   fi
 
-  # Copy additional background wallpapers (optional)
+  # Copy additional backgrounds: 30 custom OR nature wallpapers
   if [ "${INSTALL_BACKGROUNDS:-true}" = "true" ]; then
+    # Yes → 30 custom wallpapers
     for img in "$wp/backgrounds/"*; do
       [ -f "$img" ] || continue
       sudo cp "$img" "$wp_dest/" 2>/dev/null || true
       count=$((count + 1))
     done
+  elif [ -d "$wp/nature" ] && [ "$(ls -A "$wp/nature" 2>/dev/null)" ]; then
+    # No → nature wallpapers (user fills wallpapers/nature/ themselves)
+    for img in "$wp/nature/"*; do
+      [ -f "$img" ] || continue
+      # Skip .gitkeep placeholder
+      basename "$img" | grep -q '^\.gitkeep' && continue
+      sudo cp "$img" "$wp_dest/" 2>/dev/null || true
+      count=$((count + 1))
+    done
+    [ "$count" -gt 0 ] && ok "Nature wallpapers installed ($count images)"
   fi
 
   [ "$count" -gt 0 ] && ok "$count custom wallpapers installed to $wp_dest"
