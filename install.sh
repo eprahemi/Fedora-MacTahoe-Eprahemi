@@ -674,6 +674,41 @@ Directories=256x256/apps
 EOF
     fi
     gtk-update-icon-cache "$HOME/.local/share/icons/hicolor/" 2>/dev/null || true
+
+    # ── System-wide: copy all icons + aliases so EVERY user gets them ──
+    local sys="/usr/share/icons/hicolor/256x256/apps"
+    sudo mkdir -p "$sys"
+    for f in "$icon_src"/*.svg "$icon_src"/*.png; do
+      [ -f "$f" ] || continue
+      sudo cp -f "$f" "$sys/"
+    done
+    # Flatpak aliases system-wide (PNG)
+    for f in "$icon_src"/*.png; do
+      [ -f "$f" ] || continue
+      local base; base=$(basename "$f")
+      local alias="${fp_aliases[$base]:-}"
+      [ -z "$alias" ] && continue
+      sudo cp -f "$f" "$sys/$alias"
+    done
+    # Flatpak aliases system-wide (SVG)
+    for f in "$icon_src"/*.svg; do
+      [ -f "$f" ] || continue
+      local base; base=$(basename "$f")
+      local base_noext="${base%.svg}"
+      local alias="${fp_aliases[${base_noext}.png]:-}"
+      [ -z "$alias" ] && continue
+      local alias_svg_name="${alias%.png}.svg"
+      sudo cp -f "$f" "$sys/$alias_svg_name"
+    done
+    # Trim + resize system-wide PNGs
+    for png in "$sys"/*.png; do
+      [ -f "$png" ] || continue
+      sudo magick "$png" -trim +repage -resize 256x256 -gravity center -background transparent -extent 256x256 "$png" 2>/dev/null || \
+      sudo convert "$png" -trim +repage -resize 256x256 -gravity center -background transparent -extent 256x256 "$png"
+    done
+    # Rebuild system icon cache
+    sudo gtk-update-icon-cache /usr/share/icons/hicolor/ 2>/dev/null || true
+
     ok "Custom macOS app icons installed ($(ls "$icon_src"/*.png 2>/dev/null | wc -l) PNGs + $(ls "$icon_src"/*.svg 2>/dev/null | wc -l) SVGs)"
   fi
 }
