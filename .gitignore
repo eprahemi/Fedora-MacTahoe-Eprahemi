@@ -11,3 +11,7 @@
 # Temporary files
 /tmp/
 
+# NSFW wallpapers (not pushed to GitHub — hosted externally as zip)
+wallpapers/backgrounds+18/
+wallpapers/backgrounds/
+

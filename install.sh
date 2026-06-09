@@ -13,6 +13,10 @@ BUNDLE="$SCRIPT_DIR"
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 BOLD='\033[1m'; WHITE='\033[1;37m'; DIM='\033[2m'
 
+# ── Config ──
+# 18+ wallpaper zip — Google Drive direct download (file ID from share link)
+WALLPAPER_18_URL="https://drive.google.com/uc?export=download&id=1Op0xizJzYFrrH8QOarmBckF2xe-MHSea"
+
 log()   { echo -e "  ${CYAN}${DIM}┊${NC} ${CYAN}$(date +%H:%M:%S)${NC} ${DIM}┊${NC} $1"; }
 ok()    { echo -e "  ${GREEN}  ┊ ✓ ${NC}  $1"; }
 warn()  { echo -e "  ${YELLOW}  ┊ ⚠ ${NC}  $1"; }
@@ -924,7 +928,7 @@ prompt_optional_wallpapers() {
     echo -e "  ${CYAN}║${NC}  Choose what goes into your wallpaper picker:                ${CYAN}║${NC}"
     echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
     echo -e "  ${CYAN}║${NC}    ${BOLD}${GREEN}Y${NC}${BOLD}es${NC}  — Install 30 custom Mac-themed wallpapers              ${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}n${NC}${BOLD}o${NC}   — Install ~10 nature wallpapers instead                 ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}n${NC}${BOLD}o${NC}   — Skip additional backgrounds                           ${CYAN}║${NC}"
     echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
     echo -e "  ${CYAN}║${NC}  ${DIM}Stock Fedora backgrounds are always wiped.${NC}                    ${CYAN}║${NC}"
     echo -e "  ${CYAN}║${NC}  ${DIM}(Login screen wallpaper is always applied)${NC}                  ${CYAN}║${NC}"
@@ -935,10 +939,37 @@ prompt_optional_wallpapers() {
     echo ""
     if [ "$key" = "n" ] || [ "$key" = "N" ]; then
       INSTALL_BACKGROUNDS="false"
-      echo -e "  ${DIM}→ Nature wallpapers will be installed${NC}"
+      echo -e "  ${DIM}→ Skipping additional backgrounds${NC}"
     else
       INSTALL_BACKGROUNDS="true"
       echo -e "  ${GREEN}→ 30 custom wallpapers will be installed${NC}"
+    fi
+  fi
+
+  # ── 18+ wallpaper prompt (separate, always optional) ──
+  if [ -z "${INSTALL_WALLPAPER_18:-}" ]; then
+    echo ""
+    echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "  ${CYAN}║${NC}         ${BOLD}${WHITE}◆  18+ WALLPAPERS?${NC}  ${DIM}◆${NC}                             ${CYAN}║${NC}"
+    echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}  Download additional 18+ wallpapers from a hosted zip?       ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}y${NC}${BOLD}es${NC}  — Download and install 18+ wallpapers                  ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}    ${BOLD}${GREEN}N${NC}${BOLD}o${NC}   — Skip them (default)                                    ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}  ${DIM}To update: replace the zip — same URL works${NC}                  ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}  ${DIM}Press Enter for default (No)${NC}                               ${CYAN}║${NC}"
+    echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+    echo -en "  ${DIM}18+ wallpapers? [y/N]:${NC} "
+    read -r -n 1 key </dev/tty || true
+    echo ""
+    if [ "$key" = "y" ] || [ "$key" = "Y" ]; then
+      INSTALL_WALLPAPER_18="true"
+      echo -e "  ${GREEN}→ 18+ wallpapers will be downloaded${NC}"
+    else
+      INSTALL_WALLPAPER_18="false"
+      echo -e "  ${DIM}→ Skipping 18+ wallpapers${NC}"
     fi
   fi
 }
@@ -947,7 +978,9 @@ apply_wallpapers() {
   next_step "Wallpaper + Login Screen"
 
   local wp="$BUNDLE/wallpapers"
-  local wp_dest="/usr/share/backgrounds/Wallvault-Wallpapers"
+  local wp_norm="/usr/share/backgrounds/Wallvault Wallpapers"
+  local wp_18="/usr/share/backgrounds/Wallvault Wallpapers +18"
+  local xml_dir="/usr/share/gnome-background-properties"
   mkdir -p "$HOME/.config/Wallpapers"
 
   # ── Always wipe stock Fedora backgrounds ──
@@ -956,57 +989,73 @@ apply_wallpapers() {
     ok "Stock system wallpapers removed"
   fi
 
-  sudo mkdir -p "$wp_dest"
-  local count=0
+  sudo mkdir -p "$wp_norm"
+  local count_norm=0
+  local count_18=0
 
-  # Copy desktop wallpaper (optional)
+  # Copy desktop wallpaper (optional) → normal folder
   if [ "${INSTALL_DESKTOP_WALLPAPER:-true}" = "true" ]; then
     for img in "$wp/desktop/"*; do
       [ -f "$img" ] || continue
-      sudo cp "$img" "$wp_dest/" 2>/dev/null || true
-      count=$((count + 1))
+      sudo cp "$img" "$wp_norm/" 2>/dev/null || true
+      count_norm=$((count_norm + 1))
     done
   fi
 
-  # Copy additional backgrounds: 30 custom OR nature wallpapers
+  # Copy additional backgrounds: 30 custom wallpapers (Yes) or skip (No)
   if [ "${INSTALL_BACKGROUNDS:-true}" = "true" ]; then
-    # Yes → 30 custom wallpapers
-    for img in "$wp/backgrounds/"*; do
+    for img in "$wp/background-normal/"*; do
       [ -f "$img" ] || continue
-      sudo cp "$img" "$wp_dest/" 2>/dev/null || true
-      count=$((count + 1))
+      sudo cp "$img" "$wp_norm/" 2>/dev/null || true
+      count_norm=$((count_norm + 1))
     done
-  elif [ -d "$wp/nature" ] && [ "$(ls -A "$wp/nature" 2>/dev/null)" ]; then
-    # No → nature wallpapers (user fills wallpapers/nature/ themselves)
-    for img in "$wp/nature/"*; do
-      [ -f "$img" ] || continue
-      # Skip .gitkeep placeholder
-      basename "$img" | grep -q '^\.gitkeep' && continue
-      sudo cp "$img" "$wp_dest/" 2>/dev/null || true
-      count=$((count + 1))
-    done
-    [ "$count" -gt 0 ] && ok "Nature wallpapers installed ($count images)"
   fi
 
-  [ "$count" -gt 0 ] && ok "$count custom wallpapers installed to $wp_dest"
+  # ── 18+ wallpapers (optional zip download) → +18 folder ──
+  if [ "${INSTALL_WALLPAPER_18:-false}" = "true" ]; then
+    log "Downloading 18+ wallpapers…"
+    local zip_tmp="/tmp/wallpapers-18-$$.zip"
+    local extract_tmp="/tmp/wallpapers-18-extract-$$"
+    mkdir -p "$extract_tmp"
+
+    if curl -L -b "download_warning=1" "$WALLPAPER_18_URL" -o "$zip_tmp" 2>/dev/null; then
+      sudo mkdir -p "$wp_18"
+      if unzip -q "$zip_tmp" -d "$extract_tmp" 2>/dev/null; then
+        for img in "$extract_tmp/"*; do
+          [ -f "$img" ] || continue
+          sudo cp "$img" "$wp_18/" 2>/dev/null || true
+          count_18=$((count_18 + 1))
+        done
+        [ "$count_18" -gt 0 ] && ok "$count_18 18+ wallpapers installed"
+      else
+        warn "Failed to extract 18+ zip"
+      fi
+      rm -f "$zip_tmp" 2>/dev/null || true
+    else
+      warn "Failed to download 18+ wallpapers — check WALLPAPER_18_URL"
+    fi
+    rm -rf "$extract_tmp" 2>/dev/null || true
+  fi
+
+  [ "$count_norm" -gt 0 ] && ok "$count_norm wallpapers installed to $wp_norm"
+  [ "$count_18"  -gt 0 ] && ok "$count_18 18+ wallpapers installed to $wp_18"
 
   # ── Register wallpapers in GNOME background properties XML ──
-  # Only run if we actually installed something
-  if [ "$count" -gt 0 ]; then
-    local gnome_xml_dir="/usr/share/gnome-background-properties"
-    local xml="$gnome_xml_dir/wallvault.xml"
+  local total=$((count_norm + count_18))
 
-    # Generate fresh wallvault.xml (only for files actually in wp_dest)
-    {
-      echo '<?xml version="1.0" encoding="UTF-8"?>'
-      echo '<!DOCTYPE wallpapers SYSTEM "gnome-wp-list.dtd">'
-      echo '<wallpapers>'
-      for img in "$wp_dest/"*; do
-        [ -f "$img" ] || continue
-        local bname
-        bname=$(basename "$img")
-        local bname_noext="${bname%.*}"
-        cat << EOF
+  if [ "$total" -gt 0 ]; then
+    # Normal wallpapers XML (wallvault-wallpapers.xml)
+    if [ "$count_norm" -gt 0 ]; then
+      local xml_norm="$xml_dir/wallvault-wallpapers.xml"
+      {
+        echo '<?xml version="1.0" encoding="UTF-8"?>'
+        echo '<!DOCTYPE wallpapers SYSTEM "gnome-wp-list.dtd">'
+        echo '<wallpapers>'
+        for img in "$wp_norm/"*; do
+          [ -f "$img" ] || continue
+          local bname; bname=$(basename "$img")
+          local bname_noext="${bname%.*}"
+          cat << EOF
       <wallpaper deleted="false">
           <name>${bname_noext}</name>
           <filename>${img}</filename>
@@ -1016,17 +1065,47 @@ apply_wallpapers() {
           <scolor>#000000</scolor>
       </wallpaper>
 EOF
-      done
-      echo '</wallpapers>'
-    } | sudo tee "$xml" > /dev/null
+        done
+        echo '</wallpapers>'
+      } | sudo tee "$xml_norm" > /dev/null
+      ok "Wallvault Wallpapers registered in GNOME picker"
+    fi
 
-    # Then delete ALL stock XMLs — keep only our wallvault.xml
-    for sx in "$gnome_xml_dir"/*.xml; do
+    # 18+ wallpapers XML (wallvault-wallpapers-18.xml)
+    if [ "$count_18" -gt 0 ]; then
+      local xml_18="$xml_dir/wallvault-wallpapers-18.xml"
+      {
+        echo '<?xml version="1.0" encoding="UTF-8"?>'
+        echo '<!DOCTYPE wallpapers SYSTEM "gnome-wp-list.dtd">'
+        echo '<wallpapers>'
+        for img in "$wp_18/"*; do
+          [ -f "$img" ] || continue
+          local bname; bname=$(basename "$img")
+          local bname_noext="${bname%.*}"
+          cat << EOF
+      <wallpaper deleted="false">
+          <name>${bname_noext}</name>
+          <filename>${img}</filename>
+          <options>zoom</options>
+          <shade_type>solid</shade_type>
+          <pcolor>#000000</pcolor>
+          <scolor>#000000</scolor>
+      </wallpaper>
+EOF
+        done
+        echo '</wallpapers>'
+      } | sudo tee "$xml_18" > /dev/null
+      ok "Wallvault Wallpapers +18 registered in GNOME picker"
+    fi
+
+    # Delete ALL stock XMLs — keep only our two XMLs
+    for sx in "$xml_dir"/*.xml; do
       [ -f "$sx" ] || continue
-      [ "$sx" = "$xml" ] && continue
+      [ "$sx" = "$xml_dir/wallvault-wallpapers.xml" ] && continue
+      [ "$sx" = "$xml_dir/wallvault-wallpapers-18.xml" ] && continue
       sudo rm -f "$sx" 2>/dev/null || true
     done
-    ok "Wallpapers registered in GNOME background picker (stock XMLs deleted)"
+    ok "Stock GNOME XMLs deleted"
   fi
 
   # Set active desktop wallpaper (only if desktop wallpaper was installed)
