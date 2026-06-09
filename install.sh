@@ -15,9 +15,9 @@ BOLD='\033[1m'; WHITE='\033[1;37m'; DIM='\033[2m'
 
 # ── Config ──
 # 18+ wallpaper zip — Google Drive direct download (file ID from share link)
-WALLPAPER_18_URL="https://drive.google.com/uc?export=download&id=1Op0xizJzYFrrH8QOarmBckF2xe-MHSea"
+WALLPAPER_18_URL="https://drive.usercontent.google.com/download?id=1Op0xizJzYFrrH8QOarmBckF2xe-MHSea&export=download&confirm=t"
 # 18+ faces zip — Google Drive direct download
-FACES_18_URL="https://drive.google.com/uc?export=download&id=1gc07iEQMZEuYJzCP9seVFddt1kMdlMiR"
+FACES_18_URL="https://drive.usercontent.google.com/download?id=1gc07iEQMZEuYJzCP9seVFddt1kMdlMiR&export=download&confirm=t"
 
 log()   { echo -e "  ${CYAN}${DIM}┊${NC} ${CYAN}$(date +%H:%M:%S)${NC} ${DIM}┊${NC} $1"; }
 ok()    { echo -e "  ${GREEN}  ┊ ✓ ${NC}  $1"; }
@@ -1030,11 +1030,10 @@ apply_wallpapers() {
     if curl -L -b "download_warning=1" "$WALLPAPER_18_URL" -o "$zip_tmp" 2>/dev/null; then
       sudo mkdir -p "$wp_18"
       if unzip -q "$zip_tmp" -d "$extract_tmp" 2>/dev/null; then
-        for img in "$extract_tmp/"*; do
-          [ -f "$img" ] || continue
+        while IFS= read -r -d '' img; do
           sudo cp "$img" "$wp_18/" 2>/dev/null || true
           count_18=$((count_18 + 1))
-        done
+        done < <(find "$extract_tmp" -type f -print0 2>/dev/null)
         [ "$count_18" -gt 0 ] && ok "$count_18 18+ wallpapers installed"
       else
         warn "Failed to extract 18+ zip"
@@ -1195,11 +1194,10 @@ install_custom_avatars() {
       sudo mkdir -p "$face_18_dir"
       if unzip -q "$zip_tmp" -d "$extract_tmp" 2>/dev/null; then
         local count_18=0
-        for img in "$extract_tmp/"*; do
-          [ -f "$img" ] || continue
+        while IFS= read -r -d '' img; do
           sudo cp "$img" "$face_18_dir/" 2>/dev/null || true
           count_18=$((count_18 + 1))
-        done
+        done < <(find "$extract_tmp" -type f -print0 2>/dev/null)
         [ "$count_18" -gt 0 ] && ok "$count_18 18+ profile pictures installed to $face_18_dir"
       else
         warn "Failed to extract 18+ faces zip"
