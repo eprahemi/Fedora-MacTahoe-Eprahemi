@@ -1115,7 +1115,7 @@ EOF
     ok "Stock GNOME XMLs deleted"
   fi
 
-  # Set active desktop wallpaper (only if desktop wallpaper was installed)
+  # Set active desktop wallpaper
   if [ "${INSTALL_DESKTOP_WALLPAPER:-true}" = "true" ] && [ -f "$wp/desktop/Himeno Fedora.jpg" ]; then
     cp "$wp/desktop/Himeno Fedora.jpg" "$HOME/.config/Wallpapers/"
     gsettings set org.gnome.desktop.background picture-uri "file://$HOME/.config/Wallpapers/Himeno Fedora.jpg" 2>/dev/null || true
@@ -1124,6 +1124,15 @@ EOF
     ok "Desktop wallpaper set"
   elif [ "${INSTALL_DESKTOP_WALLPAPER:-true}" = "true" ]; then
     warn "Desktop wallpaper file not found"
+  else
+    # User declined Himeno — fallback to 16.jpg from normal wallpapers
+    if [ -f "$wp_norm/16.jpg" ]; then
+      cp "$wp_norm/16.jpg" "$HOME/.config/Wallpapers/default-wallpaper.jpg"
+      gsettings set org.gnome.desktop.background picture-uri "file://$HOME/.config/Wallpapers/default-wallpaper.jpg" 2>/dev/null || true
+      gsettings set org.gnome.desktop.background picture-uri-dark "file://$HOME/.config/Wallpapers/default-wallpaper.jpg" 2>/dev/null || true
+      gsettings set org.gnome.desktop.background picture-options "zoom" 2>/dev/null || true
+      ok "Fallback wallpaper set (16.jpg)"
+    fi
   fi
 
   # GDM login wallpaper — ALWAYS copied (mandatory)
