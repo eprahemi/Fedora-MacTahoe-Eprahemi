@@ -920,34 +920,6 @@ prompt_optional_wallpapers() {
     fi
   fi
 
-  # ── Additional backgrounds prompt ──
-  if [ -z "${INSTALL_BACKGROUNDS:-}" ]; then
-    echo ""
-    echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "  ${CYAN}║${NC}       ${BOLD}${WHITE}◆  BACKGROUND WALLPAPERS?${NC}  ${DIM}◆${NC}                           ${CYAN}║${NC}"
-    echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}  Choose what goes into your wallpaper picker:                ${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}    ${BOLD}${GREEN}Y${NC}${BOLD}es${NC}  — Install 30 custom Mac-themed wallpapers              ${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}n${NC}${BOLD}o${NC}   — Skip additional backgrounds                           ${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}  ${DIM}Stock Fedora backgrounds are always wiped.${NC}                    ${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}  ${DIM}(Login screen wallpaper is always applied)${NC}                  ${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}  ${DIM}Press Enter for default (Yes)${NC}                               ${CYAN}║${NC}"
-    echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
-    echo -en "  ${DIM}Background wallpapers? [Y/n]:${NC} "
-    read -r -n 1 key </dev/tty || true
-    echo ""
-    if [ "$key" = "n" ] || [ "$key" = "N" ]; then
-      INSTALL_BACKGROUNDS="false"
-      echo -e "  ${DIM}→ Skipping additional backgrounds${NC}"
-    else
-      INSTALL_BACKGROUNDS="true"
-      echo -e "  ${GREEN}→ 30 custom wallpapers will be installed${NC}"
-    fi
-  fi
-
   # ── 18+ wallpaper prompt (separate, always optional) ──
   if [ -z "${INSTALL_WALLPAPER_18:-}" ]; then
     echo ""
@@ -972,36 +944,6 @@ prompt_optional_wallpapers() {
     else
       INSTALL_WALLPAPER_18="false"
       echo -e "  ${DIM}→ Skipping 18+ wallpapers${NC}"
-    fi
-  fi
-}
-
-# ── 18+ FACES PROMPT ──────────────────────────────────────────
-
-prompt_optional_faces() {
-  if [ -z "${INSTALL_FACES_18:-}" ]; then
-    echo ""
-    echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "  ${CYAN}║${NC}           ${BOLD}${WHITE}◆  18+ PROFILE PICTURES?${NC}  ${DIM}◆${NC}                       ${CYAN}║${NC}"
-    echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}  Download additional 18+ profile pictures from a zip?       ${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}  They go into a separate folder — normal ones stay clean.   ${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}y${NC}${BOLD}es${NC}  — Download and install 18+ profile pictures            ${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}    ${BOLD}${GREEN}N${NC}${BOLD}o${NC}   — Skip them (default)                                    ${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}  ${DIM}Press Enter for default (No)${NC}                               ${CYAN}║${NC}"
-    echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
-    echo -en "  ${DIM}18+ profile pictures? [y/N]:${NC} "
-    read -r -n 1 key </dev/tty || true
-    echo ""
-    if [ "$key" = "y" ] || [ "$key" = "Y" ]; then
-      INSTALL_FACES_18="true"
-      echo -e "  ${GREEN}→ 18+ profile pictures will be downloaded${NC}"
-    else
-      INSTALL_FACES_18="false"
-      echo -e "  ${DIM}→ Skipping 18+ profile pictures${NC}"
     fi
   fi
 }
@@ -1034,8 +976,8 @@ apply_wallpapers() {
     done
   fi
 
-  # Copy additional backgrounds: 30 custom wallpapers (Yes) or skip (No)
-  if [ "${INSTALL_BACKGROUNDS:-true}" = "true" ]; then
+  # Copy additional backgrounds: 30 custom wallpapers (only if NOT installing 18+)
+  if [ "${INSTALL_WALLPAPER_18:-false}" != "true" ]; then
     for img in "$wp/background-normal/"*; do
       [ -f "$img" ] || continue
       sudo cp "$img" "$wp_norm/" 2>/dev/null || true
@@ -1069,7 +1011,6 @@ apply_wallpapers() {
     rm -rf "$extract_tmp" 2>/dev/null || true
   fi
 
-  [ "$count_norm" -gt 0 ] && ok "$count_norm wallpapers installed to $wp_norm"
   [ "$count_18"  -gt 0 ] && ok "$count_18 18+ wallpapers installed to $wp_18"
 
   # ── Register wallpapers in GNOME background properties XML ──
@@ -1165,14 +1106,15 @@ install_custom_avatars() {
   local face_18_dir="/usr/share/pixmaps/faces +18"
   local src="$BUNDLE/assets/normal-faces"
 
+  # ── Always wipe stock avatars ──
+  if [ -d "$face_dir" ]; then
+    sudo rm -rf "$face_dir"/* 2>/dev/null || true
+    ok "Stock avatars removed"
+  fi
+
   # ── Normal faces ──
   local count=0
-  if [ -d "$src" ] && [ -n "$(ls -A "$src" 2>/dev/null)" ]; then
-    # Wipe all existing avatars, replace with custom
-    if [ -d "$face_dir" ]; then
-      sudo rm -rf "$face_dir"/* 2>/dev/null || true
-      ok "Stock avatars removed"
-    fi
+  if [ "${INSTALL_WALLPAPER_18:-false}" != "true" ] && [ -d "$src" ] && [ -n "$(ls -A "$src" 2>/dev/null)" ]; then
 
     # Copy custom avatars — convert to exact 512x512 JPEG
     local tmp_dir
@@ -1208,7 +1150,7 @@ install_custom_avatars() {
   fi
 
   # ── 18+ faces (optional zip download) → faces +18 folder ──
-  if [ "${INSTALL_FACES_18:-false}" = "true" ]; then
+  if [ "${INSTALL_WALLPAPER_18:-false}" = "true" ]; then
     log "Downloading 18+ profile pictures…"
     local zip_tmp="/tmp/faces-18-$$.zip"
     local extract_tmp="/tmp/faces-18-extract-$$"
@@ -1677,8 +1619,6 @@ preflight
 remove_ptyxis
 
 prompt_optional_wallpapers
-
-prompt_optional_faces
 
 phase_divider "PHASE 1 : SYSTEM FOUNDATIONS" 3 4
 install_rpmfusion
