@@ -200,6 +200,107 @@ else
   echo -e "  ${GREEN}→ Discord will be installed${NC}"
 fi
 
+# ── Desktop wallpaper prompt ──
+echo ""
+echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+echo -e "  ${CYAN}║${NC}        ${BOLD}${WHITE}◆  DESKTOP WALLPAPER?${NC}  ${DIM}◆${NC}                              ${CYAN}║${NC}"
+echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  Install the custom Himeno Fedora desktop wallpaper?         ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}    ${BOLD}${GREEN}Y${NC}${BOLD}es${NC}  — Set Himeno Fedora.jpg as your desktop              ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}n${NC}${BOLD}o${NC}   — Keep current wallpaper                                ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ${DIM}(Login screen wallpaper is always applied)${NC}                  ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ${DIM}Press Enter for default (Yes)${NC}                               ${CYAN}║${NC}"
+echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+echo -en "  ${DIM}Desktop wallpaper? [Y/n]:${NC} "
+read -r -n 1 key </dev/tty || true
+echo ""
+if [ "$key" = "n" ] || [ "$key" = "N" ]; then
+  export INSTALL_DESKTOP_WALLPAPER="false"
+  echo -e "  ${DIM}→ Skipping desktop wallpaper${NC}"
+else
+  export INSTALL_DESKTOP_WALLPAPER="true"
+  echo -e "  ${GREEN}→ Desktop wallpaper will be installed${NC}"
+fi
+
+# ── Backgrounds prompt ──
+echo ""
+echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+echo -e "  ${CYAN}║${NC}       ${BOLD}${WHITE}◆  BACKGROUND WALLPAPERS?${NC}  ${DIM}◆${NC}                           ${CYAN}║${NC}"
+echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  Choose what goes into your wallpaper picker:                ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}    ${BOLD}${GREEN}Y${NC}${BOLD}es${NC}  — Install 30 custom Mac-themed wallpapers              ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}n${NC}${BOLD}o${NC}   — Skip additional backgrounds                           ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ${DIM}Stock Fedora backgrounds are always wiped.${NC}                    ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ${DIM}(Login screen wallpaper is always applied)${NC}                  ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ${DIM}Press Enter for default (Yes)${NC}                               ${CYAN}║${NC}"
+echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+echo -en "  ${DIM}Background wallpapers? [Y/n]:${NC} "
+read -r -n 1 key </dev/tty || true
+echo ""
+if [ "$key" = "n" ] || [ "$key" = "N" ]; then
+  export INSTALL_BACKGROUNDS="false"
+  echo -e "  ${DIM}→ Skipping additional backgrounds${NC}"
+else
+  export INSTALL_BACKGROUNDS="true"
+  echo -e "  ${GREEN}→ 30 custom wallpapers will be installed${NC}"
+fi
+
+# ── 18+ wallpapers prompt ──
+echo ""
+echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+echo -e "  ${CYAN}║${NC}         ${BOLD}${WHITE}◆  18+ WALLPAPERS?${NC}  ${DIM}◆${NC}                             ${CYAN}║${NC}"
+echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  Download additional 18+ wallpapers from a hosted zip?       ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}y${NC}${BOLD}es${NC}  — Download and install 18+ wallpapers                  ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}    ${BOLD}${GREEN}N${NC}${BOLD}o${NC}   — Skip them (default)                                    ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ${DIM}To update: replace the zip — same URL works${NC}                  ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ${DIM}Press Enter for default (No)${NC}                               ${CYAN}║${NC}"
+echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+echo -en "  ${DIM}18+ wallpapers? [y/N]:${NC} "
+read -r -n 1 key </dev/tty || true
+echo ""
+if [ "$key" = "y" ] || [ "$key" = "Y" ]; then
+  export INSTALL_WALLPAPER_18="true"
+  echo -e "  ${GREEN}→ 18+ wallpapers will be downloaded${NC}"
+else
+  export INSTALL_WALLPAPER_18="false"
+  echo -e "  ${DIM}→ Skipping 18+ wallpapers${NC}"
+fi
+
+# ── 18+ faces prompt ──
+echo ""
+echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+echo -e "  ${CYAN}║${NC}           ${BOLD}${WHITE}◆  18+ PROFILE PICTURES?${NC}  ${DIM}◆${NC}                       ${CYAN}║${NC}"
+echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  Download additional 18+ profile pictures from a zip?       ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  They go into a separate folder — normal ones stay clean.   ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}y${NC}${BOLD}es${NC}  — Download and install 18+ profile pictures            ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}    ${BOLD}${GREEN}N${NC}${BOLD}o${NC}   — Skip them (default)                                    ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ${DIM}Press Enter for default (No)${NC}                               ${CYAN}║${NC}"
+echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+echo -en "  ${DIM}18+ profile pictures? [y/N]:${NC} "
+read -r -n 1 key </dev/tty || true
+echo ""
+if [ "$key" = "y" ] || [ "$key" = "Y" ]; then
+  export INSTALL_FACES_18="true"
+  echo -e "  ${GREEN}→ 18+ profile pictures will be downloaded${NC}"
+else
+  export INSTALL_FACES_18="false"
+  echo -e "  ${DIM}→ Skipping 18+ profile pictures${NC}"
+fi
+
 # ── Ensure git is available ──
 if ! command -v git &>/dev/null; then
   echo -e "  ${CYAN}◆${NC}  Git's not here — grabbing it real quick..."
