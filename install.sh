@@ -1179,6 +1179,20 @@ install_custom_avatars() {
 
     if [ "$count" -gt 0 ]; then
       sudo chmod 644 "$face_dir"/*.jpg 2>/dev/null || true
+      # Update AccountsService icon for current user
+      if [ -d "/var/lib/AccountsService/icons" ]; then
+        local first_normal_face=""
+        for f in "$face_dir"/*.jpg; do
+          if [ -f "$f" ]; then
+            first_normal_face="$f"
+            break
+          fi
+        done
+        if [ -n "$first_normal_face" ]; then
+          sudo cp "$first_normal_face" "/var/lib/AccountsService/icons/$USER" 2>/dev/null || true
+          sudo chown root:root "/var/lib/AccountsService/icons/$USER" 2>/dev/null || true
+        fi
+      fi
       ok "$count custom avatars installed to $face_dir"
     fi
   fi
@@ -1211,8 +1225,8 @@ install_custom_avatars() {
             fi
           done
           if [ -n "$first_face" ]; then
-            sudo cp "$first_face" "/var/lib/AccountsService/icons/$CURRENT_USER" 2>/dev/null || true
-            sudo chown root:root "/var/lib/AccountsService/icons/$CURRENT_USER" 2>/dev/null || true
+            sudo cp "$first_face" "/var/lib/AccountsService/icons/$USER" 2>/dev/null || true
+            sudo chown root:root "/var/lib/AccountsService/icons/$USER" 2>/dev/null || true
           fi
         fi
         [ "$count_18" -gt 0 ] && ok "$count_18 18+ profile pictures installed to $face_18_dir"
