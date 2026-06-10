@@ -624,14 +624,12 @@ install_mactahoe_theme() {
     # Flatpak app IDs need their full reverse-DNS name to get themed
     # Map short name → Flatpak ID so both native and Flatpak installs pick it up
     declare -A fp_aliases=(
+      [discord.png]="com.discordapp.Discord.png"
       [spotify.png]="com.spotify.Client.png"
       [vlc.png]="org.videolan.VLC.png"
       [code.png]="com.visualstudio.code.png"
       [localsend.png]="org.localsend.localsend_app.png"
     )
-    if [ "${INSTALL_DISCORD:-true}" = "true" ]; then
-      fp_aliases[discord.png]="com.discordapp.Discord.png"
-    fi
     # SVG aliases
     for svg in "$icon_src"/*.svg; do
       [ -f "$svg" ] || continue
@@ -891,11 +889,8 @@ apply_dconf() {
   gsettings set org.gnome.settings-daemon.plugins.power power-button-action "'suspend'" 2>/dev/null || true
   gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-timeout uint32 4800 2>/dev/null || true
 
-  # ── Dock favorites ──
-  local favorites="['org.gnome.Nautilus.desktop', 'org.mozilla.firefox.desktop', 'google-chrome.desktop', 'microsoft-edge.desktop', 'kitty.desktop', 'org.gnome.Software.desktop']"
-  if [ "${INSTALL_DISCORD:-true}" = "true" ]; then
-    favorites="['org.gnome.Nautilus.desktop', 'org.mozilla.firefox.desktop', 'google-chrome.desktop', 'microsoft-edge.desktop', 'discord.desktop', 'kitty.desktop', 'org.gnome.Software.desktop']"
-  fi
+  # ── Dock favorites — always include Discord (if user has it, keep it pinned) ──
+  local favorites="['org.gnome.Nautilus.desktop', 'org.mozilla.firefox.desktop', 'google-chrome.desktop', 'microsoft-edge.desktop', 'discord.desktop', 'kitty.desktop', 'org.gnome.Software.desktop']"
   gsettings set org.gnome.shell favorite-apps "$favorites" 2>/dev/null || true
 
   # ── Session (never sleep) ──
