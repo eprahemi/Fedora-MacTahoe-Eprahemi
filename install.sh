@@ -602,15 +602,15 @@ install_mactahoe_theme() {
       done
     fi
     # Ensure edit icons exist in ALL size dirs so GTK finds them
-    # regardless of what size it requests first.
-    # MacTahoe-dark only bundles these in actions/symbolic, 48, 64
-    # but GTK may search 16, 22, 24, 32 first and stop on miss.
     for _ed_icon in "document-edit-symbolic.svg" "edit-symbolic.svg"; do
       if [ -f "$theme_src/$icon/actions/symbolic/$_ed_icon" ]; then
         for _ed_dir in "actions/16" "actions/22" "actions/24" "actions/32" "actions/scalable" "symbolic/actions"; do
           mkdir -p "$HOME/.local/share/icons/$icon/$_ed_dir"
           cp -f "$theme_src/$icon/actions/symbolic/$_ed_icon" \
                 "$HOME/.local/share/icons/$icon/$_ed_dir/$_ed_icon"
+          # Also fix fill= in these copied SVGs
+          sed -i 's/fill="[^"]*"/fill="currentColor"/g; s/color="[^"]*"/color="currentColor"/g' \
+            "$HOME/.local/share/icons/$icon/$_ed_dir/$_ed_icon" 2>/dev/null || true
         done
       fi
     done
@@ -639,6 +639,11 @@ install_mactahoe_theme() {
         mkdir -p "$HOME/.local/share/icons/$icon/$_adir"
       fi
     done
+
+    # Fix all symbolic SVGs: replace hardcoded fills with currentColor
+    # so GTK can properly recolor them for dark/light theme variants.
+    find "$HOME/.local/share/icons/$icon" -name "*-symbolic.svg" -exec \
+      sed -i 's/fill="[^"]*"/fill="currentColor"/g; s/color="[^"]*"/color="currentColor"/g' {} + 2>/dev/null || true
 
     gtk-update-icon-cache "$HOME/.local/share/icons/$icon/" 2>/dev/null || true
   done
@@ -685,6 +690,8 @@ install_mactahoe_theme() {
             sudo -u "$_user" mkdir -p "$_udir/$_adir"
           fi
         done
+        sudo -u "$_user" find "$_udir" -name "*-symbolic.svg" -exec \
+          sed -i 's/fill="[^"]*"/fill="currentColor"/g; s/color="[^"]*"/color="currentColor"/g' {} + 2>/dev/null || true
         sudo -u "$_user" gtk-update-icon-cache "$_udir/" 2>/dev/null || true
         log "Applied icon fixes for $_user ($icon)"
       fi
