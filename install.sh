@@ -601,6 +601,16 @@ install_mactahoe_theme() {
               "$HOME/.local/share/icons/$icon/$_qrdir/qr-code-symbolic.svg"
       done
     fi
+    # Ensure document-edit-symbolic + edit-symbolic are in symbolic/actions/
+    # Some GNOME versions expect edit icons via new-style path (symbolic/actions/)
+    # matching Adwaita's layout at /usr/share/icons/Adwaita/symbolic/actions/
+    for _ed_icon in "document-edit-symbolic.svg" "edit-symbolic.svg"; do
+      if [ -f "$theme_src/$icon/actions/symbolic/$_ed_icon" ]; then
+        mkdir -p "$HOME/.local/share/icons/$icon/symbolic/actions"
+        cp -f "$theme_src/$icon/actions/symbolic/$_ed_icon" \
+              "$HOME/.local/share/icons/$icon/symbolic/actions/$_ed_icon"
+      fi
+    done
 
     # Add Adwaita-style directory entries so GResource icons bundled by apps
     # (e.g. GNOME Settings' qr-code-symbolic, audio speaker icons) are found
@@ -645,6 +655,14 @@ install_mactahoe_theme() {
                   "$_udir/$_qrdir/qr-code-symbolic.svg"
           done
         fi
+        # Copy edit icons to new-style path (symbolic/actions/)
+        for _ed_icon in "document-edit-symbolic.svg" "edit-symbolic.svg"; do
+          if [ -f "$theme_src/$icon/actions/symbolic/$_ed_icon" ]; then
+            sudo -u "$_user" mkdir -p "$_udir/symbolic/actions"
+            sudo -u "$_user" cp -f "$theme_src/$icon/actions/symbolic/$_ed_icon" \
+                  "$_udir/symbolic/actions/$_ed_icon"
+          fi
+        done
         # Add Adwaita-style directories
         for _adir in "scalable/actions" "symbolic/actions" "scalable/apps" "symbolic/apps" \
                      "scalable/devices" "symbolic/devices" "scalable/status" "symbolic/status" \
