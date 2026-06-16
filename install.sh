@@ -601,14 +601,17 @@ install_mactahoe_theme() {
               "$HOME/.local/share/icons/$icon/$_qrdir/qr-code-symbolic.svg"
       done
     fi
-    # Ensure document-edit-symbolic + edit-symbolic are in symbolic/actions/
-    # Some GNOME versions expect edit icons via new-style path (symbolic/actions/)
-    # matching Adwaita's layout at /usr/share/icons/Adwaita/symbolic/actions/
+    # Ensure edit icons exist in ALL size dirs so GTK finds them
+    # regardless of what size it requests first.
+    # MacTahoe-dark only bundles these in actions/symbolic, 48, 64
+    # but GTK may search 16, 22, 24, 32 first and stop on miss.
     for _ed_icon in "document-edit-symbolic.svg" "edit-symbolic.svg"; do
       if [ -f "$theme_src/$icon/actions/symbolic/$_ed_icon" ]; then
-        mkdir -p "$HOME/.local/share/icons/$icon/symbolic/actions"
-        cp -f "$theme_src/$icon/actions/symbolic/$_ed_icon" \
-              "$HOME/.local/share/icons/$icon/symbolic/actions/$_ed_icon"
+        for _ed_dir in "actions/16" "actions/22" "actions/24" "actions/32" "actions/scalable" "symbolic/actions"; do
+          mkdir -p "$HOME/.local/share/icons/$icon/$_ed_dir"
+          cp -f "$theme_src/$icon/actions/symbolic/$_ed_icon" \
+                "$HOME/.local/share/icons/$icon/$_ed_dir/$_ed_icon"
+        done
       fi
     done
 
@@ -655,12 +658,14 @@ install_mactahoe_theme() {
                   "$_udir/$_qrdir/qr-code-symbolic.svg"
           done
         fi
-        # Copy edit icons to new-style path (symbolic/actions/)
+        # Copy edit icons to ALL size dirs so GTK finds them
         for _ed_icon in "document-edit-symbolic.svg" "edit-symbolic.svg"; do
           if [ -f "$theme_src/$icon/actions/symbolic/$_ed_icon" ]; then
-            sudo -u "$_user" mkdir -p "$_udir/symbolic/actions"
-            sudo -u "$_user" cp -f "$theme_src/$icon/actions/symbolic/$_ed_icon" \
-                  "$_udir/symbolic/actions/$_ed_icon"
+            for _ed_dir in "actions/16" "actions/22" "actions/24" "actions/32" "actions/scalable" "symbolic/actions"; do
+              sudo -u "$_user" mkdir -p "$_udir/$_ed_dir"
+              sudo -u "$_user" cp -f "$theme_src/$icon/actions/symbolic/$_ed_icon" \
+                    "$_udir/$_ed_dir/$_ed_icon"
+            done
           fi
         done
         # Add Adwaita-style directories
