@@ -423,6 +423,7 @@ install_rpm_packages() {
     celluloid vlc \
     kdenlive pavucontrol alacarte \
     nautilus-python gnome-tweaks \
+    adwaita-icon-theme adwaita-icon-theme-legacy \
     ImageMagick fzf ripgrep jq unzip curl wget git \
     ffmpeg-free \
     libreoffice-writer libreoffice-calc libreoffice-impress"
@@ -592,7 +593,79 @@ install_mactahoe_theme() {
         [ -f "$f" ] && cp -f "$f" "$HOME/.local/share/icons/$icon/$dir/"
       done
     done
+    # Ensure qr-code-symbolic is present (used by GNOME 48+ WiFi QR button)
+    if [ -f "$theme_src/$icon/actions/symbolic/qr-code-symbolic.svg" ]; then
+      for _qrdir in "actions/symbolic" "actions/scalable"; do
+        mkdir -p "$HOME/.local/share/icons/$icon/$_qrdir"
+        cp -f "$theme_src/$icon/actions/symbolic/qr-code-symbolic.svg" \
+              "$HOME/.local/share/icons/$icon/$_qrdir/qr-code-symbolic.svg"
+      done
+    fi
+
+    # Add Adwaita-style directory entries so GResource icons bundled by apps
+    # (e.g. GNOME Settings' qr-code-symbolic, audio speaker icons) are found
+    # when the GResource uses new-style paths like "scalable/actions/".
+    local _idx="$HOME/.local/share/icons/$icon/index.theme"
+    for _adir in "scalable/actions" "symbolic/actions" "scalable/apps" "symbolic/apps" \
+                 "scalable/devices" "symbolic/devices" "scalable/status" "symbolic/status" \
+                 "scalable/categories" "symbolic/categories" "scalable/emblems" "symbolic/emblems" \
+                 "scalable/emotes" "symbolic/mimetypes" "scalable/places" "symbolic/places"; do
+      if ! grep -q "^$_adir$" "$_idx" 2>/dev/null; then
+        # Add to Directories list (right before the first section entry)
+        sed -i "/^Directories=/ s|$|,$_adir|" "$_idx" 2>/dev/null || true
+        # Add section entry
+        local _adir_ctx; _adir_ctx="$(echo "${_adir#*/}" | sed 's/^./\u&/')"
+        {
+          echo ""
+          echo "[$_adir]"
+          echo "Size=16"
+          echo "Context=$_adir_ctx"
+          echo "Type=Scalable"
+        } >> "$_idx"
+        # Create empty directory so GTK doesn't skip it
+        mkdir -p "$HOME/.local/share/icons/$icon/$_adir"
+      fi
+    done
+
     gtk-update-icon-cache "$HOME/.local/share/icons/$icon/" 2>/dev/null || true
+  done
+
+  # ── Apply same fixes to other users who already have the theme ──
+  for _homedir in /home/*; do
+    _user="$(basename "$_homedir")"
+    [ "$_user" = "$(whoami)" ] && continue
+    for icon in MacTahoe MacTahoe-dark; do
+      local _udir="$_homedir/.local/share/icons/$icon"
+      if [ -d "$_udir" ]; then
+        # Copy qr-code-symbolic
+        if [ -f "$theme_src/$icon/actions/symbolic/qr-code-symbolic.svg" ]; then
+          for _qrdir in "actions/symbolic" "actions/scalable"; do
+            sudo -u "$_user" mkdir -p "$_udir/$_qrdir"
+            sudo -u "$_user" cp -f "$theme_src/$icon/actions/symbolic/qr-code-symbolic.svg" \
+                  "$_udir/$_qrdir/qr-code-symbolic.svg"
+          done
+        fi
+        # Add Adwaita-style directories
+        for _adir in "scalable/actions" "symbolic/actions" "scalable/apps" "symbolic/apps" \
+                     "scalable/devices" "symbolic/devices" "scalable/status" "symbolic/status" \
+                     "scalable/categories" "symbolic/categories" "scalable/emblems" "symbolic/emblems" \
+                     "scalable/emotes" "symbolic/mimetypes" "scalable/places" "symbolic/places"; do
+          if ! sudo -u "$_user" grep -q "^$_adir$" "$_udir/index.theme" 2>/dev/null; then
+            sudo -u "$_user" sed -i "/^Directories=/ s|$|,$_adir|" "$_udir/index.theme" 2>/dev/null || true
+            {
+              echo ""
+              echo "[$_adir]"
+              echo "Size=16"
+              echo "Context=$(echo "${_adir#*/}" | sed 's/^./\u&/')"
+              echo "Type=Scalable"
+            } | sudo -u "$_user" tee -a "$_udir/index.theme" >/dev/null
+            sudo -u "$_user" mkdir -p "$_udir/$_adir"
+          fi
+        done
+        sudo -u "$_user" gtk-update-icon-cache "$_udir/" 2>/dev/null || true
+        log "Applied icon fixes for $_user ($icon)"
+      fi
+    done
   done
 
   ok "Icon themes installed (MacTahoe + MacTahoe-dark)"
@@ -888,10 +961,6 @@ apply_dconf() {
   # ── Power ──
   gsettings set org.gnome.settings-daemon.plugins.power power-button-action "'suspend'" 2>/dev/null || true
   gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-timeout uint32 4800 2>/dev/null || true
-
-  # ── Dock favorites — always include Discord (if user has it, keep it pinned) ──
-  local favorites="['org.gnome.Nautilus.desktop', 'org.mozilla.firefox.desktop', 'google-chrome.desktop', 'microsoft-edge.desktop', 'discord.desktop', 'kitty.desktop', 'org.gnome.Software.desktop']"
-  gsettings set org.gnome.shell favorite-apps "$favorites" 2>/dev/null || true
 
   # ── Session (never sleep) ──
   gsettings set org.gnome.desktop.session idle-delay 0 2>/dev/null || true
@@ -1534,18 +1603,6 @@ install_extensions() {
   # Also mark Fedora defaults as disabled
   gsettings set org.gnome.shell disabled-extensions "['background-logo@fedorahosted.org', 'apps-menu@gnome-shell-extensions.gcampax.github.com']" 2>/dev/null || true
 
-  # Configure dash2dock-lite
-  dconf write /org/gnome/shell/extensions/dash2dock-lite/autohide-dash true 2>/dev/null || true
-  dconf write /org/gnome/shell/extensions/dash2dock-lite/click-action "'minimize-or-previews'" 2>/dev/null || true
-  dconf write /org/gnome/shell/extensions/dash2dock-lite/icon-size 0.25 2>/dev/null || true
-  dconf write /org/gnome/shell/extensions/dash2dock-lite/running-indicator-style 4 2>/dev/null || true
-  dconf write /org/gnome/shell/extensions/dash2dock-lite/show-favorites true 2>/dev/null || true
-  dconf write /org/gnome/shell/extensions/dash2dock-lite/show-running true 2>/dev/null || true
-  dconf write /org/gnome/shell/extensions/dash2dock-lite/dock-padding 0.5 2>/dev/null || true
-  dconf write /org/gnome/shell/extensions/dash2dock-lite/border-radius 3.0 2>/dev/null || true
-  dconf write /org/gnome/shell/extensions/dash2dock-lite/label-border-radius 3.0 2>/dev/null || true
-  dconf write /org/gnome/shell/extensions/dash2dock-lite/customize-label true 2>/dev/null || true
-
   ok "Extensions installed & configured"
 }
 
@@ -1590,6 +1647,17 @@ finalize() {
   # ── 9. Old system journal logs (keep last 3 days) ──
   log "Trimming old system logs (keeping 3 days)..."
   sudo journalctl --vacuum-time=3d 2>/dev/null || true
+
+  # ── 10. Rebuild all icon theme caches (Adwaita + local) ──
+  log "Rebuilding icon caches for all themes..."
+  for _ictx in /usr/share/icons/Adwaita /usr/share/icons/AdwaitaLegacy \
+               "$HOME/.local/share/icons/MacTahoe" "$HOME/.local/share/icons/MacTahoe-dark" \
+               "$HOME/.local/share/icons/hicolor"; do
+    [ -d "$_ictx" ] && gtk-update-icon-cache "$_ictx" 2>/dev/null || true
+  done
+  if command -v sudo &>/dev/null; then
+    sudo gtk-update-icon-cache /usr/share/icons/hicolor/ 2>/dev/null || true
+  fi
 
   ok "System cleaned and polished"
 
