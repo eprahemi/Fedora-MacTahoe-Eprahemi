@@ -720,6 +720,7 @@ install_mactahoe_theme() {
       [vlc.png]="org.videolan.VLC.png"
       [code.png]="com.visualstudio.code.png"
       [localsend.png]="org.localsend.localsend_app.png"
+      [opencode.png]="ai.opencode.desktop.png"
     )
     # SVG aliases
     for svg in "$icon_src"/*.svg; do
