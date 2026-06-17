@@ -624,7 +624,8 @@ install_mactahoe_theme() {
     for _adir in "scalable/actions" "symbolic/actions" "scalable/apps" "symbolic/apps" \
                  "scalable/devices" "symbolic/devices" "scalable/status" "symbolic/status" \
                  "scalable/categories" "symbolic/categories" "scalable/emblems" "symbolic/emblems" \
-                 "scalable/emotes" "symbolic/mimetypes" "scalable/places" "symbolic/places"; do
+                 "scalable/emotes" "symbolic/mimetypes" "scalable/places" "symbolic/places" \
+                 "symbolic/ui"; do
       if ! grep -q "^$_adir$" "$_idx" 2>/dev/null; then
         # Add to Directories list (right before the first section entry)
         sed -i "/^Directories=/ s|$|,$_adir|" "$_idx" 2>/dev/null || true
@@ -677,11 +678,20 @@ install_mactahoe_theme() {
             done
           fi
         done
+        # Copy symbolic/ui checkbox icons for existing users
+        if [ -d "$theme_src/$icon/symbolic/ui" ]; then
+          sudo -u "$_user" mkdir -p "$_udir/symbolic/ui" 2>/dev/null || true
+          for _ui_icon in "$theme_src/$icon/symbolic/ui/"*.svg; do
+            [ -f "$_ui_icon" ] || continue
+            sudo -u "$_user" cp -f "$_ui_icon" "$_udir/symbolic/ui/" 2>/dev/null || true
+          done
+        fi
         # Add Adwaita-style directories
         for _adir in "scalable/actions" "symbolic/actions" "scalable/apps" "symbolic/apps" \
                      "scalable/devices" "symbolic/devices" "scalable/status" "symbolic/status" \
                      "scalable/categories" "symbolic/categories" "scalable/emblems" "symbolic/emblems" \
-                     "scalable/emotes" "symbolic/mimetypes" "scalable/places" "symbolic/places"; do
+                     "scalable/emotes" "symbolic/mimetypes" "scalable/places" "symbolic/places" \
+                     "symbolic/ui"; do
           if ! sudo -u "$_user" grep -q "^$_adir$" "$_udir/index.theme" 2>/dev/null; then
             sudo -u "$_user" sed -i "/^Directories=/ s|$|,$_adir|" "$_udir/index.theme" 2>/dev/null || true
             {

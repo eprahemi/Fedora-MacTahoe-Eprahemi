@@ -40,17 +40,22 @@ These caused (or would cause) the script to abort silently on edge cases.
 | 21 | 20 | install.sh | Same bug for `FACES_18_URL` — also returned HTML | Same fix applied |
 | 22 | 1033–1036, 1197–1200 | install.sh | 18+ zip files have nested subdirectories (`backgrounds+18/`, `faces+18/`). Old `for img in "$extract_tmp/"*; [ -f "$img" ] || continue` skipped directories — all files silently lost | Replaced with `while IFS= read -r -d '' img; do ... done < <(find "$extract_tmp" -type f -print0)` — recursive, finds files at any depth |
 | 23 | 1194–1216, 1180–1197 | install.sh | 18+ faces installed ONLY to `faces +18/` — GNOME avatar picker scans `/usr/share/pixmaps/faces/` but NOT `faces +18/`. Result: zero avatars visible when 18+ chosen. Also: `$CURRENT_USER` was undefined (variable never set). Normal faces also lacked AccountsService auto-set. | Added `sudo mkdir -p "$face_dir"` + second `sudo cp "$img" "$face_dir/"` in same loop + `sudo chmod 644 "$face_dir"/*` + AccountsService icon update for BOTH normal and 18+ blocks using `$USER` (not `$CURRENT_USER`) |
+| 24 | 596-631 | install.sh | `qr-code-symbolic.svg` missing from MacTahoe-dark icon theme — GNOME 48+ WiFi QR button shows no icon | Created `qr-code-symbolic.svg` (16×16, `fill="currentColor"`) in project source; copy to `actions/symbolic/` + `actions/scalable/` during install |
+| 25 | 608-628 | install.sh | GNOME 48+ Settings bundles GResource icons at new-style paths like `scalable/actions/` — old-style `Directories` list can't find them | Added 16 new-style dirs (`scalable/actions`, `symbolic/actions`, etc.) to `index.theme` + `mkdir` empty dirs |
+| 26 | 596-631 | install.sh | Icon cache not rebuilt after installing icon themes | Added `gtk-update-icon-cache` call per theme + in `finalize()` |
 
 ### 🟠 CLASS C: CONTENT / UX ISSUES
 
 | # | Description | Fix |
-|---|-------------|-----|
+|---|-------------|------|
 | 20 | SPACE prompts said "Press SPACE" but now accept any key | Changed all prompt text to "Press any key" |
 | 21 | Humanized tone missing from Ptyxis/NVIDIA/Kitty blocks | Applied consistently across both scripts |
 | 22 | `echo -n` used instead of `echo -en` for ANSI color sequences | Changed to `echo -en` |
 | 23 | GNOME version in banner was hardcoded padding | Dynamic padding based on version string length |
 | 24 | Video copy to `~/Downloads/` had step heading and `ok` output | Inlined silently inside avatar function — zero output, no step, no function call |
 | 25 | bootstrap.sh accidentally reverted to git HEAD during testing | Restored all content |
+| 26 | Missing icon fix applied to per-user install only — other users (gooner) not covered | Added loop in install.sh that applies same fixes to all `/home/*` users who already have the theme |
+| 27 | `rm -rf` used instead of trash for deletion | User rule: always use `gio trash` instead of permanent delete |
 
 ### 🔵 CLASS D: ARCHITECTURE / DESIGN DECISIONS
 
@@ -65,21 +70,24 @@ These caused (or would cause) the script to abort silently on edge cases.
 | 32 | Zero hardcoded `/home/` or username paths | All dynamic: `$HOME`, `$(whoami)`, `$USER` |
 | 33 | Kitty IS required (Ptyxis blocked), non-Kitty warned not blocked | Ptyxis gets removed during install → would crash the installer |
 | 34 | Stock Fedora GTK/icon themes kept (not deleted) | Safety net — user can switch back in Settings; `dnf update` would reinstall anyway |
+| 35 | `qr-code-symbolic.svg` uses `fill="currentColor"` | Matches other symbolic icons, works on light and dark backgrounds |
+| 36 | Icon fix applied per-user (NOT system-wide) | User rejected system-wide `/usr/share/icons/` approach; prefers per-user copies |
+| 37 | Other users' themes get augmented (files added), not replaced | Non-destructive — existing user configs preserved |
 
 ---
 
 ## Current State
 
-- **install.sh**: 1717 lines, 22 steps, 6 phases
+- **install.sh**: 1789 lines, 22 steps, 6 phases
 - **bootstrap.sh**: 288 lines
 - Both pass `bash -n` syntax check
-- All bugs listed above are FIXED and PUSHED to GitHub
+- All bugs above are FIXED
 
 ## Key Files
 
 | File | Purpose |
 |------|---------|
-| `install.sh` | Main installer — all 22 steps |
+| `install.sh` | Main installer — now includes qr-code-symbolic fix, Adwaita-style dirs, per-user fix for other users |
 | `bootstrap.sh` | One-liner downloader — curl-pipe-bash entry point |
 | `ANCHORED_SESSION_SUMMARY.md` | This file — session log + bug registry |
 | `icons/256x256/` | Custom macOS app icons (PNG + SVG) |
@@ -88,7 +96,10 @@ These caused (or would cause) the script to abort silently on edge cases.
 | `wallpapers/login/` | GDM login wallpaper |
 | `assets/normal-faces/` | Custom profile pictures (7 JPEGs) |
 | `configs/` | Kitty, Fish, Starship, GTK configs |
-| `themes/` | Bundled MacTahoe-Dark fallback theme |
+| `themes/MacTahoe-dark/actions/symbolic/qr-code-symbolic.svg` | QR code icon (source, `currentColor`) |
+| `themes/MacTahoe-dark/actions/scalable/qr-code-symbolic.svg` | QR code icon (source, scalable fallback) |
+| `themes/MacTahoe/actions/symbolic/qr-code-symbolic.svg` | QR code icon for light theme |
+| `themes/MacTahoe/actions/scalable/qr-code-symbolic.svg` | QR code icon for light theme, scalable fallback |
 
 ## Crucial Lessons — Never Forget
 
@@ -97,6 +108,11 @@ These caused (or would cause) the script to abort silently on edge cases.
 3. **Icons must install system-wide** (`/usr/share/icons/hicolor/256x256/apps`) AND per-user (`$HOME/.local/share/icons/`) so all users get themed icons.
 4. **Zero hardcoded paths** — all `$HOME`, `$(whoami)`, `$USER`.
 5. **GNOME avatar picker only reads from `/usr/share/pixmaps/faces/`** — `faces +18/` is invisible. When installing 18+ faces, always copy to BOTH directories + update AccountsService icon.
+6. **GNOME 48+ Settings bundles custom icons** in GResource at `/org/gnome/Settings/icons/scalable/actions/` — the icon theme's `Directories` list MUST include new-style paths like `scalable/actions` or GTK can't resolve them.
+7. **Icon theme uses old-style dirs** (`actions/symbolic/`) but GResource paths use new-style (`scalable/actions/`). Both must be in `Directories`.
+8. **Always use `gio trash`** instead of `rm -rf` for user files. Never permanently delete user data.
+9. **When applying fixes to other users**, augment their existing theme files. Never replace or delete their per-user copies.
+10. **`edit-symbolic` and `document-edit-symbolic` ARE present in MacTahoe-dark** — if user reports them missing, rebuild icon cache and restart GNOME Settings first.
 
 ## To Resume
 

@@ -3203,18 +3203,18 @@ StWidget.focused .app-grid-running-dot {
 
 .check-box:checked StIcon {
   background-color: -st-accent-color;
-  color: -st-accent-fg-color;
+  color: #ffffff;
   border-color: transparent;
 }
 
 .check-box:checked:hover StIcon {
   background-color: st-lighten(-st-accent-color, 5%);
-  color: st-lighten(-st-accent-fg-color, 5%);
+  color: #ffffff;
 }
 
 .check-box:checked:active StIcon {
   background-color: st-darken(-st-accent-color, 7%);
-  color: st-darken(-st-accent-fg-color, 7%);
+  color: #ffffff;
 }
 
 /* Dash */
