@@ -604,6 +604,14 @@ install_mactahoe_theme() {
               "$HOME/.local/share/icons/$icon/$_qrdir/qr-code-symbolic.svg" 2>/dev/null || true
       done
     fi
+    # Ensure check-symbolic icon exists (GNOME Shell CheckBox widget uses this)
+    if [ -f "$theme_src/$icon/actions/symbolic/check-symbolic.svg" ]; then
+      for _cs_dir in "status/symbolic" "actions/symbolic" "symbolic/ui"; do
+        mkdir -p "$HOME/.local/share/icons/$icon/$_cs_dir" 2>/dev/null || true
+        cp -f "$theme_src/$icon/actions/symbolic/check-symbolic.svg" \
+              "$HOME/.local/share/icons/$icon/$_cs_dir/check-symbolic.svg" 2>/dev/null || true
+      done
+    fi
     # Ensure edit icons exist in ALL size dirs so GTK finds them
     for _ed_icon in "document-edit-symbolic.svg" "edit-symbolic.svg" "adw-entry-edit-symbolic.svg"; do
       if [ -f "$theme_src/$icon/actions/symbolic/$_ed_icon" ]; then
@@ -666,6 +674,14 @@ install_mactahoe_theme() {
             sudo -u "$_user" mkdir -p "$_udir/$_qrdir" 2>/dev/null || true
             sudo -u "$_user" cp -f "$theme_src/$icon/actions/symbolic/qr-code-symbolic.svg" \
                   "$_udir/$_qrdir/qr-code-symbolic.svg" 2>/dev/null || true
+          done
+        fi
+        # Copy check-symbolic icon (GNOME Shell CheckBox widget uses this)
+        if [ -f "$theme_src/$icon/actions/symbolic/check-symbolic.svg" ]; then
+          for _cs_dir in "status/symbolic" "actions/symbolic" "symbolic/ui"; do
+            sudo -u "$_user" mkdir -p "$_udir/$_cs_dir" 2>/dev/null || true
+            sudo -u "$_user" cp -f "$theme_src/$icon/actions/symbolic/check-symbolic.svg" \
+                  "$_udir/$_cs_dir/check-symbolic.svg" 2>/dev/null || true
           done
         fi
         # Copy edit icons to ALL size dirs so GTK finds them
