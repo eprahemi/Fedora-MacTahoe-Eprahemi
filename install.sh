@@ -579,6 +579,9 @@ install_mactahoe_theme() {
   for icon in MacTahoe MacTahoe-dark; do
     mkdir -p "$HOME/.local/share/icons"
     cp -a "$theme_src/$icon" "$HOME/.local/share/icons/"
+    # Fix ownership of any pre-existing root-owned subdirs (e.g. symbolic/actions/
+    # from a previous run) so later mkdir/cp operations don't fail with EACCES.
+    sudo chown -R "$(whoami):$(id -gn)" "$HOME/.local/share/icons/$icon" 2>/dev/null || true
     # Ensure Adwaita is in the inheritance chain (needed for ui/ icons like checkboxes)
     if ! grep -q "Adwaita" "$HOME/.local/share/icons/$icon/index.theme" 2>/dev/null; then
       sed -i 's/Inherits=hicolor,breeze/Inherits=hicolor,breeze,Adwaita/' \
@@ -596,19 +599,18 @@ install_mactahoe_theme() {
     # Ensure qr-code-symbolic is present (used by GNOME 48+ WiFi QR button)
     if [ -f "$theme_src/$icon/actions/symbolic/qr-code-symbolic.svg" ]; then
       for _qrdir in "actions/symbolic" "actions/scalable"; do
-        mkdir -p "$HOME/.local/share/icons/$icon/$_qrdir"
+        mkdir -p "$HOME/.local/share/icons/$icon/$_qrdir" 2>/dev/null || true
         cp -f "$theme_src/$icon/actions/symbolic/qr-code-symbolic.svg" \
-              "$HOME/.local/share/icons/$icon/$_qrdir/qr-code-symbolic.svg"
+              "$HOME/.local/share/icons/$icon/$_qrdir/qr-code-symbolic.svg" 2>/dev/null || true
       done
     fi
     # Ensure edit icons exist in ALL size dirs so GTK finds them
-    for _ed_icon in "document-edit-symbolic.svg" "edit-symbolic.svg"; do
+    for _ed_icon in "document-edit-symbolic.svg" "edit-symbolic.svg" "adw-entry-edit-symbolic.svg"; do
       if [ -f "$theme_src/$icon/actions/symbolic/$_ed_icon" ]; then
-        for _ed_dir in "actions/16" "actions/22" "actions/24" "actions/32" "actions/scalable" "symbolic/actions"; do
-          mkdir -p "$HOME/.local/share/icons/$icon/$_ed_dir"
+        for _ed_dir in "actions/16" "actions/22" "actions/24" "actions/32" "actions/48" "actions/64" "actions/scalable" "symbolic/actions"; do
+          mkdir -p "$HOME/.local/share/icons/$icon/$_ed_dir" 2>/dev/null || true
           cp -f "$theme_src/$icon/actions/symbolic/$_ed_icon" \
-                "$HOME/.local/share/icons/$icon/$_ed_dir/$_ed_icon"
-          # Also fix fill= in these copied SVGs
+                "$HOME/.local/share/icons/$icon/$_ed_dir/$_ed_icon" 2>/dev/null || true
           sed -i 's/fill="[^"]*"/fill="currentColor"/g; s/color="[^"]*"/color="currentColor"/g' \
             "$HOME/.local/share/icons/$icon/$_ed_dir/$_ed_icon" 2>/dev/null || true
         done
@@ -655,21 +657,23 @@ install_mactahoe_theme() {
     for icon in MacTahoe MacTahoe-dark; do
       local _udir="$_homedir/.local/share/icons/$icon"
       if [ -d "$_udir" ]; then
+        # Fix ownership of any pre-existing root-owned subdirs first
+        sudo chown -R "$_user:" "$_udir" 2>/dev/null || true
         # Copy qr-code-symbolic
         if [ -f "$theme_src/$icon/actions/symbolic/qr-code-symbolic.svg" ]; then
           for _qrdir in "actions/symbolic" "actions/scalable"; do
-            sudo -u "$_user" mkdir -p "$_udir/$_qrdir"
+            sudo -u "$_user" mkdir -p "$_udir/$_qrdir" 2>/dev/null || true
             sudo -u "$_user" cp -f "$theme_src/$icon/actions/symbolic/qr-code-symbolic.svg" \
-                  "$_udir/$_qrdir/qr-code-symbolic.svg"
+                  "$_udir/$_qrdir/qr-code-symbolic.svg" 2>/dev/null || true
           done
         fi
         # Copy edit icons to ALL size dirs so GTK finds them
-        for _ed_icon in "document-edit-symbolic.svg" "edit-symbolic.svg"; do
+        for _ed_icon in "document-edit-symbolic.svg" "edit-symbolic.svg" "adw-entry-edit-symbolic.svg"; do
           if [ -f "$theme_src/$icon/actions/symbolic/$_ed_icon" ]; then
-            for _ed_dir in "actions/16" "actions/22" "actions/24" "actions/32" "actions/scalable" "symbolic/actions"; do
-              sudo -u "$_user" mkdir -p "$_udir/$_ed_dir"
+            for _ed_dir in "actions/16" "actions/22" "actions/24" "actions/32" "actions/48" "actions/64" "actions/scalable" "symbolic/actions"; do
+              sudo -u "$_user" mkdir -p "$_udir/$_ed_dir" 2>/dev/null || true
               sudo -u "$_user" cp -f "$theme_src/$icon/actions/symbolic/$_ed_icon" \
-                    "$_udir/$_ed_dir/$_ed_icon"
+                    "$_udir/$_ed_dir/$_ed_icon" 2>/dev/null || true
             done
           fi
         done
