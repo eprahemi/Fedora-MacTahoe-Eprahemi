@@ -935,9 +935,10 @@ apply_configs() {
     ok "Fastfetch"
   fi
 
-  # Systemd logind overrides (sleep, lid, power buttons, etc.)
+  # Systemd logind overrides — wipes all existing .conf files, copies ours
   if [ -f "$BUNDLE/config/logind.conf.d/logind-overrides.conf" ]; then
     sudo mkdir -p /etc/systemd/logind.conf.d
+    sudo rm -f /etc/systemd/logind.conf.d/*.conf
     sudo cp -f "$BUNDLE/config/logind.conf.d/logind-overrides.conf" /etc/systemd/logind.conf.d/logind-overrides.conf
     sudo chown root:root /etc/systemd/logind.conf.d/logind-overrides.conf
     sudo chmod 644 /etc/systemd/logind.conf.d/logind-overrides.conf
