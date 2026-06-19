@@ -110,9 +110,8 @@ print(symbol)
         echo -e "\033[38;5;248m┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄\033[0m"
         printf "  \033[1;33m🔎 PASSWORD ANALYSIS\033[0m\n\n"
 
-        # Masked password
-        set -l masked (string sub -l 4 "$pw")"****"(string sub -s (math "$pw_len - 3") -l 3 "$pw")
-        echo -e "  \033[1;37mPassword:\033[0m  \033[1;33m$masked\033[0m"
+        # Full password display (not censored — you already know it)
+        echo -e "  \033[1;37mPassword:\033[0m  \033[1;33m$pw\033[0m"
         echo -e "  \033[1;37mLength:  \033[1;33m$pw_len\033[0m \033[1;37mchars\033[0m"
 
         # Composition bar
