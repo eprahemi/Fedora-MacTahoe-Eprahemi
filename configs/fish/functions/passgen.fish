@@ -135,30 +135,65 @@ print(symbol)
             __passgen_cracktime $entropy
         end
 
-        # ── Generate secure replacement (incorporates user'"'"'s password) ──
+        # ── Generate secure replacement (keeps your password recognizable) ──
         set -l new_len $pw_len
-        if test "$pw_len" -lt 16
-            set new_len 16
+        if test (math "$pw_len * 2") -lt 20
+            set new_len 20
+        else
+            set new_len (math "floor($pw_len * 1.8)")
         end
         set -l new_pw (python3 -c '
 import secrets, string, sys
+
 pw = sys.argv[1]
 pw_len = len(pw)
-new_len = max(pw_len, 16)
+# Target: at least 20 chars, at least 1.8x original length
+target = max(int(pw_len * 1.8), 20)
+
 has_upper = any(c.isupper() for c in pw)
 has_lower = any(c.islower() for c in pw)
 has_digit = any(c.isdigit() for c in pw)
 has_sym   = any(c in "!@#$%^&*()_-+=<>?" for c in pw)
-pool = list(pw)
-if not has_upper: pool.append(secrets.choice(string.ascii_uppercase))
-if not has_lower: pool.append(secrets.choice(string.ascii_lowercase))
-if not has_digit: pool.append(secrets.choice(string.digits))
-if not has_sym:   pool.append(secrets.choice("!@#$%^&*()_-+=<>?"))
 all_chars = string.ascii_letters + string.digits + "!@#$%^&*()_-+=<>?"
-while len(pool) < new_len:
-    pool.append(secrets.choice(all_chars))
-secrets.SystemRandom().shuffle(pool)
-print("".join(pool))
+
+# Start with original password, sprinkle case changes + missing types
+core = list(pw)
+for i in range(len(core)):
+    ch = core[i]
+    if not has_upper and ch.islower() and secrets.randbelow(3) == 0:
+        core[i] = ch.upper()
+        has_upper = True
+    elif not has_digit and ch.isalpha() and secrets.randbelow(3) == 0:
+        core[i] = secrets.choice(string.digits)
+        has_digit = True
+    elif not has_sym and ch.isalnum() and secrets.randbelow(3) == 0:
+        core[i] = secrets.choice("!@#$%^&*()_-+=<>?")
+        has_sym = True
+
+# If still missing a type, inject one inside the core
+if not has_upper:
+    core.insert(secrets.randbelow(len(core)+1), secrets.choice(string.ascii_uppercase))
+if not has_lower:
+    core.insert(secrets.randbelow(len(core)+1), secrets.choice(string.ascii_lowercase))
+if not has_digit:
+    core.insert(secrets.randbelow(len(core)+1), secrets.choice(string.digits))
+if not has_sym:
+    core.insert(secrets.randbelow(len(core)+1), secrets.choice("!@#$%^&*()_-+=<>?"))
+
+core_str = "".join(core)
+
+# Pad to target with random prefix + suffix
+need = target - len(core_str)
+if need > 0:
+    prefix_len = secrets.randbelow(need + 1)
+    suffix_len = need - prefix_len
+else:
+    prefix_len = suffix_len = 0
+
+prefix = "".join(secrets.choice(all_chars) for _ in range(prefix_len))
+suffix = "".join(secrets.choice(all_chars) for _ in range(suffix_len))
+
+print(prefix + core_str + suffix)
 ' "$pw" 2>/dev/null)
 
         # Calculate replacement entropy (always full pool: 26+26+10+20 = 82)
