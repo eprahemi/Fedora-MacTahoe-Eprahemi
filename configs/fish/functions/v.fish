@@ -54,7 +54,13 @@ else:
         if ql in bn.lower():
             print(lines[i])
 " "$query" 2>/dev/null)
-                    if set -q matches[1]
+                    if set -q matches[2]
+                        # Multiple matches — fzf picker
+                        set -l pick (printf "%s\n" $matches | fzf --prompt="🎬 Pick media > " --height=10)
+                        if test -n "$pick"
+                            vlc "$pick" & disown
+                        end
+                    else if set -q matches[1]
                         vlc "$matches[1]" & disown
                     else
                         echo -e "\033[1;31m❌ No media found matching '\033[1;33m$argv\033[1;31m' in ~/\033[0m"
