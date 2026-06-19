@@ -203,9 +203,6 @@ for name, rate in rates:
 " 2>/dev/null)
         printf "  \033[1;30mCrack time (MD5):\033[0m  \033[1;32m%s\033[0m\n" "$new_fastest"
 
-        echo -e "\n  \033[1;30m┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄\033[0m"
-        printf "  \033[1;35m@XALADIYE31\033[0m\n"
-
         # Tips
         echo -e "\n  \033[1;37m💡 WHAT WE FIXED\033[0m"
         set -l tips 0
