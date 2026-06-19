@@ -135,17 +135,31 @@ print(symbol)
             __passgen_cracktime $entropy
         end
 
-        # ── Generate secure replacement ──
+        # ── Generate secure replacement (incorporates user'"'"'s password) ──
         set -l new_len $pw_len
         if test "$pw_len" -lt 16
             set new_len 16
         end
-        set -l new_pw (python3 -c "
+        set -l new_pw (python3 -c '
 import secrets, string, sys
-length = int(sys.argv[1]) if len(sys.argv) > 1 else 16
-chars = string.ascii_letters + string.digits + '!@#\$%^&*()_-+=<>?'
-print(''.join(secrets.choice(chars) for _ in range(length)))
-" "$new_len" 2>/dev/null)
+pw = sys.argv[1]
+pw_len = len(pw)
+new_len = max(pw_len, 16)
+has_upper = any(c.isupper() for c in pw)
+has_lower = any(c.islower() for c in pw)
+has_digit = any(c.isdigit() for c in pw)
+has_sym   = any(c in "!@#$%^&*()_-+=<>?" for c in pw)
+pool = list(pw)
+if not has_upper: pool.append(secrets.choice(string.ascii_uppercase))
+if not has_lower: pool.append(secrets.choice(string.ascii_lowercase))
+if not has_digit: pool.append(secrets.choice(string.digits))
+if not has_sym:   pool.append(secrets.choice("!@#$%^&*()_-+=<>?"))
+all_chars = string.ascii_letters + string.digits + "!@#$%^&*()_-+=<>?"
+while len(pool) < new_len:
+    pool.append(secrets.choice(all_chars))
+secrets.SystemRandom().shuffle(pool)
+print("".join(pool))
+' "$pw" 2>/dev/null)
 
         # Calculate replacement entropy (always full pool: 26+26+10+20 = 82)
         set -l new_pool_size 82
@@ -317,49 +331,36 @@ end
 # ── HELPER: crack time statistics ──
 function __passgen_cracktime --description 'Display crack time estimates for given entropy'
     set -l entropy $argv[1]
-
-    echo -e "\n  \033[1;37m🔐 \033[1;36m$entropy bits\033[0m    \033[38;5;248m(2^$entropy possible combinations)\033[0m"
-    echo -e "  \033[38;5;248m┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄\033[0m"
-
-    # Use Python for big-number crack time calculations
-    python3 -c "
+    python3 -c '
 import sys, math
-
-entropy = $entropy
-avg_guesses = 2 ** (entropy - 1)  # average guesses needed
-
+e = int(sys.argv[1])
+g = 2 ** (e - 1)
+ESC = chr(27)
+GRAY = f"{ESC}[38;5;248m"
+BOLD = f"{ESC}[1;37m"
+CYAN = f"{ESC}[1;36m"
+RESET = f"{ESC}[0m"
+sup = str.maketrans("0123456789", "⁰¹²³⁴⁵⁶⁷⁸⁹")
+d = chr(0x2504)
+print(f"\n  {BOLD}🔐 {CYAN}{e} bits{RESET}    {GRAY}(2{str(e).translate(sup)} possible combinations){RESET}")
+print(f"  {GRAY}{d*45}{RESET}")
 scenarios = [
-    ('Online attack (throttled)',      1000),
-    ('Argon2id / bcrypt (slow hash)',  1000),
-    ('SHA256 (medium hash)',           10**9),
-    ('MD5 / NTLM (fast GPU)',          10**11),
-    ('Theoretical max (perfect)',      10**15),
+    ("Online attack (throttled)",      1000),
+    ("Argon2id / bcrypt (slow hash)",  1000),
+    ("SHA256 (medium hash)",           10**9),
+    ("MD5 / NTLM (fast GPU)",          10**11),
+    ("Theoretical max (perfect)",      10**15),
 ]
-
-def format_time(seconds):
-    if seconds < 1:
-        return 'instantly'
-    if seconds < 60:
-        return f'{int(seconds)} second' + ('s' if int(seconds) != 1 else '')
-    if seconds < 3600:
-        m = int(seconds // 60)
-        return f'{m} minute' + ('s' if m != 1 else '')
-    if seconds < 86400:
-        h = int(seconds // 3600)
-        return f'{h} hour' + ('s' if h != 1 else '')
-    if seconds < 31536000:
-        d = int(seconds // 86400)
-        return f'{d} day' + ('s' if d != 1 else '')
-    if seconds < 3153600000:
-        y = int(seconds // 31536000)
-        return f'{y} year' + ('s' if y != 1 else '')
-    if seconds < 315360000000:
-        c = int(seconds // 3153600000)
-        return f'{c} centur' + ('y' if c == 1 else 'ies')
-    return '∞ forever'
-
+def fmt(t):
+    if t < 1: return "instantly"
+    if t < 60: return f"{int(t)} second" + ("s" if int(t) != 1 else "")
+    if t < 3600: m = int(t//60); return f"{m} minute" + ("s" if m != 1 else "")
+    if t < 86400: h = int(t//3600); return f"{h} hour" + ("s" if h != 1 else "")
+    if t < 31536000: d = int(t//86400); return f"{d} day" + ("s" if d != 1 else "")
+    if t < 3153600000: y = int(t//31536000); return f"{y} year" + ("s" if y != 1 else "")
+    if t < 315360000000: c = int(t//3153600000); return f"{c} centur" + ("y" if c == 1 else "ies")
+    return "∞ forever"
 for name, rate in scenarios:
-    time_sec = avg_guesses // rate
-    print(f'  {name:35s}  {format_time(time_sec)}')
-" 2>/dev/null
+    print(f"  {name:35s}  {fmt(g // rate)}")
+' $entropy 2>/dev/null
 end
