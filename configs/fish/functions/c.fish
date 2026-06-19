@@ -1,8 +1,6 @@
 function c --description 'Open Celluloid or fzf-pick a media file'
-    # Ensure Celluloid's script-opts directory exists to suppress the "Failed to open" warning
     mkdir -p "$HOME/.config/celluloid/script-opts"
 
-    # All media file extensions (video + audio) — regex for find -iregex
     set -l media_regex '.*\.\(mp4\|mkv\|avi\|mov\|webm\|m4v\|mpg\|mpeg\|wmv\|flv\|3gp\|ogv\|mp3\|wav\|flac\|ogg\|m4a\|wma\|aac\|opus\)$'
 
     if set -q argv[1]
@@ -22,19 +20,16 @@ function c --description 'Open Celluloid or fzf-pick a media file'
                 return 1
             case '*'
                 set -l target "$argv"
-                # Expand ~ if present
                 set target (string replace -r '^~' "$HOME" "$target")
                 if test -f "$target"
                     celluloid "$target" >/dev/null 2>&1 & disown
                 else
-                    # File not found as-is — fuzzy search home directory
                     set -l query (string trim "$argv")
                     set -l all_media (find "$HOME" -path '*/.*' -prune -o -type f -iregex "$media_regex" -print 2>/dev/null)
                     if test -z "$all_media"
                         echo -e "\033[1;31m❌ No media files found anywhere in ~/\033[0m"
                         return 1
                     end
-                    # Fuzzy match using Python difflib
                     set -l matches (printf "%s\n" $all_media | python3 -c "
 import sys, difflib, os
 query = sys.argv[1] if len(sys.argv) > 1 else ''
@@ -58,7 +53,6 @@ else:
             print(lines[i])
 " "$query" 2>/dev/null)
                     if set -q matches[2]
-                        # Multiple matches — fzf picker
                         set -l pick (printf "%s\n" $matches | fzf --prompt="🎬 Pick media > " --height=10)
                         if test -n "$pick"
                             celluloid "$pick" >/dev/null 2>&1 & disown
