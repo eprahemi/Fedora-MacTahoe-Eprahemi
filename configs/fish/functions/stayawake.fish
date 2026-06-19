@@ -1,4 +1,4 @@
-function stayawake
+function stayawake --description 'Prevent lid-sleep with live timer display'
     set -l current_user (echo $USER | string upper)
     echo -e "\033[1;34m"
     echo "  ███████╗██████╗ ██████╗  █████╗ ██╗  ██╗███████╗███╗   ███╗██╗"
