@@ -3,12 +3,12 @@ function c --description 'Open Celluloid or fzf-pick a media file'
     mkdir -p "$HOME/.config/celluloid/script-opts"
 
     # All media file extensions (video + audio) — regex for find -iregex
-    set -l media_regex '.*\.\(mp4\|mkv\|avi\|mov\|webm\|m4v\|mpg\|mpeg\|wmv\|flv\|3gp\|ogv\|ts\|mts\|mp3\|wav\|flac\|ogg\|m4a\|wma\|aac\|opus\|aiff\|alac\|ac3\|wv\|ape\|dsf\)$'
+    set -l media_regex '.*\.\(mp4\|mkv\|avi\|mov\|webm\|m4v\|mpg\|mpeg\|wmv\|flv\|3gp\|ogv\|mp3\|wav\|flac\|ogg\|m4a\|wma\|aac\|opus\)$'
 
     if set -q argv[1]
         switch $argv[1]
             case --recent -r
-                set -l recent (string match -r '.*\.(mp4|mkv|avi|mov|webm|m4v|mpg|mpeg|wmv|flv|3gp|ogv|ts|mts|mp3|wav|flac|ogg|m4a|wma|aac|opus|aiff|alac|ac3|wv|ape|dsf)' < ~/.local/share/recently-used.xbel 2>/dev/null | head -20 | string trim)
+                set -l recent (string match -r '.*\.(mp4|mkv|avi|mov|webm|m4v|mpg|mpeg|wmv|flv|3gp|ogv|mp3|wav|flac|ogg|m4a|wma|aac|opus)' < ~/.local/share/recently-used.xbel 2>/dev/null | head -20 | string trim)
                 if test -z "$recent"
                     echo -e "\033[1;31m❌ No recent media files found.\033[0m"
                     return 1
