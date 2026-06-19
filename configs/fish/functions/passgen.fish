@@ -124,12 +124,6 @@ print(symbol)
             printf "  \033[1;35mSymbols:   \033[1;33m%3d\033[0m  %s\n" $symbol_count (string repeat -n (math "max(1, round( $symbol_count * $bar_w / $pw_len ))") "█")
         end
 
-        # Variations
-        echo -e "\n  \033[1;37m🔄 VARIATIONS\033[0m"
-        printf "  \033[38;5;248mAll caps:    \033[1;37m%s\033[0m\n" (string upper "$pw")
-        printf "  \033[38;5;248mAll lower:   \033[1;37m%s\033[0m\n" (string lower "$pw")
-        printf "  \033[38;5;248mCapitalized: \033[1;37m%s\033[0m\n" (string sub -l 1 "$pw" | string upper)(string sub -s 2 "$pw" | string lower)
-
         # Crack time
         if test "$entropy" -gt 0
             __passgen_cracktime $entropy
