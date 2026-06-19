@@ -29,7 +29,7 @@ function c --description 'Open Celluloid or fzf-pick a media file'
                 else
                     # File not found as-is — fuzzy search home directory
                     set -l query (string trim "$argv")
-                    set -l all_media (find "$HOME" -type f -iregex "$media_regex" 2>/dev/null)
+                    set -l all_media (find "$HOME" -path '*/.*' -prune -o -type f -iregex "$media_regex" -print 2>/dev/null)
                     if test -z "$all_media"
                         echo -e "\033[1;31m❌ No media files found anywhere in ~/\033[0m"
                         return 1
