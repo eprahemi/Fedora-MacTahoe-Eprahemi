@@ -6,7 +6,7 @@ function v --description 'Open VLC or fzf-pick a media file'
             case --recent -r
                 set -l recent (string match -r '.*\.(mp4|mkv|avi|mov|webm|m4v|mpg|mpeg|wmv|flv|3gp|ogv|mp3|wav|flac|ogg|m4a|wma|aac|opus)' < ~/.local/share/recently-used.xbel 2>/dev/null | head -20 | string trim)
                 if test -z "$recent"
-                    echo -e "\033[1;31m❌ No recent media files found.\033[0m"
+                    echo -e "\033[1;31m❌ No recent media files found bestie! Go binge something 🍿\033[0m"
                     return 1
                 end
                 set -l pick (printf "%s\n" $recent | fzf --prompt="🎬 Pick media > " --height=10)
@@ -14,9 +14,16 @@ function v --description 'Open VLC or fzf-pick a media file'
                     vlc "$pick" >/dev/null 2>&1 & disown
                 end
             case '-*'
-                echo -e "\033[1;33mUsage: \033[1;36mv [file|--recent]\033[0m"
+                echo -e "\033[1;33m📖 Read the manual dummy: \033[1;36mv --help\033[0m"
                 return 1
-            case '*'
+            case --help -h
+                echo -e "[1;33mUsage: [1;36mv [file][0m"
+                echo -e "  [38;5;248mOpen video/audio files with Celluloid[0m"
+                echo -e "  [38;5;248mFuzzy-searches entire home for media files[0m"
+                echo -e "  [38;5;248mSupports: mp4, mkv, avi, mov, webm, wmv, flv, m4v, mpg, mpeg, 3gp, ogv, ts, mts, m2ts, vob, divx, xvid, rm, rmvb, asf[0m"
+                echo -e "  [38;5;248m  --help, -h    Show this help[0m"
+                return 0
+                        case '*'
                 set -l target "$argv"
                 set target (string replace -r '^~' "$HOME" "$target")
                 if test -f "$target"
@@ -25,7 +32,7 @@ function v --description 'Open VLC or fzf-pick a media file'
                     set -l query (string trim "$argv")
                     set -l all_media (find "$HOME" -path '*/.*' -prune -o -type f -iregex "$media_regex" -print 2>/dev/null)
                     if test -z "$all_media"
-                        echo -e "\033[1;31m❌ No media files found anywhere in ~/\033[0m"
+                        echo -e "\033[1;31m❌ No media files found anywhere in ~/ bestie! 📁\033[0m"
                         return 1
                     end
                     set -l matches (printf "%s\n" $all_media | python3 -c "
@@ -58,7 +65,7 @@ else:
                     else if set -q matches[1]
                         vlc "$matches[1]" >/dev/null 2>&1 & disown
                     else
-                        echo -e "\033[1;31m❌ No media found matching '\033[1;33m$argv\033[1;31m' in ~/\033[0m"
+                        echo -e "\033[1;31m❌ No media found matching '\033[1;33m$argv\033[1;31m' bestie! 🤷\033[0m"
                         return 1
                     end
                 end

@@ -43,8 +43,8 @@ function refresh --description 'Deep system refresh: cache, services, extensions
                     echo -e "  \033[1;37mrefresh -pip\033[0m      — pip cache purge"
                     return 0
                 case '*'
-                    echo -e "\033[1;31m❌ Unknown flag: $arg\033[0m"
-                    echo -e "   \033[1;33mUse \033[1;36mrefresh --help\033[1;33m for available flags\033[0m"
+                    echo -e "\033[1;31m❌ Unknown flag bestie: $arg 💀\033[0m"
+                    echo -e "   \033[1;33mUse \033[1;36mrefresh --help\033[1;33m like a smart sigma 📖\033[0m"
                     return 1
             end
         end
@@ -69,9 +69,9 @@ function refresh --description 'Deep system refresh: cache, services, extensions
         set do_dnf 1
         set do_flatpak 1
         set do_pip 1
-        echo -e "  \033[1;34mMode: FULL SYSTEM REFRESH\033[0m\n"
+        echo -e "  \033[1;34mMode: FULL SYSTEM REFRESH (we going ALL in bestie)\033[0m\n"
     else
-        echo -e "  \033[1;34mMode: SELECTIVE CLEANUP\033[0m\n"
+        echo -e "  \033[1;34mMode: SELECTIVE CLEANUP (picking and choosing fam)\033[0m\n"
     end
 
     set -g __rf_total 0
@@ -168,7 +168,7 @@ function refresh --description 'Deep system refresh: cache, services, extensions
     set -l elapsed (math "$end_time - $start_time")
 
     echo -e "\n\033[1;30m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-    echo -e " \033[1;32m✨ REFRESH COMPLETE\033[0m   \033[1;37m⏱️  $elapsed sec   \033[1;36m$__rf_current/$__rf_total steps\033[0m"
+    echo -e " \033[1;32m✨ REFRESH COMPLETE bestie! System's fresher than ever 🔥\033[0m   \033[1;37m⏱️  $elapsed sec   \033[1;36m$__rf_current/$__rf_total steps\033[0m"
     echo -e " \033[1;36m  USER: "(string upper "$USER")"\033[0m"
 
     functions -e __refresh_anim __refresh_section

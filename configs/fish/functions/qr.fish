@@ -1,4 +1,24 @@
 function qr --description 'Generate a QR code in the terminal'
+    if set -q argv[1]
+        switch $argv[1]
+            case --help -h
+                echo -e "\033[1;36m"
+                echo "  ███████╗██████╗ ██████╗  █████╗ ██╗  ██╗███████╗███╗   ███╗██╗"
+                echo "  ██╔════╝██╔══██╗██╔══██╗██╔══██╗██║  ██║██╔════╝████╗ ████║██║"
+                echo "  █████╗  ██████╔╝██████╔╝███████║███████║█████╗  ██╔████╔██║██║"
+                echo "  ██╔══╝  ██╔═══╝ ██╔══██╗██╔══██║██╔══██║██╔══╝  ██║╚██╔╝██║██║"
+                echo "  ███████╗██║     ██║  ██║██║  ██║██║  ██║███████╗██║ ╚═╝ ██║██║"
+                echo "  ╚══════╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝╚═╝"
+                echo -e "\033[1;33mUsage: \033[1;36mqr <text-or-url>\033[0m"
+                echo -e "  \033[38;5;248m  Generates a QR code right in your terminal! 📱\033[0m"
+                echo -e "  \033[38;5;248m  --help, -h    📖 Read the manual dummy\033[0m"
+                echo -e "  \033[38;5;248mExamples:\033[0m"
+                echo -e "    \033[1;36mqr https://github.com\033[0m"
+                echo -e "    \033[1;36mqr \"Hello bestie\"\033[0m"
+                return 0
+        end
+    end
+
     if test (count $argv) -lt 1
         echo -e "\033[1;36m"
         echo "  ███████╗██████╗ ██████╗  █████╗ ██╗  ██╗███████╗███╗   ███╗██╗"
@@ -17,8 +37,8 @@ function qr --description 'Generate a QR code in the terminal'
     end
 
     if not command -v qrencode &>/dev/null
-        echo -e "\033[1;31m❌ qrencode is not installed.\033[0m"
-        echo -e "   \033[1;33mInstall it:\033[0m \033[1;36msudo dnf install qrencode\033[0m"
+        echo -e "\033[1;31m❌ qrencode not installed bestie! We need it fr fr\033[0m"
+        echo -e "   \033[1;33mInstall it sigma:\033[0m \033[1;36msudo dnf install qrencode\033[0m"
         return 1
     end
 
@@ -43,10 +63,10 @@ function qr --description 'Generate a QR code in the terminal'
     end
 
     if test $status -ne 0
-        echo -e "\033[1;31m❌ Failed to generate QR code.\033[0m"
+        echo -e "\033[1;31m❌ Failed to generate QR code bestie 💀\033[0m"
         return 1
     end
 
     echo -e "\n\033[1;30m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-    echo -e "\033[1;32m✅ QR GENERATED    \033[1;37mUSER: \033[1;36m"(string upper "$USER")"\033[0m"
+    echo -e "\033[1;32m✅ QR GENERATED bestie! Scan that slay 📱\033[0m    \033[1;37mUSER: \033[1;36m"(string upper "$USER")"\033[0m"
 end

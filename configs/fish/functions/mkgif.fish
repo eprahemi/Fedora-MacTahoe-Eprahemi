@@ -13,10 +13,17 @@ function mkgif --description 'Convert video to optimized GIF'
                 else if string match -q -- '--scale=*' $arg
                     set scale (string replace '--scale=' '' $arg)
                 else
-                    echo -e "\033[1;31m❌ Unknown flag: $arg\033[0m"
+                    echo -e "\033[1;31m❌ Unknown flag bestie: $arg 💀\033[0m"
                     return 1
                 end
-            case '*'
+            case --help -h
+                echo -e "[1;33mUsage: [1;36mmkgif [options] <video>[0m"
+                echo -e "  [38;5;248m  --fps N       Output framerate (default: 10)[0m"
+                echo -e "  [38;5;248m  --scale W:H   Output scale (default: 480:-1)[0m"
+                echo -e "  [38;5;248m  --help, -h    📖 Read the manual dummy[0m"
+                echo -e "  [38;5;248mExample: [1;36mmkgif --fps 15 --scale 640:-1 video.mp4[0m"
+                return 0
+                        case '*'
                 if test -z "$input"
                     set input $arg
                 else if test -z "$fps"
@@ -24,19 +31,19 @@ function mkgif --description 'Convert video to optimized GIF'
                 else if test -z "$scale"
                     set scale $arg
                 else
-                    echo -e "\033[1;31m❌ Unexpected argument: $arg\033[0m"
+                    echo -e "\033[1;31m❌ Unexpected argument bestie: $arg 💀\033[0m"
                     return 1
                 end
         end
     end
 
     if test -z "$input"
-        echo -e "\033[1;33mUsage: \033[1;36mmkgif [--fps=N] [--scale=W:H] input.mp4\033[0m"
+        echo -e "\033[1;33mUsage bestie: \033[1;36mmkgif [--fps=N] [--scale=W:H] input.mp4\033[0m"
         return 1
     end
 
     if not test -f "$input"
-        echo -e "\033[1;31m❌ File not found: $input\033[0m"
+        echo -e "\033[1;31m❌ File not found bestie: $input 💀\033[0m"
         return 1
     end
 
@@ -68,5 +75,5 @@ function mkgif --description 'Convert video to optimized GIF'
     rm -f "$palette"
 
     echo -e "\033[1;30m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-    echo -e " \033[1;32m✨ GIF created:\033[0m \033[1;36m$output\033[0m"
+    echo -e " \033[1;32m✨ GIF created bestie! That's cinema right there 🎬\033[0m \033[1;36m$output\033[0m"
 end

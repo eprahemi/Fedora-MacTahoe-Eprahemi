@@ -108,7 +108,7 @@ function testdrive --description 'Full diagnostic suite: disk/ram/net/heat/gpu/b
             draw_progress 1.2 "Allocating 3GB Memory Blocks"
             dd if=/dev/zero of=/dev/null bs=1M count=3000 status=progress
         case net
-            echo -e "🌐 \033[1;36mTARGET: GLOBAL NETWORK UPLINK\033[0m"
+            echo -e "🌐 \033[1;36mTARGET: GLOBAL NETWORK UPLINK (lemme check ur internet bestie)\033[0m"
             speedtest-cli --simple || echo "Install speedtest-cli for full results."
         case heat
             echo -e "🌡️ \033[1;31mTARGET: SYSTEM THERMAL SENSORS\033[0m"
@@ -134,11 +134,11 @@ function testdrive --description 'Full diagnostic suite: disk/ram/net/heat/gpu/b
             echo -e "\n\033[1;34m[💽 STORAGE MAPPING]\033[0m"; lsblk -p -o NAME,SIZE,TYPE,MODEL,MOUNTPOINT | grep -v "loop"
             echo -e "\n\033[1;32m[🌐 NETWORK]\033[0m"; echo -n "Local IP: "; ip route get 1 | awk '{print $7}'; echo -n "Public IP: "; curl -s https://ifconfig.me
         case '*'
-            echo -e "❌ \033[1;31mParameter Error:\033[0m '$drive_type' not recognized."
+            echo -e "❌ \033[1;31mParameter Error bestie:\033[0m '$drive_type' not recognized. Try \033[1;36mtestdrive --help\033[0m 💅"
             return 1
     end
     
-    echo -e "\n\033[1;37m[ STATUS: SUCCESS - USER: "(echo $USER | string upper)" ]\033[0m"
+    echo -e "\n\033[1;37m[ STATUS: SUCCESS bestie! Your system is literally HIM - USER: "(echo $USER | string upper)" ]\033[0m"
     echo -e "\033[1;30m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
     echo -e "\033[1;33m📂 ALL AVAILABLE COMMANDS:\033[0m"
     echo -e "  ➤ \033[36mtestdrive disk\033[0m   : Internal Storage Speed & Grading"

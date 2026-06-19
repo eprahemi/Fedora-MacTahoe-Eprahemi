@@ -16,10 +16,11 @@ function func --description 'Function archive: list/search/show all fish command
         set -l name $argv[1]
         switch $name
             case c v n weather;     echo "33"
-            case cat l p mkgif;     echo "32"
+            case cat l p mkgif extract; echo "32"
             case clean cleanreset refresh; echo "31"
             case testdrive getdata myip stats calc qr; echo "34"
             case matrix hollywood stayawake fish_greeting; echo "35"
+            case passgen;           echo "33"
             case '*';               echo "36"
         end
     end
@@ -44,16 +45,25 @@ function func --description 'Function archive: list/search/show all fish command
             case l;       echo "l [path]"
             case p;       echo "p"
             case mkgif;   echo "mkgif [--fps=N] [--scale=W:H] input"
+            case extract; echo "extract <archive> [dest]"
             case func;    echo "func [search|show]"
+            case passgen; echo "passgen [opts]"
             case '*';     echo "$name"
         end
     end
 
     if set -q argv[1]
         switch $argv[1]
+            case --help -h
+                echo -e "\033[1;33mUsage: \033[1;36mfunc [subcommand]\033[0m"
+                echo -e "  \033[38;5;248m  search <keyword>   Search functions by name or description\033[0m"
+                echo -e "  \033[38;5;248m  show <function>    Show the source code of a function\033[0m"
+                echo -e "  \033[38;5;248m  --help, -h         Show this help\033[0m"
+                echo -e "  \033[38;5;248m  (no args)          List all available functions\033[0m"
+                return 0
             case search
                 if not set -q argv[2]
-                    echo -e "\033[1;33mUsage: \033[1;36mfunc search <keyword>\033[0m"
+                    echo -e "\033[1;33mUsage bestie: \033[1;36mfunc search <keyword>\033[0m"
                     return 1
                 end
                 set -l keyword $argv[2]
@@ -83,19 +93,19 @@ function func --description 'Function archive: list/search/show all fish command
 
             case show
                 if not set -q argv[2]
-                    echo -e "\033[1;33mUsage: \033[1;36mfunc show <function>\033[0m"
+                    echo -e "\033[1;33mUsage bestie: \033[1;36mfunc show <function>\033[0m"
                     return 1
                 end
                 if functions -q $argv[2]
                     functions $argv[2]
                 else
-                    echo -e "\033[1;31m❌ No function named '$argv[2]'\033[0m"
+                    echo -e "\033[1;31m❌ No function named '$argv[2]' bestie! That ain't it 💅\033[0m"
                     return 1
                 end
                 return 0
 
             case '-*'
-                echo -e "\033[1;33mUsage: \033[1;36mfunc [search <kw>|show <func>]\033[0m"
+                echo -e "\033[1;33m📖 Read the manual dummy: \033[1;36mfunc search <kw>  |  func show <func>  |  func --help\033[0m"
                 return 1
         end
     end
@@ -131,7 +141,7 @@ function func --description 'Function archive: list/search/show all fish command
     # Files
     echo -e "\n  \033[1;32m📁  FILES\033[0m"
     echo -e "  \033[1;30m"(string repeat -n $column_width "─")"\033[0m"
-    for name in cat l p mkgif
+    for name in cat l p mkgif extract
         for f in $files
             set -l fn (string replace -r '\.fish$' '' (basename "$f"))
             if test "$fn" = "$name"
@@ -191,7 +201,7 @@ function func --description 'Function archive: list/search/show all fish command
     # Utility
     echo -e "\n  \033[1;36m🔧  UTILITY\033[0m"
     echo -e "  \033[1;30m"(string repeat -n $column_width "─")"\033[0m"
-    for name in func
+    for name in func passgen
         for f in $files
             set -l fn (string replace -r '\.fish$' '' (basename "$f"))
             if test "$fn" = "$name"
@@ -204,7 +214,7 @@ function func --description 'Function archive: list/search/show all fish command
     end
 
     echo -e "  \033[1;30m"(string repeat -n $column_width "═")"\033[0m"
-    echo -e "  \033[1;36m📦  $total functions loaded\033[0m    \033[1;37mUSER: \033[1;36m"(string upper "$USER")"\033[0m"
+    echo -e "  \033[1;36m📦  $total functions loaded bestie! No cap\033[0m    \033[1;37mUSER: \033[1;36m"(string upper "$USER")"\033[0m"
     echo -e "  \033[1;33m💡  \033[1;36mfunc search <kw>\033[1;33m  —  \033[1;36mfunc show <function>\033[1;33m  —  \033[1;36mtype <function>\033[1;33m for source\033[0m"
 
     functions -e __func_desc __func_color __func_usage

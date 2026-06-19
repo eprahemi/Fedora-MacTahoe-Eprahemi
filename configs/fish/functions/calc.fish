@@ -1,4 +1,26 @@
 function calc --description 'Quick math in the terminal using Python'
+    if set -q argv[1]
+        switch $argv[1]
+            case --help -h
+                echo -e "\033[1;36m"
+                echo "  ███████╗██████╗ ██████╗  █████╗ ██╗  ██╗███████╗███╗   ███╗██╗"
+                echo "  ██╔════╝██╔══██╗██╔══██╗██╔══██╗██║  ██║██╔════╝████╗ ████║██║"
+                echo "  █████╗  ██████╔╝██████╔╝███████║███████║█████╗  ██╔████╔██║██║"
+                echo "  ██╔══╝  ██╔═══╝ ██╔══██╗██╔══██║██╔══██║██╔══╝  ██║╚██╔╝██║██║"
+                echo "  ███████╗██║     ██║  ██║██║  ██║██║  ██║███████╗██║ ╚═╝ ██║██║"
+                echo "  ╚══════╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝╚═╝"
+                echo -e "\033[1;35m╔══════════════════════════════════════════════════════════╗\033[0m"
+                echo -e "\033[1;35m║       \033[1;33mUSAGE:  calc <expression>\033[1;35m                     ║\033[0m"
+                echo -e "\033[1;35m╚══════════════════════════════════════════════════════════╝\033[0m"
+                echo -e "  \033[1;37mExamples:\033[0m"
+                echo -e "    \033[1;36mcalc \"2 + 2\"\033[0m"
+                echo -e "    \033[1;36mcalc \"sin(pi/4)\"\033[0m"
+                echo -e "    \033[1;36mcalc \"2**10\"\033[0m"
+                echo -e "    \033[1;36mcalc \"sqrt(144)\"\033[0m"
+                return 0
+        end
+    end
+
     if test (count $argv) -lt 1
         echo -e "\033[1;36m"
         echo "  ███████╗██████╗ ██████╗  █████╗ ██╗  ██╗███████╗███╗   ███╗██╗"
@@ -45,12 +67,12 @@ except Exception as e:
 " 2>&1)
 
     if string match -q "ERROR:*" "$result"
-        echo -e "  \033[1;31m❌ $result\033[0m"
+        echo -e "  \033[1;31m❌ Oopsie bestie, your math ain't mathin': $result\033[0m"
         return 1
     else
-        echo -e "  \033[1;37mRESULT:\033[0m   \033[1;32m$result\033[0m"
+        echo -e "  \033[1;37mRESULT:\033[0m   \033[1;32m$result\033[0m   \033[1;33m✨ slay\033[0m"
     end
 
     echo -e "\n\033[1;30m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-    echo -e "\033[1;35m🧮 COMPLETE    \033[1;37mUSER: \033[1;36m"(string upper "$USER")"\033[0m"
+    echo -e "\033[1;35m🧮 MATH SLAAAAY bestie    \033[1;37mUSER: \033[1;36m"(string upper "$USER")"\033[0m"
 end

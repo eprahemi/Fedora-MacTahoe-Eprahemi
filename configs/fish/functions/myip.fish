@@ -39,5 +39,5 @@ function myip --description 'Show public IP, local IP & DNS servers in a styled 
     echo -e "  \033[1;37m🔌 INTERFACE\033[0m      \033[1;35m$iface\033[0m"
     echo -e "  \033[1;37m📡 DNS SERVERS\033[0m    $dns_servers"
     echo -e "\n\033[1;30m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-    echo -e "\033[1;33m🔒 STATUS: \033[1;32mLIVE\033[0m    \033[1;37mUSER: \033[1;36m"(string upper "$USER")"\033[0m"
+    echo -e "\033[1;33m🔒 STATUS: \033[1;32mLIVE (we're so back bestie)\033[0m    \033[1;37mUSER: \033[1;36m"(string upper "$USER")"\033[0m"
 end

@@ -47,5 +47,5 @@ function stats --description 'System dashboard: uptime, RAM, disk, CPU, load'
     end
 
     echo -e "\n\033[1;30m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-    echo -e "\033[1;34m🔧 STATUS: \033[1;32mOPERATIONAL\033[0m    \033[1;37mUSER: \033[1;36m"(string upper "$USER")"\033[0m"
+    echo -e "\033[1;34m🔧 STATUS: \033[1;32mOPERATIONAL (system's feeling cute today fr fr)\033[0m    \033[1;37mUSER: \033[1;36m"(string upper "$USER")"\033[0m"
 end
