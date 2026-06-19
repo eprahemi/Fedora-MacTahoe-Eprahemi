@@ -18,7 +18,7 @@ function c --description 'Open Celluloid or fzf-pick a video'
                 echo -e "\033[1;33mUsage: \033[1;36mc [file|--recent]\033[0m"
                 return 1
             case '*'
-                celluloid $argv >/dev/null 2>&1 & disown
+                celluloid "$argv" >/dev/null 2>&1 & disown
         end
     else
         set -l vid (find . -maxdepth 1 \( -iname '*.mp4' -o -iname '*.mkv' -o -iname '*.avi' -o -iname '*.mov' -o -iname '*.webm' \) 2>/dev/null | fzf --prompt="🎬 Pick video > " --height=10)
