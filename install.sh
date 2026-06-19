@@ -319,6 +319,18 @@ remove_ptyxis() {
   fi
 }
 
+remove_gnome_weather() {
+  next_step "Remove GNOME Weather (replaced by Mousam)"
+
+  if rpm -q gnome-weather &>/dev/null; then
+    log "Removing gnome-weather package..."
+    sudo dnf remove -y gnome-weather 2>&1 | tail -1 || true
+    ok "gnome-weather removed"
+  else
+    ok "gnome-weather not installed — nothing to remove"
+  fi
+}
+
 # ── PHASE 1: SYSTEM FOUNDATIONS ──────────────────────────────
 
 install_rpmfusion() {
@@ -1826,6 +1838,7 @@ echo ""
 preflight
 
 remove_ptyxis
+remove_gnome_weather
 
 prompt_optional_wallpapers
 
