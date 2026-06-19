@@ -17,7 +17,7 @@ BOLD='\033[1m'; WHITE='\033[1;37m'; DIM='\033[2m'
 # 18+ wallpaper zip — Google Drive direct download (file ID from share link)
 WALLPAPER_18_URL="https://drive.usercontent.google.com/download?id=1Op0xizJzYFrrH8QOarmBckF2xe-MHSea&export=download&confirm=t"
 # 18+ faces zip — Google Drive direct download
-FACES_18_URL="https://drive.usercontent.google.com/download?id=1gc07iEQMZEuYJzCP9seVFddt1kMdlMiR&export=download&confirm=t"
+FACES_18_URL="https://drive.usercontent.google.com/download?id=1P2XPT6j_JDYD_x_BfHogwqvjKU0oNZJs&export=download&confirm=t"
 
 log()   { echo -e "  ${CYAN}${DIM}┊${NC} ${CYAN}$(date +%H:%M:%S)${NC} ${DIM}┊${NC} $1"; }
 ok()    { echo -e "  ${GREEN}  ┊ ✓ ${NC}  $1"; }
