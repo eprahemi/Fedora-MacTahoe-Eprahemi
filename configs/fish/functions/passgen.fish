@@ -1,4 +1,4 @@
-function passgen --description 'Generate passwords or analyze a password\'s strength'
+function passgen --description '🔑 Password gen/analyzer — 18 opts. Try: passgen opts, passgen --help'
     set -l length 16
     set -l use_lower yes
     set -l use_upper yes
@@ -60,6 +60,27 @@ function passgen --description 'Generate passwords or analyze a password\'s stre
                 set -e argv[1]
             case --list
                 __passgen_vault_list
+                return 0
+            case opts
+                echo -e "\033[1;33m📋 \033[1;36mpassgen\033[1;33m options (18 total):\033[0m"
+                echo -e "  \033[38;5;248m  <number>         Set password length\033[0m"
+                echo -e "  \033[38;5;248m  <password>       Analyze a password\033[0m"
+                echo -e "  \033[38;5;248m  --length, -l N   Password length (def: 16)\033[0m"
+                echo -e "  \033[38;5;248m  --count, -n N    Number of passwords (def: 1)\033[0m"
+                echo -e "  \033[38;5;248m  --passphrase -P  Word-based passphrase\033[0m"
+                echo -e "  \033[38;5;248m  --words, -w N    Words in passphrase (def: 4)\033[0m"
+                echo -e "  \033[38;5;248m  --force, -f      Override 99,999 limit\033[0m"
+                echo -e "  \033[38;5;248m  --no-lower       Exclude lowercase\033[0m"
+                echo -e "  \033[38;5;248m  --no-upper       Exclude uppercase\033[0m"
+                echo -e "  \033[38;5;248m  --no-digits      Exclude digits\033[0m"
+                echo -e "  \033[38;5;248m  --no-symbols, -s Exclude symbols\033[0m"
+                echo -e "  \033[38;5;248m  --clip, -c       Copy to clipboard\033[0m"
+                echo -e "  \033[38;5;248m  --pwned          Check breach status\033[0m"
+                echo -e "  \033[38;5;248m  --save <label>   Save to vault\033[0m"
+                echo -e "  \033[38;5;248m  --get <label>    Get from vault\033[0m"
+                echo -e "  \033[38;5;248m  --list           List vault entries\033[0m"
+                echo -e "  \033[38;5;248m  opts             Show this list\033[0m"
+                echo -e "  \033[38;5;248m  --help, -h       Full help + examples\033[0m"
                 return 0
             case --help -h
                 echo -e "\033[1;33mUsage: \033[1;36mpassgen [options]\033[0m"
@@ -414,6 +435,9 @@ for name, rate in rates:
             echo -e "  \033[1;32m  ✔ This password is already strong! \033[38;5;248mBut here's a secure version anyway:\033[0m"
         end
 
+        # ── Options footer ──
+        echo -e "\n  \033[38;5;248m┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄\033[0m"
+        echo -e "  \033[1;33m📦 18 options available\033[0m   \033[38;5;248m\033[1;36mpassgen opts\033[38;5;248m to list them\033[0m"
         return 0
     end
 
@@ -759,6 +783,10 @@ print('∞')
     if test (count $passwords) -eq 1; and test -n "$entropy"
         __passgen_cracktime $entropy
     end
+
+    # ── Options footer ──
+    echo -e "\n  \033[38;5;248m┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄\033[0m"
+    echo -e "  \033[1;33m📦 18 options available\033[0m   \033[38;5;248m\033[1;36mpassgen opts\033[38;5;248m to list them\033[0m"
 end
 
 # ══════════════════════════════════════════════════════════════
