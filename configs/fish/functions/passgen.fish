@@ -35,17 +35,17 @@ function passgen --description 'Generate passwords or analyze a password\'s stre
                 set -e argv[1..2]
             case --help -h
                 echo -e "\033[1;33mUsage: \033[1;36mpassgen [options]\033[0m"
-                echo -e "  \033[1;30m<number>\033[0m           \033[1;37mPassword length preset\033[0m"
-                echo -e "  \033[1;30m<password>\033[0m         \033[1;37mAnalyze a password\'s strength\033[0m"
-                echo -e "  \033[1;30m--length, -l N\033[0m     \033[1;37mPassword length (default: 16)\033[0m"
-                echo -e "  \033[1;30m--count, -n N\033[0m      \033[1;37mNumber of passwords (default: 1)\033[0m"
-                echo -e "  \033[1;30m--no-lower\033[0m         \033[1;37mExclude lowercase letters\033[0m"
-                echo -e "  \033[1;30m--no-upper\033[0m         \033[1;37mExclude uppercase letters\033[0m"
-                echo -e "  \033[1;30m--no-digits\033[0m        \033[1;37mExclude digits\033[0m"
-                echo -e "  \033[1;30m--no-symbols, -s\033[0m   \033[1;37mExclude symbols\033[0m"
-                echo -e "  \033[1;30m--clip, -c\033[0m         \033[1;37mCopy to clipboard\033[0m"
+                echo -e "  \033[38;5;248m<number>\033[0m           \033[1;37mPassword length preset\033[0m"
+                echo -e "  \033[38;5;248m<password>\033[0m         \033[1;37mAnalyze a password\'s strength\033[0m"
+                echo -e "  \033[38;5;248m--length, -l N\033[0m     \033[1;37mPassword length (default: 16)\033[0m"
+                echo -e "  \033[38;5;248m--count, -n N\033[0m      \033[1;37mNumber of passwords (default: 1)\033[0m"
+                echo -e "  \033[38;5;248m--no-lower\033[0m         \033[1;37mExclude lowercase letters\033[0m"
+                echo -e "  \033[38;5;248m--no-upper\033[0m         \033[1;37mExclude uppercase letters\033[0m"
+                echo -e "  \033[38;5;248m--no-digits\033[0m        \033[1;37mExclude digits\033[0m"
+                echo -e "  \033[38;5;248m--no-symbols, -s\033[0m   \033[1;37mExclude symbols\033[0m"
+                echo -e "  \033[38;5;248m--clip, -c\033[0m         \033[1;37mCopy to clipboard\033[0m"
                 echo -e "\n  \033[1;36mPresets:\033[0m \033[1;33m16\033[0m \033[1;33m32\033[0m \033[1;33m48\033[0m \033[1;33m64\033[0m \033[1;33m96\033[0m \033[1;33m104\033[0m"
-                echo -e "  \033[1;30mExamples:\033[0m"
+                echo -e "  \033[38;5;248mExamples:\033[0m"
                 echo -e "    \033[1;36mpassgen\033[0m              \033[1;37mGenerate a 16-char password\033[0m"
                 echo -e "    \033[1;36mpassgen 32\033[0m           \033[1;37mGenerate a 32-char password\033[0m"
                 echo -e "    \033[1;36mpassgen mypassword123\033[0m \033[1;37mAnalyze password strength\033[0m"
@@ -107,7 +107,7 @@ print(symbol)
         echo "  ██╔═══╝ ██╔══██║╚════██║╚════██║██║   ██║██╔══╝  ██║╚██╗██║"
         echo "  ██║     ██║  ██║███████║███████║╚██████╔╝███████╗██║ ╚████║"
         echo "  ╚═╝     ╚═╝  ╚═╝╚══════╝╚══════╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝"
-        echo -e "\033[1;30m┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄\033[0m"
+        echo -e "\033[38;5;248m┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄\033[0m"
         printf "  \033[1;33m🔎 PASSWORD ANALYSIS\033[0m\n\n"
 
         # Masked password
@@ -127,9 +127,9 @@ print(symbol)
 
         # Variations
         echo -e "\n  \033[1;37m🔄 VARIATIONS\033[0m"
-        printf "  \033[1;30mAll caps:    \033[1;37m%s\033[0m\n" (string upper "$pw")
-        printf "  \033[1;30mAll lower:   \033[1;37m%s\033[0m\n" (string lower "$pw")
-        printf "  \033[1;30mCapitalized: \033[1;37m%s\033[0m\n" (string sub -l 1 "$pw" | string upper)(string sub -s 2 "$pw" | string lower)
+        printf "  \033[38;5;248mAll caps:    \033[1;37m%s\033[0m\n" (string upper "$pw")
+        printf "  \033[38;5;248mAll lower:   \033[1;37m%s\033[0m\n" (string lower "$pw")
+        printf "  \033[38;5;248mCapitalized: \033[1;37m%s\033[0m\n" (string sub -l 1 "$pw" | string upper)(string sub -s 2 "$pw" | string lower)
 
         # Crack time
         if test "$entropy" -gt 0
@@ -154,7 +154,7 @@ print(''.join(secrets.choice(chars) for _ in range(length)))
 
         # ── PASSWORD UPGRADE COMPARISON ──
         echo -e "\n  \033[1;37m💡 PASSWORD UPGRADE\033[0m"
-        echo -e "  \033[1;30m┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄\033[0m"
+        echo -e "  \033[38;5;248m┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄\033[0m"
         # Old password
         printf "  \033[1;37mYour password:\033[0m      \033[1;33m%s\033[0m\n" "$pw"
         # Crack time for old (fastest attack: MD5)
@@ -176,9 +176,9 @@ for name, rate in rates:
     else: s = '∞ forever'
     print(s)
 " 2>/dev/null)
-        printf "  \033[1;30mCrack time (MD5):\033[0m  \033[1;31m%s\033[0m\n" "$old_fastest"
+        printf "  \033[38;5;248mCrack time (MD5):\033[0m  \033[1;31m%s\033[0m\n" "$old_fastest"
 
-        echo -e "\n  \033[1;30m                      ⬇\033[0m\n"
+        echo -e "\n  \033[38;5;248m                      ⬇\033[0m\n"
 
         # New secure password
         printf "  \033[1;37mEdited with secure:\033[0m \033[1;32m%s\033[0m\n" "$new_pw"
@@ -201,42 +201,42 @@ for name, rate in rates:
     else: s = '∞ forever'
     print(s)
 " 2>/dev/null)
-        printf "  \033[1;30mCrack time (MD5):\033[0m  \033[1;32m%s\033[0m\n" "$new_fastest"
+        printf "  \033[38;5;248mCrack time (MD5):\033[0m  \033[1;32m%s\033[0m\n" "$new_fastest"
 
         # Tips
         echo -e "\n  \033[1;37m💡 WHAT WE FIXED\033[0m"
         set -l tips 0
         if test "$pw_len" -lt 12
             set tips (math $tips + 1)
-            echo -e "  \033[1;33m$tips.\033[0m \033[1;37mLength\033[0m — \033[1;30m$pw_len → $new_len chars (at least 12 recommended)\033[0m"
+            echo -e "  \033[1;33m$tips.\033[0m \033[1;37mLength\033[0m — \033[38;5;248m$pw_len → $new_len chars (at least 12 recommended)\033[0m"
         end
         if test "$upper_count" -eq 0
             set tips (math $tips + 1)
-            echo -e "  \033[1;33m$tips.\033[0m \033[1;37mUppercase\033[0m — \033[1;30madded A-Z\033[0m"
+            echo -e "  \033[1;33m$tips.\033[0m \033[1;37mUppercase\033[0m — \033[38;5;248madded A-Z\033[0m"
         end
         if test "$lower_count" -eq 0
             set tips (math $tips + 1)
-            echo -e "  \033[1;33m$tips.\033[0m \033[1;37mLowercase\033[0m — \033[1;30madded a-z\033[0m"
+            echo -e "  \033[1;33m$tips.\033[0m \033[1;37mLowercase\033[0m — \033[38;5;248madded a-z\033[0m"
         end
         if test "$digit_count" -eq 0
             set tips (math $tips + 1)
-            echo -e "  \033[1;33m$tips.\033[0m \033[1;37mDigits\033[0m — \033[1;30madded 0-9\033[0m"
+            echo -e "  \033[1;33m$tips.\033[0m \033[1;37mDigits\033[0m — \033[38;5;248madded 0-9\033[0m"
         end
         if test "$symbol_count" -eq 0
             set tips (math $tips + 1)
-            echo -e "  \033[1;33m$tips.\033[0m \033[1;37mSymbols\033[0m — \033[1;30madded !@#\$%%^&*()_-+=<>?\033[0m"
+            echo -e "  \033[1;33m$tips.\033[0m \033[1;37mSymbols\033[0m — \033[38;5;248madded !@#\$%%^&*()_-+=<>?\033[0m"
         end
         if test "$pw_len" -ge 8
             and string match -qr '(.)\1{2,}' "$pw"
             set tips (math $tips + 1)
-            echo -e "  \033[1;33m$tips.\033[0m \033[1;37mRepeats\033[0m — \033[1;30mremoved repeated character patterns\033[0m"
+            echo -e "  \033[1;33m$tips.\033[0m \033[1;37mRepeats\033[0m — \033[38;5;248mremoved repeated character patterns\033[0m"
         end
         if string match -qr '^(password|123456|qwerty|letmein|admin|welcome)' (string lower "$pw")
             set tips (math $tips + 1)
-            echo -e "  \033[1;33m$tips.\033[0m \033[1;37mCommon word\033[0m — \033[1;30mswitched to random characters\033[0m"
+            echo -e "  \033[1;33m$tips.\033[0m \033[1;37mCommon word\033[0m — \033[38;5;248mswitched to random characters\033[0m"
         end
         if test "$tips" -eq 0
-            echo -e "  \033[1;32m  ✔ This password is already strong! \033[1;30mBut here's a secure version anyway:\033[0m"
+            echo -e "  \033[1;32m  ✔ This password is already strong! \033[38;5;248mBut here's a secure version anyway:\033[0m"
         end
 
         functions -e __passgen_cracktime
@@ -285,7 +285,7 @@ for name, rate in rates:
     echo "  ██╔═══╝ ██╔══██║╚════██║╚════██║██║   ██║██╔══╝  ██║╚██╗██║"
     echo "  ██║     ██║  ██║███████║███████║╚██████╔╝███████╗██║ ╚████║"
     echo "  ╚═╝     ╚═╝  ╚═╝╚══════╝╚══════╝ ╚═════╝ ╚══════╝╚═╝  ╚═══╝"
-    echo -e "\033[1;30m┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄\033[0m"
+    echo -e "\033[38;5;248m┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄\033[0m"
     printf "  \033[1;37mLength: \033[1;33m%s\033[0m     \033[1;37mCount: \033[1;33m%s\033[0m     \033[1;37mPool: \033[1;33m%s\033[0m\n" "$length" "$count" "$pool_size"
 
     for i in (seq (count $passwords))
@@ -319,8 +319,8 @@ end
 function __passgen_cracktime --description 'Display crack time estimates for given entropy'
     set -l entropy $argv[1]
 
-    echo -e "\n  \033[1;37m🔐 \033[1;36m$entropy bits\033[0m    \033[1;30m(2^$entropy possible combinations)\033[0m"
-    echo -e "  \033[1;30m┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄\033[0m"
+    echo -e "\n  \033[1;37m🔐 \033[1;36m$entropy bits\033[0m    \033[38;5;248m(2^$entropy possible combinations)\033[0m"
+    echo -e "  \033[38;5;248m┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄\033[0m"
 
     # Use Python for big-number crack time calculations
     python3 -c "
