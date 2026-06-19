@@ -426,6 +426,7 @@ install_rpm_packages() {
     adwaita-icon-theme adwaita-icon-theme-legacy \
     ImageMagick fzf ripgrep jq unzip curl wget git \
     ffmpeg-free \
+    bat cmatrix qrencode podman python3-pip speedtest-cli \
     libreoffice-writer libreoffice-calc libreoffice-impress"
 
   if [ "$INSTALL_DISCORD" = "true" ]; then
