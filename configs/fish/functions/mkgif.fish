@@ -1,6 +1,48 @@
-function mkgif
-    ffmpeg -i $argv[1] -vf "fps=10,scale=480:-1:flags=lanczos" -c:v gif $argv[1].gif
-      # --- EPRAHEMI CUSTOM HEADER ---
+function mkgif --description 'Convert video to optimized GIF'
+    set -l fps 10
+    set -l scale "480:-1"
+    set -l input ""
+
+    for arg in $argv
+        switch $arg
+            case --fps
+            case --scale
+            case '-*'
+                if string match -q -- '--fps=*' $arg
+                    set fps (string replace '--fps=' '' $arg)
+                else if string match -q -- '--scale=*' $arg
+                    set scale (string replace '--scale=' '' $arg)
+                else
+                    echo -e "\033[1;31m❌ Unknown flag: $arg\033[0m"
+                    return 1
+                end
+            case '*'
+                if test -z "$input"
+                    set input $arg
+                else if test -z "$fps"
+                    set fps $arg
+                else if test -z "$scale"
+                    set scale $arg
+                else
+                    echo -e "\033[1;31m❌ Unexpected argument: $arg\033[0m"
+                    return 1
+                end
+        end
+    end
+
+    if test -z "$input"
+        echo -e "\033[1;33mUsage: \033[1;36mmkgif [--fps=N] [--scale=W:H] input.mp4\033[0m"
+        return 1
+    end
+
+    if not test -f "$input"
+        echo -e "\033[1;31m❌ File not found: $input\033[0m"
+        return 1
+    end
+
+    set -l palette "/tmp/__mkgif_palette.png"
+    set -l output (string replace -r '\.[^.]+$' '' "$input").gif
+
     echo -e "\033[1;36m"
     echo "  ███████╗██████╗ ██████╗  █████╗ ██╗  ██╗███████╗███╗   ███╗██╗"
     echo "  ██╔════╝██╔══██╗██╔══██╗██╔══██╗██║  ██║██╔════╝████╗ ████║██║"
@@ -8,6 +50,23 @@ function mkgif
     echo "  ██╔══╝  ██╔═══╝ ██╔══██╗██╔══██║██╔══██║██╔══╝  ██║╚██╔╝██║██║"
     echo "  ███████╗██║     ██║  ██║██║  ██║██║  ██║███████╗██║ ╚═╝ ██║██║"
     echo "  ╚══════╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝╚═╝"
-    echo "GIF created: $argv[1].gif"
-    echo "Enjoy your high end gif."
+    echo -e "\033[1;30m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+    echo -e "  \033[1;37mInput:\033[0m  $input"
+    echo -e "  \033[1;37mOutput:\033[0m $output"
+    echo -e "  \033[1;37mFPS:\033[0m    $fps"
+    echo -e "  \033[1;37mScale:\033[0m  $scale"
+    echo -e "\033[1;30m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+
+    echo -n "  \033[1;37m⏳ Generating palette...\033[0m "
+    ffmpeg -v warning -i "$input" -vf "fps=$fps,scale=$scale:flags=lanczos,palettegen=stats_mode=diff" "$palette" -y 2>/dev/null
+    echo -e "\033[1;32m✅\033[0m"
+
+    echo -n "  \033[1;37m⏳ Creating GIF...\033[0m "
+    ffmpeg -v warning -i "$input" -i "$palette" -lavfi "fps=$fps,scale=$scale:flags=lanczos [x]; [x][1:v] paletteuse=dither=bayer:bayer_scale=5" "$output" -y 2>/dev/null
+    echo -e "\033[1;32m✅\033[0m"
+
+    rm -f "$palette"
+
+    echo -e "\033[1;30m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
+    echo -e " \033[1;32m✨ GIF created:\033[0m \033[1;36m$output\033[0m"
 end

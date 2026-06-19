@@ -1,4 +1,106 @@
-function func --description 'List all available fish functions with descriptions'
+function func --description 'Function archive: list/search/show all fish commands'
+    set -l func_dir "$HOME/.config/fish/functions"
+    set -l files (ls "$func_dir"/*.fish 2>/dev/null)
+
+    function __func_desc
+        set -l file $argv[1]
+        set -l desc (grep -h -- '--description' "$file" 2>/dev/null | head -1 | sed "s/.*--description '\(.*\)'.*/\1/" | sed 's/.*--description "\(.*\)".*/\1/')
+        if test -z "$desc"
+            echo "No description"
+        else
+            echo "$desc"
+        end
+    end
+
+    function __func_color
+        set -l name $argv[1]
+        switch $name
+            case c v n weather;     echo "33"
+            case cat l p mkgif;     echo "32"
+            case clean cleanreset refresh; echo "31"
+            case testdrive getdata myip stats calc qr; echo "34"
+            case matrix hollywood stayawake fish_greeting; echo "35"
+            case '*';               echo "36"
+        end
+    end
+
+    function __func_usage
+        set -l name $argv[1]
+        switch $name
+            case c;       echo "c [file|--recent]"
+            case v;       echo "v [file|--recent]"
+            case cat;     echo "cat [file|--lang LANG file|--line-range :N file]"
+            case n;       echo "n [file|--today|--last]"
+            case weather; echo "weather [--gui]"
+            case matrix;  echo "matrix [--red|--blue|--green|--rainbow] [--speed=N]"
+            case mkgif;   echo "mkgif [--fps=N] [--scale=W:H] input.mp4"
+            case stayawake; echo "stayawake [duration|--display|--stop]"
+            case getdata; echo "getdata [--list|--venv]"
+            case clean;   echo "clean [--all|--pip|--dry-run]"
+            case myip;    echo "myip"
+            case stats;   echo "stats"
+            case calc;    echo "calc <expression>"
+            case qr;      echo "qr <text-or-url>"
+            case l;       echo "l [path]"
+            case p;       echo "p"
+            case mkgif;   echo "mkgif [--fps=N] [--scale=W:H] input"
+            case func;    echo "func [search|show]"
+            case '*';     echo "$name"
+        end
+    end
+
+    if set -q argv[1]
+        switch $argv[1]
+            case search
+                if not set -q argv[2]
+                    echo -e "\033[1;33mUsage: \033[1;36mfunc search <keyword>\033[0m"
+                    return 1
+                end
+                set -l keyword $argv[2]
+                echo -e "\033[1;36m"
+                echo "  ███████╗██████╗ ██████╗  █████╗ ██╗  ██╗███████╗███╗   ███╗██╗"
+                echo "  ██╔════╝██╔══██╗██╔══██╗██╔══██╗██║  ██║██╔════╝████╗ ████║██║"
+                echo "  █████╗  ██████╔╝██████╔╝███████║███████║█████╗  ██╔████╔██║██║"
+                echo "  ██╔══╝  ██╔═══╝ ██╔══██╗██╔══██║██╔══██║██╔══╝  ██║╚██╔╝██║██║"
+                echo "  ███████╗██║     ██║  ██║██║  ██║██║  ██║███████╗██║ ╚═╝ ██║██║"
+                echo "  ╚══════╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝╚═╝"
+                echo -e "\033[1;33m╔══════════════════════════════════════════════════════════╗\033[0m"
+                echo -e "\033[1;33m║          \033[1;36mSEARCH RESULTS — \"$keyword\"\033[1;33m                    ║\033[0m"
+                echo -e "\033[1;33m╚══════════════════════════════════════════════════════════╝\033[0m"
+
+                set -l found 0
+                for f in $files
+                    set -l name (string replace -r '\.fish$' '' (basename "$f"))
+                    set -l desc (__func_desc "$f")
+                    if string match -qir "$keyword" "$name $desc"
+                        set -l c (__func_color $name)
+                        printf "  \033[1;%sm%-14s\033[0m  \033[1;30m→\033[0m  \033[1;37m%s\033[0m\n" $c $name $desc
+                        set found (math $found + 1)
+                    end
+                end
+                echo -e "\n  \033[1;36m📦 $found matches\033[0m"
+                return 0
+
+            case show
+                if not set -q argv[2]
+                    echo -e "\033[1;33mUsage: \033[1;36mfunc show <function>\033[0m"
+                    return 1
+                end
+                if functions -q $argv[2]
+                    functions $argv[2]
+                else
+                    echo -e "\033[1;31m❌ No function named '$argv[2]'\033[0m"
+                    return 1
+                end
+                return 0
+
+            case '-*'
+                echo -e "\033[1;33mUsage: \033[1;36mfunc [search <kw>|show <func>]\033[0m"
+                return 1
+        end
+    end
+
+    # ── DEFAULT: Full archive ──
     echo -e "\033[1;36m"
     echo "  ███████╗██████╗ ██████╗  █████╗ ██╗  ██╗███████╗███╗   ███╗██╗"
     echo "  ██╔════╝██╔══██╗██╔══██╗██╔══██╗██║  ██║██╔════╝████╗ ████║██║"
@@ -6,64 +108,107 @@ function func --description 'List all available fish functions with descriptions
     echo "  ██╔══╝  ██╔═══╝ ██╔══██╗██╔══██║██╔══██║██╔══╝  ██║╚██╔╝██║██║"
     echo "  ███████╗██║     ██║  ██║██║  ██║██║  ██║███████╗██║ ╚═╝ ██║██║"
     echo "  ╚══════╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝╚═╝"
-    echo -e "\033[1;30m╔══════════════════════════════════════════════════════════╗\033[0m"
-    echo -e "\033[1;30m║          \033[1;36mEPRAHEMI FUNCTION ARCHIVE - v1.0\033[1;30m               ║\033[0m"
-    echo -e "\033[1;30m╚══════════════════════════════════════════════════════════╝\033[0m"
+    echo -e "\033[1;30m╔══════════════════════════════════════════════════════════════════════╗\033[0m"
+    echo -e "\033[1;30m║            \033[1;36mEPRAHEMI FUNCTION ARCHIVE\033[1;30m              \033[1;37mv2.0\033[1;30m          ║\033[0m"
+    echo -e "\033[1;30m╚══════════════════════════════════════════════════════════════════════╝\033[0m"
 
-    set -l func_dir "$HOME/.config/fish/functions"
-    set -l files (ls "$func_dir"/*.fish 2>/dev/null)
     set -l total 0
-    set -l max_name_len 0
+    set -l column_width 65
 
-    for f in $files
-        set -l name (string replace -r '\.fish$' '' (basename "$f"))
-        set -l len (string length "$name")
-        if test $len -gt $max_name_len
-            set max_name_len $len
+    # ── CATEGORIES ──
+    # Media
+    echo -e "\n  \033[1;33m🎬  MEDIA\033[0m"
+    echo -e "  \033[1;30m"(string repeat -n $column_width "─")"\033[0m"
+    for name in c v n weather
+        for f in $files
+            set -l fn (string replace -r '\.fish$' '' (basename "$f"))
+            if test "$fn" = "$name"
+                set -l desc (__func_desc "$f")
+                set -l usage (__func_usage "$name")
+                printf "  \033[1;33m%-14s\033[0m  \033[1;30m→\033[0m  \033[1;37m%-35s\033[0m  \033[1;30m(\033[1;33m%s\033[1;30m)\033[0m\n" "$name" "$desc" "$usage"
+                set total (math $total + 1)
+            end
         end
     end
 
-    if test $max_name_len -lt 14
-        set max_name_len 14
+    # Files
+    echo -e "\n  \033[1;32m📁  FILES\033[0m"
+    echo -e "  \033[1;30m"(string repeat -n $column_width "─")"\033[0m"
+    for name in cat l p mkgif
+        for f in $files
+            set -l fn (string replace -r '\.fish$' '' (basename "$f"))
+            if test "$fn" = "$name"
+                set -l desc (__func_desc "$f")
+                set -l usage (__func_usage "$name")
+                printf "  \033[1;32m%-14s\033[0m  \033[1;30m→\033[0m  \033[1;37m%-35s\033[0m  \033[1;30m(\033[1;32m%s\033[1;30m)\033[0m\n" "$name" "$desc" "$usage"
+                set total (math $total + 1)
+            end
+        end
     end
 
-    set -l pad (math "$max_name_len + 2")
-
-    echo -e "\n  \033[1;33mALL AVAILABLE COMMANDS\033[0m"
-    echo -e "  \033[1;30m"(string repeat -n (math 70 + $max_name_len) "─")"\033[0m"
-
-    for f in $files
-        set -l name (string replace -r '\.fish$' '' (basename "$f"))
-        set -l desc (grep -h -- '--description' "$f" 2>/dev/null | head -1 | sed "s/.*--description '\(.*\)'.*/\1/" | sed "s/.*--description \"\(.*\)\".*/\1/")
-
-        if test -z "$desc"
-            set desc "No description provided"
+    # System
+    echo -e "\n  \033[1;31m⚙️  SYSTEM\033[0m"
+    echo -e "  \033[1;30m"(string repeat -n $column_width "─")"\033[0m"
+    for name in clean cleanreset refresh
+        for f in $files
+            set -l fn (string replace -r '\.fish$' '' (basename "$f"))
+            if test "$fn" = "$name"
+                set -l desc (__func_desc "$f")
+                set -l usage (__func_usage "$name")
+                printf "  \033[1;31m%-14s\033[0m  \033[1;30m→\033[0m  \033[1;37m%-35s\033[0m  \033[1;30m(\033[1;31m%s\033[1;30m)\033[0m\n" "$name" "$desc" "$usage"
+                set total (math $total + 1)
+            end
         end
-
-        set -l name_padded $name
-        while test (string length "$name_padded") -lt $max_name_len
-            set name_padded "$name_padded "
-        end
-
-        set -l color "\033[1;36m"
-        switch $name
-            case c v n weather;          set color "\033[1;33m"
-            case l p;                    set color "\033[1;32m"
-            case cat mkgif;              set color "\033[1;35m"
-            case clean cleanreset refresh; set color "\033[1;31m"
-            case testdrive getdata myip stats calc; set color "\033[1;34m"
-            case matrix hollywood stayawake; set color "\033[1;35m"
-        end
-
-        if test $name = "func"
-            set color "\033[1;36m"
-        end
-
-        echo -e "   $color$name_padded\033[0m  \033[1;30m→\033[0m  \033[1;37m$desc\033[0m"
-        set total (math $total + 1)
     end
 
-    echo -e "  \033[1;30m"(string repeat -n (math 70 + $max_name_len) "─")"\033[0m"
-    echo -e "  \033[1;36m📦 $total functions loaded\033[0m    \033[1;37mUSER: \033[1;36m"(string upper "$USER")"\033[0m"
-    echo -e "  \033[1;33m💡 Tip: use \033[1;36mtype <function>\033[1;33m to see source code\033[0m"
+    # Diagnostics
+    echo -e "\n  \033[1;34m📊  DIAGNOSTICS\033[0m"
+    echo -e "  \033[1;30m"(string repeat -n $column_width "─")"\033[0m"
+    for name in testdrive getdata myip stats calc qr
+        for f in $files
+            set -l fn (string replace -r '\.fish$' '' (basename "$f"))
+            if test "$fn" = "$name"
+                set -l desc (__func_desc "$f")
+                set -l usage (__func_usage "$name")
+                printf "  \033[1;34m%-14s\033[0m  \033[1;30m→\033[0m  \033[1;37m%-35s\033[0m  \033[1;30m(\033[1;34m%s\033[1;30m)\033[0m\n" "$name" "$desc" "$usage"
+                set total (math $total + 1)
+            end
+        end
+    end
+
+    # Fun
+    echo -e "\n  \033[1;35m🎨  FUN\033[0m"
+    echo -e "  \033[1;30m"(string repeat -n $column_width "─")"\033[0m"
+    for name in matrix hollywood stayawake fish_greeting
+        for f in $files
+            set -l fn (string replace -r '\.fish$' '' (basename "$f"))
+            if test "$fn" = "$name"
+                set -l desc (__func_desc "$f")
+                set -l usage (__func_usage "$name")
+                printf "  \033[1;35m%-14s\033[0m  \033[1;30m→\033[0m  \033[1;37m%-35s\033[0m  \033[1;30m(\033[1;35m%s\033[1;30m)\033[0m\n" "$name" "$desc" "$usage"
+                set total (math $total + 1)
+            end
+        end
+    end
+
+    # Utility
+    echo -e "\n  \033[1;36m🔧  UTILITY\033[0m"
+    echo -e "  \033[1;30m"(string repeat -n $column_width "─")"\033[0m"
+    for name in func
+        for f in $files
+            set -l fn (string replace -r '\.fish$' '' (basename "$f"))
+            if test "$fn" = "$name"
+                set -l desc (__func_desc "$f")
+                set -l usage (__func_usage "$name")
+                printf "  \033[1;36m%-14s\033[0m  \033[1;30m→\033[0m  \033[1;37m%-35s\033[0m  \033[1;30m(\033[1;36m%s\033[1;30m)\033[0m\n" "$name" "$desc" "$usage"
+                set total (math $total + 1)
+            end
+        end
+    end
+
+    echo -e "  \033[1;30m"(string repeat -n $column_width "═")"\033[0m"
+    echo -e "  \033[1;36m📦  $total functions loaded\033[0m    \033[1;37mUSER: \033[1;36m"(string upper "$USER")"\033[0m"
+    echo -e "  \033[1;33m💡  \033[1;36mfunc search <kw>\033[1;33m  —  \033[1;36mfunc show <function>\033[1;33m  —  \033[1;36mtype <function>\033[1;33m for source\033[0m"
+
+    functions -e __func_desc __func_color __func_usage
 end
