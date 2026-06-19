@@ -1,4 +1,4 @@
-function cleanreset
+function cleanreset --description 'Safe refresh: shell restart, thumbs, DNF, Flatpak, logs'
     # --- EPRAHEMI CUSTOM HEADER ---
     echo -e "\033[1;36m"
     echo "  ███████╗██████╗ ██████╗  █████╗ ██╗  ██╗███████╗███╗   ███╗██╗"
