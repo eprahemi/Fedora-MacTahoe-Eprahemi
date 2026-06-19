@@ -119,21 +119,71 @@ function passgen --description 'Generate passwords or analyze a password\'s stre
         end
     end
 
-    # ── Meme number check ──
-    if test "$length" -eq 69
-        echo -e "  \033[1;35m( ͡° ͜ʖ ͡°) nice... you typed 69... hehehe\033[0m"
-        echo -e "  \033[38;5;248m  ayo what you planning with that length bestie? 🤨\033[0m"
-    else if test "$length" -eq 67
-        echo -e "  \033[1;33m67? 67! DANGEROUS ITCHY NUMBER FELLA!\033[0m"
-        echo -e "  \033[38;5;248m  67 67 67 67 67... just kidding (or am I?) 👀\033[0m"
-    else if test "$length" -eq 420
-        echo -e "  \033[1;32m🌿 420 blaze it! Someone's feeling relaxed today 🚬\033[0m"
-    else if test "$length" -eq 666
-        echo -e "  \033[1;31m😈 666... THE NUMBER OF THE BEAST! \033[1;33mRIP your GPU\033[0m"
-    else if test "$length" -eq 777
-        echo -e "  \033[1;33m🍀 777 LUCKY STREAK! Hit the jackpot with this one!\033[0m"
-    else if test "$length" -eq 42
-        echo -e "  \033[1;36m🌌 42 — The Answer to the Ultimate Question of Life, the Universe, and Everything\033[0m"
+    # ── MEME NUMBER DATA CENTER 🎰 ──
+    # If you think of another one, add it bestie. This is a NO JUDGEMENT ZONE.
+    switch $length
+        case 7
+            echo -e "  \033[1;35m🎰 7 7 7 — JACKPOT LINE! Somebody hit the slots fr fr\033[0m"
+        case 11
+            echo -e "  \033[1;33m🔊 THIS ONE GOES TO 11! \033[38;5;248mSpinal Tap would be proud 🎸\033[0m"
+        case 13
+            echo -e "  \033[1;31m🍀 13... unlucky? OR IS IT? \033[38;5;248mFriday the 13th vibes bestie 👻\033[0m"
+        case 21
+            echo -e "  \033[1;32m🃏 21! BLACKJACK! \033[38;5;248mDealer hits? Dealer stays? We stay WINNING 💰\033[0m"
+        case 42
+            echo -e "  \033[1;36m🌌 42 — The Answer to the Ultimate Question of Life, the Universe, and Everything\033[0m"
+            echo -e "  \033[38;5;248m  Douglas Adams would be proud. Don't forget your towel 🧖\033[0m"
+        case 67
+            echo -e "  \033[1;33m67?! 67!! DANGEROUS ITCHY NUMBER FELLA!\033[0m"
+            echo -e "  \033[38;5;248m  67 67 67 67 67... just kidding (or am I?) 👀\033[0m"
+        case 69
+            echo -e "  \033[1;35m( ͡° ͜ʖ ͡°) nice... you typed 69... hehehe\033[0m"
+            echo -e "  \033[38;5;248m  ayo what you planning with that length bestie? 🤨\033[0m"
+        case 88
+            echo -e "  \033[1;31m🧧 88! DOUBLE HAPPINESS! \033[38;5;248mChinese lucky number gang rise up 🐉\033[0m"
+        case 99
+            echo -e "  \033[1;33m🎵 99 PROBLEMS BUT A PASSWORD AIN'T ONE! \033[38;5;248mJay-Z nodded 🎤\033[0m"
+        case 100
+            echo -e "  \033[1;33m💯 100! PERFECT SCORE ENERGY! \033[38;5;248mNo cap, you're literally HIM 🔥\033[0m"
+        case 101
+            echo -e "  \033[1;36m🐕 101 Dalmatians! \033[38;5;248mCruella de Vil could never 💅\033[0m"
+        case 111
+            echo -e "  \033[1;33m🔮 111 — ANGEL NUMBER! \033[38;5;248mThe universe is telling you something bestie ✨\033[0m"
+        case 222
+            echo -e "  \033[1;34m🌊 222 — BALANCE & HARMONY... \033[38;5;248mor just a cool number idk 🤷\033[0m"
+        case 333
+            echo -e "  \033[1;35m👁️ 333 — ASCENDED MASTERS WATCHING... \033[38;5;248mor maybe it's just schizophrenia 💀\033[0m"
+        case 404
+            echo -e "  \033[1;31m🚫 404 — PASSWORD NOT FOUND! \033[38;5;248mError 418: I'm a teapot (jk)\033[0m"
+        case 420
+            echo -e "  \033[1;32m🌿 420 blaze it! Someone's feeling relaxed today 🚬\033[0m"
+            echo -e "  \033[38;5;248m  Remember: with great power comes great responsibility (and munchies) 🍕\033[0m"
+        case 500
+            echo -e "  \033[1;31m💀 500 — INTERNAL SERVER ERROR! \033[38;5;248mYour PC is having an existential crisis\033[0m"
+        case 666
+            echo -e "  \033[1;31m😈 666... THE NUMBER OF THE BEAST! \033[1;33mRIP your GPU\033[0m"
+            echo -e "  \033[38;5;248m  \\m/ (>.<) \\m/  \033[0m"
+        case 777
+            echo -e "  \033[1;33m🍀 777 LUCKY STREAK! Hit the jackpot with this one!\033[0m"
+            echo -e "  \033[38;5;248m  Vegas called, they want their number back 🎰\033[0m"
+        case 800
+            echo -e "  \033[1;35m📞 800 — TOLL FREE BABY! \033[38;5;248mCall me maybe? 📱\033[0m"
+        case 888
+            echo -e "  \033[1;31m🧧🧧 888! TRIPLE LUCK! \033[38;5;248mIn Chinese this means 'fa fa fa' = GET RICH 💰\033[0m"
+        case 911
+            echo -e "  \033[1;31m🚨 911 — EMERGENCY! \033[38;5;248mWhat did you do bestie? I'm not snitching but... 👀\033[0m"
+        case 999
+            echo -e "  \033[1;33m🌟 999 — COMPLETION! \033[38;5;248mOne chapter ends, another begins. Deep bestie hours 🧘\033[0m"
+        case 1001
+            echo -e "  \033[1;35m📖 1001 Arabian Nights! \033[38;5;248mScheherazade could never generate this password fr 🧞\033[0m"
+        case 1337
+            echo -e "  \033[1;32m👾 1337 — LEET SPEAK! \033[38;5;248my0u'r3 4 r34l h4ck3r n0w b35713 💻\033[0m"
+        case 4200
+            echo -e "  \033[1;32m🌿🌿 4200 — BLAZE IT TWICE! \033[38;5;248mDouble the weed, double the speed 🚬🚬\033[0m"
+        case 8008
+            echo -e "  \033[1;35m🫣 8008... hehe you typed BOOB \033[38;5;248mgrow up bestie (but same lol) 💀\033[0m"
+        case 8675309
+            echo -e "  \033[1;33m🎵 867-5309! JENNY DON'T CHANGE YOUR NUMBER! \033[38;5;248mTommy Tutone gang 🎸\033[0m"
     end
 
     # ── PASSWORD MANAGER: --save ──
@@ -364,7 +414,6 @@ for name, rate in rates:
             echo -e "  \033[1;32m  ✔ This password is already strong! \033[38;5;248mBut here's a secure version anyway:\033[0m"
         end
 
-        functions -e __passgen_cracktime
         return 0
     end
 
@@ -707,7 +756,7 @@ print('∞')
     end
 
     # Crack time (single pw only)
-    if test (count $passwords) -eq 1 -a -n "$entropy"
+    if test (count $passwords) -eq 1; and test -n "$entropy"
         __passgen_cracktime $entropy
     end
 end
@@ -787,23 +836,58 @@ function __passgen_show_score --description 'Display score badge with grade'
     set -l filled (math "max(1, round($score / 10))" 2>/dev/null)
     set -l empty (math "10 - $filled" 2>/dev/null)
 
-    # Fun comment for special scores
+    # Fun comment for special scores 🎰
     set -l fun ""
-    if test "$score" -eq 69
-        set fun "  \033[1;35m( ͡° ͜ʖ ͡°) nice score bro\033[0m"
-    else if test "$score" -eq 42
-        set fun "  \033[1;36m🌌 Ultimate Answer score!\033[0m"
-    else if test "$score" -eq 100
-        set fun "  \033[1;33m🏆 PERFECT SCORE! YOU WIN PASSWORDS!\033[0m"
-    else if test "$score" -eq 0
-        set fun "  \033[1;31m💀 literally 0... did you type 'password'?\033[0m"
-    else if test "$score" -eq 13
-        set fun "  \033[1;33m🍀 unlucky score? or lucky? who knows\033[0m"
+    switch $score
+        case 0
+            set fun "  \033[1;31m💀 literally 0... did you type 'password'?\033[0m"
+        case 7
+            set fun "  \033[1;35m🎰 Lucky 7! Slot machine energy!\033[0m"
+        case 11
+            set fun "  \033[1;33m🔊 This score goes to 11!\033[0m"
+        case 13
+            set fun "  \033[1;33m🍀 unlucky score? or lucky? who knows\033[0m"
+        case 21
+            set fun "  \033[1;32m🃏 21! BLACKJACK! Dealer busts!\033[0m"
+        case 42
+            set fun "  \033[1;36m🌌 Ultimate Answer score!\033[0m"
+        case 67
+            set fun "  \033[1;33m67?! DANGEROUS ITCHY SCORE FELLA!\033[0m"
+        case 69
+            set fun "  \033[1;35m( ͡° ͜ʖ ͡°) nice score bro\033[0m"
+        case 88
+            set fun "  \033[1;31m🧧 Double happiness score!\033[0m"
+        case 99
+            set fun "  \033[1;33m🎵 99 problems but the score ain't one!\033[0m"
+        case 100
+            set fun "  \033[1;33m🏆 PERFECT SCORE! YOU WIN PASSWORDS!\033[0m"
+        case 101
+            set fun "  \033[1;36m🐕 101 Dalmatians score! Cruella could never\033[0m"
+        case 111
+            set fun "  \033[1;33m🔮 Angel number score! ✨\033[0m"
+        case 404
+            set fun "  \033[1;31m🚫 Score not found! Error 404\033[0m"
+        case 420
+            set fun "  \033[1;32m🌿 Blaze it score!\033[0m"
+        case 500
+            set fun "  \033[1;31m💀 Internal Server Error score!\033[0m"
+        case 666
+            set fun "  \033[1;31m😈 Evil score! \\m/\033[0m"
+        case 777
+            set fun "  \033[1;33m🍀 Jackpot score! Lucky you!\033[0m"
+        case 911
+            set fun "  \033[1;31m🚨 Emergency! That score is fire!\033[0m"
+        case 999
+            set fun "  \033[1;33m🌟 Completionist score! \033[0m"
+        case 1337
+            set fun "  \033[1;32m👾 1337 — l33t h4x0r score!\033[0m"
     end
 
     printf "  \033[1;37mScore:\033[0m  \033[%s%3d/100 %s\033[0m  \033[38;5;248m[" $color $score $grade
     printf "\033[%s%s\033[38;5;248m" $color (string repeat -n $filled "█")
-    printf "░"(string repeat -n (math "$empty - 1") "░")
+    if test "$empty" -gt 0
+        printf "░"(string repeat -n (math "$empty - 1") "░")
+    end
     printf "]\033[0m$fun\n"
 end
 
