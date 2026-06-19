@@ -653,8 +653,9 @@ install_mactahoe_theme() {
 
     # Fix all symbolic SVGs: replace hardcoded fills with currentColor
     # so GTK can properly recolor them for dark/light theme variants.
+    # Handles both fill="..." attributes AND style="fill:..." inline CSS.
     find "$HOME/.local/share/icons/$icon" -name "*-symbolic.svg" -exec \
-      sed -i 's/fill="[^"]*"/fill="currentColor"/g; s/color="[^"]*"/color="currentColor"/g' {} + 2>/dev/null || true
+      sed -i 's/fill="#[^"]*"/fill="currentColor"/g; s/color="#[^"]*"/color="currentColor"/g; s/fill:#[^;";]*/fill:currentColor/g; s/;fill-opacity:[^;";]*//g' {} + 2>/dev/null || true
 
     gtk-update-icon-cache "$HOME/.local/share/icons/$icon/" 2>/dev/null || true
   done

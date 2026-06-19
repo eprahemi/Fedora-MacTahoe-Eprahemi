@@ -14,13 +14,13 @@
      id="defs8166" />
   <sodipodi:namedview
      id="namedview8164"
-     pagecolor="#ffffff"
-     bordercolor="#666666"
+     pagecolor="currentColor"
+     bordercolor="currentColor"
      borderopacity="1.0"
      inkscape:showpageshadow="2"
      inkscape:pageopacity="0.0"
      inkscape:pagecheckerboard="0"
-     inkscape:deskcolor="#d1d1d1"
+     inkscape:deskcolor="currentColor"
      showgrid="true"
      inkscape:zoom="13.906433"
      inkscape:cx="4.3145499"
@@ -37,11 +37,11 @@
   </sodipodi:namedview>
   <path
      id="rect8170"
-     style="fill:#dedede;fill-rule:evenodd;stroke-width:0.912871;stroke-linecap:square;stop-color:#000000"
+     style="fill:currentColor;fill-rule:evenodd;stroke-width:0.912871;stroke-linecap:square;stop-color:#000000"
      d="M 9.1923882 -1.463932 L 9.1923882 2.5356407 L 9.1923882 3.5355339 L 14.191854 3.5355339 L 14.191854 2.5356407 L 10.192281 2.5356407 L 10.192281 -1.463932 L 9.1923882 -1.463932 z M 15.506631 -7.7781746 L 15.506631 -6.7782814 L 19.506203 -6.7782814 L 19.506203 -2.7787087 L 20.506097 -2.7787087 L 20.506097 -6.7782814 L 20.506097 -7.7781746 L 19.506203 -7.7781746 L 15.506631 -7.7781746 z "
      transform="rotate(45)" />
   <rect
-     style="fill:#dedede;fill-rule:evenodd;stroke-linecap:square;stop-color:#000000"
+     style="fill:currentColor;fill-rule:evenodd;stroke-linecap:square;stop-color:#000000"
      id="rect8174"
      width="1"
      height="8"
@@ -50,6 +50,6 @@
      transform="rotate(15)" />
   <path
      id="path8181"
-     style="fill:#dedede;fill-rule:evenodd;stroke-width:0.875;stroke-linecap:square;stop-color:#000000"
+     style="fill:currentColor;fill-rule:evenodd;stroke-width:0.875;stroke-linecap:square;stop-color:#000000"
      d="M 15.5,14 A 3.5,3.5 0 0 0 12,17.5 3.5,3.5 0 0 0 15.5,21 3.5,3.5 0 0 0 19,17.5 3.5,3.5 0 0 0 15.5,14 Z M 15,15 h 1 v 2 h 2 v 1 h -2 v 2 h -1 v -2 h -2 v -1 h 2 z" />
 </svg>

@@ -15,13 +15,13 @@
      id="defs20" />
   <sodipodi:namedview
      id="namedview18"
-     pagecolor="#ffffff"
-     bordercolor="#666666"
+     pagecolor="currentColor"
+     bordercolor="currentColor"
      borderopacity="1.0"
      inkscape:showpageshadow="2"
      inkscape:pageopacity="0.0"
      inkscape:pagecheckerboard="0"
-     inkscape:deskcolor="#d1d1d1"
+     inkscape:deskcolor="currentColor"
      showgrid="false"
      inkscape:zoom="24.174578"
      inkscape:cx="13.98163"
@@ -33,7 +33,7 @@
      inkscape:window-maximized="1"
      inkscape:current-layer="g14" />
   <g
-     fill="#dedede"
+     fill="currentColor"
      id="g14"
      transform="rotate(90,7.75,8.25)">
     <path
