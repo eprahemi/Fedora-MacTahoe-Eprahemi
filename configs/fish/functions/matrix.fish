@@ -1,3 +1,8 @@
+# ══════════════════════════════════════════════════════════════
+# matrix 💚 — EPRAHEMI INC. 🏢 Welcome to the real world 🕶️
+# Eprahemi dodged bullets AND copyright claims 🏃💨
+# Fedora MacTahoe Eprahemi Edition © 2026 — follow the white rabbit
+# ══════════════════════════════════════════════════════════════
 function matrix --description 'Cmatrix with color & speed options'
     set -l color "green"
     set -l speed 0

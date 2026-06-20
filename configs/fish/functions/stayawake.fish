@@ -1,3 +1,8 @@
+# ══════════════════════════════════════════════════════════════
+# stayawake 😴 — EPRAHEMI INC. 🏢 Sleep is for the weak 💤
+# Eprahemi stays awake so you don't have to (you're welcome) ☕
+# Fedora MacTahoe Eprahemi Edition © 2026 — no sleep till...
+# ══════════════════════════════════════════════════════════════
 function stayawake --description 'Prevent sleep/display sleep — usage: stayawake [duration|--display|--stop]'
     if set -q argv[1]
         switch $argv[1]

@@ -1,3 +1,8 @@
+# ══════════════════════════════════════════════════════════════
+# testdrive 🏎️ — EPRAHEMI INC. 🏢 Vroom vroom muthafucka 🚗💨
+# Eprahemi diagnostics: certified by the streets 🏆
+# Fedora MacTahoe Eprahemi Edition © 2026 — full throttle
+# ══════════════════════════════════════════════════════════════
 function testdrive --description 'Full diagnostic suite: disk/ram/net/heat/gpu/batt/cpu/stress/info'
     # --- EPRAHEMI CUSTOM HEADER ---
     echo -e "\033[1;36m"

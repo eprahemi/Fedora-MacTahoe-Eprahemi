@@ -1,3 +1,8 @@
+# ══════════════════════════════════════════════════════════════
+# stats 📊 — EPRAHEMI INC. 🏢 Statistics don't lie but I do 😈
+# Eprahemi's system vitals > your entire PC 🖥️💰
+# Fedora MacTahoe Eprahemi Edition © 2026 — flexing on you
+# ══════════════════════════════════════════════════════════════
 function stats --description 'System dashboard: uptime, RAM, disk, CPU, load'
     echo -e "\033[1;36m"
     echo "  ███████╗██████╗ ██████╗  █████╗ ██╗  ██╗███████╗███╗   ███╗██╗"

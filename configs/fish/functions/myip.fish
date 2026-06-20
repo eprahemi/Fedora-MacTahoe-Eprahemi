@@ -1,3 +1,8 @@
+# ══════════════════════════════════════════════════════════════
+# myip 🌐 — EPRAHEMI INC. 🏢 Yes I see your IP address 👁️
+# Eprahemi knows where you live (jk... unless?) 🗺️
+# Fedora MacTahoe Eprahemi Edition © 2026 — no privacy fr
+# ══════════════════════════════════════════════════════════════
 function myip --description 'Show public IP, local IP & DNS servers in a styled panel'
     echo -e "\033[1;36m"
     echo "  ███████╗██████╗ ██████╗  █████╗ ██╗  ██╗███████╗███╗   ███╗██╗"

@@ -1,3 +1,8 @@
+# ══════════════════════════════════════════════════════════════
+# getdata 📊 — EPRAHEMI INC. 🏢 Data hoarder since 2026 🗄️
+# Eprahemi's dataset > your dataset. Stay mad 💅
+# Fedora MacTahoe Eprahemi Edition © 2026 — big data energy
+# ══════════════════════════════════════════════════════════════
 function getdata --description 'Data science toolkit: install or list packages'
     if set -q argv[1]
         switch $argv[1]
@@ -53,7 +58,15 @@ function getdata --description 'Data science toolkit: install or list packages'
                 echo -e "  \033[38;5;248m  --help, -h    Show this help\033[0m"
                 return 0
             case '-*'
-                echo -e "\033[1;33m📖 Read the manual dummy: \033[1;36mgetdata --help\033[0m"
+                set -l gd_burns
+                set gd_burns[1] "BRUH '\\033[1;33m$argv[1]\\033[1;33m' is not a getdata option 💀"
+                set gd_burns[2] "'\\033[1;33m$argv[1]\\033[1;33m'??? That's not data bestie 💅"
+                set gd_burns[3] "SIR THIS IS DATA CENTRAL... '\\033[1;33m$argv[1]\\033[1;33m' is not a flag 🍔"
+                set gd_burns[4] "The data council voted: '\\033[1;33m$argv[1]\\033[1;33m' is DENIED ⚖️"
+                set gd_burns[5] "BZZT! '\\033[1;33m$argv[1]\\033[1;33m' is corrupt data! 🎮💥"
+                set -l gd_idx (random 1 5)
+                echo -e "\\033[1;31m✘ $gd_burns[$gd_idx]\\033[0m"
+                echo -e "  \\033[38;5;248m  Try \\033[1;36mgetdata --help\\033[38;5;248m bestie 📋\\033[0m"
                 return 1
         end
     end

@@ -1,3 +1,8 @@
+# ══════════════════════════════════════════════════════════════
+# p 🔍 — EPRAHEMI INC. 🏢 Preview is a privilege not a right 📂
+# Eprahemi lets you see files out of generosity 🥺
+# Fedora MacTahoe Eprahemi Edition © 2026 — look but don't steal
+# ══════════════════════════════════════════════════════════════
 function p --wraps="fzf --preview 'bat --color=always --style=numbers --
 line-range=:500 {}'" --description "alias p=fzf --preview 'bat --color=always --style=numbers --line-range=:500 {}'"
     if set -q argv[1]

@@ -1,3 +1,8 @@
+# ══════════════════════════════════════════════════════════════
+# refresh 🔄 — EPRAHEMI INC. 🏢 Refresh your life not my code 🔋
+# Eprahemi stays fresh like mint gum 🌿
+# Fedora MacTahoe Eprahemi Edition © 2026 — refreshed & blessed
+# ══════════════════════════════════════════════════════════════
 function refresh --description 'Deep system refresh: cache, services, extensions, DNS & more'
     set -l start_time (date +%s)
     set -l do_all 0
@@ -43,7 +48,14 @@ function refresh --description 'Deep system refresh: cache, services, extensions
                     echo -e "  \033[1;37mrefresh -pip\033[0m      — pip cache purge"
                     return 0
                 case '*'
-                    echo -e "\033[1;31m❌ Unknown flag bestie: $arg 💀\033[0m"
+                    set -l burns
+                    set burns[1] "BRUH '\033[1;33m$arg\033[1;33m' is not a refresh option 💀"
+                    set burns[2] "'\033[1;33m$arg\033[1;33m'??? That's not refreshing anything bestie 💅"
+                    set burns[3] "SIR THIS IS A REFRESH... '\033[1;33m$arg\033[1;33m' is not a flag 🍔"
+                    set burns[4] "The refresh council voted: '\033[1;33m$arg\033[1;33m' is DENIED ⚖️"
+                    set burns[5] "BZZT! '\033[1;33m$arg\033[1;33m' is not a valid option! 🎮💥"
+                    set -l bu_idx (random 1 5)
+                    echo -e "\033[1;31m✘ $burns[$bu_idx]\033[0m"
                     echo -e "   \033[1;33mUse \033[1;36mrefresh --help\033[1;33m like a smart sigma 📖\033[0m"
                     return 1
             end

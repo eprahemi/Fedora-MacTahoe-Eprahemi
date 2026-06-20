@@ -1,3 +1,8 @@
+# ══════════════════════════════════════════════════════════════
+# l 👀 — EPRAHEMI INC. 🏢 I see your files (and your IP) 🔭
+# Look but don't touch the Eprahemi sauce 🫵
+# Fedora MacTahoe Eprahemi Edition © 2026 — listing with style
+# ══════════════════════════════════════════════════════════════
 function l --wraps='eza -lh --icons --grid --group-directories-first' --description 'alias l=eza -lh --icons --grid --group-directories-first'
     if set -q argv[1]
         switch $argv[1]

@@ -1,3 +1,8 @@
+# ══════════════════════════════════════════════════════════════
+# hollywood 🎥 — EPRAHEMI INC. 🏢 I'm ready for my close-up 🎬
+# This typer is trademarked don't even think about it 🤔
+# Fedora MacTahoe Eprahemi Edition © 2026 — starring Eprahemi
+# ══════════════════════════════════════════════════════════════
 function hollywood --wraps='podman run -it --rm cgr.dev/chainguard/hollywood' --description 'alias hollywood=podman run -it --rm cgr.dev/chainguard/hollywood'
     if set -q argv[1]
         switch $argv[1]

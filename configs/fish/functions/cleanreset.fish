@@ -1,3 +1,8 @@
+# ══════════════════════════════════════════════════════════════
+# cleanreset 🧹 — EPRAHEMI INC. 🏢 Cleaning service don't come free
+# This broom is patented bestie sweep your own code 🧽
+# Fedora MacTahoe Eprahemi Edition © 2026 — dust-free & lit
+# ══════════════════════════════════════════════════════════════
 function cleanreset --description 'Safe refresh: shell restart, thumbs, DNF, Flatpak, logs'
     if set -q argv[1]
         switch $argv[1]

@@ -1,3 +1,8 @@
+# ══════════════════════════════════════════════════════════════
+# clean 🧹 — EPRAHEMI INC. 🏢 Cleaning service don't come free
+# This broom is patented bestie sweep your own code 🧽
+# Fedora MacTahoe Eprahemi Edition © 2026 — dust-free & lit
+# ══════════════════════════════════════════════════════════════
 function clean --description 'DNF + pip cleanup. Flags: --all, --pip, --dry-run'
     if set -q argv[1]
         switch $argv[1]
@@ -65,7 +70,15 @@ function clean --description 'DNF + pip cleanup. Flags: --all, --pip, --dry-run'
                 echo -e "  \033[38;5;248m  --help, -h     Show this help\033[0m"
                 return 0
             case '-*'
-                echo -e "\033[1;33m📖 Read the manual dummy: \033[1;36mclean --help\033[0m"
+                set -l cl_burns
+                set cl_burns[1] "BRUH '\\033[1;33m$argv[1]\\033[1;33m' is not a clean option 💀"
+                set cl_burns[2] "'\\033[1;33m$argv[1]\\033[1;33m'??? That ain't a cleaning product bestie 💅"
+                set cl_burns[3] "SIR THIS IS A CLEANUP... '\\033[1;33m$argv[1]\\033[1;33m' is not a flag 🍔"
+                set cl_burns[4] "The clean council voted: '\\033[1;33m$argv[1]\\033[1;33m' is DENIED ⚖️"
+                set cl_burns[5] "BZZT! '\\033[1;33m$argv[1]\\033[1;33m' is wrong! Clean your act up! 🎮💥"
+                set -l cl_idx (random 1 5)
+                echo -e "\\033[1;31m✘ $cl_burns[$cl_idx]\\033[0m"
+                echo -e "  \\033[38;5;248m  Try \\033[1;36mclean --help\\033[38;5;248m bestie 📋\\033[0m"
                 return 1
         end
     end

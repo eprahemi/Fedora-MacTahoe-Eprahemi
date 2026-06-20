@@ -1,3 +1,8 @@
+# ══════════════════════════════════════════════════════════════
+# passgen 🔑 — EPRAHEMI INC. 🏢 ALL RIGHTS RESERVED (or else 💀)
+# If you steal this Imma find you bestie 👁️👄👁️
+# Fedora MacTahoe Eprahemi Edition © 2026 — no cap fr fr
+# ══════════════════════════════════════════════════════════════
 function passgen --description '🔑 Password gen/analyzer — 18 opts. Try: passgen opts, passgen --help'
     set -l length 16
     set -l use_lower yes
@@ -113,6 +118,61 @@ function passgen --description '🔑 Password gen/analyzer — 18 opts. Try: pas
                 echo -e "    \033[1;36mpassgen --get email\033[0m   \033[1;37mRetrieve 'email' password\033[0m"
                 return 0
             case '*'
+                # ── Unknown flag? Catch it before it wrecks everything ──
+                if string match -qr -- '^--?[a-zA-Z]' "$argv[1]"
+                    # Pool of funny L messages for each wrong flag attempt
+                    set -l burns
+                    set burns[1]  "BRUH WHAT EVEN IS '\033[1;33m$argv[1]\033[1;31m'??? That ain't a passgen option bestie 💀"
+                    set burns[2]  "'\033[1;33m$argv[1]\033[1;31m'? GIRL who taught you to type passwords?? 💅"
+                    set burns[3]  "ERROR 404: '\033[1;33m$argv[1]\033[1;31m' not found in the passgen dictionary (and it NEVER will be) 📕"
+                    set burns[4]  "\033[1;33m$argv[1]\033[1;31m??? You really thought you COOKED with that one? Burnt. 🔥"
+                    set burns[5]  "SIR THIS IS A PASSGEN... we don't do '\033[1;33m$argv[1]\033[1;31m' here 🍔"
+                    set burns[6]  "I checked 3 times. '\033[1;33m$argv[1]\033[1;31m' is NOT a passgen option. It's giving delulu. 🎀"
+                    set burns[7]  "The passgen council has voted: '\033[1;33m$argv[1]\033[1;31m' is DENIED. 24-0. No appeals. ⚖️"
+                    set burns[8]  "'\033[1;33m$argv[1]\033[1;31m'? Never heard of her. And I don't WANNA hear of her. 🙉"
+                    set burns[9]  "AIYO '\033[1;33m$argv[1]\033[1;31m'?! Your password generator is crying rn bestie 😭"
+                    set burns[10] "'\033[1;33m$argv[1]\033[1;31m' didn't pass the passgen vibe check. Not even CLOSE. ❌"
+                    set burns[11] "Skill issue. '\033[1;33m$argv[1]\033[1;31m' is not a passgen option. Try again but better. 🎮"
+                    set burns[12] "ERROR 418: I'm a teapot and even I know '\033[1;33m$argv[1]\033[1;31m' ain't real 🫖"
+                    set burns[13] "Computer says no. '\033[1;33m$argv[1]\033[1;31m'? Absolutely not. 🤖🇬🇧"
+                    set burns[14] "You had ONE job and you typed '\033[1;33m$argv[1]\033[1;31m'. Unreal. 😤"
+                    set burns[15] "'\033[1;33m$argv[1]\033[1;31m' walked into the wrong passgen and got COOKED 🍳"
+                    set burns[16] "Bestie. BESTIE. '\033[1;33m$argv[1]\033[1;31m'? We need to talk. 🫤"
+                    set burns[17] "\033[1;33m$argv[1]\033[1;31m' is not a passgen option. It's a cry for help. 📞"
+                    set burns[18] "\033[1;33m$argv[1]\033[1;31m' is the reason passgen can't have nice things 🙃"
+                    set burns[19] "I would explain why '\033[1;33m$argv[1]\033[1;31m' doesn't work but I don't have that kind of time 💁"
+                    set burns[20] "BZZT! Wrong! '\033[1;33m$argv[1]\033[1;31m' is incorrect! Thanks for playing! 🎮💥"
+                    set -l ridx (random 1 20)
+                    echo -e "\033[1;31m✘ $burns[$ridx]\033[0m"
+
+                    # ── Did you mean? Similar valid options —─
+                    set -l suggestion (python3 -c "
+import sys, difflib
+flag = sys.argv[1]
+valid = ['--length','-l','--no-lower','--no-upper','--no-digits','--no-symbols','-s',
+         '--clip','-c','--count','-n','--passphrase','-P','--words','-w','--pwned',
+         '--save','--get','--list','--force','-f','--help','-h','opts']
+# Also add misspelling-friendly versions
+valid += ['--len','--leng','--lenth','--lenght','--no-lowe','--no-uppe','--no-digi',
+          '--no-sym','--clp','--cp','--cli','--pwn','--pwend','--sav',
+          '--sve','--gt','--gtt','--lst','--hel','--hlp','--forc','--frc','opt']
+matches = difflib.get_close_matches(flag, valid, n=4, cutoff=0.3)
+seen = set()
+for m in matches:
+    if m != flag and m not in seen:
+        seen.add(m)
+        print(m)
+" "$argv[1]" 2>/dev/null)
+
+                    if set -q suggestion[1]
+                        echo -e "  \033[1;33mDid you mean...\033[0m"
+                        for s in $suggestion
+                            echo -e "    \033[1;36m$s\033[0m"
+                        end
+                    end
+                    echo -e "  \033[38;5;248m  Try \033[1;36mpassgen --help\033[38;5;248m or \033[1;36mpassgen opts\033[38;5;248m for the full menu 📋\033[0m"
+                    return 1
+                end
                 if string match -qr '^\d+$' "$argv[1]"
                     set length $argv[1]
                     set -e argv[1]
@@ -222,7 +282,7 @@ function passgen --description '🔑 Password gen/analyzer — 18 opts. Try: pas
     # ── ANALYSIS MODE ──
     if test "$analyze_mode" = yes
         set -l pw "$analyze_password"
-        set -l pw_len (string length "$pw")
+        set -l pw_len (string length -- "$pw")
 
         set -l counts (python3 -c "
 import sys
@@ -427,7 +487,7 @@ for name, rate in rates:
             set tips (math $tips + 1)
             echo -e "  \033[1;33m$tips.\033[0m \033[1;37mRepeats\033[0m — \033[38;5;248mremoved repeated character patterns\033[0m"
         end
-        if string match -qr '^(password|123456|qwerty|letmein|admin|welcome)' (string lower "$pw")
+        if string match -qr '^(password|123456|qwerty|letmein|admin|welcome)' (string lower -- "$pw")
             set tips (math $tips + 1)
             echo -e "  \033[1;33m$tips.\033[0m \033[1;37mCommon word\033[0m — \033[38;5;248mswitched to random characters\033[0m"
         end
@@ -829,7 +889,7 @@ function __passgen_score --description 'Calculate score 0-100 + grade from entro
         # Repeated chars
         if string match -qr '(.)\1{2,}' "$pw"; set penalty (math "$penalty + 5"); end
         # Common passwords
-        if string match -qr '^(password|123456|qwerty|letmein|admin|welcome)' (string lower "$pw")
+        if string match -qr '^(password|123456|qwerty|letmein|admin|welcome)' (string lower -- "$pw")
             set penalty (math "$penalty + 20")
         end
     end
@@ -1133,7 +1193,7 @@ end
 # ── COMPUTE SCORE FOR A RAW PASSWORD (bulk table) ──
 function __passgen_compute_score_for_pw --description 'Quick score 0-100 for a raw password string'
     set -l pw $argv[1]
-    set -l len (string length "$pw")
+    set -l len (string length -- "$pw")
     set -l upper_c (count (string match -ra '[A-Z]' "$pw") )
     set -l lower_c (count (string match -ra '[a-z]' "$pw") )
     set -l digit_c (count (string match -ra '[0-9]' "$pw") )
@@ -1170,7 +1230,7 @@ function __passgen_compute_score_for_pw --description 'Quick score 0-100 for a r
 
     set -l penalty 0
     if string match -qr '(.)\1{2,}' "$pw"; set penalty (math "$penalty + 5"); end
-    if string match -qr '^(password|123456|qwerty|letmein|admin|welcome)' (string lower "$pw")
+    if string match -qr '^(password|123456|qwerty|letmein|admin|welcome)' (string lower -- "$pw")
         set penalty (math "$penalty + 20")
     end
 

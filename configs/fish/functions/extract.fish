@@ -1,3 +1,8 @@
+# ══════════════════════════════════════════════════════════════
+# extract 📦 — EPRAHEMI INC. 🏢 Extraction is an art form 🎨
+# Unauthorized copying? I'll extract your kneecaps 🦵💥
+# Fedora MacTahoe Eprahemi Edition © 2026 — decompress this
+# ══════════════════════════════════════════════════════════════
 function extract --description 'Extract any archive file — auto-detects format'
     if set -q argv[1]
         switch $argv[1]

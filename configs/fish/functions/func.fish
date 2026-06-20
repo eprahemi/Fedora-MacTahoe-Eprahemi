@@ -1,3 +1,8 @@
+# ══════════════════════════════════════════════════════════════
+# func 📦 — EPRAHEMI INC. 🏢 The archive of all archives 🗃️
+# Touch this code and I'll appear in your walls 🧱👀
+# Fedora MacTahoe Eprahemi Edition © 2026 — copyright 100%
+# ══════════════════════════════════════════════════════════════
 function func --description 'Function archive: list/search/show all fish commands'
     set -l func_dir "$HOME/.config/fish/functions"
     set -l files (ls "$func_dir"/*.fish 2>/dev/null)
@@ -105,7 +110,15 @@ function func --description 'Function archive: list/search/show all fish command
                 return 0
 
             case '-*'
-                echo -e "\033[1;33m📖 Read the manual dummy: \033[1;36mfunc search <kw>  |  func show <func>  |  func --help\033[0m"
+                set -l fn_burns
+                set fn_burns[1] "BRUH '\\033[1;33m$argv[1]\\033[1;33m' is not a func subcommand 💀"
+                set fn_burns[2] "'\\033[1;33m$argv[1]\\033[1;33m'??? That's not in the archive bestie 💅"
+                set fn_burns[3] "SIR THIS IS A FUNCTION ARCHIVE... '\\033[1;33m$argv[1]\\033[1;33m' is not here 🍔"
+                set fn_burns[4] "The func council voted: '\\033[1;33m$argv[1]\\033[1;33m' is DENIED ⚖️"
+                set fn_burns[5] "BZZT! '\\033[1;33m$argv[1]\\033[1;33m' is not a func command! 🎮💥"
+                set -l fn_idx (random 1 5)
+                echo -e "\\033[1;31m✘ $fn_burns[$fn_idx]\\033[0m"
+                echo -e "  \\033[38;5;248m  Try \\033[1;36mfunc --help\\033[38;5;248m bestie 📋\\033[0m"
                 return 1
         end
     end

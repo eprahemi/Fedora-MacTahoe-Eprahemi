@@ -1,3 +1,8 @@
+# ══════════════════════════════════════════════════════════════
+# mkgif 🎞️ — EPRAHEMI INC. 🏢 Every frame is copyrighted 📸
+# Eprahemi made this GIF and you can't have it 😤
+# Fedora MacTahoe Eprahemi Edition © 2026 — moving pictures
+# ══════════════════════════════════════════════════════════════
 function mkgif --description 'Convert video to optimized GIF'
     set -l fps 10
     set -l scale "480:-1"
@@ -13,15 +18,22 @@ function mkgif --description 'Convert video to optimized GIF'
                 else if string match -q -- '--scale=*' $arg
                     set scale (string replace '--scale=' '' $arg)
                 else
-                    echo -e "\033[1;31m❌ Unknown flag bestie: $arg 💀\033[0m"
+                    set -l burns
+                    set burns[1] "BRUH '\033[1;33m$arg\033[1;33m' is not a mkgif option 💀"
+                    set burns[2] "'\033[1;33m$arg\033[1;33m'??? That's not a GIF setting bestie 💅"
+                    set burns[3] "SIR THIS IS A GIF MAKER... '\033[1;33m$arg\033[1;33m' is not a flag 🍔"
+                    set burns[4] "The GIF council voted: '\033[1;33m$arg\033[1;33m' is DENIED ⚖️"
+                    set burns[5] "BZZT! '\033[1;33m$arg\033[1;33m' is not a valid option! 🎮💥"
+                    set -l bu_idx (random 1 5)
+                    echo -e "\033[1;31m✘ $burns[$bu_idx]\033[0m"
                     return 1
                 end
             case --help -h
-                echo -e "[1;33mUsage: [1;36mmkgif [options] <video>[0m"
-                echo -e "  [38;5;248m  --fps N       Output framerate (default: 10)[0m"
-                echo -e "  [38;5;248m  --scale W:H   Output scale (default: 480:-1)[0m"
-                echo -e "  [38;5;248m  --help, -h    📖 Read the manual dummy[0m"
-                echo -e "  [38;5;248mExample: [1;36mmkgif --fps 15 --scale 640:-1 video.mp4[0m"
+                echo -e "\033[1;33mUsage: \033[1;36mmkgif [options] <video>\033[0m"
+                echo -e "  \033[38;5;248m  --fps N       Output framerate (default: 10)\033[0m"
+                echo -e "  \033[38;5;248m  --scale W:H   Output scale (default: 480:-1)\033[0m"
+                echo -e "  \033[38;5;248m  --help, -h    📖 Read the manual dummy\033[0m"
+                echo -e "  \033[38;5;248mExample: \033[1;36mmkgif --fps 15 --scale 640:-1 video.mp4\033[0m"
                 return 0
                         case '*'
                 if test -z "$input"
