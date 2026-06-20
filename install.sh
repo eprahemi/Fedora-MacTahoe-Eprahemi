@@ -913,7 +913,7 @@ apply_configs() {
     mkdir -p "$HOME/.config/fish/functions"
     cp "$cfg/fish/config.fish" "$HOME/.config/fish/"
     if [ -d "$cfg/fish/functions" ]; then
-      cp "$cfg/fish/functions/"*.fish "$HOME/.config/fish/functions/" 2>/dev/null || true
+      cp -f "$cfg/fish/functions/"*.fish "$HOME/.config/fish/functions/" 2>/dev/null || true
     fi
     ok "Fish config ($(ls "$HOME/.config/fish/functions/"*.fish 2>/dev/null | wc -l) functions)"
   fi
