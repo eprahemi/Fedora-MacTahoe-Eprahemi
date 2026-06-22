@@ -351,13 +351,13 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
         set -l has_amd (string match -q "AuthenticAMD" (cat /proc/cpuinfo | head -5 | grep "vendor_id" | awk '{print $3}'); and echo "AMD"; or echo "Intel")
 
         # Per-core frequencies
-        set -l core_freqs ""
+        set -l core_freqs
         for cpu in /sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq
             set -l raw (cat "$cpu" 2>/dev/null)
             if test -n "$raw"
                 set -l freq (math "$raw / 1000" 2>/dev/null)
                 if test -n "$freq"
-                    set core_freqs "$core_freqs $freq"
+                    set -a core_freqs "$freq"
                 end
             end
         end
@@ -391,12 +391,11 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
         __td_divider
 
         # Show top frequencies
-        set -l freq_list (string split " " "$core_freqs")
-        set -l freq_count (count $freq_list)
+        set -l freq_count (count $core_freqs)
         if test $freq_count -gt 1
             echo -e "  $GY│$C  $DPer-Core Frequencies:$C"
             set -l idx 0
-            for f in $freq_list
+            for f in $core_freqs
                 if test $idx -lt (math "min($freq_count, 8)")
                     printf "  $GY│$C    $DCPU%02d:$C  $WH%s MHz$C\n" $idx "$f"
                     set idx (math $idx + 1)
@@ -894,7 +893,7 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
 
         set -l batt_data (upower -i $batt_path 2>/dev/null)
         set -l percentage (printf '%s\n' $batt_data | grep "percentage" | awk '{print $2}')
-        set -l capacity (printf '%s\n' $batt_data | grep "capacity" | awk '{if ($2 ~ /^[0-9]/) print $2; else print $3}' | head -1)
+        set -l capacity (printf '%s\n' $batt_data | grep -E "^[[:space:]]*capacity:[[:space:]]" | awk '{print $2}')
         set -l state (printf '%s\n' $batt_data | grep "state" | awk '{print $2}')
         set -l energy (printf '%s\n' $batt_data | grep "energy:" | head -1 | awk '{print $2}')
         set -l energy_full (printf '%s\n' $batt_data | grep "energy-full:" | head -1 | awk '{print $2}')
