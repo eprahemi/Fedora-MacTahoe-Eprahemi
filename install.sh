@@ -282,8 +282,8 @@ preflight() {
   # ── Passwordless sudo hint (optional) ──
   if [ "$_has_nopasswd" = true ]; then
     log "Passwordless sudo already active — nothing to change"
-  elif [ -f /etc/sudoers.d/99-mactahoe ]; then
-    log "sudoers hint file already exists at /etc/sudoers.d/99-mactahoe"
+  elif [ -f /etc/sudoers.d/99-fedoratahoe ]; then
+    log "sudoers hint file already exists at /etc/sudoers.d/99-fedoratahoe"
   elif sudo grep -qrs "$USER.*NOPASSWD" /etc/sudoers /etc/sudoers.d/ 2>/dev/null; then
     log "NOPASSWD entry for $USER already present in sudoers"
   else
@@ -292,11 +292,11 @@ preflight() {
     echo "# $USER ALL=(ALL) NOPASSWD: ALL" > "$_tmp_sudoers"
     if sudo visudo -c -f "$_tmp_sudoers" 2>/dev/null; then
       sudo mkdir -p /etc/sudoers.d
-      sudo cp "$_tmp_sudoers" /etc/sudoers.d/99-mactahoe
-      sudo chmod 440 /etc/sudoers.d/99-mactahoe
-      sudo chown root:root /etc/sudoers.d/99-mactahoe
-      ok "Commented NOPASSWD entry added to /etc/sudoers.d/99-mactahoe"
-      warn "Enable with: sudo visudo -f /etc/sudoers.d/99-mactahoe  →  uncomment the line"
+      sudo cp "$_tmp_sudoers" /etc/sudoers.d/99-fedoratahoe
+      sudo chmod 440 /etc/sudoers.d/99-fedoratahoe
+      sudo chown root:root /etc/sudoers.d/99-fedoratahoe
+      ok "Commented NOPASSWD entry added to /etc/sudoers.d/99-fedoratahoe"
+      warn "Enable with: sudo visudo -f /etc/sudoers.d/99-fedoratahoe  →  uncomment the line"
     fi
     rm -f "$_tmp_sudoers"
   fi
