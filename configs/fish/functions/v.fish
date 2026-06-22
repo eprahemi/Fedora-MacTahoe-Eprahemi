@@ -8,6 +8,14 @@ function v --description 'Open VLC or fzf-pick a media file'
 
     if set -q argv[1]
         switch $argv[1]
+            case --help -h
+                echo -e "\033[1;33mUsage: \033[1;36mv [file]\033[0m"
+                echo -e "  \033[38;5;248mOpen video/audio files with Celluloid\033[0m"
+                echo -e "  \033[38;5;248mFuzzy-searches entire home for media files\033[0m"
+                echo -e "  \033[38;5;248mSupports: mp4, mkv, avi, mov, webm, wmv, flv, m4v, mpg, mpeg, 3gp, ogv, ts, mts, m2ts, vob, divx, xvid, rm, rmvb, asf\033[0m"
+                echo -e "  \033[38;5;248m  --help, -h    Show this help\033[0m"
+                echo -e "  \033[38;5;248m📦 Unknown flag handling + rotating burns (Jun 2026)\033[0m"
+                return 0
             case --recent -r
                 set -l recent (string match -r '.*\.(mp4|mkv|avi|mov|webm|m4v|mpg|mpeg|wmv|flv|3gp|ogv|mp3|wav|flac|ogg|m4a|wma|aac|opus)' < ~/.local/share/recently-used.xbel 2>/dev/null | head -20 | string trim)
                 if test -z "$recent"
@@ -29,14 +37,6 @@ function v --description 'Open VLC or fzf-pick a media file'
                 echo -e "\\033[1;31m✘ $v_burns[$v_idx]\\033[0m"
                 echo -e "  \\033[38;5;248m  Try \\033[1;36mv --help\\033[38;5;248m bestie 📋\\033[0m"
                 return 1
-            case --help -h
-                echo -e "\033[1;33mUsage: \033[1;36mv [file]\033[0m"
-                echo -e "  \033[38;5;248mOpen video/audio files with Celluloid\033[0m"
-                echo -e "  \033[38;5;248mFuzzy-searches entire home for media files\033[0m"
-                echo -e "  \033[38;5;248mSupports: mp4, mkv, avi, mov, webm, wmv, flv, m4v, mpg, mpeg, 3gp, ogv, ts, mts, m2ts, vob, divx, xvid, rm, rmvb, asf\033[0m"
-                echo -e "  \033[38;5;248m  --help, -h    Show this help\033[0m"
-                echo -e "  \033[38;5;248m📦 Unknown flag handling + rotating burns (Jun 2026)\033[0m"
-                return 0
                         case '*'
                 set -l target "$argv[1]"
                 set target (string replace -r '^~' "$HOME" "$target")
