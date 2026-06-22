@@ -270,11 +270,36 @@ preflight() {
   ok "Internet — we're online"
 
   # ── Sudo check ──
-  if ! sudo -n true 2>/dev/null; then
+  local _has_nopasswd=false
+  if sudo -n true 2>/dev/null; then
+    _has_nopasswd=true
+  else
     warn "Sudo coming up — have your password ready."
   fi
   sudo echo "Sudo OK" >/dev/null || fail "Sudo required"
   ok "Sudo access granted"
+
+  # ── Passwordless sudo hint (optional) ──
+  if [ "$_has_nopasswd" = true ]; then
+    log "Passwordless sudo already active — nothing to change"
+  elif [ -f /etc/sudoers.d/99-mactahoe ]; then
+    log "sudoers hint file already exists at /etc/sudoers.d/99-mactahoe"
+  elif sudo grep -qrs "$USER.*NOPASSWD" /etc/sudoers /etc/sudoers.d/ 2>/dev/null; then
+    log "NOPASSWD entry for $USER already present in sudoers"
+  else
+    local _tmp_sudoers
+    _tmp_sudoers=$(mktemp)
+    echo "# $USER ALL=(ALL) NOPASSWD: ALL" > "$_tmp_sudoers"
+    if sudo visudo -c -f "$_tmp_sudoers" 2>/dev/null; then
+      sudo mkdir -p /etc/sudoers.d
+      sudo cp "$_tmp_sudoers" /etc/sudoers.d/99-mactahoe
+      sudo chmod 440 /etc/sudoers.d/99-mactahoe
+      sudo chown root:root /etc/sudoers.d/99-mactahoe
+      ok "Commented NOPASSWD entry added to /etc/sudoers.d/99-mactahoe"
+      warn "Enable with: sudo visudo -f /etc/sudoers.d/99-mactahoe  →  uncomment the line"
+    fi
+    rm -f "$_tmp_sudoers"
+  fi
 }
 
 # ── PTYXIS REMOVAL ───────────────────────────────────────────
