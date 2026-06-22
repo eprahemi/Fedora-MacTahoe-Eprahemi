@@ -1081,15 +1081,14 @@ prompt_sudoers_entry() {
     echo -e "  ${CYAN}║${NC}       ${BOLD}${WHITE}◆  PASSWORDLESS SUDO HINT?${NC}  ${DIM}◆${NC}                         ${CYAN}║${NC}"
     echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
     echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}  Add a ${DIM}commented${NC} NOPASSWD line so you can easily enable       ${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}  passwordless sudo by uncommenting it later with:                     ${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}    sudo visudo -f /etc/sudoers.d/99-fedoratahoe                       ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}  Append a ${DIM}commented${NC} NOPASSWD line at the end of /etc/sudoers       ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}  so you can easily enable passwordless sudo later by                  ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}  running:  sudo visudo   →   uncomment the line                       ${CYAN}║${NC}"
     echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}y${NC}${BOLD}es${NC}  — Add the commented line                              ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}y${NC}${BOLD}es${NC}  — Append the commented line                              ${CYAN}║${NC}"
     echo -e "  ${CYAN}║${NC}    ${BOLD}${GREEN}N${NC}${BOLD}o${NC}   — Skip (default)                                         ${CYAN}║${NC}"
     echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}  ${DIM}Your sudoers will NOT be modified — only a new file may      ${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}  be created. Existing entries are never touched.${NC}                ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}  ${DIM}Existing sudoers entries are never touched.                     ${CYAN}║${NC}"
     echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
     echo -en "  ${DIM}Add passwordless sudo hint? [y/N]:${NC} "
     read -r -n 1 key </dev/tty || true
@@ -1105,21 +1104,23 @@ prompt_sudoers_entry() {
 
   if [ "$INSTALL_SUDOERS_HINT" = "true" ]; then
     # Check if already present
-    if [ -f /etc/sudoers.d/99-fedoratahoe ]; then
-      ok "sudoers hint already exists at /etc/sudoers.d/99-fedoratahoe"
-    elif sudo grep -qrs "$USER.*NOPASSWD" /etc/sudoers /etc/sudoers.d/ 2>/dev/null; then
-      ok "NOPASSWD entry for $USER already present in sudoers"
+    if sudo grep -q "$USER.*NOPASSWD" /etc/sudoers 2>/dev/null; then
+      ok "NOPASSWD entry for $USER already present in /etc/sudoers"
     else
+      # Safely append via temp file + visudo validation
       local _tmp_sudoers
       _tmp_sudoers=$(mktemp)
-      echo "# $USER ALL=(ALL) NOPASSWD: ALL" > "$_tmp_sudoers"
+      sudo cat /etc/sudoers > "$_tmp_sudoers"
+      echo "" >> "$_tmp_sudoers"
+      echo "# $USER ALL=(ALL) NOPASSWD: ALL" >> "$_tmp_sudoers"
       if sudo visudo -c -f "$_tmp_sudoers" 2>/dev/null; then
-        sudo mkdir -p /etc/sudoers.d
-        sudo cp "$_tmp_sudoers" /etc/sudoers.d/99-fedoratahoe
-        sudo chmod 440 /etc/sudoers.d/99-fedoratahoe
-        sudo chown root:root /etc/sudoers.d/99-fedoratahoe
-        ok "Commented NOPASSWD entry added to /etc/sudoers.d/99-fedoratahoe"
-        warn "To enable: sudo visudo -f /etc/sudoers.d/99-fedoratahoe  →  uncomment the line"
+        sudo cp "$_tmp_sudoers" /etc/sudoers
+        sudo chmod 440 /etc/sudoers
+        sudo chown root:root /etc/sudoers
+        ok "Commented NOPASSWD entry added to end of /etc/sudoers"
+        warn "Enable it: sudo visudo  →  find the line and uncomment it"
+      else
+        warn "sudoers validation failed — hint not added"
       fi
       rm -f "$_tmp_sudoers"
     fi
