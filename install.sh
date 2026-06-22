@@ -270,37 +270,11 @@ preflight() {
   ok "Internet — we're online"
 
   # ── Sudo check ──
-  local _has_nopasswd=false
-  sudo -K 2>/dev/null || true  # clear cached timestamp so check is genuine
-  if sudo -n true 2>/dev/null; then
-    _has_nopasswd=true
-  else
+  if ! sudo -n true 2>/dev/null; then
     warn "Sudo coming up — have your password ready."
   fi
   sudo echo "Sudo OK" >/dev/null || fail "Sudo required"
   ok "Sudo access granted"
-
-  # ── Passwordless sudo hint (optional) ──
-  if [ "$_has_nopasswd" = true ]; then
-    log "Passwordless sudo already active — nothing to change"
-  elif [ -f /etc/sudoers.d/99-fedoratahoe ]; then
-    log "sudoers hint file already exists at /etc/sudoers.d/99-fedoratahoe"
-  elif sudo grep -qrs "$USER.*NOPASSWD" /etc/sudoers /etc/sudoers.d/ 2>/dev/null; then
-    log "NOPASSWD entry for $USER already present in sudoers"
-  else
-    local _tmp_sudoers
-    _tmp_sudoers=$(mktemp)
-    echo "# $USER ALL=(ALL) NOPASSWD: ALL" > "$_tmp_sudoers"
-    if sudo visudo -c -f "$_tmp_sudoers" 2>/dev/null; then
-      sudo mkdir -p /etc/sudoers.d
-      sudo cp "$_tmp_sudoers" /etc/sudoers.d/99-fedoratahoe
-      sudo chmod 440 /etc/sudoers.d/99-fedoratahoe
-      sudo chown root:root /etc/sudoers.d/99-fedoratahoe
-      ok "Commented NOPASSWD entry added to /etc/sudoers.d/99-fedoratahoe"
-      warn "Enable with: sudo visudo -f /etc/sudoers.d/99-fedoratahoe  →  uncomment the line"
-    fi
-    rm -f "$_tmp_sudoers"
-  fi
 }
 
 # ── PTYXIS REMOVAL ───────────────────────────────────────────
@@ -1098,6 +1072,60 @@ apply_dconf() {
   ok "dconf settings applied"
 }
 
+# ── Optional passwordless sudo prompt (run before Phase 1) ──
+
+prompt_sudoers_entry() {
+  if [ -z "${INSTALL_SUDOERS_HINT:-}" ]; then
+    echo ""
+    echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "  ${CYAN}║${NC}       ${BOLD}${WHITE}◆  PASSWORDLESS SUDO HINT?${NC}  ${DIM}◆${NC}                         ${CYAN}║${NC}"
+    echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}  Add a ${DIM}commented${NC} NOPASSWD line so you can easily enable       ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}  passwordless sudo by uncommenting it later with:                     ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}    sudo visudo -f /etc/sudoers.d/99-fedoratahoe                       ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}y${NC}${BOLD}es${NC}  — Add the commented line                              ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}    ${BOLD}${GREEN}N${NC}${BOLD}o${NC}   — Skip (default)                                         ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}  ${DIM}Your sudoers will NOT be modified — only a new file may      ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}  be created. Existing entries are never touched.${NC}                ${CYAN}║${NC}"
+    echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+    echo -en "  ${DIM}Add passwordless sudo hint? [y/N]:${NC} "
+    read -r -n 1 key </dev/tty || true
+    echo ""
+    if [ "$key" = "y" ] || [ "$key" = "Y" ]; then
+      INSTALL_SUDOERS_HINT="true"
+      echo -e "  ${GREEN}→ Adding commented NOPASSWD entry${NC}"
+    else
+      INSTALL_SUDOERS_HINT="false"
+      echo -e "  ${DIM}→ Skipping passwordless sudo hint${NC}"
+    fi
+  fi
+
+  if [ "$INSTALL_SUDOERS_HINT" = "true" ]; then
+    # Check if already present
+    if [ -f /etc/sudoers.d/99-fedoratahoe ]; then
+      ok "sudoers hint already exists at /etc/sudoers.d/99-fedoratahoe"
+    elif sudo grep -qrs "$USER.*NOPASSWD" /etc/sudoers /etc/sudoers.d/ 2>/dev/null; then
+      ok "NOPASSWD entry for $USER already present in sudoers"
+    else
+      local _tmp_sudoers
+      _tmp_sudoers=$(mktemp)
+      echo "# $USER ALL=(ALL) NOPASSWD: ALL" > "$_tmp_sudoers"
+      if sudo visudo -c -f "$_tmp_sudoers" 2>/dev/null; then
+        sudo mkdir -p /etc/sudoers.d
+        sudo cp "$_tmp_sudoers" /etc/sudoers.d/99-fedoratahoe
+        sudo chmod 440 /etc/sudoers.d/99-fedoratahoe
+        sudo chown root:root /etc/sudoers.d/99-fedoratahoe
+        ok "Commented NOPASSWD entry added to /etc/sudoers.d/99-fedoratahoe"
+        warn "To enable: sudo visudo -f /etc/sudoers.d/99-fedoratahoe  →  uncomment the line"
+      fi
+      rm -f "$_tmp_sudoers"
+    fi
+  fi
+}
+
 # ── Optional wallpaper prompts (run before Phase 1) ──
 
 prompt_optional_wallpapers() {
@@ -1866,6 +1894,8 @@ remove_ptyxis
 remove_gnome_weather
 
 prompt_optional_wallpapers
+
+prompt_sudoers_entry
 
 phase_divider "PHASE 1 : SYSTEM FOUNDATIONS" 3 4
 install_rpmfusion
