@@ -209,7 +209,11 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
         echo -e "  $B$WH╠══════════════════════════════════════════════════════════╣$C"
 
         # CPU
-        printf "  $B$WH║$C  $CY🖥️  CPU$C  %-32s" (string sub -l 32 "$__td_s_cpu_model")
+        set -l cpu_label (echo "$__td_s_cpu_model" | sed 's/.*(R).*(TM) //; s/ CPU @.*//')
+        if test -z "$cpu_label"
+            set cpu_label (string sub -l 28 "$__td_s_cpu_model")
+        end
+        printf "  $B$WH║$C  $CY🖥️  CPU$C  %-32s" (string sub -l 32 "$cpu_label")
         if test "$__td_s_cpu_ok" = "yes"
             echo -e "$GR🟢$C $B$WH║$C"
         else
@@ -858,9 +862,9 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
         # DNS resolution
         __td_divider
         echo -e "  $GY│$C  $DDNS Resolution:$C"
-        set -l dns_time (time dig google.com +short 2>&1 | tail -1 | grep -oE '[0-9]+m[0-9.]+s' | head -1)
-        if test -n "$dns_time"
-            __td_row "  google.com" "$dns_time"
+        set -l dns_res (dig google.com +short 2>/dev/null | tail -1)
+        if test -n "$dns_res"
+            __td_row "  google.com" "$dns_res"
         end
 
         # Speed test
