@@ -263,11 +263,17 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
         set -l os_name (cat /etc/fedora-release 2>/dev/null | head -1; or echo "Fedora Linux")
         set -l kernel (uname -r)
         set -l arch (uname -m)
-        set -l hostname (hostname)
+        set -l my_hostname (hostname)
         set -l uptime_raw (uptime -p 2>/dev/null | sed 's/up //'; or uptime | awk -F'up ' '{print $2}' | awk -F',' '{print $1}')
         set -l load (cat /proc/loadavg | awk '{print $1", "$2", "$3}')
         set -l users (who | wc -l)
-        set -l desktop ($DESKTOP_SESSION; or echo $XDG_CURRENT_DESKTOP; or echo "unknown")
+        set -l desktop "$DESKTOP_SESSION"
+        if test -z "$desktop"
+            set desktop "$XDG_CURRENT_DESKTOP"
+        end
+        if test -z "$desktop"
+            set desktop "unknown"
+        end
 
         # Hardware
         set -l mobo (sudo -n dmidecode -s baseboard-product-name 2>/dev/null; or echo "N/A")
@@ -276,7 +282,7 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
 
         __td_row "OS" "$os_name"
         __td_row "Kernel" "$kernel ($arch)"
-        __td_row "Hostname" "$hostname"
+        __td_row "Hostname" "$my_hostname"
         __td_row "Desktop" "$desktop"
         __td_row "Uptime" "$uptime_raw"
         __td_row "Load Avg" "$load"
@@ -347,8 +353,13 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
         # Per-core frequencies
         set -l core_freqs ""
         for cpu in /sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq
-            set -l freq (math (cat "$cpu" 2>/dev/null) / 1000)
-            set core_freqs "$core_freqs $freq MHz"
+            set -l raw (cat "$cpu" 2>/dev/null)
+            if test -n "$raw"
+                set -l freq (math "$raw / 1000" 2>/dev/null)
+                if test -n "$freq"
+                    set core_freqs "$core_freqs $freq"
+                end
+            end
         end
 
         # Socket + thermal throttle
@@ -387,7 +398,7 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
             set -l idx 0
             for f in $freq_list
                 if test $idx -lt (math "min($freq_count, 8)")
-                    printf "  $GY│$C    $DCPU%02d:$C  $WH%s$C\n" $idx "$f"
+                    printf "  $GY│$C    $DCPU%02d:$C  $WH%s MHz$C\n" $idx "$f"
                     set idx (math $idx + 1)
                 end
             end
@@ -883,7 +894,7 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
 
         set -l batt_data (upower -i $batt_path 2>/dev/null)
         set -l percentage (printf '%s\n' $batt_data | grep "percentage" | awk '{print $2}')
-        set -l capacity (printf '%s\n' $batt_data | grep "capacity" | awk '{print $2}')
+        set -l capacity (printf '%s\n' $batt_data | grep "capacity" | awk '{if ($2 ~ /^[0-9]/) print $2; else print $3}' | head -1)
         set -l state (printf '%s\n' $batt_data | grep "state" | awk '{print $2}')
         set -l energy (printf '%s\n' $batt_data | grep "energy:" | head -1 | awk '{print $2}')
         set -l energy_full (printf '%s\n' $batt_data | grep "energy-full:" | head -1 | awk '{print $2}')
@@ -921,14 +932,16 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
         # Wear level
         if test -n "$capacity"
             set -l wear (math "100 - $(echo $capacity | sed 's/%//')" 2>/dev/null)
-            if test "$wear" -gt 20
-                echo -e "  $GY│$C  $RE⚠️  Battery wear at $wear% — consider replacement$C"
-                set -g __td_s_batt_pct "$(echo $capacity | sed 's/%//')%"
-            else if test "$wear" -gt 10
-                echo -e "  $GY│$C  $YE⚠️  Battery wear at $wear%$C"
-                set -g __td_s_batt_pct "$(echo $capacity | sed 's/%//')%"
-            else
-                set -g __td_s_batt_pct "100%"
+            if test -n "$wear"
+                if test "$wear" -gt 20
+                    echo -e "  $GY│$C  $RE⚠️  Battery wear at $wear% — consider replacement$C"
+                    set -g __td_s_batt_pct "$(echo $capacity | sed 's/%//')%"
+                else if test "$wear" -gt 10
+                    echo -e "  $GY│$C  $YE⚠️  Battery wear at $wear%$C"
+                    set -g __td_s_batt_pct "$(echo $capacity | sed 's/%//')%"
+                else
+                    set -g __td_s_batt_pct "100%"
+                end
             end
         end
         set -g __td_s_batt_state "$state"
@@ -987,8 +1000,8 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
         # DNF
         if type -q dnf
             echo -e "  $GY│$C  $D📦 Checking DNF updates...$C"
-            set -l dnf_updates (sudo -n dnf check-update 2>/dev/null | tail -n +2 | grep -c "^" 2>/dev/null; or echo "0")
-            set -l dnf_sec (sudo -n dnf updateinfo --list --security 2>/dev/null | grep -c "^" 2>/dev/null; or echo "0")
+            set -l dnf_updates (sudo -n dnf check-update 2>/dev/null | tail -n +2 | grep -c "^" 2>/dev/null)
+            set -l dnf_sec (sudo -n dnf updateinfo --list --security 2>/dev/null | grep -c "^" 2>/dev/null)
             __td_row "DNF Updates" "$dnf_updates available"
             __td_row "  Security" "$dnf_sec security updates"
         end
@@ -1005,7 +1018,7 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
         if type -q fwupdmgr
             __td_divider
             echo -e "  $GY│$C  $D🔧 Checking firmware updates...$C"
-            set -l fw_updates (fwupdmgr get-updates 2>/dev/null | grep -c "─" 2>/dev/null; or echo "0")
+            set -l fw_updates (fwupdmgr get-updates 2>/dev/null | grep -c "─" 2>/dev/null)
             __td_row "Firmware Updates" "$fw_updates available"
         end
     end
@@ -1048,7 +1061,7 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
         end
 
         # Failed auth
-        set -l failed_auth (sudo -n journalctl -x -n 50 2>/dev/null | grep -c "Failed password\|authentication failure" 2>/dev/null; or echo "0")
+        set -l failed_auth (sudo -n journalctl -x -n 50 2>/dev/null | grep -c "Failed password\|authentication failure" 2>/dev/null)
         if test "$failed_auth" -gt 0
             __td_row "Failed Auth (recent)" "$RE$failed_auth attempts$C"
             set -g __td_s_sec_ok "no"
