@@ -271,6 +271,7 @@ preflight() {
 
   # ── Sudo check ──
   local _has_nopasswd=false
+  sudo -K 2>/dev/null || true  # clear cached timestamp so check is genuine
   if sudo -n true 2>/dev/null; then
     _has_nopasswd=true
   else
