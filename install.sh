@@ -1107,6 +1107,9 @@ prompt_sudoers_entry() {
     echo -e "  ${CYAN}║${NC}  ${DIM}We NEVER touch or remove any existing lines in your sudoers file.               ${CYAN}║${NC}"
     echo -e "  ${CYAN}║${NC}  ${DIM}We only add ONE new commented line at the bottom, and only if you say YES.      ${CYAN}║${NC}"
     echo -e "  ${CYAN}║${NC}  ${DIM}If you run the script again, it will see the line already exists and skip.      ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}  ${BOLD}${GREEN}Your data is safe. Everything is encrypted and stays on your machine.${NC}       ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}  ${GREEN}${BOLD}  No internet connection needed. No data ever leaves your computer.${NC}            ${CYAN}║${NC}"
     echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
     echo -en "  ${DIM}Add passwordless sudo hint? [y/N]:${NC} "
     read -r -n 1 key </dev/tty || true
