@@ -970,7 +970,7 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
             echo -e "  $GY│$C  $DBoot Time Breakdown:$C"
             set -l boot_time (systemd-analyze time 2>/dev/null)
             if test -n "$boot_time"
-                echo "$boot_time" | while read -l line
+                printf '%s\n' $boot_time | while read -l line
                     echo -e "  $GY│$C    $WH$line$C"
                 end
             end
@@ -992,10 +992,10 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
 
     function __td_report_services_block --no-scope-shadowing
         set -l failed (systemctl --failed 2>/dev/null)
-        set -l failed_count (echo "$failed" | grep -c "loaded" 2>/dev/null)
+        set -l failed_count (printf '%s\n' $failed | grep -c "loaded" 2>/dev/null)
         if test "$failed_count" -gt 0
             echo -e "  $GY│$C  $RE⚠️  $failed_count failed unit(s)$C"
-            echo "$failed" | grep "loaded" | while read -l line
+            printf '%s\n' $failed | grep "loaded" | while read -l line
                 echo -e "  $GY│$C    $RE✘$C $D$line$C"
             end
         else
