@@ -123,6 +123,13 @@ function refresh --description 'Deep system refresh: cache, services, extensions
         echo -e "  \033[1;34m── \033[1;37m$name\033[1;34m ──\033[0m"
     end
 
+    # ── Cache sudo credentials upfront if any task needs root ──
+    if test $do_all -eq 1 -o $do_dnf -eq 1
+        echo -e "  \033[1;33m🔑 Sudo needed for some tasks — enter password once...\033[0m"
+        sudo -v 2>/dev/null
+        echo -e "  \033[1;32m✅ Sudo cached — let's roll bestie\033[0m\n"
+    end
+
     if test $do_cache -eq 1
         __refresh_section "CACHE CLEANUP"
         __refresh_anim "Thumbnail cache"      "find ~/.cache/thumbnails -type f -delete 2>/dev/null; true"
@@ -134,8 +141,8 @@ function refresh --description 'Deep system refresh: cache, services, extensions
 
     if test $do_dnf -eq 1
         __refresh_section "DNF CLEANUP"
-        __refresh_anim "DNF clean all"  "sudo dnf clean all 2>/dev/null"
-        __refresh_anim "DNF autoremove" "sudo dnf autoremove -y 2>/dev/null"
+        __refresh_anim "DNF clean all"  "sudo -n dnf clean all 2>/dev/null"
+        __refresh_anim "DNF autoremove" "sudo -n dnf autoremove -y 2>/dev/null"
     end
 
     if test $do_flatpak -eq 1
