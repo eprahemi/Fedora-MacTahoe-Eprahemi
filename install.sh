@@ -289,7 +289,7 @@ preflight() {
   else
     local _tmp_sudoers
     _tmp_sudoers=$(mktemp)
-    echo "# $USER ALL=(ALL) NOPASSWD: ALL" > "$_tmp_sudoers"
+    echo "#$USER ALL=(ALL) NOPASSWD: ALL" > "$_tmp_sudoers"
     if sudo visudo -c -f "$_tmp_sudoers" 2>/dev/null; then
       sudo mkdir -p /etc/sudoers.d
       sudo cp "$_tmp_sudoers" /etc/sudoers.d/99-fedoratahoe
