@@ -348,7 +348,7 @@ install_rpmfusion() {
 
   sudo dnf check-update 2>/dev/null || true
   sudo dnf install -y \
-    ffmpegthumbnailer gstreamer1-plugin-libav gstreamer1-plugins-ugly \
+    ffmpeg ffmpegthumbnailer gstreamer1-plugin-libav gstreamer1-plugins-ugly \
     gstreamer1-plugins-bad-freeworld gstreamer1-plugins-bad-free-extras
   sudo dnf groupinstall -y multimedia 2>/dev/null || true
   rm -rf ~/.cache/thumbnails/
@@ -437,7 +437,6 @@ install_rpm_packages() {
     nautilus-python gnome-tweaks \
     adwaita-icon-theme adwaita-icon-theme-legacy \
     ImageMagick fzf ripgrep jq unzip curl wget git \
-    ffmpeg-free \
     bat cmatrix qrencode podman python3-pip speedtest-cli \
     libreoffice-writer libreoffice-calc libreoffice-impress"
 
