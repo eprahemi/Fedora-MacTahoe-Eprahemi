@@ -33,6 +33,33 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
     echo -e "         "$D"[ $CY EPRAHEMI ELITE DIAGNOSTIC SUITE $D]$C"
     echo ""
 
+    # ── Show Command List (defined early — called by --help and no-args) ──
+    function __td_show_commands --no-scope-shadowing
+        echo -e ""
+        echo -e "  $B$WH╭──────────────────────────────────────────────────────╮$C"
+        echo -e "  $B$WH│$C  $CY⚡$C  $B$WHMASTER COMMANDS$C  $B$WH│$C"
+        echo -e "  $B$WH├──────────────────────────────────────────────────────┤$C"
+        echo -e "  $B$WH│$C  $CY all        $C$D •$C  Full system autopsy — every module"
+        echo -e "  $B$WH│$C  $CY disk       $C$D •$C  Internal storage: speed, IOPS, SMART"
+        echo -e "  $B$WH│$C  $CY ext        $C$D •$C  External storage picker & benchmark"
+        echo -e "  $B$WH│$C  $CY cpu        $C$D •$C  Per-core freq, cache, features, throttle"
+        echo -e "  $B$WH│$C  $CY ram        $C$D •$C  Memory throughput, speed, swap, ZRAM"
+        echo -e "  $B$WH│$C  $CY gpu        $C$D •$C  GPU info: VRAM, temp, driver, clocks"
+        echo -e "  $B$WH│$C  $CY heat       $C$D •$C  Thermal: CPU/GPU/NVMe temps, fans"
+        echo -e "  $B$WH│$C  $CY net        $C$D •$C  Network: speed, ping, interfaces, DNS"
+        echo -e "  $B$WH│$C  $CY info       $C$D •$C  Full system blueprint: OS/kernel/IP"
+        echo -e "  $B$WH│$C  $CY batt       $C$D •$C  Battery health, capacity, draw"
+        echo -e "  $B$WH│$C  $CY boot       $C$D •$C  Boot time breakdown (systemd-analyze)"
+        echo -e "  $B$WH│$C  $CY health     $C$D •$C  Overall system health score"
+        echo -e "  $B$WH│$C  $CY updates    $C$D •$C  Pending dnf/flatpak/firmware updates"
+        echo -e "  $B$WH│$C  $CY services   $C$D •$C  Failed services, boot health"
+        echo -e "  $B$WH│$C  $CY top        $C$D •$C  Top processes by CPU/memory/I/O"
+        echo -e "  $B$WH│$C  $CY security   $C$D •$C  SELinux, firewall, ports, auth"
+        echo -e "  $B$WH│$C  $CY stress     $C$D •$C  CPU/RAM/I/O saturation test"
+        echo -e "  $B$WH╰──────────────────────────────────────────────────────╯$C"
+        echo ""
+    end
+
     if not set -q argv[1]
         echo -e "  $RE✦$C  $B$WHNo module specified.$C  Try:$C"
         __td_show_commands
@@ -116,35 +143,8 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
         or echo -e "  $GY│$C  $YE⚠️  Sudo unavailable — some data may be limited$C"
     end
 
-    # ── Show Command List ──
-    function __td_show_commands --no-scope-shadowing
-        echo -e ""
-        echo -e "  $B$WH╭──────────────────────────────────────────────────────╮$C"
-        echo -e "  $B$WH│$C  $CY⚡$C  $B$WHMASTER COMMANDS$C  $B$WH│$C"
-        echo -e "  $B$WH├──────────────────────────────────────────────────────┤$C"
-        echo -e "  $B$WH│$C  $CY all        $C$D •$C  Full system autopsy — every module"
-        echo -e "  $B$WH│$C  $CY disk       $C$D •$C  Internal storage: speed, IOPS, SMART"
-        echo -e "  $B$WH│$C  $CY ext        $C$D •$C  External storage picker & benchmark"
-        echo -e "  $B$WH│$C  $CY cpu        $C$D •$C  Per-core freq, cache, features, throttle"
-        echo -e "  $B$WH│$C  $CY ram        $C$D •$C  Memory throughput, speed, swap, ZRAM"
-        echo -e "  $B$WH│$C  $CY gpu        $C$D •$C  GPU info: VRAM, temp, driver, clocks"
-        echo -e "  $B$WH│$C  $CY heat       $C$D •$C  Thermal: CPU/GPU/NVMe temps, fans"
-        echo -e "  $B$WH│$C  $CY net        $C$D •$C  Network: speed, ping, interfaces, DNS"
-        echo -e "  $B$WH│$C  $CY info       $C$D •$C  Full system blueprint: OS/kernel/IP"
-        echo -e "  $B$WH│$C  $CY batt       $C$D •$C  Battery health, capacity, draw"
-        echo -e "  $B$WH│$C  $CY boot       $C$D •$C  Boot time breakdown (systemd-analyze)"
-        echo -e "  $B$WH│$C  $CY health     $C$D •$C  Overall system health score"
-        echo -e "  $B$WH│$C  $CY updates    $C$D •$C  Pending dnf/flatpak/firmware updates"
-        echo -e "  $B$WH│$C  $CY services   $C$D •$C  Failed services, boot health"
-        echo -e "  $B$WH│$C  $CY top        $C$D •$C  Top processes by CPU/memory/I/O"
-        echo -e "  $B$WH│$C  $CY security   $C$D •$C  SELinux, firewall, ports, auth"
-        echo -e "  $B$WH│$C  $CY stress     $C$D •$C  CPU/RAM/I/O saturation test"
-        echo -e "  $B$WH╰──────────────────────────────────────────────────────╯$C"
-        echo ""
-    end
-
     # ════════════════════════════════════════════════════════════════
-    # All report block function definitions (moved before dispatch)
+    # All report block function definitions
     # ════════════════════════════════════════════════════════════════
 
     function __td_show_footer --no-scope-shadowing
