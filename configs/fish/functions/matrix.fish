@@ -35,6 +35,7 @@ function matrix --description 'Cmatrix with color & speed options'
                 echo -e "  [38;5;248m  --speed N     Set drop speed (default: 0)[0m"
                 echo -e "  [38;5;248m  --help, -h    📖 Read the manual dummy[0m"
                 echo -e "  [38;5;248mExample: [1;36mmatrix --red --speed 5[0m"
+                echo -e "  \033[38;5;248m📦 Unknown flag handling + rotating burns (Jun 2026)\033[0m"
                 return 0
                         case '*'
                 if test -n "$speed"; set speed $arg; else; set args "$args $arg"; end

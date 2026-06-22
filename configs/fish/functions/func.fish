@@ -43,6 +43,7 @@ function func --description 'Function archive: list/search/show all fish command
             case stayawake; echo "stayawake [duration|--display|--stop]"
             case getdata; echo "getdata [--list|--venv]"
             case clean;   echo "clean [--all|--pip|--dry-run]"
+            case refresh; echo "refresh [-k|--all|--cache|--dns|--dnf|...]"
             case myip;    echo "myip"
             case stats;   echo "stats"
             case calc;    echo "calc <expression>"

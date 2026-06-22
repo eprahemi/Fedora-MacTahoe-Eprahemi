@@ -18,6 +18,7 @@ function cleanreset --description 'Safe refresh: shell restart, thumbs, DNF, Fla
                 echo -e "  \033[38;5;248mSafe refresh: restarts GNOME Shell, clears thumbnails,\033[0m"
                 echo -e "  \033[38;5;248mcleans DNF & Flatpak, vacuums logs, reloads config\033[0m"
                 echo -e "  \033[38;5;248m  --help, -h    📖 Read the manual dummy\033[0m"
+                echo -e "  \033[38;5;248m📦 Unknown flag handling + rotating burns (Jun 2026)\033[0m"
                 return 0
         end
     end

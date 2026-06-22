@@ -14,7 +14,19 @@ function extract --description 'Extract any archive file — auto-detects format
                 echo -e "    \033[1;36mextract file.tar.gz\033[0m"
                 echo -e "    \033[1;36mextract file.zip ~/target/\033[0m"
                 echo -e "  \033[38;5;248m  --help, -h     Show this help\033[0m"
+                echo -e "  \033[38;5;248m📦 Auto-detect archive extraction (Jun 2026)\033[0m"
                 return 0
+            case '-*'
+                set -l ex_burns
+                set ex_burns[1] "BRUH '\033[1;33m$argv[1]\033[1;33m' is not an archive bestie 💀"
+                set ex_burns[2] "'\033[1;33m$argv[1]\033[1;33m'??? That ain't extractable bestie 💅"
+                set ex_burns[3] "SIR THIS IS AN EXTRACTOR... '\033[1;33m$argv[1]\033[1;33m' is not a flag 🍔"
+                set ex_burns[4] "The extract council voted: '\033[1;33m$argv[1]\033[1;33m' is DENIED ⚖️"
+                set ex_burns[5] "BZZT! '\033[1;33m$argv[1]\033[1;33m' can't be extracted! 🎮💥"
+                set -l ex_idx (random 1 5)
+                echo -e "\033[1;31m✘ $ex_burns[$ex_idx]\033[0m"
+                echo -e "  \033[38;5;248m  Try \033[1;36mextract --help\033[38;5;248m bestie 📋\033[0m"
+                return 1
         end
     else
         echo -e "\033[1;33mUsage bestie: \033[1;36mextract <archive> [destination]\033[0m"

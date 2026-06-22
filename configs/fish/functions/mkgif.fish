@@ -34,6 +34,7 @@ function mkgif --description 'Convert video to optimized GIF'
                 echo -e "  \033[38;5;248m  --scale W:H   Output scale (default: 480:-1)\033[0m"
                 echo -e "  \033[38;5;248m  --help, -h    📖 Read the manual dummy\033[0m"
                 echo -e "  \033[38;5;248mExample: \033[1;36mmkgif --fps 15 --scale 640:-1 video.mp4\033[0m"
+                echo -e "  \033[38;5;248m📦 Unknown flag handling + rotating burns (Jun 2026)\033[0m"
                 return 0
                         case '*'
                 if test -z "$input"

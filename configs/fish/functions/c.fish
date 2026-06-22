@@ -37,6 +37,7 @@ function c --description 'Open Celluloid or fzf-pick a media file'
                 echo -e "  \033[38;5;248mFuzzy-searches entire home for media files\033[0m"
                 echo -e "  \033[38;5;248mSupports: mp4, mkv, avi, mov, webm, wmv, flv, m4v, mpg, mpeg, 3gp, ogv, ts, mts, m2ts, vob, divx, xvid, rm, rmvb, asf\033[0m"
                 echo -e "  \033[38;5;248m  --help, -h    Show this help\033[0m"
+                echo -e "  \033[38;5;248m📦 Unknown flag handling + rotating burns (Jun 2026)\033[0m"
                 return 0
                         case '*'
                 set -l target "$argv[1]"

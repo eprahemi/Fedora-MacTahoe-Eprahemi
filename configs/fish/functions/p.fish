@@ -19,6 +19,7 @@ line-range=:500 {}'" --description "alias p=fzf --preview 'bat --color=always --
                 echo -e "  \033[38;5;248m  Interactive file preview with fzf + bat 🦇\033[0m"
                 echo -e "  \033[38;5;248m  Just run it and pick a file bestie!\033[0m"
                 echo -e "  \033[38;5;248m  --help, -h    📖 Read the manual dummy\033[0m"
+                echo -e "  \033[38;5;248m📦 Unknown flag handling + rotating burns (Jun 2026)\033[0m"
                 return 0
         end
     end

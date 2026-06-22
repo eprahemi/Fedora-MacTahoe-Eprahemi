@@ -3,7 +3,7 @@
 # Eprahemi stays fresh like mint gum 🌿
 # Fedora MacTahoe Eprahemi Edition © 2026 — refreshed & blessed
 # ══════════════════════════════════════════════════════════════
-function refresh --description 'Deep system refresh: cache, services, extensions, DNS & more'
+function refresh --description 'Deep system refresh: cache, services, extensions, DNS, desktop grid & more'
     set -l start_time (date +%s)
     set -l do_all 0
     set -l do_cache 0
@@ -13,6 +13,7 @@ function refresh --description 'Deep system refresh: cache, services, extensions
     set -l do_dnf 0
     set -l do_flatpak 0
     set -l do_pip 0
+    set -l do_desktop 0
 
     if test (count $argv) -eq 0
         set do_all 1
@@ -27,6 +28,7 @@ function refresh --description 'Deep system refresh: cache, services, extensions
                 case -dnf;         set do_dnf 1
                 case -fp --flatpak; set do_flatpak 1
                 case -pip;         set do_pip 1
+                case -k --desktop; set do_desktop 1
                 case -h --help
                     echo -e "\033[1;36m"
                     echo "  ███████╗██████╗ ██████╗  █████╗ ██╗  ██╗███████╗███╗   ███╗██╗"
@@ -43,9 +45,11 @@ function refresh --description 'Deep system refresh: cache, services, extensions
                     echo -e "  \033[1;37mrefresh -s\033[0m        — restart Nautilus + xdg-desktop-portal"
                     echo -e "  \033[1;37mrefresh -e\033[0m        — cycle Dash-to-Dock extension"
                     echo -e "  \033[1;37mrefresh -d\033[0m        — flush DNS resolver cache"
+                    echo -e "  \033[1;37mrefresh -k\033[0m        — refresh desktop app grid, icons, names"
                     echo -e "  \033[1;37mrefresh -dnf\033[0m      — dnf clean all & autoremove"
                     echo -e "  \033[1;37mrefresh -fp\033[0m       — flatpak uninstall --unused"
                     echo -e "  \033[1;37mrefresh -pip\033[0m      — pip cache purge"
+                    echo -e "  \033[38;5;248m📦 Desktop refresh, D-Bus app grid, icon cache rebuild (Jun 2026)\033[0m"
                     return 0
                 case '*'
                     set -l burns
@@ -81,6 +85,7 @@ function refresh --description 'Deep system refresh: cache, services, extensions
         set do_dnf 1
         set do_flatpak 1
         set do_pip 1
+        set do_desktop 1
         echo -e "  \033[1;34mMode: FULL SYSTEM REFRESH (we going ALL in bestie)\033[0m\n"
     else
         echo -e "  \033[1;34mMode: SELECTIVE CLEANUP (picking and choosing fam)\033[0m\n"
@@ -99,6 +104,7 @@ function refresh --description 'Deep system refresh: cache, services, extensions
     if test $do_dns -eq 1;      set __rf_total (math $__rf_total + 1); end
     if test $do_services -eq 1; set __rf_total (math $__rf_total + 4); end
     if test $do_extensions -eq 1; set __rf_total (math $__rf_total + 4); end
+    if test $do_desktop -eq 1;  set __rf_total (math $__rf_total + 7); end
 
     function __refresh_anim
         set -l label $argv[1]
@@ -124,7 +130,7 @@ function refresh --description 'Deep system refresh: cache, services, extensions
     end
 
     # ── Cache sudo credentials upfront if any task needs root ──
-    if test $do_all -eq 1 -o $do_dnf -eq 1
+    if test $do_all -eq 1 -o $do_dnf -eq 1 -o $do_desktop -eq 1
         echo -e "  \033[1;33m🔑 Sudo needed for some tasks — enter password once...\033[0m"
         sudo -v 2>/dev/null
         echo -e "  \033[1;32m✅ Sudo cached — let's roll bestie\033[0m\n"
@@ -181,6 +187,38 @@ function refresh --description 'Deep system refresh: cache, services, extensions
         __refresh_anim "Disable User Themes"  "gnome-extensions disable user-theme@gnome-shell-extensions.gcampax.github.com 2>/dev/null"
         sleep 0.3
         __refresh_anim "Enable User Themes"   "gnome-extensions enable user-theme@gnome-shell-extensions.gcampax.github.com 2>/dev/null"
+    end
+
+    if test $do_desktop -eq 1
+        __refresh_section "DESKTOP / APP GRID"
+        set -l icon_theme (gsettings get org.gnome.desktop.interface icon-theme 2>/dev/null | string trim -c "'")
+        set -l gtk_theme (gsettings get org.gnome.desktop.interface gtk-theme 2>/dev/null | string trim -c "'")
+        set -l cursor_theme (gsettings get org.gnome.desktop.interface cursor-theme 2>/dev/null | string trim -c "'")
+
+        # ── Rebuild icon cache for the current icon theme ──
+        for theme_dir in /usr/share/icons/$icon_theme ~/.local/share/icons/$icon_theme ~/.icons/$icon_theme
+            if test -d "$theme_dir"
+                __refresh_anim "Icon cache ($icon_theme)" "gtk-update-icon-cache -f '$theme_dir' 2>/dev/null"
+                break
+            end
+        end
+
+        # ── Update desktop file database (makes app grid pick up name/icon changes) ──
+        __refresh_anim "User desktop db" "update-desktop-database ~/.local/share/applications/ 2>/dev/null; true"
+        if test -d /usr/share/applications/
+            __refresh_anim "System desktop db" "sudo -n update-desktop-database /usr/share/applications/ 2>/dev/null; true"
+        end
+
+        # ── Re-apply themes to force runtime reload ──
+        __refresh_anim "Re-apply icon theme" "gsettings set org.gnome.desktop.interface icon-theme '$icon_theme' 2>/dev/null"
+        __refresh_anim "Re-apply cursor theme" "gsettings set org.gnome.desktop.interface cursor-theme '$cursor_theme' 2>/dev/null"
+        if test -n "$gtk_theme"
+            __refresh_anim "Re-apply GTK theme" "gsettings set org.gnome.desktop.interface gtk-theme '$gtk_theme' 2>/dev/null"
+        end
+
+        # ── Refresh the app grid via D-Bus (safe — no shell restart) ──
+        __refresh_anim "Refresh app grid" "busctl call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Main.overview._dash._iconGrid.redisplay(); Main.overview._appDisplay._grid._redisplay()' 2>/dev/null; true"
+        echo -e "  \033[1;33m💡 Tip: If icons don't update fully, press Alt+F2 then type \033[1;36mr\033[1;33m and press Enter — safe shell reload without logout\033[0m"
     end
 
     set -l end_time (date +%s)

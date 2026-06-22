@@ -13,6 +13,7 @@ function n --description 'Quick notes: open, --today, --last'
                 echo -e "  \033[38;5;248m  --last, -l    Open the most recent note\033[0m"
                 echo -e "  \033[38;5;248m  --help, -h    📖 Read the manual dummy\033[0m"
                 echo -e "  \033[38;5;248mNotes stored in ~/Notes/ (fancy bestie) ✨\033[0m"
+                echo -e "  \033[38;5;248m📦 Unknown flag handling + rotating burns (Jun 2026)\033[0m"
                 return 0
             case --today -t
                 mkdir -p "$HOME/Notes"

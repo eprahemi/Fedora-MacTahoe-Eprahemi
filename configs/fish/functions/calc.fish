@@ -22,6 +22,7 @@ function calc --description 'Quick math in the terminal using Python'
                 echo -e "    \033[1;36mcalc "sin(pi/4)"\033[0m"
                 echo -e "    \033[1;36mcalc "2**10"\033[0m"
                 echo -e "    \033[1;36mcalc "sqrt(144)"\033[0m"
+                echo -e "  \033[38;5;248m📦 Unknown flag handling + rotating burns (Jun 2026)\033[0m"
                 return 0
             case '*'
                 if string match -qr -- '^--?[a-zA-Z]' "$argv[1]"

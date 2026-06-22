@@ -11,6 +11,7 @@ function hollywood --wraps='podman run -it --rm cgr.dev/chainguard/hollywood' --
                 echo -e "  \033[38;5;248m  Makes your terminal look like a Hollywood hacker movie 🎬\033[0m"
                 echo -e "  \033[38;5;248m  No flags needed, just run it sigma!\033[0m"
                 echo -e "  \033[38;5;248m  --help, -h    📖 Read the manual dummy\033[0m"
+                echo -e "  \033[38;5;248m📦 Unknown flag handling + rotating burns (Jun 2026)\033[0m"
                 return 0
         end
     end

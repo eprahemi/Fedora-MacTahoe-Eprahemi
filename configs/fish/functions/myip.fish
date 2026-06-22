@@ -4,6 +4,21 @@
 # Fedora MacTahoe Eprahemi Edition © 2026 — no privacy fr
 # ══════════════════════════════════════════════════════════════
 function myip --description 'Show public IP, local IP & DNS servers in a styled panel'
+    if set -q argv[1]
+        switch $argv[1]
+            case --help -h
+                echo -e "\033[1;33mUsage: \033[1;36mmyip\033[0m"
+                echo -e "  \033[38;5;248m  (no args)     Show public IP, local IP & DNS\033[0m"
+                echo -e "  \033[38;5;248m  --help, -h    📖 Read the manual dummy\033[0m"
+                echo -e "\n  \033[38;5;248m📦 Network identity panel + unknown flag handling (Jun 2026)\033[0m"
+                return 0
+            case '-*'
+                echo -e "\033[1;31m✘ BRUH '\033[1;33m$argv[1]\033[1;31m' is not a myip option bestie 💀\033[0m"
+                echo -e "  \033[38;5;248m  Try \033[1;36mmyip --help\033[38;5;248m bestie 📋\033[0m"
+                return 1
+        end
+    end
+
     echo -e "\033[1;36m"
     echo "  ███████╗██████╗ ██████╗  █████╗ ██╗  ██╗███████╗███╗   ███╗██╗"
     echo "  ██╔════╝██╔══██╗██╔══██╗██╔══██╗██║  ██║██╔════╝████╗ ████║██║"

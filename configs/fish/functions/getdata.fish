@@ -56,6 +56,7 @@ function getdata --description 'Data science toolkit: install or list packages'
                 echo -e "  \033[38;5;248m  --venv, -v    Set up Python virtual environment\033[0m"
                 echo -e "  \033[38;5;248m  (no args)     Install full data-science stack\033[0m"
                 echo -e "  \033[38;5;248m  --help, -h    Show this help\033[0m"
+                echo -e "  \033[38;5;248m📦 Unknown flag handling + rotating burns (Jun 2026)\033[0m"
                 return 0
             case '-*'
                 set -l gd_burns

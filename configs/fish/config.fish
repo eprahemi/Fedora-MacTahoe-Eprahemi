@@ -10,6 +10,11 @@ if status is-interactive
 
 end
 
+# ── Override unknown-command handler with funny errors + did-you-mean ──
+if test -f ~/.config/fish/functions/__fish_default_command_not_found_handler.fish
+    source ~/.config/fish/functions/__fish_default_command_not_found_handler.fish
+end
+
 starship init fish | source
 set -gx TERMINAL kitty
 set -gx TERM kitty

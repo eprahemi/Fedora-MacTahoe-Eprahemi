@@ -18,6 +18,7 @@ function l --wraps='eza -lh --icons --grid --group-directories-first' --descript
                 echo -e "  \033[38;5;248m  Pretty file lister with icons & grid layout\033[0m"
                 echo -e "  \033[38;5;248m  Powered by eza (modern ls replacement)\033[0m"
                 echo -e "  \033[38;5;248m  --help, -h    📖 Read the manual dummy\033[0m"
+                echo -e "  \033[38;5;248m📦 Unknown flag handling + rotating burns (Jun 2026)\033[0m"
                 return 0
         end
     end

@@ -12,6 +12,7 @@ function cat --description 'Pretty file viewer with bat (supports --lang, --line
                 echo -e "  \033[38;5;248m  --line-range, -r <:N>  Show only first N lines\033[0m"
                 echo -e "  \033[38;5;248m  --help, -h           📖 Read the manual dummy\033[0m"
                 echo -e "  \033[38;5;248m  (no args)            Show bat's own help\033[0m"
+                echo -e "  \033[38;5;248m📦 Unknown flag handling + rotating burns (Jun 2026)\033[0m"
                 return 0
             case --lang -l
                 if set -q argv[2]
