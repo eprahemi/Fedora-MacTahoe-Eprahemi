@@ -347,6 +347,15 @@ install_rpmfusion() {
     "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${release}.noarch.rpm"
 
   sudo dnf check-update 2>/dev/null || true
+
+  # Fedora 44+ ships ffmpeg-free which conflicts with RPM Fusion's ffmpeg.
+  # Swap it out cleanly before installing the rest.
+  if rpm -q ffmpeg-free &>/dev/null && ! rpm -q ffmpeg &>/dev/null; then
+    log "Replacing Fedora's ffmpeg-free with RPM Fusion's ffmpeg..."
+    sudo dnf swap -y ffmpeg-free ffmpeg 2>/dev/null || \
+      sudo dnf install -y --allowerasing ffmpeg 2>/dev/null || true
+  fi
+
   sudo dnf install -y \
     ffmpeg ffmpegthumbnailer gstreamer1-plugin-libav gstreamer1-plugins-ugly \
     gstreamer1-plugins-bad-freeworld gstreamer1-plugins-bad-free-extras
