@@ -882,11 +882,11 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
             echo -e "  $GY│$C  $BRunning speed test...$C"
             set -l speed_res (speedtest-cli --simple 2>/dev/null)
             if test -n "$speed_res"
-                echo "$speed_res" | while read -l line
+                printf '%s\n' $speed_res | while read -l line
                     echo -e "  $GY│$C    $WH$line$C"
                 end
-                set -l download (echo "$speed_res" | grep "Download" | grep -oE '[0-9.]+' | head -1)
-                set -l upload (echo "$speed_res" | grep "Upload" | grep -oE '[0-9.]+' | head -1)
+                set -l download (printf '%s\n' $speed_res | grep "Download" | grep -oE '[0-9.]+' | head -1)
+                set -l upload (printf '%s\n' $speed_res | grep "Upload" | grep -oE '[0-9.]+' | head -1)
                 set -g __td_s_net_down "$download Mbit/s"
                 set -g __td_s_net_up "$upload Mbit/s"
             end
