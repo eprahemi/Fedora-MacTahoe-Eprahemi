@@ -869,6 +869,15 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
 
         # Speed test
         __td_divider
+        set -l __td_auto_sp 0
+        if not type -q speedtest-cli
+            echo -e "  $GY│$C  $D📡 Installing speedtest-cli for one-shot test...$C"
+            sudo dnf install -y speedtest-cli 2>/dev/null
+            if type -q speedtest-cli
+                set __td_auto_sp 1
+            end
+        end
+
         if type -q speedtest-cli
             echo -e "  $GY│$C  $BRunning speed test...$C"
             set -l speed_res (speedtest-cli --simple 2>/dev/null)
@@ -881,9 +890,15 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
                 set -g __td_s_net_down "$download Mbit/s"
                 set -g __td_s_net_up "$upload Mbit/s"
             end
+
+            if test $__td_auto_sp -eq 1
+                echo -e "  $GY│$C  $D🧹 Cleaning up speedtest-cli...$C"
+                sudo dnf remove -y speedtest-cli 2>/dev/null
+                sudo dnf autoremove -y 2>/dev/null
+                rm -rf ~/.speedtest-cli /tmp/speedtest* 2>/dev/null
+            end
         else
-            echo -e "  $GY│$C  $D📡 Install speedtest-cli for bandwidth test$C"
-            echo -e "  $GY│$C  $D     Run: sudo dnf install speedtest-cli$C"
+            echo -e "  $GY│$C  $D📡 Could not install speedtest-cli (no network?) $C"
         end
     end
 
