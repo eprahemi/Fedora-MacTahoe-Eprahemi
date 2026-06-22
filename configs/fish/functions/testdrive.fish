@@ -588,7 +588,7 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
         __td_row "Model" "$dev_model"
         __td_row "Size" "$dev_size"
         __td_row "Filesystem" "$dev_type on $dev_mount"
-        __td_row "Technology" "$($B$WH$tech_label$C)  $interface_speed"
+        __td_row "Technology" "$B$WH$tech_label$C  $interface_speed"
 
         # SMART health
         set -l smart_avail 0
