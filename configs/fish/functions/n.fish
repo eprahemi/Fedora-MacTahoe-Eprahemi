@@ -25,7 +25,7 @@ function n --description 'Quick notes: open, --today, --last'
                 end
                 gnome-text-editor "$file" & disown
             case --last -l
-                set -l last (ls -t "$HOME/Notes"*.md 2>/dev/null | head -1)
+                set -l last (ls -t "$HOME/Notes/"*.md 2>/dev/null | head -1)
                 if test -z "$last"
                     echo -e "\033[1;31m❌ No notes found bestie! Go write something 📄\033[0m"
                     return 1
