@@ -312,7 +312,7 @@ echo -e "  ${CYAN}║${NC}${bv2}$(printf '%*s' $((62 - ${#bv2})) '')${CYAN}║${
 bv3="    N   — Nah, not today (default)"
 echo -e "  ${CYAN}║${NC}${bv3}$(printf '%*s' $((62 - ${#bv3})) '')${CYAN}║${NC}"
 echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-bv4="  You'll get Billie Eilish 0.mp4, Jinx clips, and more"
+bv4="  You'll get Billie Eilish , Jinx Edit Hot, and more"
 echo -e "  ${CYAN}║${NC}${bv4}$(printf '%*s' $((62 - ${#bv4})) '')${CYAN}║${NC}"
 bv5="  Press Enter for default (No)"
 echo -e "  ${CYAN}║${NC}${bv5}$(printf '%*s' $((62 - ${#bv5})) '')${CYAN}║${NC}"
