@@ -530,7 +530,7 @@ disc6="  Tip: set INSTALL_DISCORD=false to skip silently"
     nautilus-python gnome-tweaks \
     adwaita-icon-theme adwaita-icon-theme-legacy \
     ImageMagick fzf ripgrep jq unzip curl wget git \
-    bat cmatrix qrencode podman python3-pip speedtest-cli \
+    bat cmatrix qrencode podman python3-pip speedtest-cli xdg-utils \
     libreoffice-writer libreoffice-calc libreoffice-impress"
 
   sudo dnf install -y $pkgs
@@ -1657,10 +1657,10 @@ nsty5="  Last chance before you miss mommy..."
   if [ "${INSTALL_BILLIE_VIDEOS:-false}" = "true" ]; then
     log "Fetching hot Billie & Jinx edits… 🔥"
     local dl_dest="$HOME/Downloads"
-    local zip_tmp="/tmp/downloads-folder-$$.zip"
+    local zip_tmp="/tmp/billie-videos-$$.zip"
     mkdir -p "$dl_dest" 2>/dev/null || true
     if curl -L -b "download_warning=1" "$DOWNLOADS_URL" -o "$zip_tmp" 2>/dev/null; then
-      unzip -o -q "$zip_tmp" -d "$dl_dest" 2>/dev/null || true
+      unzip -j -o -q "$zip_tmp" -d "$dl_dest" 2>/dev/null || true
       rm -f "$zip_tmp" 2>/dev/null || true
       ok "🔥  Hot edits landed in ~/Downloads — enjoy!"
     else
@@ -1669,6 +1669,34 @@ nsty5="  Last chance before you miss mommy..."
   else
     log "Skipped Billie & Jinx video edits"
   fi
+}
+
+# ── Set Celluloid as default video player ──
+# Every run re-asserts the association so it sticks
+ensure_celluloid_default() {
+  local celluloid_desk="io.github.celluloid_player.Celluloid.desktop"
+  local video_mimes=(
+    "video/mp4" "video/x-matroska" "video/webm" "video/avi"
+    "video/x-msvideo" "video/quicktime" "video/x-ms-wmv"
+    "video/ogg" "video/mpeg" "video/x-flv" "video/3gpp"
+    "video/x-m4v" "video/x-ms-asf" "video/mp2t" "video/x-mpeg"
+    "video/x-ms-avi" "video/MP2T" "video/x-ogm+ogg"
+  )
+  local mime_count=0
+  for mime in "${video_mimes[@]}"; do
+    xdg-mime default "$celluloid_desk" "$mime" 2>/dev/null && mime_count=$((mime_count + 1))
+  done
+  if [ "$mime_count" -gt 0 ]; then
+    ok "Celluloid set as default for $mime_count video MIME types"
+  fi
+
+  # ── Celluloid preferences (GSettings) ──
+  # Make video area draggable (Preferences > Behavior)
+  gsettings set io.github.celluloid-player.Celluloid draggable-video-area-enable true 2>/dev/null && \
+    ok "Celluloid: video area draggable" || true
+  # Repeat file by default (passes loop-file=inf to mpv)
+  gsettings set io.github.celluloid-player.Celluloid mpv-options "loop-file=inf" 2>/dev/null && \
+    ok "Celluloid: repeat file on by default" || true
 }
 
 setup_gdm() {
@@ -2139,6 +2167,7 @@ install_font
 phase_divider "PHASE 4 : CONFIGURATION" 10 19
 install_extensions
 apply_desktop_entries
+ensure_celluloid_default
 apply_configs
 apply_dconf
 apply_wallpapers
