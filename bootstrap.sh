@@ -122,51 +122,6 @@ pt13="  needs to be the main ride for this to work."
   fi
 fi
 
-# ── NVIDIA warning (before download) ──
-nvidia_found=false
-lspci 2>/dev/null | grep -qi nvidia && nvidia_found=true
-lsmod 2>/dev/null | grep -qi nouveau && nvidia_found=true
-if [ "$nvidia_found" = true ]; then
-  echo ""
-  echo -e "  ${YELLOW}╔══════════════════════════════════════════════════════════════╗${NC}"
-n_title="  HEADS UP — NVIDIA DETECTED"
-  echo -e "  ${YELLOW}║${NC}${BOLD}${n_title}${NC}$(printf '%*s' $((62 - ${#n_title})) '')${YELLOW}║${NC}"
-  echo -e "  ${YELLOW}╠══════════════════════════════════════════════════════════════╣${NC}"
-  echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
-b_nvidia1="  You've got NVIDIA gear. On a fresh install, running this"
-  echo -e "  ${YELLOW}║${NC}  ${b_nvidia1}$(printf '%*s' $((60 - ${#b_nvidia1})) '')${YELLOW}║${NC}"
-b_nvidia2="  before a full system update can mess up your display."
-  echo -e "  ${YELLOW}║${NC}  ${b_nvidia2}$(printf '%*s' $((60 - ${#b_nvidia2})) '')${YELLOW}║${NC}"
-b_nvidia3="  Think 800x600 resolution and laggy refresh. Not fun."
-  echo -e "  ${YELLOW}║${NC}  ${b_nvidia3}$(printf '%*s' $((60 - ${#b_nvidia3})) '')${YELLOW}║${NC}"
-  echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
-b_nvidia4="  Save yourself the headache — do this first:"
-  echo -e "  ${YELLOW}║${NC}  ${BOLD}${b_nvidia4}$(printf '%*s' $((60 - ${#b_nvidia4})) '')${YELLOW}║${NC}"
-b_step1="    1. Get online (ethernet > WiFi if you can)"
-  echo -e "  ${YELLOW}║${NC}${b_step1}$(printf '%*s' $((62 - ${#b_step1})) '')${YELLOW}║${NC}"
-b_step2="    2. sudo dnf upgrade"
-  echo -e "  ${YELLOW}║${NC}${BOLD}${b_step2}$(printf '%*s' $((62 - ${#b_step2})) '')${YELLOW}║${NC}"
-b_step3="    3. Reboot"
-  echo -e "  ${YELLOW}║${NC}${b_step3}$(printf '%*s' $((62 - ${#b_step3})) '')${YELLOW}║${NC}"
-b_step4="    4. Run this thing again"
-  echo -e "  ${YELLOW}║${NC}${b_step4}$(printf '%*s' $((62 - ${#b_step4})) '')${YELLOW}║${NC}"
-  echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
-b_updated="  ✓  Already updated? Press any key to roll."
-  echo -e "  ${YELLOW}║${NC}  ${GREEN}${b_updated}$(printf '%*s' $((60 - ${#b_updated})) '')${YELLOW}║${NC}"
-b_ctrlc="  Ctrl+C to go update first"
-  echo -e "  ${YELLOW}║${NC}  ${b_ctrlc}$(printf '%*s' $((60 - ${#b_ctrlc})) '')${YELLOW}║${NC}"
-  echo -e "  ${YELLOW}╚══════════════════════════════════════════════════════════════╝${NC}"
-  echo ""
-  echo -en "  ${DIM}Press any key to continue...${NC} "
-  while true; do
-    read -r -n 1 key </dev/tty || true
-    if [ -n "$key" ]; then
-      echo -e "${GREEN}let's go${NC}"
-      break
-    fi
-  done
-fi
-
 # ── Capture GNOME version ──
 GNOME_VER=$(gnome-shell --version 2>/dev/null | grep -oP '\d+\.\d+' || echo "?")
 
