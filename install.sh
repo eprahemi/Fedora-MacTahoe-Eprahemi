@@ -11,7 +11,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUNDLE="$SCRIPT_DIR"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
-BOLD='\033[1m'; WHITE='\033[1;37m'; DIM='\033[2m'
+BOLD='\033[1m'; WHITE='\033[1;37m'; DIM='\033[2m'; PINK='\033[1;35m'
 
 # ── Config ──
 # 18+ wallpaper zip — Google Drive direct download (file ID from share link)
@@ -26,7 +26,7 @@ ok()    { echo -e "  ${GREEN}  ┊ ✓ ${NC}  $1"; }
 warn()  { echo -e "  ${YELLOW}  ┊ ⚠ ${NC}  $1"; }
 fail()  { echo -e "  ${RED}  ┊ ✗ ${NC}  $1"; exit 1; }
 
-TOTAL_STEPS=22
+TOTAL_STEPS=23
 STEP=0
 
 next_step() {
@@ -1292,38 +1292,6 @@ wp18_5="  Press Enter for default (No)"
     fi
   fi
 
-  # ── 🔥 Hot Billie & Jinx video edits prompt ──
-  if [ -z "${INSTALL_BILLIE_VIDEOS:-}" ]; then
-    echo ""
-    echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-bv_t="        ◆  🔥  HOT BILLIE & JINX VIDEO EDITS?  ◆"
-    echo -e "  ${CYAN}║${NC}${bv_t}$(printf '%*s' $((62 - ${#bv_t})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-bv1="  🔥  Sick edits — Billie, Jinx, and cool stuff (~500 MB)"
-    echo -e "  ${CYAN}║${NC}${bv1}$(printf '%*s' $((62 - ${#bv1})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-bv2="    y  — Heck yeah! Drop 'em in ~/Downloads"
-    echo -e "  ${CYAN}║${NC}${bv2}$(printf '%*s' $((62 - ${#bv2})) '')${CYAN}║${NC}"
-bv3="    N   — Nah, not today (default)"
-    echo -e "  ${CYAN}║${NC}${bv3}$(printf '%*s' $((62 - ${#bv3})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-bv4="  You'll get Billie Eilish , Jinx Edit Hot, and more"
-    echo -e "  ${CYAN}║${NC}${bv4}$(printf '%*s' $((62 - ${#bv4})) '')${CYAN}║${NC}"
-bv5="  Press Enter for default (No)"
-    echo -e "  ${CYAN}║${NC}${bv5}$(printf '%*s' $((62 - ${#bv5})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
-    echo -en "  ${DIM}🔥  Hot Billie & Jinx edits? [y/N]:${NC} "
-    read -r -n 1 key </dev/tty || true
-    echo ""
-    if [ "$key" = "y" ] || [ "$key" = "Y" ]; then
-      INSTALL_BILLIE_VIDEOS="true"
-      echo -e "  ${GREEN}→  🔥  Alright! Dropping hot edits in ~/Downloads${NC}"
-    else
-      INSTALL_BILLIE_VIDEOS="false"
-      echo -e "  ${DIM}→  Skipping — your loss, they're fire 🔥${NC}"
-    fi
-  fi
 }
 
 apply_wallpapers() {
@@ -1592,7 +1560,74 @@ install_custom_avatars() {
     rm -rf "$extract_tmp" 2>/dev/null || true
   fi
 
-  # ── 🔥 Hot Billie & Jinx video edits (optional download) ──
+}
+
+# ── 🔥 Billie & Jinx video edits (optional prompt + download, step 22) ──
+download_optional_videos() {
+  next_step "Billie & Jinx Videos"
+
+  # ── Prompt if not already set (e.g. by bootstrap.sh) ──
+  if [ -z "${INSTALL_BILLIE_VIDEOS:-}" ]; then
+    echo ""
+    echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+bv_t="        ◆  🔥  HOT BILLIE & JINX VIDEO EDITS?  ◆"
+    echo -e "  ${CYAN}║${NC}${bv_t}$(printf '%*s' $((62 - ${#bv_t})) '')${CYAN}║${NC}"
+    echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+bv1="  🔥  Sick edits — Billie, Jinx, and cool stuff (~500 MB)"
+    echo -e "  ${CYAN}║${NC}${bv1}$(printf '%*s' $((62 - ${#bv1})) '')${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+bv2="    y  — Heck yeah! Drop 'em in ~/Downloads"
+    echo -e "  ${CYAN}║${NC}${bv2}$(printf '%*s' $((62 - ${#bv2})) '')${CYAN}║${NC}"
+bv3="    N   — Nah, not today (default)"
+    echo -e "  ${CYAN}║${NC}${bv3}$(printf '%*s' $((62 - ${#bv3})) '')${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+bv4="  You'll get Billie Eilish , Jinx Edit Hot, and more"
+    echo -e "  ${CYAN}║${NC}${bv4}$(printf '%*s' $((62 - ${#bv4})) '')${CYAN}║${NC}"
+bv5="  Press Enter for default (No)"
+    echo -e "  ${CYAN}║${NC}${bv5}$(printf '%*s' $((62 - ${#bv5})) '')${CYAN}║${NC}"
+    echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+    echo -en "  ${DIM}🔥  Hot Billie & Jinx edits? [y/N]:${NC} "
+    read -r -n 1 key </dev/tty || true
+    echo ""
+    if [ "$key" = "y" ] || [ "$key" = "Y" ]; then
+      INSTALL_BILLIE_VIDEOS="true"
+      echo -e "  ${GREEN}→  🔥  Alright! Dropping hot edits in ~/Downloads${NC}"
+    else
+      # ── Naughty second prompt — are you REALLY sure? ──
+      echo ""
+      echo -e "  ${PINK}╔══════════════════════════════════════════════════════════════╗${NC}"
+nsty_t="     ◆  👀  U SURE BUDDY?  👀  ◆"
+      echo -e "  ${PINK}║${NC}${nsty_t}$(printf '%*s' $((62 - ${#nsty_t})) '')${PINK}║${NC}"
+      echo -e "  ${PINK}╠══════════════════════════════════════════════════════════════╣${NC}"
+      echo -e "  ${PINK}║${NC}                                                              ${PINK}║${NC}"
+nsty1="  You really gonna miss out on mommy Billie's sweet"
+      echo -e "  ${PINK}║${NC}${nsty1}$(printf '%*s' $((62 - ${#nsty1})) '')${PINK}║${NC}"
+nsty2="  body and Jinx's hot slim curves?  🔥  💦"
+      echo -e "  ${PINK}║${NC}${nsty2}$(printf '%*s' $((62 - ${#nsty2})) '')${PINK}║${NC}"
+      echo -e "  ${PINK}║${NC}                                                              ${PINK}║${NC}"
+nsty3="    y  — OK OK YOU CONVINCED ME!  😩🔥"
+      echo -e "  ${PINK}║${NC}${nsty3}$(printf '%*s' $((62 - ${#nsty3})) '')${PINK}║${NC}"
+nsty4="    N  — Nah I'm good (for real this time)"
+      echo -e "  ${PINK}║${NC}${nsty4}$(printf '%*s' $((62 - ${#nsty4})) '')${PINK}║${NC}"
+      echo -e "  ${PINK}║${NC}                                                              ${PINK}║${NC}"
+nsty5="  Last chance before you miss mommy..."
+      echo -e "  ${PINK}║${NC}${nsty5}$(printf '%*s' $((62 - ${#nsty5})) '')${PINK}║${NC}"
+      echo -e "  ${PINK}╚══════════════════════════════════════════════════════════════╝${NC}"
+      echo -en "  ${PINK}👀  For real though? [y/N]:${NC} "
+      read -r -n 1 key2 </dev/tty || true
+      echo ""
+      if [ "$key2" = "y" ] || [ "$key2" = "Y" ]; then
+        INSTALL_BILLIE_VIDEOS="true"
+        echo -e "  ${GREEN}→  😩  Alright alright — dropping hot edits in ~/Downloads${NC}"
+      else
+        INSTALL_BILLIE_VIDEOS="false"
+        echo -e "  ${DIM}→  Aight your loss, more for the rest of us 🔥${NC}"
+      fi
+    fi
+  fi
+
+  # ── Download if opted in ──
   if [ "${INSTALL_BILLIE_VIDEOS:-false}" = "true" ]; then
     log "Fetching hot Billie & Jinx edits… 🔥"
     local dl_dest="$HOME/Downloads"
@@ -1605,6 +1640,8 @@ install_custom_avatars() {
     else
       warn "🔥  Download failed — check DOWNLOADS_URL"
     fi
+  else
+    log "Skipped Billie & Jinx video edits"
   fi
 }
 
@@ -2042,7 +2079,7 @@ echo -e "  ${CYAN}║${NC}"'                                                    
 gnome_text="  GNOME ${GNOME_VER}  ◆  Kitty Terminal  ◆  Fish Shell"
 echo -e "  ${CYAN}║${NC}  ${DIM}GNOME${NC} ${GNOME_VER}  ${DIM}◆  Kitty Terminal  ◆  Fish Shell${NC}$(printf '%*s' $((60 - ${#gnome_text})) '')${CYAN}║${NC}"
 echo -e "  ${CYAN}║${NC}"'                                                              '"${CYAN}║${NC}"
-echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  22-Step Installer    ${DIM}◆${NC}  Auto-detects your system    ${DIM}◆${NC}    ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  23-Step Installer    ${DIM}◆${NC}  Auto-detects your system    ${DIM}◆${NC}    ${CYAN}║${NC}"
 theme_text="  ◆  Theme compiles for your GNOME ${GNOME_VER}"
 echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  Theme compiles for your GNOME ${BOLD}${GNOME_VER}${NC}$(printf '%*s' $((60 - ${#theme_text})) '')${CYAN}║${NC}"
 echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  Sets up Kitty, Fish, icons, fonts, sounds${NC}                ${CYAN}║${NC}"
@@ -2089,5 +2126,6 @@ phase_divider "PHASE 5 : TERMINAL & SHELL" 20 21
 setup_terminal
 setup_shell
 
-phase_divider "PHASE 6 : FINALIZE" 22 22
+phase_divider "PHASE 6 : FINALIZE" 22 23
+download_optional_videos
 finalize
