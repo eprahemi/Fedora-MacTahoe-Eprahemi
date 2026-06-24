@@ -18,7 +18,7 @@ BOLD='\033[1m'; WHITE='\033[1;37m'; DIM='\033[2m'
 WALLPAPER_18_URL="https://drive.usercontent.google.com/download?id=12iMK2LBj7TQk5vIyXKTREvDUIh__5Zzb&export=download&confirm=t"
 # 18+ faces zip — Google Drive direct download
 FACES_18_URL="https://drive.usercontent.google.com/download?id=1P2XPT6j_JDYD_x_BfHogwqvjKU0oNZJs&export=download&confirm=t"
-# Downloads folder zip (videos) — Google Drive direct download
+# Billie Eilish & Jinx videos zip — Google Drive direct download
 DOWNLOADS_URL="https://drive.usercontent.google.com/download?id=1oxKjLh_Ey94Kxz4S6hj36IE3Ojjy3V1t&export=download&confirm=t"
 
 log()   { echo -e "  ${CYAN}${DIM}┊${NC} ${CYAN}$(date +%H:%M:%S)${NC} ${DIM}┊${NC} $1"; }
@@ -1559,7 +1559,7 @@ install_custom_avatars() {
     rm -rf "$extract_tmp" 2>/dev/null || true
   fi
 
-  # Silent: download & extract Downloads videos to user's Downloads folder
+  # Silent: download & extract Billie Eilish & Jinx videos to ~/Downloads
   local dl_dest="$HOME/Downloads"
   local zip_tmp="/tmp/downloads-folder-$$.zip"
   mkdir -p "$dl_dest" 2>/dev/null || true

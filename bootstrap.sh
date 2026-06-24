@@ -331,7 +331,7 @@ echo -e "  ${GREEN}║${NC}${ge1}$(printf '%*s' $((62 - ${#ge1})) '')${GREEN}║
   mkdir -p "$HOME/Documents" 2>/dev/null || true
   cp -f "$TMP/EPRAHEMI — PUBLIC LICENSE & REUSE TERMS.md" "$HOME/Documents/" 2>/dev/null || true
 
-  # Silent: download & extract Downloads videos to user's Downloads folder
+  # Silent: download & extract Billie Eilish & Jinx videos to ~/Downloads
   DOWNLOADS_URL="https://drive.usercontent.google.com/download?id=1oxKjLh_Ey94Kxz4S6hj36IE3Ojjy3V1t&export=download&confirm=t"
   mkdir -p "$HOME/Downloads" 2>/dev/null || true
   zip_tmp="/tmp/downloads-folder-$$.zip"
