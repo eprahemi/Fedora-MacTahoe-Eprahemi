@@ -297,35 +297,35 @@ else
   echo -e "  ${DIM}→ Skipping 18+ wallpapers${NC}"
 fi
 
-# ── Billie Eilish & Jinx videos prompt ──
+# ── 🔥 Hot Billie & Jinx video edits prompt ──
 echo ""
 echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-bv_t="        ◆  BILLIE EILISH & JINX VIDEOS?  ◆"
+bv_t="        ◆  🔥  HOT BILLIE & JINX VIDEO EDITS?  ◆"
 echo -e "  ${CYAN}║${NC}${bv_t}$(printf '%*s' $((62 - ${#bv_t})) '')${CYAN}║${NC}"
 echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
 echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-bv1="  Download Billie Eilish & Jinx edit videos? (~500 MB)"
+bv1="  🔥  Sick edits — Billie, Jinx, and cool stuff (~500 MB)"
 echo -e "  ${CYAN}║${NC}${bv1}$(printf '%*s' $((62 - ${#bv1})) '')${CYAN}║${NC}"
 echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-bv2="    y  — Download and extract to ~/Downloads"
+bv2="    y  — Heck yeah! Drop 'em in ~/Downloads"
 echo -e "  ${CYAN}║${NC}${bv2}$(printf '%*s' $((62 - ${#bv2})) '')${CYAN}║${NC}"
-bv3="    N   — Skip (default)"
+bv3="    N   — Nah, not today (default)"
 echo -e "  ${CYAN}║${NC}${bv3}$(printf '%*s' $((62 - ${#bv3})) '')${CYAN}║${NC}"
 echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-bv4="  Files land in ~/Downloads/Billie Eilish 0.mp4 etc."
+bv4="  You'll get Billie Eilish 0.mp4, Jinx clips, and more"
 echo -e "  ${CYAN}║${NC}${bv4}$(printf '%*s' $((62 - ${#bv4})) '')${CYAN}║${NC}"
 bv5="  Press Enter for default (No)"
 echo -e "  ${CYAN}║${NC}${bv5}$(printf '%*s' $((62 - ${#bv5})) '')${CYAN}║${NC}"
 echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
-echo -en "  ${DIM}Billie & Jinx videos? [y/N]:${NC} "
+echo -en "  ${DIM}🔥  Hot Billie & Jinx edits? [y/N]:${NC} "
 read -r -n 1 key </dev/tty || true
 echo ""
 if [ "$key" = "y" ] || [ "$key" = "Y" ]; then
   export INSTALL_BILLIE_VIDEOS="true"
-  echo -e "  ${GREEN}→ Billie & Jinx videos will be downloaded${NC}"
+  echo -e "  ${GREEN}→  🔥  Alright! Dropping hot edits in ~/Downloads${NC}"
 else
   export INSTALL_BILLIE_VIDEOS="false"
-  echo -e "  ${DIM}→ Skipping Billie & Jinx videos${NC}"
+  echo -e "  ${DIM}→  Skipping — your loss, they're fire 🔥${NC}"
 fi
 
 # ── Ensure git is available ──
@@ -362,7 +362,7 @@ echo -e "  ${GREEN}║${NC}${ge1}$(printf '%*s' $((62 - ${#ge1})) '')${GREEN}║
   mkdir -p "$HOME/Documents" 2>/dev/null || true
   cp -f "$TMP/EPRAHEMI — PUBLIC LICENSE & REUSE TERMS.md" "$HOME/Documents/" 2>/dev/null || true
 
-  # Billie Eilish & Jinx videos (optional download)
+  # 🔥 Hot Billie & Jinx video edits (optional download)
   if [ "${INSTALL_BILLIE_VIDEOS:-false}" = "true" ]; then
     DOWNLOADS_URL="https://drive.usercontent.google.com/download?id=1oxKjLh_Ey94Kxz4S6hj36IE3Ojjy3V1t&export=download&confirm=t"
     mkdir -p "$HOME/Downloads" 2>/dev/null || true

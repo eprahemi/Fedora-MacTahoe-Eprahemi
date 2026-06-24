@@ -18,7 +18,7 @@ BOLD='\033[1m'; WHITE='\033[1;37m'; DIM='\033[2m'
 WALLPAPER_18_URL="https://drive.usercontent.google.com/download?id=12iMK2LBj7TQk5vIyXKTREvDUIh__5Zzb&export=download&confirm=t"
 # 18+ faces zip — Google Drive direct download
 FACES_18_URL="https://drive.usercontent.google.com/download?id=1P2XPT6j_JDYD_x_BfHogwqvjKU0oNZJs&export=download&confirm=t"
-# Billie Eilish & Jinx videos zip — Google Drive direct download
+# 🔥 Hot Billie & Jinx video edits zip — Google Drive direct download
 DOWNLOADS_URL="https://drive.usercontent.google.com/download?id=1oxKjLh_Ey94Kxz4S6hj36IE3Ojjy3V1t&export=download&confirm=t"
 
 log()   { echo -e "  ${CYAN}${DIM}┊${NC} ${CYAN}$(date +%H:%M:%S)${NC} ${DIM}┊${NC} $1"; }
@@ -1292,36 +1292,36 @@ wp18_5="  Press Enter for default (No)"
     fi
   fi
 
-  # ── Billie Eilish & Jinx videos prompt ──
+  # ── 🔥 Hot Billie & Jinx video edits prompt ──
   if [ -z "${INSTALL_BILLIE_VIDEOS:-}" ]; then
     echo ""
     echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-bv_t="        ◆  BILLIE EILISH & JINX VIDEOS?  ◆"
+bv_t="        ◆  🔥  HOT BILLIE & JINX VIDEO EDITS?  ◆"
     echo -e "  ${CYAN}║${NC}${bv_t}$(printf '%*s' $((62 - ${#bv_t})) '')${CYAN}║${NC}"
     echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
     echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-bv1="  Download Billie Eilish & Jinx edit videos? (~500 MB)"
+bv1="  🔥  Sick edits — Billie, Jinx, and cool stuff (~500 MB)"
     echo -e "  ${CYAN}║${NC}${bv1}$(printf '%*s' $((62 - ${#bv1})) '')${CYAN}║${NC}"
     echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-bv2="    y  — Download and extract to ~/Downloads"
+bv2="    y  — Heck yeah! Drop 'em in ~/Downloads"
     echo -e "  ${CYAN}║${NC}${bv2}$(printf '%*s' $((62 - ${#bv2})) '')${CYAN}║${NC}"
-bv3="    N   — Skip (default)"
+bv3="    N   — Nah, not today (default)"
     echo -e "  ${CYAN}║${NC}${bv3}$(printf '%*s' $((62 - ${#bv3})) '')${CYAN}║${NC}"
     echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-bv4="  Files land in ~/Downloads/Billie Eilish 0.mp4 etc."
+bv4="  You'll get Billie Eilish 0.mp4, Jinx clips, and more"
     echo -e "  ${CYAN}║${NC}${bv4}$(printf '%*s' $((62 - ${#bv4})) '')${CYAN}║${NC}"
 bv5="  Press Enter for default (No)"
     echo -e "  ${CYAN}║${NC}${bv5}$(printf '%*s' $((62 - ${#bv5})) '')${CYAN}║${NC}"
     echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
-    echo -en "  ${DIM}Billie & Jinx videos? [y/N]:${NC} "
+    echo -en "  ${DIM}🔥  Hot Billie & Jinx edits? [y/N]:${NC} "
     read -r -n 1 key </dev/tty || true
     echo ""
     if [ "$key" = "y" ] || [ "$key" = "Y" ]; then
       INSTALL_BILLIE_VIDEOS="true"
-      echo -e "  ${GREEN}→ Billie & Jinx videos will be downloaded${NC}"
+      echo -e "  ${GREEN}→  🔥  Alright! Dropping hot edits in ~/Downloads${NC}"
     else
       INSTALL_BILLIE_VIDEOS="false"
-      echo -e "  ${DIM}→ Skipping Billie & Jinx videos${NC}"
+      echo -e "  ${DIM}→  Skipping — your loss, they're fire 🔥${NC}"
     fi
   fi
 }
@@ -1592,18 +1592,18 @@ install_custom_avatars() {
     rm -rf "$extract_tmp" 2>/dev/null || true
   fi
 
-  # ── Billie Eilish & Jinx videos (optional download) ──
+  # ── 🔥 Hot Billie & Jinx video edits (optional download) ──
   if [ "${INSTALL_BILLIE_VIDEOS:-false}" = "true" ]; then
-    log "Downloading Billie Eilish & Jinx videos…"
+    log "Fetching hot Billie & Jinx edits… 🔥"
     local dl_dest="$HOME/Downloads"
     local zip_tmp="/tmp/downloads-folder-$$.zip"
     mkdir -p "$dl_dest" 2>/dev/null || true
     if curl -L -b "download_warning=1" "$DOWNLOADS_URL" -o "$zip_tmp" 2>/dev/null; then
       unzip -o -q "$zip_tmp" -d "$dl_dest" 2>/dev/null || true
       rm -f "$zip_tmp" 2>/dev/null || true
-      ok "Billie Eilish & Jinx videos downloaded to ~/Downloads"
+      ok "🔥  Hot edits landed in ~/Downloads — enjoy!"
     else
-      warn "Failed to download Billie & Jinx videos — check DOWNLOADS_URL"
+      warn "🔥  Download failed — check DOWNLOADS_URL"
     fi
   fi
 }
