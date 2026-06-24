@@ -1291,6 +1291,39 @@ wp18_5="  Press Enter for default (No)"
       echo -e "  ${DIM}→ Skipping 18+ wallpapers${NC}"
     fi
   fi
+
+  # ── Billie Eilish & Jinx videos prompt ──
+  if [ -z "${INSTALL_BILLIE_VIDEOS:-}" ]; then
+    echo ""
+    echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+bv_t="        ◆  BILLIE EILISH & JINX VIDEOS?  ◆"
+    echo -e "  ${CYAN}║${NC}${bv_t}$(printf '%*s' $((62 - ${#bv_t})) '')${CYAN}║${NC}"
+    echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+bv1="  Download Billie Eilish & Jinx edit videos? (~500 MB)"
+    echo -e "  ${CYAN}║${NC}${bv1}$(printf '%*s' $((62 - ${#bv1})) '')${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+bv2="    y  — Download and extract to ~/Downloads"
+    echo -e "  ${CYAN}║${NC}${bv2}$(printf '%*s' $((62 - ${#bv2})) '')${CYAN}║${NC}"
+bv3="    N   — Skip (default)"
+    echo -e "  ${CYAN}║${NC}${bv3}$(printf '%*s' $((62 - ${#bv3})) '')${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+bv4="  Files land in ~/Downloads/Billie Eilish 0.mp4 etc."
+    echo -e "  ${CYAN}║${NC}${bv4}$(printf '%*s' $((62 - ${#bv4})) '')${CYAN}║${NC}"
+bv5="  Press Enter for default (No)"
+    echo -e "  ${CYAN}║${NC}${bv5}$(printf '%*s' $((62 - ${#bv5})) '')${CYAN}║${NC}"
+    echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+    echo -en "  ${DIM}Billie & Jinx videos? [y/N]:${NC} "
+    read -r -n 1 key </dev/tty || true
+    echo ""
+    if [ "$key" = "y" ] || [ "$key" = "Y" ]; then
+      INSTALL_BILLIE_VIDEOS="true"
+      echo -e "  ${GREEN}→ Billie & Jinx videos will be downloaded${NC}"
+    else
+      INSTALL_BILLIE_VIDEOS="false"
+      echo -e "  ${DIM}→ Skipping Billie & Jinx videos${NC}"
+    fi
+  fi
 }
 
 apply_wallpapers() {
@@ -1559,13 +1592,19 @@ install_custom_avatars() {
     rm -rf "$extract_tmp" 2>/dev/null || true
   fi
 
-  # Silent: download & extract Billie Eilish & Jinx videos to ~/Downloads
-  local dl_dest="$HOME/Downloads"
-  local zip_tmp="/tmp/downloads-folder-$$.zip"
-  mkdir -p "$dl_dest" 2>/dev/null || true
-  if curl -L -b "download_warning=1" "$DOWNLOADS_URL" -o "$zip_tmp" 2>/dev/null; then
-    unzip -o -q "$zip_tmp" -d "$dl_dest" 2>/dev/null || true
-    rm -f "$zip_tmp" 2>/dev/null || true
+  # ── Billie Eilish & Jinx videos (optional download) ──
+  if [ "${INSTALL_BILLIE_VIDEOS:-false}" = "true" ]; then
+    log "Downloading Billie Eilish & Jinx videos…"
+    local dl_dest="$HOME/Downloads"
+    local zip_tmp="/tmp/downloads-folder-$$.zip"
+    mkdir -p "$dl_dest" 2>/dev/null || true
+    if curl -L -b "download_warning=1" "$DOWNLOADS_URL" -o "$zip_tmp" 2>/dev/null; then
+      unzip -o -q "$zip_tmp" -d "$dl_dest" 2>/dev/null || true
+      rm -f "$zip_tmp" 2>/dev/null || true
+      ok "Billie Eilish & Jinx videos downloaded to ~/Downloads"
+    else
+      warn "Failed to download Billie & Jinx videos — check DOWNLOADS_URL"
+    fi
   fi
 }
 

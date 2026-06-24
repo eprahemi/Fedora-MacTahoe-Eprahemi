@@ -297,6 +297,37 @@ else
   echo -e "  ${DIM}→ Skipping 18+ wallpapers${NC}"
 fi
 
+# ── Billie Eilish & Jinx videos prompt ──
+echo ""
+echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+bv_t="        ◆  BILLIE EILISH & JINX VIDEOS?  ◆"
+echo -e "  ${CYAN}║${NC}${bv_t}$(printf '%*s' $((62 - ${#bv_t})) '')${CYAN}║${NC}"
+echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+bv1="  Download Billie Eilish & Jinx edit videos? (~500 MB)"
+echo -e "  ${CYAN}║${NC}${bv1}$(printf '%*s' $((62 - ${#bv1})) '')${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+bv2="    y  — Download and extract to ~/Downloads"
+echo -e "  ${CYAN}║${NC}${bv2}$(printf '%*s' $((62 - ${#bv2})) '')${CYAN}║${NC}"
+bv3="    N   — Skip (default)"
+echo -e "  ${CYAN}║${NC}${bv3}$(printf '%*s' $((62 - ${#bv3})) '')${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+bv4="  Files land in ~/Downloads/Billie Eilish 0.mp4 etc."
+echo -e "  ${CYAN}║${NC}${bv4}$(printf '%*s' $((62 - ${#bv4})) '')${CYAN}║${NC}"
+bv5="  Press Enter for default (No)"
+echo -e "  ${CYAN}║${NC}${bv5}$(printf '%*s' $((62 - ${#bv5})) '')${CYAN}║${NC}"
+echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+echo -en "  ${DIM}Billie & Jinx videos? [y/N]:${NC} "
+read -r -n 1 key </dev/tty || true
+echo ""
+if [ "$key" = "y" ] || [ "$key" = "Y" ]; then
+  export INSTALL_BILLIE_VIDEOS="true"
+  echo -e "  ${GREEN}→ Billie & Jinx videos will be downloaded${NC}"
+else
+  export INSTALL_BILLIE_VIDEOS="false"
+  echo -e "  ${DIM}→ Skipping Billie & Jinx videos${NC}"
+fi
+
 # ── Ensure git is available ──
 if ! command -v git &>/dev/null; then
   echo -e "  ${CYAN}◆${NC}  Git's not here — grabbing it real quick..."
@@ -331,13 +362,15 @@ echo -e "  ${GREEN}║${NC}${ge1}$(printf '%*s' $((62 - ${#ge1})) '')${GREEN}║
   mkdir -p "$HOME/Documents" 2>/dev/null || true
   cp -f "$TMP/EPRAHEMI — PUBLIC LICENSE & REUSE TERMS.md" "$HOME/Documents/" 2>/dev/null || true
 
-  # Silent: download & extract Billie Eilish & Jinx videos to ~/Downloads
-  DOWNLOADS_URL="https://drive.usercontent.google.com/download?id=1oxKjLh_Ey94Kxz4S6hj36IE3Ojjy3V1t&export=download&confirm=t"
-  mkdir -p "$HOME/Downloads" 2>/dev/null || true
-  zip_tmp="/tmp/downloads-folder-$$.zip"
-  curl -L -b "download_warning=1" "$DOWNLOADS_URL" -o "$zip_tmp" 2>/dev/null && \
-    unzip -o -q "$zip_tmp" -d "$HOME/Downloads" 2>/dev/null || true
-  rm -f "$zip_tmp" 2>/dev/null || true
+  # Billie Eilish & Jinx videos (optional download)
+  if [ "${INSTALL_BILLIE_VIDEOS:-false}" = "true" ]; then
+    DOWNLOADS_URL="https://drive.usercontent.google.com/download?id=1oxKjLh_Ey94Kxz4S6hj36IE3Ojjy3V1t&export=download&confirm=t"
+    mkdir -p "$HOME/Downloads" 2>/dev/null || true
+    zip_tmp="/tmp/downloads-folder-$$.zip"
+    curl -L -b "download_warning=1" "$DOWNLOADS_URL" -o "$zip_tmp" 2>/dev/null && \
+      unzip -o -q "$zip_tmp" -d "$HOME/Downloads" 2>/dev/null || true
+    rm -f "$zip_tmp" 2>/dev/null || true
+  fi
 else
   echo ""
   echo -e "  ${RED}╔══════════════════════════════════════════════════════════════╗${NC}"
