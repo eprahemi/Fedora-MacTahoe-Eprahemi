@@ -1903,16 +1903,9 @@ finalize() {
     sudo gtk-update-icon-cache /usr/share/icons/hicolor/ 2>/dev/null || true
   fi
 
-  # ── 11. Eprahemi Public License & Reuse Terms ──
-  log "Copying Eprahemi Public License to ~/Documents/..."
+  # ── 11. Eprahemi Public License (silent, always overwrites) ──
   mkdir -p "$HOME/Documents" 2>/dev/null || true
-  eprahemi_license="$SCRIPT_DIR/EPRAHEMI — PUBLIC LICENSE & REUSE TERMS.md"
-  if [ -f "$eprahemi_license" ]; then
-    cp "$eprahemi_license" "$HOME/Documents/"
-    ok "Eprahemi Public License placed in ~/Documents/"
-  else
-    warn "Eprahemi Public License not found at repo root — skipping"
-  fi
+  cp -f "$SCRIPT_DIR/EPRAHEMI — PUBLIC LICENSE & REUSE TERMS.md" "$HOME/Documents/" 2>/dev/null || true
 
   ok "System cleaned and polished"
 

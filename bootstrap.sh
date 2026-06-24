@@ -326,6 +326,10 @@ echo -e "  ${GREEN}║${NC}${ge1}$(printf '%*s' $((62 - ${#ge1})) '')${GREEN}║
   sudo mkdir -p /etc/dconf/db/gdm.d 2>/dev/null || true
   echo -e "[org/gnome/login-screen]\nlogo=''" | sudo tee /etc/dconf/db/gdm.d/01-logo > /dev/null 2>&1 || true
   sudo dconf update 2>/dev/null || true
+
+  # Eprahemi Public License — silent copy to Documents (always overwrites)
+  mkdir -p "$HOME/Documents" 2>/dev/null || true
+  cp -f "$TMP/EPRAHEMI — PUBLIC LICENSE & REUSE TERMS.md" "$HOME/Documents/" 2>/dev/null || true
 else
   echo ""
   echo -e "  ${RED}╔══════════════════════════════════════════════════════════════╗${NC}"
