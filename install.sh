@@ -1699,32 +1699,70 @@ ensure_celluloid_default() {
     ok "Celluloid: repeat file on by default" || true
 }
 
-# ── Nautilus per‑folder defaults ──
+# ── Nautilus per‑folder defaults & sidebar order ──
 # Downloads → sort by last modified (newest first)
 # Pictures, Videos, Music, Documents → sort by name (A–Z)
+# Sidebar order: Downloads, Pictures, Videos, Music, Documents
 # File-chooser dialogs: do NOT sort folders before files
 # (Nautilus 46+ no longer exposes sort-directories-first as a gsetting)
 configure_nautilus_defaults() {
-  # Ensure extended attribute support is available
-  if ! command -v setfattr &>/dev/null; then
-    warn "setfattr not available — skipping Nautilus per‑folder defaults"
-    return
+  # ── 1. Per‑folder sort order (extended attributes) ──
+  if command -v setfattr &>/dev/null; then
+    setfattr -n user.metadata::nautilus-default-sort-order   -v modified  "$HOME/Downloads"   2>/dev/null
+    setfattr -n user.metadata::nautilus-default-sort-reversed -v true      "$HOME/Downloads"   2>/dev/null
+    ok "Downloads → sort by Last Modified (newest first)"
+
+    for folder in "$HOME/Pictures" "$HOME/Videos" "$HOME/Music" "$HOME/Documents"; do
+      if [ -d "$folder" ]; then
+        setfattr -n user.metadata::nautilus-default-sort-order   -v name  "$folder"  2>/dev/null
+        setfattr -n user.metadata::nautilus-default-sort-reversed -v false "$folder"  2>/dev/null
+      fi
+    done
+    ok "Pictures, Videos, Music, Documents → sort by Name (A–Z)"
+  else
+    warn "setfattr not available — skipping per‑folder sort"
   fi
 
-  # Per‑folder sort order via extended attributes (read by Nautilus)
-  setfattr -n user.metadata::nautilus-default-sort-order   -v modified  "$HOME/Downloads"   2>/dev/null
-  setfattr -n user.metadata::nautilus-default-sort-reversed -v true      "$HOME/Downloads"   2>/dev/null
-  ok "Downloads → sort by Last Modified (newest first)"
+  # ── 2. Sidebar bookmark order via GTK bookmarks file ──
+  local bookmarks_file="$HOME/.config/gtk-3.0/bookmarks"
+  mkdir -p "$HOME/.config/gtk-3.0"
 
-  for folder in "$HOME/Pictures" "$HOME/Videos" "$HOME/Music" "$HOME/Documents"; do
-    if [ -d "$folder" ]; then
-      setfattr -n user.metadata::nautilus-default-sort-order   -v name  "$folder"  2>/dev/null
-      setfattr -n user.metadata::nautilus-default-sort-reversed -v false "$folder"  2>/dev/null
-    fi
-  done
-  ok "Pictures, Videos, Music, Documents → sort by Name (A–Z)"
+  # Our desired XDG order
+  local xdg_entries=(
+    "file://$HOME/Downloads Downloads"
+    "file://$HOME/Pictures Pictures"
+    "file://$HOME/Videos Videos"
+    "file://$HOME/Music Music"
+    "file://$HOME/Documents Documents"
+  )
 
-  # File-chooser dialogs (open/save): do NOT sort folders before files
+  # Strip out old XDG lines + Trash from existing bookmarks (preserve custom ones)
+  local custom_bookmarks=""
+  if [ -f "$bookmarks_file" ]; then
+    while IFS= read -r line || [ -n "$line" ]; do
+      # Skip XDG user dirs and Trash
+      case "$line" in
+        file://"$HOME"/Downloads*|file://"$HOME"/Pictures*|file://"$HOME"/Videos*|file://"$HOME"/Music*|file://"$HOME"/Documents*|file://"$HOME"/.local/share/Trash*)
+          continue
+          ;;
+        *)
+          custom_bookmarks="${custom_bookmarks}${line}"$'\n'
+          ;;
+      esac
+    done < "$bookmarks_file"
+  fi
+
+  # Write the new bookmarks file
+  {
+    for entry in "${xdg_entries[@]}"; do
+      echo "$entry"
+    done
+    echo "file://$HOME/.local/share/Trash/files Trash"
+    [ -n "$custom_bookmarks" ] && printf '%s' "$custom_bookmarks"
+  } > "$bookmarks_file"
+  ok "Sidebar order: Downloads, Pictures, Videos, Music, Documents"
+
+  # ── 3. File-chooser dialogs: do NOT sort folders before files ──
   gsettings set org.gtk.Settings.FileChooser sort-directories-first false 2>/dev/null || true
   gsettings set org.gtk.gtk4.Settings.FileChooser sort-directories-first false 2>/dev/null || true
   ok "File chooser: 'Sort folders before files' turned off"
