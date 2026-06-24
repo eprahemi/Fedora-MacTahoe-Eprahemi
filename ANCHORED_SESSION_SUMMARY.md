@@ -74,12 +74,51 @@ These caused (or would cause) the script to abort silently on edge cases.
 | 36 | Icon fix applied per-user (NOT system-wide) | User rejected system-wide `/usr/share/icons/` approach; prefers per-user copies |
 | 37 | Other users' themes get augmented (files added), not replaced | Non-destructive — existing user configs preserved |
 
+### 🟣 CLASS E: BOX ALIGNMENT / DYNAMIC PADDING
+
+| # | Box | File | Original Bug | Fix |
+|---|-----|------|-------------|-----|
+| 38 | Victory banner (main) | install.sh | `/_/` overflow lines, feature line misaligned (43→62), `Made by` + Firefox warning static | Shortened feature lines to fit 62, dynamic `%*s` for Made by/Firefox |
+| 39 | Phase dividers | install.sh | `%*s` padding hardcoded at 62 but banner is 66 wide | Changed to 58 (66 - 4 for `║  ` prefix) |
+| 40 | Main banner title + subtitle | install.sh | `gnome_text`/`theme_text` used `%*s` with 62 instead of 60 (no `  ` prefix) | Changed to 60 |
+| 41 | "Time to reboot" | install.sh | Text line `"  Time to reboot..."` overflowing, hardcoded trailing spaces | Shortened text + dynamic `%*s` |
+| 42 | "Already updated?" | both | Hardcoded trailing spaces | Dynamic `%*s` with `$((62 - ${#var}))` |
+| 43 | NVIDIA detection box | install.sh | Missing (was deleted during a collapse) | Restored with dynamic padding |
+| 44 | Kitty "Press any key" | both | Line had 14 trailing spaces instead of 15 (off by 1) | Added +1 space to match 62 |
+| 45 | Ptyxis detection boxes | both | Various lines with hardcoded padding | All converted to `%*s` dynamic padding |
+| 46 | Passwordless sudo prompt | install.sh | Long lines overflowing 62-char box | Rewritten with shorter text + dynamic padding |
+| 47 | Discord prompt | install.sh | 7 lines with hardcoded trailing spaces | All converted to `variable + $(printf '%*s' $((62 - ${#var})) '')` pattern |
+| 48 | Desktop wallpaper prompt | install.sh | Title + 5 content lines hardcoded | Converted to dynamic padding |
+| 49 | 18+ wallpapers prompt | install.sh | Title + 5 content lines hardcoded | Converted to dynamic padding |
+| 50 | Incompatible OS box | install.sh | 4 lines missing closing `║`, all lines hardcoded, no ANSI colors | Full rewrite: ANSI colors, dynamic padding, all borders present |
+| 51 | Incompatible DE box | install.sh | Same issues as OS box | Full rewrite |
+| 52 | GNOME Shell Not Found box | install.sh | Same issues as OS box | Full rewrite |
+| 53 | NVIDIA title | bootstrap.sh | Hardcoded trailing spaces (content was 64 vs 62) | Dynamic `%*s` (now 62) |
+| 54 | "More from Eprahemi" box | install.sh | Top/bottom mismatched at 69 chars | Unified at 69 with `%*s` |
+| 55 | "Grabbing the Goods" / "Got Everything" / "Download Failed" | bootstrap.sh | Already had dynamic padding (grab1/grab2/grab3/ge1) | Verified correct; `dlf` box has ⛔ emoji — kept hardcoded (double-width caveat) |
+
+**Dynamic padding formula**: `$(printf '%*s' $((62 - ${#var})) '')` where `var` is the full content string between the `║` borders. Box inner width = 62 chars. Line total = 66 chars.
+
+**Emoji caveat**: Double-width emoji (⛔ 📦 ✅) report as 1 char in bash `${#var}` but render as 2 columns, causing visual 1-column misalignment. Only affects 3 lines in bootstrap.sh; acceptable imperfection.
+
+**ASCII art banners** (Fedora ASCII art, "YOU DID IT!" victory art) use single-quoted fixed strings that already fill 62 cols — do not convert to dynamic padding.
+
+### 🟤 CLASS F: PACKAGE SOURCE CHANGES / DOCUMENTATION
+
+| # | Change | File | Details |
+|---|--------|------|---------|
+| 56 | Discord RPM → Flatpak | install.sh | `pkgs="discord $pkgs"` removed from RPM list; added `flatpak install -y flathub com.discordapp.Discord` in `install_flatpaks()` |
+| 57 | Discord size text updated | both | From "~100 MB" → "~214 MB download, ~540 MB installed" (actual Flatpak sizes) |
+| 58 | EPRAHEMI Public License added | repo root | `EPRAHEMI — PUBLIC LICENSE & REUSE TERMS.md` — copyright-free reuse, permissive terms |
+| 59 | License auto-copies to Documents | install.sh (finalize) | Copies `EPRAHEMI — PUBLIC LICENSE & REUSE TERMS.md` from repo root to `~/Documents/` on every install |
+
 ---
 
 ## Current State
 
-- **install.sh**: 1789 lines, 22 steps, 6 phases
-- **bootstrap.sh**: 288 lines
+- **install.sh**: 2064 lines, 22 steps, 6 phases, all box lines use dynamic padding (except fixed ASCII art)
+- **bootstrap.sh**: 339 lines, all box lines use dynamic padding (except ⛔/📦/✅ emoji lines and fixed ASCII art)
+- **EPRAHEMI — PUBLIC LICENSE & REUSE TERMS.md** added at repo root; installed to `~/Documents/` during finalize step
 - Both pass `bash -n` syntax check
 - All bugs above are FIXED
 
@@ -89,6 +128,7 @@ These caused (or would cause) the script to abort silently on edge cases.
 |------|---------|
 | `install.sh` | Main installer — now includes qr-code-symbolic fix, Adwaita-style dirs, per-user fix for other users |
 | `bootstrap.sh` | One-liner downloader — curl-pipe-bash entry point |
+| `EPRAHEMI — PUBLIC LICENSE & REUSE TERMS.md` | Eprahemi's public license — copied to user's Documents on install |
 | `ANCHORED_SESSION_SUMMARY.md` | This file — session log + bug registry |
 | `icons/256x256/` | Custom macOS app icons (PNG + SVG) |
 | `wallpapers/background-normal/` | 30 custom Mac-themed wallpapers |
