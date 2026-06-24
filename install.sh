@@ -529,7 +529,7 @@ disc6="  Tip: set INSTALL_DISCORD=false to skip silently"
     kdenlive pavucontrol alacarte \
     nautilus-python gnome-tweaks \
     adwaita-icon-theme adwaita-icon-theme-legacy \
-    ImageMagick fzf ripgrep jq unzip curl wget git \
+    ImageMagick fzf ripgrep jq unzip curl wget git attr \
     bat cmatrix qrencode podman python3-pip speedtest-cli xdg-utils \
     libreoffice-writer libreoffice-calc libreoffice-impress"
 
@@ -1699,6 +1699,37 @@ ensure_celluloid_default() {
     ok "Celluloid: repeat file on by default" || true
 }
 
+# ── Nautilus per‑folder defaults ──
+# Downloads → sort by last modified (newest first)
+# Pictures, Videos, Music, Documents → sort by name (A–Z)
+# File-chooser dialogs: do NOT sort folders before files
+# (Nautilus 46+ no longer exposes sort-directories-first as a gsetting)
+configure_nautilus_defaults() {
+  # Ensure extended attribute support is available
+  if ! command -v setfattr &>/dev/null; then
+    warn "setfattr not available — skipping Nautilus per‑folder defaults"
+    return
+  fi
+
+  # Per‑folder sort order via extended attributes (read by Nautilus)
+  setfattr -n user.metadata::nautilus-default-sort-order   -v modified  "$HOME/Downloads"   2>/dev/null
+  setfattr -n user.metadata::nautilus-default-sort-reversed -v true      "$HOME/Downloads"   2>/dev/null
+  ok "Downloads → sort by Last Modified (newest first)"
+
+  for folder in "$HOME/Pictures" "$HOME/Videos" "$HOME/Music" "$HOME/Documents"; do
+    if [ -d "$folder" ]; then
+      setfattr -n user.metadata::nautilus-default-sort-order   -v name  "$folder"  2>/dev/null
+      setfattr -n user.metadata::nautilus-default-sort-reversed -v false "$folder"  2>/dev/null
+    fi
+  done
+  ok "Pictures, Videos, Music, Documents → sort by Name (A–Z)"
+
+  # File-chooser dialogs (open/save): do NOT sort folders before files
+  gsettings set org.gtk.Settings.FileChooser sort-directories-first false 2>/dev/null || true
+  gsettings set org.gtk.gtk4.Settings.FileChooser sort-directories-first false 2>/dev/null || true
+  ok "File chooser: 'Sort folders before files' turned off"
+}
+
 setup_gdm() {
   next_step "GDM Login Screen Theme"
 
@@ -2087,7 +2118,7 @@ ep2="  ┊  Fedora MacTahoe  —  Open-source Mac vibes"
   echo -e "  ${DIM}│${NC}                                                                 ${DIM}│${NC}"
 m1="  🐙  GitHub         →  https://github.com/eprahemi"
   echo -e "  ${DIM}│${NC}  ${CYAN}${m1}${NC}$(printf '%*s' $((63 - ${#m1})) '')${DIM}│${NC}"
-m2="  🖥   MacTahoe Site  →  https://fedora-config.pages.dev"
+m2="  🖥   MacTahoe Site  →  https://fedoratahoe.pages.dev"
   echo -e "  ${DIM}│${NC}  ${CYAN}${m2}${NC}$(printf '%*s' $((63 - ${#m2})) '')${DIM}│${NC}"
 m3="  🖼   Wallpapers     →  https://wallvault.pages.dev/home  (+18)"
   echo -e "  ${DIM}│${NC}  ${CYAN}${m3}${NC}$(printf '%*s' $((63 - ${#m3})) '')${DIM}│${NC}"
@@ -2168,6 +2199,7 @@ phase_divider "PHASE 4 : CONFIGURATION" 10 19
 install_extensions
 apply_desktop_entries
 ensure_celluloid_default
+configure_nautilus_defaults
 apply_configs
 apply_dconf
 apply_wallpapers
