@@ -529,7 +529,7 @@ disc6="  Tip: set INSTALL_DISCORD=false to skip silently"
     kdenlive pavucontrol alacarte \
     nautilus-python gnome-tweaks \
     adwaita-icon-theme adwaita-icon-theme-legacy \
-    ImageMagick fzf ripgrep jq unzip curl wget git attr \
+    ImageMagick fzf ripgrep jq unzip curl wget git \
     bat cmatrix qrencode podman python3-pip speedtest-cli xdg-utils \
     libreoffice-writer libreoffice-calc libreoffice-impress"
 
