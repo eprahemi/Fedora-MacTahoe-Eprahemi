@@ -1706,22 +1706,18 @@ ensure_celluloid_default() {
 # File-chooser dialogs: do NOT sort folders before files
 # (Nautilus 46+ no longer exposes sort-directories-first as a gsetting)
 configure_nautilus_defaults() {
-  # ── 1. Per‑folder sort order (extended attributes) ──
-  if command -v setfattr &>/dev/null; then
-    setfattr -n user.metadata::nautilus-default-sort-order   -v modified  "$HOME/Downloads"   2>/dev/null
-    setfattr -n user.metadata::nautilus-default-sort-reversed -v true      "$HOME/Downloads"   2>/dev/null
-    ok "Downloads → sort by Last Modified (newest first)"
+  # ── 1. Per‑folder sort order (via GVFS metadata — what Nautilus 50 actually reads) ──
+  gio set "$HOME/Downloads"  metadata::nautilus-icon-view-sort-by        date_modified  2>/dev/null || true
+  gio set "$HOME/Downloads"  metadata::nautilus-icon-view-sort-reversed  true           2>/dev/null || true
+  ok "Downloads → sort by Last Modified (newest first)"
 
-    for folder in "$HOME/Pictures" "$HOME/Videos" "$HOME/Music" "$HOME/Documents"; do
-      if [ -d "$folder" ]; then
-        setfattr -n user.metadata::nautilus-default-sort-order   -v name  "$folder"  2>/dev/null
-        setfattr -n user.metadata::nautilus-default-sort-reversed -v false "$folder"  2>/dev/null
-      fi
-    done
-    ok "Pictures, Videos, Music, Documents → sort by Name (A–Z)"
-  else
-    warn "setfattr not available — skipping per‑folder sort"
-  fi
+  for folder in "$HOME/Pictures" "$HOME/Videos" "$HOME/Music" "$HOME/Documents"; do
+    if [ -d "$folder" ]; then
+      gio set "$folder"  metadata::nautilus-icon-view-sort-by       name  2>/dev/null || true
+      gio set "$folder"  metadata::nautilus-icon-view-sort-reversed false 2>/dev/null || true
+    fi
+  done
+  ok "Pictures, Videos, Music, Documents → sort by Name (A–Z)"
 
   # ── 2. Sidebar bookmark order via GTK bookmarks file ──
   local bookmarks_file="$HOME/.config/gtk-3.0/bookmarks"
