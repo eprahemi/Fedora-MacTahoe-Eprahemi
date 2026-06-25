@@ -1088,7 +1088,8 @@ apply_dconf() {
   gsettings set org.gnome.desktop.peripherals.touchpad natural-scroll true 2>/dev/null || true
   gsettings set org.gnome.desktop.peripherals.touchpad click-method "'fingers'" 2>/dev/null || true
   gsettings set org.gnome.desktop.peripherals.touchpad two-finger-scrolling-enabled true 2>/dev/null || true
-  gsettings set org.gnome.desktop.peripherals.mouse accel-profile "'default'" 2>/dev/null || true
+  gsettings set org.gnome.desktop.peripherals.touchpad accel-profile "'flat'" 2>/dev/null || true
+  gsettings set org.gnome.desktop.peripherals.mouse accel-profile "'flat'" 2>/dev/null || true
   gsettings set org.gnome.desktop.peripherals.mouse natural-scroll false 2>/dev/null || true
 
   # ── Workspaces ──
