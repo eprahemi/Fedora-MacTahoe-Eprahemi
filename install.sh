@@ -1145,6 +1145,7 @@ apply_dconf() {
   gsettings set org.gnome.nautilus.preferences recursive-search "'always'" 2>/dev/null || true
   gsettings set org.gnome.nautilus.preferences show-image-thumbnails "'always'" 2>/dev/null || true
   gsettings set org.gnome.nautilus.preferences show-directory-item-counts "'always'" 2>/dev/null || true
+  gsettings set org.gnome.nautilus.preferences show-hidden-files true 2>/dev/null || true
 
   # ── Night Light ──
   gsettings set org.gnome.settings-daemon.plugins.color night-light-enabled false 2>/dev/null || true
@@ -1152,14 +1153,25 @@ apply_dconf() {
   gsettings set org.gnome.settings-daemon.plugins.color night-light-temperature uint32 2700 2>/dev/null || true
 
   # ── Power ──
-  gsettings set org.gnome.settings-daemon.plugins.power power-button-action "'suspend'" 2>/dev/null || true
+  gsettings set org.gnome.settings-daemon.plugins.power power-button-action "'interactive'" 2>/dev/null || true
   gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-ac-timeout uint32 4800 2>/dev/null || true
 
   # ── Session (never sleep) ──
   gsettings set org.gnome.desktop.session idle-delay 0 2>/dev/null || true
 
+  # ── Default terminal → Kitty ──
+  gsettings set org.gnome.desktop.default-applications.terminal exec 'kitty' 2>/dev/null || true
+  gsettings set org.gnome.desktop.default-applications.terminal exec-arg '-e' 2>/dev/null || true
+
   # ── Privacy ──
   gsettings set org.gnome.desktop.privacy report-technical-problems false 2>/dev/null || true
+  gsettings set org.gnome.desktop.privacy remember-app-usage false 2>/dev/null || true
+  gsettings set org.gnome.desktop.privacy send-software-usage-stats false 2>/dev/null || true
+
+  # Stop + disable ABRT crash-reporting daemons (if present)
+  sudo systemctl disable --now abrtd abrt-journal-core abrt-oops abrt-xorg 2>/dev/null || true
+  # Stop + disable Tracker3 file indexer (if present) — saves CPU/battery
+  systemctl --user disable --now tracker3-miner-fs tracker3-miner-fs-control tracker3-miner-apps tracker3-miner-extractor 2>/dev/null || true
 
   # ── Extension dconf restore ──
   if [ -f "$dconf_file" ]; then
