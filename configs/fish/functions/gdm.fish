@@ -655,8 +655,8 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
                                 echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
                                 echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
                                 echo ""
-                                read -l -P "  [Y/n]: " like_it
-                                if test -z "$like_it"; or string match -qir '^y' "$like_it"
+                                read -l -P "  [y/N]: " like_it
+                                if string match -qir '^y' "$like_it"
                                     set image "$blurred_file"
                                     set blur_done 1
                                     echo -e "  $GR✅  Custom blur applied$C  github.com/eprahemi"
