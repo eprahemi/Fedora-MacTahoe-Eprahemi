@@ -361,7 +361,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         set -e argv[1]
         set -l repo_dir "$HOME/.local/share/mactahoe-gtk"
         set -l last_file "$repo_dir/.gdm-undo-copy.jpg"
-        if not test -s "$last_file"
+        if not test -f "$last_file"
             echo ""
             echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
@@ -370,10 +370,41 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
             echo -e "  $RE╠══════════════════════════════════════════════════════════════╣$C"
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
-            set -l sv_e2 "  Apply a wallpaper first:"
+            set -l sv_e2 "  You haven't applied any wallpaper yet."
             echo -e "  $RE║$C  $D$sv_e2$C$(printf '%*s' (math "60 - "(string length "$sv_e2")) '')$RE║$C"
-            set -l sv_e3 "    gdm filename.jpg"
-            echo -e "  $RE║$C  $CY$sv_e3$C$(printf '%*s' (math "60 - "(string length "$sv_e3")) '')$RE║$C"
+            set -l sv_e3 "  Apply one first:"
+            echo -e "  $RE║$C  $D$sv_e3$C$(printf '%*s' (math "60 - "(string length "$sv_e3")) '')$RE║$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            set -l sv_e4 "    gdm filename.jpg"
+            echo -e "  $RE║$C  $CY$sv_e4$C$(printf '%*s' (math "60 - "(string length "$sv_e4")) '')$RE║$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            set -l br "  eprahemi  •  github.com/eprahemi"
+            echo -e "  $RE║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
+            echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
+            echo ""
+            return 1
+        end
+        # File exists — now check if it's empty (corrupt / 0 bytes)
+        if not test -s "$last_file"
+            set -l zero_size (stat -c "%s" "$last_file" 2>/dev/null)
+            if test -z "$zero_size"
+                set zero_size "0"
+            end
+            echo ""
+            echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            set -l sv_c1 "  ⚠️  WALLPAPER FILE IS EMPTY"
+            echo -e "  $RE║$C  $WH$sv_c1$C$(printf '%*s' (math "60 - "(string length "$sv_c1")) '')$RE║$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            echo -e "  $RE╠══════════════════════════════════════════════════════════════╣$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            set -l sv_c2 "  The saved wallpaper is $zero_size bytes — it may be"
+            set -l sv_c3 "  corrupted. Apply a new wallpaper to fix it."
+            echo -e "  $RE║$C  $D$sv_c2$C$(printf '%*s' (math "60 - "(string length "$sv_c2")) '')$RE║$C"
+            echo -e "  $RE║$C  $D$sv_c3$C$(printf '%*s' (math "60 - "(string length "$sv_c3")) '')$RE║$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            set -l sv_c4 "    gdm filename.jpg"
+            echo -e "  $RE║$C  $CY$sv_c4$C$(printf '%*s' (math "60 - "(string length "$sv_c4")) '')$RE║$C"
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
             set -l br "  eprahemi  •  github.com/eprahemi"
             echo -e "  $RE║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
@@ -494,9 +525,15 @@ except:
         set -e argv[1]
         set -l repo_dir "$HOME/.local/share/mactahoe-gtk"
         set -l last_file "$repo_dir/.gdm-undo-copy.jpg"
-        if not test -s "$last_file"
+        if not test -f "$last_file"
             echo -e "  $RE✘  No GDM wallpaper info available.$C"
             echo -e "  $GY  Apply a wallpaper first with $CY$B gdm filename.jpg$C"
+            echo -e "  $GY  github.com/eprahemi$C"
+            return 1
+        end
+        if not test -s "$last_file"
+            echo -e "  $RE✘  Saved wallpaper is empty (0 bytes) — corrupted.$C"
+            echo -e "  $GY  Apply a new wallpaper to rebuild the cache.$C"
             echo -e "  $GY  github.com/eprahemi$C"
             return 1
         end
