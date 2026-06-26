@@ -361,7 +361,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         set -e argv[1]
         set -l repo_dir "$HOME/.local/share/mactahoe-gtk"
         set -l last_file "$repo_dir/.gdm-undo-copy.jpg"
-        if not test -f "$last_file"
+        if not test -s "$last_file"
             echo ""
             echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
@@ -494,7 +494,7 @@ except:
         set -e argv[1]
         set -l repo_dir "$HOME/.local/share/mactahoe-gtk"
         set -l last_file "$repo_dir/.gdm-undo-copy.jpg"
-        if not test -f "$last_file"
+        if not test -s "$last_file"
             echo -e "  $RE✘  No GDM wallpaper info available.$C"
             echo -e "  $GY  Apply a wallpaper first with $CY$B gdm filename.jpg$C"
             echo -e "  $GY  github.com/eprahemi$C"
