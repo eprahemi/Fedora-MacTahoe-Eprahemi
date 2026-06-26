@@ -546,7 +546,7 @@ except:
         set -l info_file "$repo_dir/.gdm-info.txt"
         if test -f "$info_file"
             # Parse KEY: value lines — use `set` (no -l) to modify function locals
-            for pair in "FORMAT:fmt" "COLORSPACE:csp" "DEPTH:dep" "DIMS:dims" "DPI:dpi" "MP:mp" "ASPECT:aspect" "BLUR:blur" "SOURCE:source" "SIZE:gdm_size" "DATE:gdm_date"
+            for pair in "FORMAT:fmt" "COLORSPACE:csp" "DEPTH:dep" "DIMS:dims" "DPI:dpi" "MP:mp" "ASPECT:aspect" "BLUR:blur" "SOURCE:source" "SIZE:gdm_size" "DATE:gdm_date" "NAME:f_name"
                 set -l kv (string split ":" "$pair")
                 set -l key $kv[1]
                 set -l var $kv[2]
@@ -594,14 +594,10 @@ except:
             end
         end
 
-        # ─── Split path + read original name ───
+        # ─── Split path + fallback name if cache didn't have NAME ───
         set -l f_dir (dirname "$last_file")
         set f_dir (string replace -r "^$HOME" "~" "$f_dir")
-        set -l name_txt "$repo_dir/.gdm-undo-name.txt"
-        set -l f_name ""
-        if test -f "$name_txt"
-            set f_name (string trim < "$name_txt")
-        else
+        if test -z "$f_name"
             set f_name (basename "$last_file")
         end
 
@@ -1572,6 +1568,15 @@ except:
     end
     set orig_path (string replace -r "^$HOME" "~" "$orig_path")
 
+    # Read original filename from /tmp/ (saved before blur/conversion)
+    set -l original_name ""
+    if test -f /tmp/.gdm-info/original-name.txt
+        set original_name (string trim < /tmp/.gdm-info/original-name.txt 2>/dev/null)
+    end
+    if test -z "$original_name"
+        set original_name (basename "$image")
+    end
+
     set -l retry_count 0
     set -l cache_ok 0
 
@@ -1653,7 +1658,8 @@ except:
         # ── Write to temporary cache file ──
         set -l tmp_cache "/tmp/.gdm-info-tmp.txt"
         mkdir -p "$repo"
-        echo "FORMAT: $fmt"        >  "$tmp_cache"
+        echo "NAME: $original_name"  >  "$tmp_cache"
+        echo "FORMAT: $fmt"        >> "$tmp_cache"
         echo "COLORSPACE: $csp"    >> "$tmp_cache"
         echo "DEPTH: $dep"         >> "$tmp_cache"
         echo "DIMS: $dims"         >> "$tmp_cache"
@@ -1671,7 +1677,7 @@ except:
         set -l fields_ok 1
         set -l validation_errors ""
 
-        for pair in "FORMAT:$fmt" "COLORSPACE:$csp" "DEPTH:$dep" "DIMS:$dims" "DPI:$dpi" "MP:$mp" "ASPECT:$aspect" "BLUR:$blur_desc" "SOURCE:$orig_path"
+        for pair in "NAME:$original_name" "FORMAT:$fmt" "COLORSPACE:$csp" "DEPTH:$dep" "DIMS:$dims" "DPI:$dpi" "MP:$mp" "ASPECT:$aspect" "BLUR:$blur_desc" "SOURCE:$orig_path"
             set -l fname (string split ":" "$pair")[1]
             set -l fval  (string split ":" "$pair")[2]
             if test -z "$fval"; or string match -qr '^\?+$' "$fval"
@@ -1715,7 +1721,7 @@ except:
         echo -e "  $D  ⚠️  Metadata incomplete after 3 retries — writing with Unknown markers.$C  $GY eprahemi$C"
 
         # Fill empty/? fields with "Unknown"
-        for __var in fmt csp dep dims dpi mp aspect blur_desc orig_path f_size f_date
+        for __var in original_name fmt csp dep dims dpi mp aspect blur_desc orig_path f_size f_date
             set -l __val (eval "echo \$$__var" 2>/dev/null)
             if test -z "$__val"; or string match -qr '^\?+$' "$__val"
                 set "$__var" "Unknown"
@@ -1723,7 +1729,8 @@ except:
         end
 
         mkdir -p "$repo"
-        echo "FORMAT: $fmt"        >  "$repo/.gdm-info.txt"
+        echo "NAME: $original_name"  >  "$repo/.gdm-info.txt"
+        echo "FORMAT: $fmt"        >> "$repo/.gdm-info.txt"
         echo "COLORSPACE: $csp"    >> "$repo/.gdm-info.txt"
         echo "DEPTH: $dep"         >> "$repo/.gdm-info.txt"
         echo "DIMS: $dims"         >> "$repo/.gdm-info.txt"
@@ -1746,13 +1753,8 @@ except:
     end
     # Save a copy for 'gdm info'
     cp "$image" "$repo/.gdm-undo-copy.jpg"
-    # Read original name from /tmp/ (saved before blur/conversion overwrote $image)
-    if test -f /tmp/.gdm-info/original-name.txt
-        cat /tmp/.gdm-info/original-name.txt > "$repo/.gdm-undo-name.txt"
-        rm -rf /tmp/.gdm-info
-    else
-        basename "$image" > "$repo/.gdm-undo-name.txt"
-    end
+    # Clean up /tmp/.gdm-info/ — original name + source path now in metadata cache
+    rm -rf /tmp/.gdm-info
     echo -e "  $CY🖼️  Applying GDM wallpaper...$C  $D github.com/eprahemi$C"
     cd "$repo"
     sudo ./tweaks.sh -g -nb -nd -b "$image"
