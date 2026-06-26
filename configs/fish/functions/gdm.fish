@@ -770,7 +770,7 @@ except:
     set -l image ""
     set -l results
 
-    # 1. Try direct path first
+    # 1. Try direct path first — no extension filter for explicit paths
     set -l direct (realpath "$filename" 2>/dev/null)
     if test -f "$direct"
         set results "$direct"
@@ -859,28 +859,28 @@ except:
                 end
             end
         end
-    end
 
-    # Deduplicate (paths with spaces: always quote $r)
-    if test (count $results) -gt 1
-        set -l deduped
+        # Deduplicate search results (paths with spaces: always quote $r)
+        if test (count $results) -gt 1
+            set -l deduped
+            for r in $results
+                if not contains -- "$r" $deduped
+                    set -a deduped "$r"
+                end
+            end
+            set results $deduped
+        end
+
+        # Filter search results to image files only — weed out .py, .mjs, .js
+        set -l img_results
+        set -l img_regex '\.(jpg|jpeg|png|gif|bmp|webp|tiff?|svg|svgz|ico|heic|heif|avif|jp2|jfif|jfi|pjpeg|pjp|psd|jxl)$'
         for r in $results
-            if not contains -- "$r" $deduped
-                set -a deduped "$r"
+            if string match -riq -- "$img_regex" "$r"
+                set -a img_results "$r"
             end
         end
-        set results $deduped
+        set results $img_results
     end
-
-    # Filter to image files only — weed out .py, .mjs, .js, etc.
-    set -l img_results
-    set -l img_regex '\.(jpg|jpeg|png|gif|bmp|webp|tiff?|svg|svgz|ico|heic|heif|avif|jp2|jfif|jfi|pjpeg|pjp|psd|jxl)$'
-    for r in $results
-        if string match -riq -- "$img_regex" "$r"
-            set -a img_results "$r"
-        end
-    end
-    set results $img_results
 
     set -l result_count (count $results)
 
