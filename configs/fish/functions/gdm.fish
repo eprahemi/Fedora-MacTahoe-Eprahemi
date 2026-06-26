@@ -334,7 +334,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
     end
 
     # ── "info" subcommand: show current GDM wallpaper details ──
-    if set -q argv[1]; and contains -- "$argv[1]" "info" "--info"
+    if set -q argv[1]; and contains -- "$argv[1]" "info" "--info" "-info"
         set -e argv[1]
         set -l last_file "$HOME/.local/share/mactahoe-gtk/.gdm-undo-copy.jpg"
         if not test -f "$last_file"
@@ -386,7 +386,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $GY  github.com/eprahemi$C"
         return 1
     end
-    set -l filename (string join ' ' $argv)
+    set -l filename (string join ' ' -- $argv)
 
     # ══════════════════════════════════════════════════════════════
     # 🔍  SEARCH ENGINE — finds the image everywhere
