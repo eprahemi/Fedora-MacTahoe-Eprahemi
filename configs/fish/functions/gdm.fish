@@ -29,19 +29,23 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-        set -l n2 "    gdm filename.jpg"
+        set -l n2 "    gdm current"
         echo -e "  $CY║$C  $CY$B$n2$C$(printf '%*s' (math "60 - "(string length "$n2")) '')$CY║$C"
-        set -l n3 "    gdm /path/to/image.jpg"
+        set -l n2b "          →  use current desktop wallpaper"
+        echo -e "  $CY║$C  $D$n2b$C$(printf '%*s' (math "60 - "(string length "$n2b")) '')$CY║$C"
+        set -l n3 "    gdm filename.jpg"
         echo -e "  $CY║$C  $CY$B$n3$C$(printf '%*s' (math "60 - "(string length "$n3")) '')$CY║$C"
-        set -l n4 "    gdm default"
+        set -l n4 "    gdm /path/to/image.jpg"
         echo -e "  $CY║$C  $CY$B$n4$C$(printf '%*s' (math "60 - "(string length "$n4")) '')$CY║$C"
-        set -l n5 "    gdm -y|--yes filename.jpg"
+        set -l n5 "    gdm default"
         echo -e "  $CY║$C  $CY$B$n5$C$(printf '%*s' (math "60 - "(string length "$n5")) '')$CY║$C"
+        set -l n6 "    gdm -y|--yes filename.jpg"
+        echo -e "  $CY║$C  $CY$B$n6$C$(printf '%*s' (math "60 - "(string length "$n6")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-        set -l n6 "  🔍  gdm --help   →  full features + blur"
-        echo -e "  $CY║$C  $D$n6$C$(printf '%*s' (math "60 - "(string length "$n6")) '')$CY║$C"
+        set -l n7 "  🔍  gdm --help   →  full features + blur"
+        echo -e "  $CY║$C  $D$n7$C$(printf '%*s' (math "60 - "(string length "$n7")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         set -l br "  eprahemi  •  github.com/eprahemi"
         echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
@@ -82,10 +86,12 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY║$C  $CY$B$u1$C$(printf '%*s' (math "60 - "(string length "$u1")) '')$CY║$C"
         set -l u2 "    gdm /path/to/image.jpg"
         echo -e "  $CY║$C  $CY$B$u2$C$(printf '%*s' (math "60 - "(string length "$u2")) '')$CY║$C"
-        set -l u3 "    gdm default"
+        set -l u3 "    gdm current"
         echo -e "  $CY║$C  $CY$B$u3$C$(printf '%*s' (math "60 - "(string length "$u3")) '')$CY║$C"
-        set -l u4 "    gdm -y|--yes filename.jpg"
+        set -l u4 "    gdm default"
         echo -e "  $CY║$C  $CY$B$u4$C$(printf '%*s' (math "60 - "(string length "$u4")) '')$CY║$C"
+        set -l u5 "    gdm -y|--yes filename.jpg"
+        echo -e "  $CY║$C  $CY$B$u5$C$(printf '%*s' (math "60 - "(string length "$u5")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
@@ -106,6 +112,8 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY║$C  $D$f6$C$(printf '%*s' (math "60 - "(string length "$f6")) '')$CY║$C"
         set -l f7 "  🔁  gdm default — restore Himeno login screen"
         echo -e "  $CY║$C  $D$f7$C$(printf '%*s' (math "60 - "(string length "$f7")) '')$CY║$C"
+        set -l f8 "  🖥️  gdm current — use current desktop wallpaper"
+        echo -e "  $CY║$C  $D$f8$C$(printf '%*s' (math "60 - "(string length "$f8")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
@@ -138,6 +146,8 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY║$C  $CY$e4$C$(printf '%*s' (math "60 - "(string length "$e4")) '')$CY║$C"
         set -l e5 "  gdm default"
         echo -e "  $CY║$C  $CY$e5$C$(printf '%*s' (math "60 - "(string length "$e5")) '')$CY║$C"
+        set -l e6 "  gdm current"
+        echo -e "  $CY║$C  $CY$e6$C$(printf '%*s' (math "60 - "(string length "$e6")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
@@ -179,6 +189,92 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
             echo -e "  $GY  github.com/eprahemi$C"
             return 1
         end
+    end
+
+    # ── "current" subcommand: use current desktop wallpaper ──
+    if set -q argv[1]; and contains -- "$argv[1]" "current" "--current"
+        set -e argv[1]
+        set -l C  "\033[0m"
+        set -l CY "\033[1;36m"
+        set -l GR "\033[1;32m"
+        set -l YE "\033[1;33m"
+        set -l RE "\033[1;31m"
+        set -l GY "\033[38;5;248m"
+        set -l WH "\033[1;37m"
+        set -l D  "\033[2m"
+
+        # Get current desktop wallpaper URI from GNOME gsettings
+        set -l bg_uri (gsettings get org.gnome.desktop.background picture-uri 2>/dev/null)
+
+        if test -z "$bg_uri"
+            echo -e "  $RE✘  No desktop wallpaper detected.$C"
+            echo -e "  $GY  Set one in Settings → Background first.$C"
+            echo -e "  $GY  github.com/eprahemi$C"
+            return 1
+        end
+
+        # Strip 'file://' prefix and quotes: 'file:///path/img.jpg' → /path/img.jpg
+        set -l bg_uri_s (string trim -c "'" "$bg_uri")
+        set -l bg_path_raw (string replace -r '^file://' '' "$bg_uri_s")
+        # URL-decode (%20 → space, %23 → #, etc.)
+        set -l bg_path "$bg_path_raw"
+        if command -v python3 &>/dev/null
+            set bg_path (python3 -c "import urllib.parse, sys; print(urllib.parse.unquote(sys.argv[1]))" "$bg_path_raw" 2>/dev/null)
+        end
+
+        if not test -f "$bg_path"
+            echo -e "  $RE✘  Wallpaper file not found: $YE$bg_path$C"
+            echo -e "  $GY  The file may have been moved or deleted.$C"
+            echo -e "  $GY  github.com/eprahemi$C"
+            return 1
+        end
+
+        # ── Show confirm box ──
+        echo ""
+        echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        set -l cc1 "  🖼️  CURRENT DESKTOP WALLPAPER"
+        echo -e "  $CY║$C  $WH$cc1$C$(printf '%*s' (math "60 - "(string length "$cc1")) '')$CY║$C"
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+
+        set -l cc2_len (string length "$bg_path")
+        set -l cc2_disp "$bg_path"
+        if test $cc2_len -gt 56
+            set cc2_disp (string sub -l 53 "$bg_path")"..."
+            set cc2_len 56
+        end
+        echo -e "  $CY║$C    $YE$cc2_disp$C$(printf '%*s' (math "58 - $cc2_len") '')$CY║$C"
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        set -l cc3 "  [Y] Yes → Apply + blur options"
+        echo -e "  $CY║$C  $GR$cc3$C$(printf '%*s' (math "60 - "(string length "$cc3")) '')$CY║$C"
+        set -l cc4 "  [N] No  → Cancel"
+        echo -e "  $CY║$C  $RE$cc4$C$(printf '%*s' (math "60 - "(string length "$cc4")) '')$CY║$C"
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        set -l br "  eprahemi  •  github.com/eprahemi"
+        echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
+        echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
+        echo ""
+
+        # ── Preview in Kitty ──
+        if test -n "$KITTY_PID"
+            kitty +kitten icat --align left "$bg_path" 2>/dev/null
+            echo ""
+        end
+
+        read -l -P "  [y/N]: " current_confirm
+        if not string match -qir '^y' "$current_confirm"
+            echo -e "  $RE✘  Cancelled. Run $CY$B gdm$C $RE again — github.com/eprahemi$C"
+            return 1
+        end
+
+        # Pass to gdm so it flows through search → confirm → blur → apply
+        echo -e "  $D  Using current desktop wallpaper: $bg_path$C"
+        gdm "$bg_path"
+        return $status
     end
 
     # ── "default" subcommand: restore Himeno login wallpaper ──
