@@ -1532,6 +1532,17 @@ except:
         end
 
         mkdir -p "$HOME/.local/share"
+        # Preserve runtime state files before replacing the repo
+        set -l saved_undo ""
+        set -l saved_info ""
+        if test -f "$repo/.gdm-undo-copy.jpg"
+            set saved_undo (mktemp /tmp/gdm-undo-XXXXXX.jpg)
+            cp "$repo/.gdm-undo-copy.jpg" "$saved_undo"
+        end
+        if test -f "$repo/.gdm-info.txt"
+            set saved_info (mktemp /tmp/gdm-info-XXXXXX.txt)
+            cp "$repo/.gdm-info.txt" "$saved_info"
+        end
         rm -rf "$repo"
 
         # ── Guard: git must be installed ──
@@ -1593,6 +1604,16 @@ except:
             return 1
         end
         echo -e "  $GR✅  FedoraTahoe-GDM cached at $repo (works offline from now on)$C  $GY github.com/eprahemi$C"
+
+        # Restore preserved runtime state files
+        if test -n "$saved_undo"; and test -f "$saved_undo"
+            cp "$saved_undo" "$repo/.gdm-undo-copy.jpg"
+            rm -f "$saved_undo"
+        end
+        if test -n "$saved_info"; and test -f "$saved_info"
+            cp "$saved_info" "$repo/.gdm-info.txt"
+            rm -f "$saved_info"
+        end
     end
 
     # ══════════════════════════════════════════════════════════════
