@@ -173,13 +173,21 @@ A persistent GDM wallpaper switching function that works entirely offline after 
 
 ### `gdm info` Flow
 1. Reads `~/.local/share/mactahoe-gtk/.gdm-undo-copy.jpg` (backup kept from last apply)
-2. Shows path (truncated if >54 chars), size (B/KB/MB), and dimensions (via `magick identify`)
-3. Displayed in branded high-end box with eprahemi footer
+2. Two-section nested frame: FILE DETAILS + IMAGE INFORMATION
+3. Shows filename, dir, size, date (current ts — not file mtime), format, colorspace, depth, DPI, MP, aspect, blur status, source path
+4. All padding adjusted for emoji double-width (emoji renders 2 cols, Fish string length counts as 1)
+5. Source path truncated with `…` prefix showing end of path
+6. Displayed in branded high-end box with eprahemi footer
 
-### Undo/Save (REMOVED)
-- `gdm undo` and `gdm save` subcommands were removed per user request
-- Only `gdm info` remains
-- The `.gdm-undo-copy.jpg` backup file is still created before each apply (for `gdm info` to read)
+### `gdm save` Flow (NEW — re-added per user request)
+1. Reads `~/.local/share/mactahoe-gtk/.gdm-undo-copy.jpg`
+2. Generates random 8-char alphanumeric name via python3 `secrets.choice(string.ascii_letters + string.digits)`
+3. Copies to `~/Pictures/<random>.jpg` with collision protection (`_1`, `_2`, … suffix)
+4. Shows beautiful green branded box with path + encrypted-looking filename
+
+### Undo (REMOVED PERMANENTLY)
+- `gdm undo` subcommand was removed per user request — will not be re-added
+- `.gdm-undo-copy.jpg` backup still created before each apply (for `gdm info` and `gdm save` to read)
 
 ### Confirm Defaults
 | Prompt | Default | Action |
