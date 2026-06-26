@@ -336,7 +336,8 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
     # ── "info" subcommand: beautiful GDM wallpaper details with preview ──
     if set -q argv[1]; and contains -- "$argv[1]" "info" "--info" "-info"
         set -e argv[1]
-        set -l last_file "$HOME/.local/share/mactahoe-gtk/.gdm-undo-copy.jpg"
+        set -l repo_dir "$HOME/.local/share/mactahoe-gtk"
+        set -l last_file "$repo_dir/.gdm-undo-copy.jpg"
         if not test -f "$last_file"
             echo -e "  $RE✘  No GDM wallpaper info available.$C"
             echo -e "  $GY  Apply a wallpaper first with $CY$B gdm filename.jpg$C"
@@ -344,46 +345,58 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
             return 1
         end
 
-        # ─── Gather metadata ───
-        set -l f_bytes (command -v stat &>/dev/null; and stat -c "%s" "$last_file" 2>/dev/null; or echo "?")
-        set -l f_dims (command -v identify &>/dev/null; and magick identify -format "%wx%h" "$last_file" 2>/dev/null; or echo "?x?")
-        set -l f_mtime (command -v stat &>/dev/null; and stat -c "%y" "$last_file" 2>/dev/null | string sub -l 16; or echo "?")
+        # ─── Initialize metadata variables (function-scoped) ───
+        set -l fmt "?"; set -l csp "?"; set -l dep "?"
+        set -l dims "?x?"; set -l dpi "?"; set -l mp "?"
+        set -l aspect "?"; set -l blur "?"; set -l source "?"
+        set -l gdm_size "?"; set -l gdm_date "?"
 
-        # Human-readable size with python3 rounding
-        set -l f_size "$f_bytes B"
-        if command -v python3 &>/dev/null; and test "$f_bytes" != "?"
-            set f_size (python3 -c "
-import sys
-n = int(sys.argv[1])
-if n >= 1073741824:
-    print(f'{n/1073741824:.1f} GB')
-elif n >= 1048576:
-    print(f'{n/1048576:.1f} MB')
-elif n >= 1024:
-    print(f'{n/1024:.1f} KB')
-else:
-    print(f'{n} B')
-" "$f_bytes")
+        set -l info_file "$repo_dir/.gdm-info.txt"
+        if test -f "$info_file"
+            # Parse KEY: value lines — use `set` (no -l) to modify function locals
+            for pair in "FORMAT:fmt" "COLORSPACE:csp" "DEPTH:dep" "DIMS:dims" "DPI:dpi" "MP:mp" "ASPECT:aspect" "BLUR:blur" "SOURCE:source" "SIZE:gdm_size" "DATE:gdm_date"
+                set -l kv (string split ":" "$pair")
+                set -l key $kv[1]
+                set -l var $kv[2]
+                set -l _line (string match -r "^$key: (.+)" < "$info_file" 2>/dev/null)
+                if test (count $_line) -ge 2
+                    set "$var" "$_line[2]"
+                end
+            end
+        else
+            # Fallback: gather from backup image
+            if command -v magick &>/dev/null
+                set fmt (magick identify -format "%m" "$last_file" 2>/dev/null)
+                set csp (magick identify -format "%[colorspace]" "$last_file" 2>/dev/null)
+                set dep (magick identify -format "%[depth]" "$last_file" 2>/dev/null)
+                set dims (magick identify -format "%wx%h" "$last_file" 2>/dev/null)
+                set dpi (magick identify -format "%xx%y" "$last_file" 2>/dev/null)
+                # Calc MP + aspect
+                if command -v python3 &>/dev/null
+                    set -l w_str (string split "x" "$dims" 2>/dev/null)[1]
+                    set -l h_str (string split "x" "$dims" 2>/dev/null)[2]
+                    if test -n "$w_str"; and test -n "$h_str"
+                        set mp (python3 -c "import sys; w=int(sys.argv[1]); h=int(sys.argv[2]); print(f'{w*h/1000000:.1f}')" "$w_str" "$h_str" 2>/dev/null)
+                        set aspect (python3 -c "import sys,math; w=int(sys.argv[1]); h=int(sys.argv[2]); g=math.gcd(w,h); print(f'{w//g}:{h//g}')" "$w_str" "$h_str" 2>/dev/null)
+                    end
+                end
+            end
+            if command -v stat &>/dev/null
+                set -l f_bytes (stat -c "%s" "$last_file" 2>/dev/null)
+                set -l f_mtime (stat -c "%y" "$last_file" 2>/dev/null | string sub -l 16)
+                if command -v python3 &>/dev/null; and test -n "$f_bytes"
+                    set gdm_size (python3 -c "import sys; n=int(sys.argv[1]); print(f'{n/1048576:.1f} MB' if n>=1048576 else (f'{n/1024:.1f} KB' if n>=1024 else f'{n} B'))" "$f_bytes" 2>/dev/null)
+                end
+                if command -v python3 &>/dev/null; and test -n "$f_mtime"
+                    set gdm_date (python3 -c "import sys; from datetime import datetime; dt=datetime.strptime(sys.argv[1].strip(),'%Y-%m-%d %H:%M'); print(dt.strftime('%d %b %Y  %H:%M'))" "$f_mtime" 2>/dev/null)
+                end
+            end
         end
 
-        # Format date: "2026-06-26 14:32" → "26 Jun 2026  14:32"
-        set -l f_date "$f_mtime"
-        if command -v python3 &>/dev/null; and test "$f_mtime" != "?"
-            set f_date (python3 -c "
-import sys
-from datetime import datetime
-try:
-    dt = datetime.strptime(sys.argv[1].strip(), '%Y-%m-%d %H:%M')
-    print(dt.strftime('%d %b %Y  %H:%M'))
-except:
-    print(sys.argv[1])
-" "$f_mtime")
-        end
-
-        # ─── Split path; read original name from .txt if it exists ───
+        # ─── Split path + read original name ───
         set -l f_dir (dirname "$last_file")
         set f_dir (string replace -r "^$HOME" "~" "$f_dir")
-        set -l name_txt "$HOME/.local/share/mactahoe-gtk/.gdm-undo-name.txt"
+        set -l name_txt "$repo_dir/.gdm-undo-name.txt"
         set -l f_name ""
         if test -f "$name_txt"
             set f_name (string trim < "$name_txt")
@@ -391,7 +404,7 @@ except:
             set f_name (basename "$last_file")
         end
 
-        # ─── Kitty image preview (before the info box) ───
+        # ─── Kitty image preview ───
         if test -n "$KITTY_PID"
             echo ""
             echo -e "  $CY┌── $WH🖼️  WALLPAPER PREVIEW $D(Kitty)$C$(printf '%*s' 27 '')$CY──┐$C"
@@ -401,11 +414,7 @@ except:
         end
 
         # ═══════════════════════════════════════════════════════════════
-        # INFO BOX — nested details section
-        # All lines: 62 chars between ║
-        #   ║    ┌─...─┐  ║  (4 left + box + 2 right = 62)
-        #   ║    │      │  ║  (4 + 1 + cont + 2 + 1 + 2 = 62)
-        #   ║    └─...─┘  ║  (4 + 1 + n + 1 + 2 = 62, n=54)
+        # INFO BOX — TWO SECTIONS: FILE DETAILS + IMAGE TECHNOLOGY
         # ═══════════════════════════════════════════════════════════════
         echo ""
         echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
@@ -416,55 +425,80 @@ except:
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
 
-        # ── Nested info frame (54 ─ wide, ┐ at 59, │ at 59) ──
+        # ── SECTION 1: FILE DETAILS (54 ─ wide nested frame) ──
         echo -e "  $CY║$C    $D┌──────────────────────────────────────────────────────┐$C  $CY║$C"
-        echo -e "  $CY║$C    $D│$C  $WH📄  FILE$C$(printf '%*s' 45 '')$D│$C  $CY║$C"
+        echo -e "  $CY║$C    $D│$C  $WH📄  FILE DETAILS$C$(printf '%*s' 37 '')$D│$C  $CY║$C"
 
-        # Dir line
-        set -l f_dir_label "📂  Dir "
-        set -l f_dir_val "$f_dir/"
-        set -l f_dir_full "$f_dir_label$f_dir_val"
-        set -l f_dir_len (string length -- "$f_dir_full")
-        set -l f_dir_pad (math "50 - $f_dir_len")
-        if test $f_dir_pad -lt 0; set f_dir_pad 0; end
-        echo -e "  $CY║$C    $D│$C  $D$f_dir_label$C$GY$f_dir_val$C$(printf '%*s' $f_dir_pad '')$D│$C  $CY║$C"
+        # File name line — bold + green
+        set -l fn_label "📎  "
+        set -l fn_line "$fn_label$f_name"
+        set -l fn_len (string length -- "$fn_line")
+        set -l fn_pad (math "50 - $fn_len")
+        if test $fn_pad -lt 0; set fn_pad 0; end
+        echo -e "  $CY║$C    $D│$C  $fn_label$GR$B$f_name$C$(printf '%*s' $fn_pad '')$D│$C  $CY║$C"
 
-        # File line
-        set -l f_file_label "📎  File "
-        set -l f_file_full "$f_file_label$f_name"
-        set -l f_file_len (string length -- "$f_file_full")
-        set -l f_file_pad (math "50 - $f_file_len")
-        if test $f_file_pad -lt 0; set f_file_pad 0; end
-        echo -e "  $CY║$C    $D│$C  $D$f_file_label$C$YE$f_name$C$(printf '%*s' $f_file_pad '')$D│$C  $CY║$C"
+        # Dir line — dim gray
+        set -l dr_label "📍  "
+        set -l dr_line "$dr_label$f_dir/"
+        set -l dr_len (string length -- "$dr_line")
+        set -l dr_pad (math "50 - $dr_len")
+        if test $dr_pad -lt 0; set dr_pad 0; end
+        echo -e "  $CY║$C    $D│$C  $D$dr_label$C$GY$f_dir/$C$(printf '%*s' $dr_pad '')$D│$C  $CY║$C"
 
-        # Separator inside frame
-        echo -e "  $CY║$C    $D│$C$(printf '%*s' 52 '')$D│$C  $CY║$C"
+        # Size + Date on one line (two columns, 50 chars)
+        set -l sd_label  "💾  "
+        set -l sd_content "$sd_label$GR$gdm_size$C  $D🕒$C  $gdm_date"
+        set -l sd_plain  "$sd_label$gdm_size  🕒  $gdm_date"
+        set -l sd_len    (string length -- "$sd_plain")
+        set -l sd_pad    (math "50 - $sd_len")
+        if test $sd_pad -lt 0; set sd_pad 0; end
+        echo -e "  $CY║$C    $D│$C  $sd_content$(printf '%*s' $sd_pad '')$D│$C  $CY║$C"
 
-        # Size + Dims on one line (two columns)
-        set -l size_label "💾  Size "
-        set -l dims_label "📐  Dims "
-        set -l left_col "$size_label$CY$f_size$C"
-        set -l right_col "$dims_label$GR$f_dims$C"
-        # Left part: label + value (padded to ~26)
-        set -l left_full "$size_label$f_size"
-        set -l left_len (string length -- "$left_full")
-        set -l left_pad (math "26 - $left_len")
-        if test $left_pad -lt 0; set left_pad 0; end
-        set -l l_part "$D$size_label$C$CY$f_size$C$(printf '%*s' $left_pad '')"
-        set -l r_part "$D$dims_label$C$GR$f_dims$C"
-        set -l row_full "$size_label$f_size$dims_label$f_dims"
-        set -l row_len (string length -- "$row_full")
-        set -l row_pad (math "50 - $row_len")
-        if test $row_pad -lt 0; set row_pad 0; end
-        echo -e "  $CY║$C    $D│$C  $D$size_label$C$CY$f_size$C  $D$dims_label$C$GR$f_dims$C$(printf '%*s' $row_pad '')$D│$C  $CY║$C"
+        # ── SECTION 2: IMAGE TECHNOLOGY ──
+        echo -e "  $CY║$C    $D├──────────────────────────────────────────────────────┤$C  $CY║$C"
+        echo -e "  $CY║$C    $D│$C  $WH🎨  IMAGE TECHNOLOGY$C$(printf '%*s' 34 '')$D│$C  $CY║$C"
 
-        # Date line
-        set -l date_label "🕒  Added "
-        set -l date_full "$date_label$f_date"
-        set -l date_len (string length -- "$date_full")
-        set -l date_pad (math "50 - $date_len")
-        if test $date_pad -lt 0; set date_pad 0; end
-        echo -e "  $CY║$C    $D│$C  $D$date_label$C$f_date$C$(printf '%*s' $date_pad '')$D│$C  $CY║$C"
+        # Line: Format | Colorspace | Bit depth
+        set -l dep_str (string join -- '' "$dep" '-bit')
+        set -l fc_label "🖼️  "
+        set -l fc_content "$fc_label$CY$fmt$C    $D🎨$C  $csp    $D🔲$C  $dep_str"
+        set -l fc_plain  "$fc_label$fmt  🎨  $csp  🔲  $dep_str"
+        set -l fc_len    (string length -- "$fc_plain")
+        set -l fc_pad    (math "50 - $fc_len")
+        if test $fc_pad -lt 0; set fc_pad 0; end
+        echo -e "  $CY║$C    $D│$C  $fc_content$(printf '%*s' $fc_pad '')$D│$C  $CY║$C"
+
+        # Line: Aspect ratio | Megapixels | DPI
+        set -l mp_str "$mp MP"
+        set -l am_label "📏  "
+        set -l am_content "$am_label$CY$aspect$C    $D📐$C  $mp_str    $D🔳$C  $dpi"
+        set -l am_plain  "$am_label$aspect  📐  $mp_str  🔳  $dpi"
+        set -l am_len    (string length -- "$am_plain")
+        set -l am_pad    (math "50 - $am_len")
+        if test $am_pad -lt 0; set am_pad 0; end
+        echo -e "  $CY║$C    $D│$C  $am_content$(printf '%s%*s' '' $am_pad '')$D│$C  $CY║$C"
+
+        # Line: Blur status
+        set -l bl_label "🌀  "
+        set -l bl_content "$bl_label$blur"
+        set -l bl_len   (string length -- "$bl_content")
+        set -l bl_pad   (math "50 - $bl_len")
+        if test $bl_pad -lt 0; set bl_pad 0; end
+        echo -e "  $CY║$C    $D│$C  $bl_content$(printf '%*s' $bl_pad '')$D│$C  $CY║$C"
+
+        # Line: Source path
+        set -l sr_label "📂  Source  "
+        set -l sr_val "$source"
+        set -l sr_max   (math "50 - "(string length -- "$sr_label"))
+        if test (string length -- "$sr_val") -gt $sr_max
+            set sr_val (string sub -l (math "$sr_max - 3") "$source")"..."
+        end
+        set -l sr_content "$sr_label$GY$sr_val$C"
+        set -l sr_plain  "$sr_label$sr_val"
+        set -l sr_len    (string length -- "$sr_plain")
+        set -l sr_pad    (math "50 - $sr_len")
+        if test $sr_pad -lt 0; set sr_pad 0; end
+        echo -e "  $CY║$C    $D│$C  $D$sr_label$C$GY$sr_val$C$(printf '%*s' $sr_pad '')$D│$C  $CY║$C"
 
         # Frame bottom
         echo -e "  $CY║$C    $D└──────────────────────────────────────────────────────┘$C  $CY║$C"
@@ -685,10 +719,11 @@ except:
             end
     end
 
-    # ── Save original source name to /tmp/ before blur/conversion overwrites $image ──
+    # ── Save original source info to /tmp/ before blur/conversion overwrites $image ──
     #     This survives through blur + JPEG conversion; apply step reads it back
     mkdir -p /tmp/.gdm-info
     basename "$image" > /tmp/.gdm-info/original-name.txt
+    realpath "$image" 2>/dev/null > /tmp/.gdm-info/original-path.txt
 
     # ══════════════════════════════════════════════════════════════
     # 🎨  BLUR OPTIONS — blur + dark tint before applying
@@ -733,6 +768,7 @@ except:
 
                 switch (string lower "$blur_choice")
                     case n no
+                        echo "No blur applied" > /tmp/.gdm-info/blur-settings.txt
                         set blur_done 1
 
                     case '' y yes
@@ -748,10 +784,12 @@ except:
                             end
                             # Apply immediately — no LIKE THE RESULT? prompt for default
                             set image "$blurred_file"
+                            echo "Blur 0x40 + black 40%" > /tmp/.gdm-info/blur-settings.txt
                             set blur_done 1
                             echo -e "  $GR✅  Default blur applied$C  github.com/eprahemi"
                         else
                             echo -e "  $RE✘  Blur failed — image may be corrupt or unsupported. Using original.$C  $GY github.com/eprahemi$C"
+                            echo "No blur applied (blur failed)" > /tmp/.gdm-info/blur-settings.txt
                             set blur_done 1
                         end
 
@@ -814,12 +852,14 @@ except:
                                 read -l -P "  [y/N]: " like_it
                                 if string match -qir '^y' "$like_it"
                                     set image "$blurred_file"
+                                    echo "Blur 0x$blur_sigma + black $colorize_pct%" > /tmp/.gdm-info/blur-settings.txt
                                     set blur_done 1
                                     echo -e "  $GR✅  Custom blur applied$C  github.com/eprahemi"
                                 end
                                 # N → loops back to blur menu
                             else
                                 set image "$blurred_file"
+                                echo "Blur 0x$blur_sigma + black $colorize_pct%" > /tmp/.gdm-info/blur-settings.txt
                                 echo -e "  $D  💻  Preview requires Kitty terminal — blur applied without preview.$C"
                                 echo -e "  $GR✅  Custom blur applied$C  github.com/eprahemi"
                                 echo ""
@@ -832,11 +872,13 @@ except:
                             end
                         else
                             echo -e "  $RE✘  Custom blur failed — image may be corrupt or unsupported. Using original.$C  $GY github.com/eprahemi$C"
+                            echo "No blur applied (blur failed)" > /tmp/.gdm-info/blur-settings.txt
                             set blur_done 1
                         end
                 end
             end
         else
+            echo "No blur applied" > /tmp/.gdm-info/blur-settings.txt
             set blur_choice "n"
         end
     else
@@ -870,11 +912,13 @@ except:
                 if sudo dnf install -y ImageMagick 2>/dev/null
                     echo -e "  $GR✅  ImageMagick installed!$C  $GY github.com/eprahemi$C"
                     echo -e "  $GY  Run $CY$B gdm$C $GY again to use blur options.$C"
+                    echo "No blur applied (ImageMagick was just installed)" > /tmp/.gdm-info/blur-settings.txt
                 else
                     echo -e "  $RE✘  Installation failed. Try: $CY$B sudo dnf install ImageMagick$C  $GY github.com/eprahemi$C"
                 end
             else
                 echo -e "  $D  Skipping blur — using original image.$C  $GY github.com/eprahemi$C"
+                echo "No blur applied (ImageMagick not installed)" > /tmp/.gdm-info/blur-settings.txt
             end
         end
     end
@@ -992,6 +1036,121 @@ except:
         echo -e "  $D  ⚠️  ImageMagick not installed — skipping JPEG conversion.$C  $GY github.com/eprahemi$C"
     end
 
+    # ── Gather metadata for gdm info cache ──
+    #     Default blur-settings if not written by any path
+    if not test -f /tmp/.gdm-info/blur-settings.txt
+        echo "No blur applied" > /tmp/.gdm-info/blur-settings.txt
+    end
+    set -l blur_desc (string trim < /tmp/.gdm-info/blur-settings.txt 2>/dev/null)
+
+    # Read saved source path (fallback to $image if missing)
+    set -l orig_path ""
+    if test -f /tmp/.gdm-info/original-path.txt
+        set orig_path (string trim < /tmp/.gdm-info/original-path.txt 2>/dev/null)
+    end
+    if test -z "$orig_path"
+        set orig_path "$image"
+    end
+    set orig_path (string replace -r "^$HOME" "~" "$orig_path")
+
+    set -l fmt "?"
+    set -l csp "?"
+    set -l dep "?"
+    set -l dims "?x?"
+    set -l dpi "?"
+    set -l mp "?"
+    set -l aspect "?"
+    set -l f_bytes "?"
+    set -l f_size "?"
+    set -l f_date "?"
+
+    if command -v magick &>/dev/null
+        set fmt (magick identify -format "%m" "$image" 2>/dev/null)
+        set csp (magick identify -format "%[colorspace]" "$image" 2>/dev/null)
+        set dep (magick identify -format "%[depth]" "$image" 2>/dev/null)
+        set dims (magick identify -format "%wx%h" "$image" 2>/dev/null)
+        set dpi (magick identify -format "%xx%y" "$image" 2>/dev/null)
+
+        # Megapixels + aspect ratio via python3
+        set -l w_str (string split "x" "$dims" 2>/dev/null)[1]
+        set -l h_str (string split "x" "$dims" 2>/dev/null)[2]
+        if test -n "$w_str"; and test -n "$h_str"
+            set mp (python3 -c "
+import sys
+w = int(sys.argv[1])
+h = int(sys.argv[2])
+print(f'{w*h/1000000:.1f}')
+" "$w_str" "$h_str" 2>/dev/null)
+            set aspect (python3 -c "
+import sys, math
+w = int(sys.argv[1])
+h = int(sys.argv[2])
+g = math.gcd(w, h)
+print(f'{w//g}:{h//g}')
+" "$w_str" "$h_str" 2>/dev/null)
+        end
+    end
+
+    # File size + date from stat (use original if possible, else final $image)
+    set -l stat_target "$image"
+    if test -f /tmp/.gdm-info/original-path.txt
+        set -l op (string trim < /tmp/.gdm-info/original-path.txt 2>/dev/null)
+        if test -f "$op"
+            set stat_target "$op"
+        end
+    end
+    if command -v stat &>/dev/null
+        set f_bytes (stat -c "%s" "$stat_target" 2>/dev/null)
+        set f_mtime (stat -c "%y" "$stat_target" 2>/dev/null | string sub -l 16)
+    end
+
+    # Human-readable size
+    if command -v python3 &>/dev/null; and test "$f_bytes" != "?"
+        set f_size (python3 -c "
+import sys
+n = int(sys.argv[1])
+if n >= 1073741824:
+    print(f'{n/1073741824:.1f} GB')
+elif n >= 1048576:
+    print(f'{n/1048576:.1f} MB')
+elif n >= 1024:
+    print(f'{n/1024:.1f} KB')
+else:
+    print(f'{n} B')
+" "$f_bytes" 2>/dev/null)
+    else
+        set f_size "$f_bytes B"
+    end
+
+    # Format date
+    if command -v python3 &>/dev/null; and test "$f_mtime" != "?"
+        set f_date (python3 -c "
+import sys
+from datetime import datetime
+try:
+    dt = datetime.strptime(sys.argv[1].strip(), '%Y-%m-%d %H:%M')
+    print(dt.strftime('%d %b %Y  %H:%M'))
+except:
+    print(sys.argv[1])
+" "$f_mtime" 2>/dev/null)
+    else
+        set f_date "$f_mtime"
+    end
+
+    # ── Write .gdm-info.txt cache file to repo ──
+    mkdir -p "$repo"
+    echo "FORMAT: $fmt"        > "$repo/.gdm-info.txt"
+    echo "COLORSPACE: $csp"    >> "$repo/.gdm-info.txt"
+    echo "DEPTH: $dep"         >> "$repo/.gdm-info.txt"
+    echo "DIMS: $dims"         >> "$repo/.gdm-info.txt"
+    echo "DPI: $dpi"           >> "$repo/.gdm-info.txt"
+    echo "MP: $mp"             >> "$repo/.gdm-info.txt"
+    echo "ASPECT: $aspect"     >> "$repo/.gdm-info.txt"
+    echo "BLUR: $blur_desc"    >> "$repo/.gdm-info.txt"
+    echo "SOURCE: $orig_path"  >> "$repo/.gdm-info.txt"
+    echo "SIZE: $f_size"       >> "$repo/.gdm-info.txt"
+    echo "DATE: $f_date"       >> "$repo/.gdm-info.txt"
+
     # ── Apply the wallpaper ──
     # Guard: sudo must be installed
     if not command -v sudo &>/dev/null
@@ -1000,7 +1159,6 @@ except:
         return 1
     end
     # Save a copy for 'gdm info'
-    mkdir -p "$repo"
     cp "$image" "$repo/.gdm-undo-copy.jpg"
     # Read original name from /tmp/ (saved before blur/conversion overwrote $image)
     if test -f /tmp/.gdm-info/original-name.txt
