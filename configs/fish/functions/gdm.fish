@@ -830,6 +830,16 @@ except:
         set results $deduped
     end
 
+    # Filter to image files only — weed out .py, .mjs, .js, etc.
+    set -l img_results
+    set -l img_regex '\.(jpg|jpeg|png|gif|bmp|webp|tiff?|svg|ico|heic|heif|avif|jp2)$'
+    for r in $results
+        if string match -riq -- "$img_regex" "$r"
+            set -a img_results "$r"
+        end
+    end
+    set results $img_results
+
     set -l result_count (count $results)
 
     # ══════════════════════════════════════════════════════════════
