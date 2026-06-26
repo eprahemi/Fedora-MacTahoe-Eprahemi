@@ -70,6 +70,8 @@ function passgen --description '🔑 Password generator and analyzer — 18 opti
                 echo -e "\033[1;33m📋 \033[1;36mpassgen\033[1;33m options (18 total):\033[0m"
                 echo -e "  \033[38;5;248m  <number>         Set password length\033[0m"
                 echo -e "  \033[38;5;248m  <password>       Analyze a password\033[0m"
+                echo -e "  \033[38;5;248m  gen <N>          Generate (bypasses length limit)\033[0m"
+                echo -e "  \033[38;5;248m  check <password> Analyze explicitly (for numeric passwords)\033[0m"
                 echo -e "  \033[38;5;248m  --length, -l N   Password length (def: 16)\033[0m"
                 echo -e "  \033[38;5;248m  --count, -n N    Number of passwords (def: 1)\033[0m"
                 echo -e "  \033[38;5;248m  --passphrase -P  Word-based passphrase\033[0m"
@@ -88,35 +90,59 @@ function passgen --description '🔑 Password generator and analyzer — 18 opti
                 echo -e "  \033[38;5;248m  --help, -h       Full help + examples\033[0m"
                 return 0
             case --help -h
-                echo -e "\033[1;33mUsage: \033[1;36mpassgen [options]\033[0m"
-                echo -e "  \033[38;5;248m<number>\033[0m           \033[1;37mPassword length preset (max 128; use -l for larger)\033[0m"
-                echo -e "  \033[38;5;248m<password>\033[0m         \033[1;37mAnalyze a password\'s strength\033[0m"
-                echo -e "  \033[38;5;248m--length, -l N\033[0m     \033[1;37mPassword length (default: 16)\033[0m"
-                echo -e "  \033[38;5;248m--count, -n N\033[0m      \033[1;37mNumber of passwords (default: 1)\033[0m"
-                echo -e "  \033[38;5;248m--passphrase, -P\033[0m   \033[1;37mGenerate a passphrase (words)\033[0m"
-                echo -e "  \033[38;5;248m--words, -w N\033[0m      \033[1;37mNumber of words for passphrase (default: 4)\033[0m"
-                echo -e "  \033[38;5;248m--force, -f\033[0m        \033[1;37mOverride max-length limit\033[0m"
-                echo -e "  \033[38;5;248m--no-lower\033[0m         \033[1;37mExclude lowercase letters\033[0m"
-                echo -e "  \033[38;5;248m--no-upper\033[0m         \033[1;37mExclude uppercase letters\033[0m"
-                echo -e "  \033[38;5;248m--no-digits\033[0m        \033[1;37mExclude digits\033[0m"
-                echo -e "  \033[38;5;248m--no-symbols, -s\033[0m   \033[1;37mExclude symbols\033[0m"
-                echo -e "  \033[38;5;248m--clip, -c\033[0m         \033[1;37mCopy to clipboard\033[0m"
-                echo -e "  \033[38;5;248m--pwned\033[0m            \033[1;37mCheck password against known breaches\033[0m"
-                echo -e "  \033[38;5;248m--save <label>\033[0m     \033[1;37mSave a password to encrypted vault\033[0m"
-                echo -e "  \033[38;5;248m--get <label>\033[0m      \033[1;37mRetrieve a password from vault\033[0m"
-                echo -e "  \033[38;5;248m--list\033[0m             \033[1;37mList saved vault entries\033[0m"
+                echo -e "\033[1;33mUsage: \033[1;36mpassgen\033[1;33m [options] [\033[1;36mgen\033[1;33m|\033[1;36mcheck\033[1;33m] [args]\033[0m"
+                echo -e "  \033[38;5;248m<number>\033[0m              \033[1;37mPassword length preset\033[0m"
+                echo -e "  \033[38;5;248m<password>\033[0m            \033[1;37mAnalyze a password\'s strength\033[0m"
+                echo -e "  \033[38;5;248mgen <N>\033[0m               \033[1;37mGenerate password (bypasses length limit)\033[0m"
+                echo -e "  \033[38;5;248mcheck <password>\033[0m      \033[1;37mAnalyze a password explicitly\033[0m"
+                echo -e "  \033[38;5;248m--length, -l N\033[0m        \033[1;37mPassword length (default: 16)\033[0m"
+                echo -e "  \033[38;5;248m--count, -n N\033[0m         \033[1;37mNumber of passwords (default: 1)\033[0m"
+                echo -e "  \033[38;5;248m--passphrase, -P\033[0m      \033[1;37mGenerate a passphrase (words)\033[0m"
+                echo -e "  \033[38;5;248m--words, -w N\033[0m         \033[1;37mNumber of words for passphrase (default: 4)\033[0m"
+                echo -e "  \033[38;5;248m--force, -f\033[0m           \033[1;37mOverride max-length limit\033[0m"
+                echo -e "  \033[38;5;248m--no-lower\033[0m            \033[1;37mExclude lowercase letters\033[0m"
+                echo -e "  \033[38;5;248m--no-upper\033[0m            \033[1;37mExclude uppercase letters\033[0m"
+                echo -e "  \033[38;5;248m--no-digits\033[0m           \033[1;37mExclude digits\033[0m"
+                echo -e "  \033[38;5;248m--no-symbols, -s\033[0m      \033[1;37mExclude symbols\033[0m"
+                echo -e "  \033[38;5;248m--clip, -c\033[0m            \033[1;37mCopy to clipboard\033[0m"
+                echo -e "  \033[38;5;248m--pwned\033[0m               \033[1;37mCheck password against known breaches\033[0m"
+                echo -e "  \033[38;5;248m--save <label>\033[0m        \033[1;37mSave a password to encrypted vault\033[0m"
+                echo -e "  \033[38;5;248m--get <label>\033[0m         \033[1;37mRetrieve a password from vault\033[0m"
+                echo -e "  \033[38;5;248m--list\033[0m                \033[1;37mList saved vault entries\033[0m"
                 echo -e "\n  \033[1;36mPresets:\033[0m \033[1;33m16\033[0m \033[1;33m32\033[0m \033[1;33m48\033[0m \033[1;33m64\033[0m \033[1;33m96\033[0m \033[1;33m104\033[0m"
                 echo -e "  \033[38;5;248mExamples:\033[0m"
-                echo -e "    \033[1;36mpassgen\033[0m               \033[1;37mGenerate a 16-char password\033[0m"
-                echo -e "    \033[1;36mpassgen 32\033[0m            \033[1;37mGenerate a 32-char password\033[0m"
-                echo -e "    \033[1;36mpassgen -P\033[0m            \033[1;37mGenerate a 4-word passphrase\033[0m"
-                echo -e "    \033[1;36mpassgen -P -w 6\033[0m       \033[1;37mGenerate a 6-word passphrase\033[0m"
-                echo -e "    \033[1;36mpassgen -f 100000\033[0m     \033[1;37mForce 100k-char password\033[0m"
-                echo -e "    \033[1;36mpassgen mypassword123\033[0m  \033[1;37mAnalyze password strength\033[0m"
+                echo -e "    \033[1;36mpassgen\033[0m                  \033[1;37mGenerate a 16-char password\033[0m"
+                echo -e "    \033[1;36mpassgen gen 99999\033[0m        \033[1;37mGenerate a 99,999-char password\033[0m"
+                echo -e "    \033[1;36mpassgen 32\033[0m               \033[1;37mGenerate a 32-char password\033[0m"
+                echo -e "    \033[1;36mpassgen check 123456\033[0m     \033[1;37mAnalyze a numeric password\033[0m"
+                echo -e "    \033[1;36mpassgen mypassword123\033[0m    \033[1;37mAnalyze password strength\033[0m"
                 echo -e "    \033[1;36mpassgen mypassword123 --pwned\033[0m \033[1;37mAnalyze + check breaches\033[0m"
-                echo -e "    \033[1;36mpassgen --save email\033[0m  \033[1;37mSave last password as 'email'\033[0m"
-                echo -e "    \033[1;36mpassgen --get email\033[0m   \033[1;37mRetrieve 'email' password\033[0m"
+                echo -e "    \033[1;36mpassgen -P\033[0m               \033[1;37mGenerate a 4-word passphrase\033[0m"
+                echo -e "    \033[1;36mpassgen -P -w 6\033[0m          \033[1;37mGenerate a 6-word passphrase\033[0m"
+                echo -e "    \033[1;36mpassgen --save email\033[0m     \033[1;37mSave last password as 'email'\033[0m"
+                echo -e "    \033[1;36mpassgen --get email\033[0m      \033[1;37mRetrieve 'email' password\033[0m"
                 return 0
+            case gen
+                # passgen gen <N> — generate with bypass of length limit
+                set force_mode yes
+                set -e argv[1]
+                if set -q argv[1]
+                    set length $argv[1]
+                    set -e argv[1]
+                end
+            case check
+                # passgen check <password> — explicit analyze (for numeric passwords)
+                set analyze_mode yes
+                set -e argv[1]
+                if set -q argv[1]
+                    set analyze_password "$argv[1]"
+                    set -e argv[1]
+                else
+                    echo -e "\033[1;31m✘ Error: \033[1;36mpassgen check\033[1;31m requires a password to analyze\033[0m"
+                    echo -e "  \033[38;5;248m  Usage: \033[1;36mpassgen check <password>\033[0m"
+                    echo -e "  \033[38;5;248m  Example: \033[1;36mpassgen check 123456\033[0m"
+                    return 1
+                end
             case '*'
                 # ── Unknown flag? Catch it before it wrecks everything ──
                 if string match -qr -- '^--?[a-zA-Z]' "$argv[1]"
@@ -150,7 +176,7 @@ for m in matches:
                     echo -e "  \033[38;5;248m  Try \033[1;36mpassgen --help\033[38;5;248m or \033[1;36mpassgen opts\033[38;5;248m for the full menu 📋\033[0m"
                     return 1
                 end
-                if string match -qr '^\d+$' "$argv[1]" && test "$argv[1]" -le 128
+                if string match -qr '^\d+$' "$argv[1]"
                     set length $argv[1]
                     set -e argv[1]
                 else
@@ -169,8 +195,8 @@ for m in matches:
         else
             echo -e "\033[1;31m✘ Password too long: \033[1;33m$length\033[1;31m characters\033[0m"
             echo -e "  \033[38;5;248m  Maximum supported length is \033[1;33m99,999\033[38;5;248m characters\033[0m"
-            echo -e "  \033[38;5;248m  To override: \033[1;36mpassgen -f $length\033[0m"
-            echo -e "  \033[38;5;248m  Usage: \033[1;36mpassgen --help\033[0m"
+            echo -e "  \033[38;5;248m  To generate: \033[1;36mpassgen gen $length\033[0m"
+            echo -e "  \033[38;5;248m  To analyze as password: \033[1;36mpassgen check $length\033[0m"
             return 1
         end
     end
