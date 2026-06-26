@@ -19,6 +19,23 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
     set -l skip_confirm 0
     set -l skip_double_confirm 0
 
+    # ── Guard: triple+ dashes (---, ----, ---info) before string match crashes ──
+    for arg in $argv
+        if string match -qr '^---' -- "$arg" 2>/dev/null
+            echo ""
+            echo -e "  $RE┌────────────────────────────────────────────────────────────┐$C"
+            echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
+            echo -e "  $RE│$C     $WH✘  Invalid option: $CY$arg$C$(printf '%*s' (math "55 - "(string length "$arg")) '')$RE│$C"
+            echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
+            echo -e "  $RE│$C  $D  Use single or double dashes only ($C$GY--$C$D, $C$GY-$C$D).$C$RE         │$C"
+            echo -e "  $RE│$C  $D  Example: $C$CY gdm --info$C$D  or  $C$CY gdm -h$C$RE$D$C$RE           │$C"
+            echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
+            echo -e "  $RE└────────────────────────────────────────────────────────────┘$C"
+            echo -e "  $GY  eprahemi  •  github.com/eprahemi$C"
+            return 1
+        end
+    end
+
     # ── Arg check (no args → show all usages in a box) ──
     if not set -q argv[1]
         echo ""
@@ -784,10 +801,10 @@ except:
     else
         # 🛡️  GUARD: Minimum search term length (short = deadly slow)
         # Skip guard if input contains / (it's a full/relative path)
-        set -l is_path (string match -r '/' "$filename")
+        set -l is_path (string match -r -- '/' "$filename")
         # Check the stem (before any extension) — "b.jpg" has a 5-char
         # filename but the meaningful search term "b" is still too short
-        set -l stem (string replace -r '\..*$' '' "$filename")
+        set -l stem (string replace -r -- '\..*$' '' "$filename")
         if test -z "$is_path"; and test (string length -- "$stem") -lt 3
             echo ""
             echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
