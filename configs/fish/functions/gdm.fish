@@ -1565,6 +1565,8 @@ except:
             echo -e "  $GY  github.com/eprahemi/FedoraTahoe-GDM$C"
             return 1
         end
+        # Remove .git && .gitignore — not needed at runtime, saves ~500 KB
+        rm -rf "$repo/.git" "$repo/.gitignore" 2>/dev/null
         echo -e "  $GR✅  FedoraTahoe-GDM cached at $repo (works offline from now on)$C  $GY github.com/eprahemi$C"
 
         # Restore preserved runtime state files
