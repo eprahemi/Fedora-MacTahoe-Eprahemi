@@ -41,6 +41,8 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY║$C  $CY$B$n5$C$(printf '%*s' (math "60 - "(string length "$n5")) '')$CY║$C"
         set -l n5b "    gdm info"
         echo -e "  $CY║$C  $CY$B$n5b$C$(printf '%*s' (math "60 - "(string length "$n5b")) '')$CY║$C"
+        set -l n5c "    gdm save"
+        echo -e "  $CY║$C  $CY$B$n5c$C$(printf '%*s' (math "60 - "(string length "$n5c")) '')$CY║$C"
         set -l n6 "    gdm -y|--yes filename.jpg"
         echo -e "  $CY║$C  $CY$B$n6$C$(printf '%*s' (math "60 - "(string length "$n6")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
@@ -96,6 +98,8 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY║$C  $CY$B$u5$C$(printf '%*s' (math "60 - "(string length "$u5")) '')$CY║$C"
         set -l u6 "    gdm info"
         echo -e "  $CY║$C  $CY$B$u6$C$(printf '%*s' (math "60 - "(string length "$u6")) '')$CY║$C"
+        set -l u7 "    gdm save"
+        echo -e "  $CY║$C  $CY$B$u7$C$(printf '%*s' (math "60 - "(string length "$u7")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
@@ -120,6 +124,8 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY║$C  $D$f8$C$(printf '%*s' (math "60 - "(string length "$f8")) '')$CY║$C"
         set -l f9 "  ℹ️   gdm info — show last applied GDM wallpaper details"
         echo -e "  $CY║$C  $D$f9$C$(printf '%*s' (math "60 - "(string length "$f9")) '')$CY║$C"
+        set -l f10 "  💾  gdm save  — save wallpaper to ~/Pictures/ with encrypted name"
+        echo -e "  $CY║$C  $D$f10$C$(printf '%*s' (math "60 - "(string length "$f10")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
@@ -156,6 +162,8 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY║$C  $CY$e6$C$(printf '%*s' (math "60 - "(string length "$e6")) '')$CY║$C"
         set -l e7 "  gdm info"
         echo -e "  $CY║$C  $CY$e7$C$(printf '%*s' (math "60 - "(string length "$e7")) '')$CY║$C"
+        set -l e8 "  gdm save"
+        echo -e "  $CY║$C  $CY$e8$C$(printf '%*s' (math "60 - "(string length "$e8")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
@@ -331,6 +339,80 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
             gdm --yes "$wp_repo"
         end
         return $status
+    end
+
+    # ── "save" subcommand: save current wallpaper to ~/Pictures/ ──
+    if set -q argv[1]; and contains -- "$argv[1]" "save" "--save" "-save"
+        set -e argv[1]
+        set -l repo_dir "$HOME/.local/share/mactahoe-gtk"
+        set -l last_file "$repo_dir/.gdm-undo-copy.jpg"
+        if not test -f "$last_file"
+            echo -e "  $RE✘  No GDM wallpaper to save.$C"
+            echo -e "  $GY  Apply a wallpaper first with $CY$B gdm filename.jpg$C"
+            echo -e "  $GY  github.com/eprahemi$C"
+            return 1
+        end
+
+        # Generate random 8-char alphanumeric filename
+        set -l rand_name (python3 -c "
+import secrets, string
+print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(8)))
+" 2>/dev/null)
+        if test -z "$rand_name"
+            # Fallback: use od + head
+            set rand_name (tr -dc 'A-Za-z0-9' < /dev/urandom 2>/dev/null | head -c 8)
+            if test -z "$rand_name"
+                set rand_name "GDM_Save"
+            end
+        end
+
+        set -l dest_dir "$HOME/Pictures"
+        mkdir -p "$dest_dir"
+        set -l dest_file "$dest_dir/$rand_name.jpg"
+
+        # Copy with overwrite protection (append number if exists)
+        set -l counter 1
+        set -l try_file "$dest_file"
+        while test -f "$try_file"
+            set try_file (string join '' "$dest_dir/" "$rand_name" "_$counter.jpg")
+            set counter (math "$counter + 1")
+        end
+        set dest_file "$try_file"
+
+        cp "$last_file" "$dest_file"
+
+        # Show beautiful save confirmation box
+        echo ""
+        echo -e "  $GR╔══════════════════════════════════════════════════════════════╗$C"
+        echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
+        set -l sv1 "  💾  WALLPAPER SAVED"
+        echo -e "  $GR║$C  $WH$sv1$C$(printf '%*s' (math "60 - "(string length "$sv1")) '')$GR║$C"
+        echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
+        echo -e "  $GR╠══════════════════════════════════════════════════════════════╣$C"
+        echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
+
+        set -l sv2 "  📁  Saved to:"
+        echo -e "  $GR║$C  $D$sv2$C$(printf '%*s' (math "60 - "(string length "$sv2")) '')$GR║$C"
+        set -l sv3 "  $dest_file"
+        set -l sv3_len (string length -- "$sv3")
+        if test $sv3_len -gt 54
+            set sv3 (string sub -l 51 "$sv3")"..."
+            set sv3_len 54
+        end
+        echo -e "  $GR║$C    $CY$sv3$C$(printf '%*s' (math "58 - $sv3_len") '')$GR║$C"
+        echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
+
+        set -l sv4 "  🔐  Filename:  $WH$B$rand_name.jpg$C"
+        set -l sv4_plain "  🔐  Filename:  $rand_name.jpg"
+        set -l sv4_len (string length -- "$sv4_plain")
+        echo -e "  $GR║$C  $D$sv4$C$(printf '%*s' (math "60 - $sv4_len - 1") '')$GR║$C"
+        echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
+
+        set -l br "  eprahemi  •  github.com/eprahemi"
+        echo -e "  $GR║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$GR║$C"
+        echo -e "  $GR╚══════════════════════════════════════════════════════════════╝$C"
+        echo ""
+        return 0
     end
 
     # ── "info" subcommand: beautiful GDM wallpaper details with preview ──
