@@ -951,11 +951,13 @@ except:
             echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
 
             for i in (seq $result_count)
-                set -l path $results[$i]
+                set -l fullpath $results[$i]
+                set -l dir_part (dirname "$fullpath")/
+                set -l file_part (basename "$fullpath")
                 set -l num_str (printf "%2d" $i)
                 set -l prefix "  [$num_str]  "
                 set -l cont_indent "        "
-                set -l remaining "$path"
+                set -l remaining "$fullpath"
                 set -l line_num 1
                 while test -n "$remaining"
                     set -l trimmed (string sub -l 52 "$remaining")
@@ -970,15 +972,24 @@ except:
                         set part "$trimmed"
                         set rest (string sub -s 53 "$remaining")
                     end
+                    # Bold the filename within the displayed text
+                    set -l file_regex (string escape --style=regex "$file_part")
+                    set -l display (string replace -r -- "^(.*)($file_regex)" '$1'"$WH$B"'$2' "$part")
                     if test $line_num -eq 1
-                        set -l m_line "$prefix$part"
-                        echo -e "  $CY║$C  $m_line$C$(printf '%*s' (math "60 - "(string length "$m_line")) '')$CY║$C"
+                        set -l raw_line "$prefix$part"
+                        set -l col_line "$prefix$display"
+                        echo -e "  $CY║$C  $col_line$C$(printf '%*s' (math "60 - "(string length "$raw_line")) '')$CY║$C"
                     else
-                        set -l m_line "$cont_indent$part"
-                        echo -e "  $CY║$C  $m_line$C$(printf '%*s' (math "60 - "(string length "$m_line")) '')$CY║$C"
+                        set -l raw_line "$cont_indent$part"
+                        set -l col_line "$cont_indent$display"
+                        echo -e "  $CY║$C  $col_line$C$(printf '%*s' (math "60 - "(string length "$raw_line")) '')$CY║$C"
                     end
                     set remaining "$rest"
                     set line_num (math "$line_num + 1")
+                end
+                # Blank line between entries
+                if test $i -lt $result_count
+                    echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                 end
             end
 
