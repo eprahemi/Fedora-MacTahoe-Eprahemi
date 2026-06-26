@@ -19,6 +19,7 @@ function passgen --description '🔑 Password generator and analyzer — 18 opti
     set -l save_label ""
     set -l get_label ""
     set -l force_mode no
+    set -l gen_mode no
 
     # ── Parse arguments ──
     while set -q argv[1]
@@ -61,8 +62,14 @@ function passgen --description '🔑 Password generator and analyzer — 18 opti
                 set get_label $argv[2]
                 set -e argv[1..2]
             case --force -f -F -force
-                set force_mode yes
-                set -e argv[1]
+                if test "$gen_mode" = yes
+                    set force_mode yes
+                    set -e argv[1]
+                else
+                    echo -e "\033[1;31m✘ \033[1;36m--force\033[1;31m only works with \033[1;36mgen\033[1;31m subcommand\033[0m"
+                    echo -e "  \033[38;5;248m  Usage: \033[1;36mpassgen gen $length --force\033[0m"
+                    return 1
+                end
             case --list
                 __passgen_vault_list
                 return 0
@@ -124,8 +131,9 @@ function passgen --description '🔑 Password generator and analyzer — 18 opti
                 return 0
             case gen
                 # passgen gen <N> — explicit generate subcommand
+                set gen_mode yes
                 set -e argv[1]
-                if set -q argv[1]
+                if set -q argv[1] && string match -qr '^\d+$' "$argv[1]"
                     set length $argv[1]
                     set -e argv[1]
                 end
