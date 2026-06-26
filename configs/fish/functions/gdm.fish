@@ -685,8 +685,10 @@ except:
             end
     end
 
-    # ── Save original source name before blur/conversion overwrites $image ──
-    set image_src_name (basename "$image")
+    # ── Save original source name to /tmp/ before blur/conversion overwrites $image ──
+    #     This survives through blur + JPEG conversion; apply step reads it back
+    mkdir -p /tmp/.gdm-info
+    basename "$image" > /tmp/.gdm-info/original-name.txt
 
     # ══════════════════════════════════════════════════════════════
     # 🎨  BLUR OPTIONS — blur + dark tint before applying
@@ -997,10 +999,16 @@ except:
         echo -e "  $GY  Install it and try again.  github.com/eprahemi$C"
         return 1
     end
-    # Save a copy and original name for 'gdm info'
+    # Save a copy for 'gdm info'
     mkdir -p "$repo"
     cp "$image" "$repo/.gdm-undo-copy.jpg"
-    echo "$image_src_name" > "$repo/.gdm-undo-name.txt"
+    # Read original name from /tmp/ (saved before blur/conversion overwrote $image)
+    if test -f /tmp/.gdm-info/original-name.txt
+        cat /tmp/.gdm-info/original-name.txt > "$repo/.gdm-undo-name.txt"
+        rm -rf /tmp/.gdm-info
+    else
+        basename "$image" > "$repo/.gdm-undo-name.txt"
+    end
     echo -e "  $CY🖼️  Applying GDM wallpaper...$C  $D github.com/eprahemi$C"
     cd "$repo"
     sudo ./tweaks.sh -g -nb -nd -b "$image"
