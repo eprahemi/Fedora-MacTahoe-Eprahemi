@@ -587,45 +587,13 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
                                 echo ""
                                 kitty +kitten icat --align left "$blurred_file" 2>/dev/null
                                 echo ""
-                            end
-                            # ── Ask if user likes it (only in Kitty) ──
-                            if test -n "$KITTY_PID"
-                                echo ""
-                                echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
-                                echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                                set -l l1 "  👍  LIKE THE RESULT?"
-                                echo -e "  $CY║$C  $WH$l1$C$(printf '%*s' (math "60 - "(string length "$l1")) '')$CY║$C"
-                                echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                                echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
-                                echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                                set -l l2 "  [Y] Yes — apply this blurred version"
-                                echo -e "  $CY║$C  $GR$l2$C$(printf '%*s' (math "60 - "(string length "$l2")) '')$CY║$C"
-                                set -l l3 "  [N] No  — try different blur settings"
-                                echo -e "  $CY║$C  $YE$l3$C$(printf '%*s' (math "60 - "(string length "$l3")) '')$CY║$C"
-                                echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                                set -l br "  eprahemi  •  github.com/eprahemi"
-                                echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
-                                echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
-                                echo ""
-                                read -l -P "  [Y/n]: " like_it
-                                if test -z "$like_it"; or string match -qir '^y' "$like_it"
-                                    set image "$blurred_file"
-                                    set blur_done 1
-                                    echo -e "  $GR✅  Blur applied$C  github.com/eprahemi"
-                                end
-                                # N → loops back to blur menu
                             else
-                                set image "$blurred_file"
                                 echo -e "  $D  💻  Preview requires Kitty terminal — blur applied without preview.$C"
-                                echo -e "  $GR✅  Blur applied$C  github.com/eprahemi"
-                                echo ""
-                                read -l -P "  [Y] Continue  [N] Try again: " non_kitty_ok
-                                if string match -qir '^n' "$non_kitty_ok"
-                                    # loop back to blur menu
-                                else
-                                    set blur_done 1
-                                end
                             end
+                            # Apply immediately — no LIKE THE RESULT? prompt for default
+                            set image "$blurred_file"
+                            set blur_done 1
+                            echo -e "  $GR✅  Default blur applied$C  github.com/eprahemi"
                         else
                             echo -e "  $RE✘  Blur failed — image may be corrupt or unsupported. Using original.$C  $GY github.com/eprahemi$C"
                             set blur_done 1
