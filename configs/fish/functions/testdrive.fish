@@ -1,5 +1,5 @@
 # ══════════════════════════════════════════════════════════════
-# testdrive 🏎️ — EPRAHEMI INC. 🏢 Vroom vroom muthafucka 🚗💨
+# testdrive — System diagnostic and benchmark utility
 # Eprahemi diagnostics: certified by the streets 🏆
 # Fedora MacTahoe Eprahemi Edition © 2026 — full throttle
 # ══════════════════════════════════════════════════════════════

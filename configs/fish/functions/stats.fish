@@ -1,7 +1,7 @@
 # ══════════════════════════════════════════════════════════════
-# stats 📊 — EPRAHEMI INC. 🏢 Statistics don't lie but I do 😈
-# Eprahemi's system vitals > your entire PC 🖥️💰
-# Fedora MacTahoe Eprahemi Edition © 2026 — flexing on you
+# stats — EPRAHEMI INC. System vitals dashboard
+# Displays uptime, RAM, disk, CPU, and load information
+# Fedora MacTahoe Eprahemi Edition © 2026
 # ══════════════════════════════════════════════════════════════
 function stats --description 'System dashboard: uptime, RAM, disk, CPU, load'
     if set -q argv[1]
@@ -9,12 +9,12 @@ function stats --description 'System dashboard: uptime, RAM, disk, CPU, load'
             case --help -h
                 echo -e "\033[1;33mUsage: \033[1;36mstats\033[0m"
                 echo -e "  \033[38;5;248m  (no args)     Live system dashboard: host, kernel, RAM, disk, CPU, load\033[0m"
-                echo -e "  \033[38;5;248m  --help, -h    📖 Read the manual dummy\033[0m"
-                echo -e "\n  \033[38;5;248m📦 System vitals dashboard + unknown flag handling (Jun 2026)\033[0m"
+                echo -e "  \033[38;5;248m  --help, -h    Show this help\033[0m"
+                echo -e "\n  \033[38;5;248mSystem vitals dashboard — June 2026\033[0m"
                 return 0
             case '-*'
-                echo -e "\033[1;31m✘ BRUH '\033[1;33m$argv[1]\033[1;31m' is not a stats option bestie 💀\033[0m"
-                echo -e "  \033[38;5;248m  Try \033[1;36mstats --help\033[38;5;248m bestie 📋\033[0m"
+                echo -e "\033[1;31m✘ Error: '\033[1;33m$argv[1]\033[1;31m' is not a valid stats option\033[0m"
+                echo -e "  \033[38;5;248m  Try \033[1;36mstats --help\033[38;5;248m for usage information 📋\033[0m"
                 return 1
         end
     end
@@ -67,5 +67,5 @@ function stats --description 'System dashboard: uptime, RAM, disk, CPU, load'
     end
 
     echo -e "\n\033[1;30m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-    echo -e "\033[1;34m🔧 STATUS: \033[1;32mOPERATIONAL (system's feeling cute today fr fr)\033[0m    \033[1;37mUSER: \033[1;36m"(string upper "$USER")"\033[0m"
+    echo -e "\033[1;34m🔧 STATUS: \033[1;32mOPERATIONAL\033[0m    \033[1;37mUSER: \033[1;36m"(string upper "$USER")"\033[0m"
 end

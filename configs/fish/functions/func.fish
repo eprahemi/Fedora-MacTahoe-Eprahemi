@@ -1,6 +1,6 @@
 # ══════════════════════════════════════════════════════════════
-# func 🗃️ — EPRAHEMI INC. 🏢 The archive of all archives 📦
-# Touch this code and I'll appear in your walls 🧱👀
+# func 🗃️ — Function archive listing tool 📦
+# List, search, and show fish function source files
 # Fedora MacTahoe Eprahemi Edition © 2026 — copyright 100%
 # ══════════════════════════════════════════════════════════════
 function func --description 'Function archive: list/search/show all fish commands'
@@ -174,21 +174,14 @@ function func --description 'Function archive: list/search/show all fish command
                     functions $argv[2]
                     echo ""
                 else
-                    echo -e "$R❌ No function named '$argv[2]' bestie! That ain't it$N"
+                    echo -e "$R❌ No function named '$argv[2]'$N"
                     return 1
                 end
                 return 0
 
             case '-*'
-                set -l fn_burns
-                set fn_burns[1] "BRUH '$Y$argv[1]$Y' is not a func subcommand 💀"
-                set fn_burns[2] "'$Y$argv[1]$Y'??? That's not in the archive bestie 💅"
-                set fn_burns[3] "SIR THIS IS A FUNCTION ARCHIVE... '$Y$argv[1]$Y' is not here 🍔"
-                set fn_burns[4] "The func council voted: '$Y$argv[1]$Y' is DENIED ⚖️"
-                set fn_burns[5] "BZZT! '$Y$argv[1]$Y' is not a func command! 🎮💥"
-                set -l fn_idx (random 1 5)
-                echo -e "$R✘ $fn_burns[$fn_idx]$N"
-                echo -e "  $D Try $C""func --help$D bestie 📋$N"
+                echo -e "$R✘ Unknown option: '$Y$argv[1]$R'$N"
+                echo -e "  $D Try $C""func --help$D 📋$N"
                 return 1
         end
     end

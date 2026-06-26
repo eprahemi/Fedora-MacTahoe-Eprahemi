@@ -1,7 +1,6 @@
 # ══════════════════════════════════════════════════════════════
-# matrix 💚 — EPRAHEMI INC. 🏢 Welcome to the real world 🕶️
-# Eprahemi dodged bullets AND copyright claims 🏃💨
-# Fedora MacTahoe Eprahemi Edition © 2026 — follow the white rabbit
+# matrix — Cmatrix wrapper with color and speed options
+# Fedora MacTahoe Eprahemi Edition © 2026
 # ══════════════════════════════════════════════════════════════
 function matrix --description 'Cmatrix with color & speed options'
     set -l color "green"
@@ -28,14 +27,13 @@ function matrix --description 'Cmatrix with color & speed options'
                 end
             case --help -h
                 echo -e "[1;33mUsage: [1;36mmatrix [options][0m"
-                echo -e "  [38;5;248m  --red, -r     Red matrix rain (red pill energy) 🔴[0m"
-                echo -e "  [38;5;248m  --green, -g   Green matrix rain (default, classic vibes) 🟢[0m"
-                echo -e "  [38;5;248m  --blue, -b    Blue matrix rain (sad boy hours) 🔵[0m"
-                echo -e "  [38;5;248m  --rainbow, -w Rainbow matrix rain (🌈 sigma mode)[0m"
+                echo -e "  [38;5;248m  --red, -r     Red matrix rain[0m"
+                echo -e "  [38;5;248m  --green, -g   Green matrix rain (default)[0m"
+                echo -e "  [38;5;248m  --blue, -b    Blue matrix rain[0m"
+                echo -e "  [38;5;248m  --rainbow, -w Rainbow matrix rain[0m"
                 echo -e "  [38;5;248m  --speed N     Set drop speed (default: 0)[0m"
-                echo -e "  [38;5;248m  --help, -h    📖 Read the manual dummy[0m"
+                echo -e "  [38;5;248m  --help, -h    Show this help message[0m"
                 echo -e "  [38;5;248mExample: [1;36mmatrix --red --speed 5[0m"
-                echo -e "  \033[38;5;248m📦 Unknown flag handling + rotating burns (Jun 2026)\033[0m"
                 return 0
                         case '*'
                 if test -n "$speed"; set speed $arg; else; set args "$args $arg"; end

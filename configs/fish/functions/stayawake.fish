@@ -1,7 +1,6 @@
 # ══════════════════════════════════════════════════════════════
-# stayawake 😴 — EPRAHEMI INC. 🏢 Sleep is for the weak 💤
-# Eprahemi stays awake so you don't have to (you're welcome) ☕
-# Fedora MacTahoe Eprahemi Edition © 2026 — no sleep till...
+# stayawake — Prevent system sleep/display sleep
+# Fedora MacTahoe Eprahemi Edition © 2026
 # ══════════════════════════════════════════════════════════════
 function stayawake --description 'Prevent sleep/display sleep — usage: stayawake [duration|--display|--stop]'
     if set -q argv[1]
@@ -28,7 +27,7 @@ function stayawake --description 'Prevent sleep/display sleep — usage: stayawa
                 echo -e "  \033[1;36mstayawake 30m\033[0m     — block lid-sleep for 30 minutes"
                 echo -e "  \033[1;36mstayawake --display\033[0m — block display sleep only"
                 echo -e "  \033[1;36mstayawake --stop\033[0m   — cancel active inhibitor"
-                echo -e "  \033[38;5;248m📦 Unknown flag handling + rotating burns (Jun 2026)\033[0m"
+                echo -e "  \033[38;5;248mVersion: June 2026\033[0m"
                 return 0
 
             case '*'

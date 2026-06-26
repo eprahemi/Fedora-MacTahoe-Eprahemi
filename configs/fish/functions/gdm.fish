@@ -1,7 +1,6 @@
 # ══════════════════════════════════════════════════════════════
-# gdm 🖼️ — eprahemi INC. 🏢 Login screen flex on em 💅
-# eprahemi makes GDM wallpaper hot or not? ALWAYS HOT 🔥
-# Fedora MacTahoe eprahemi Edition © 2026 — change yo login
+# gdm — GDM login wallpaper switcher with blur, preview, and search
+# Fedora MacTahoe eprahemi Edition © 2026
 # github.com/eprahemi
 # ══════════════════════════════════════════════════════════════
 function gdm --description 'Change GDM login screen wallpaper — needs internet only the first time — github.com/eprahemi'

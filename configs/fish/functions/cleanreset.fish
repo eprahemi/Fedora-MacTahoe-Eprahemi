@@ -1,6 +1,6 @@
 # ══════════════════════════════════════════════════════════════
-# cleanreset 🧹 — EPRAHEMI INC. 🏢 Cleaning service don't come free
-# This broom is patented bestie sweep your own code 🧽
+# cleanreset — EPRAHEMI INC. 🏢 System refresh utility
+# Clean temporary files and refresh shell
 # Fedora MacTahoe Eprahemi Edition © 2026 — dust-free & lit
 # ══════════════════════════════════════════════════════════════
 function cleanreset --description 'Safe refresh: shell restart, thumbs, DNF, Flatpak, logs'
@@ -17,8 +17,8 @@ function cleanreset --description 'Safe refresh: shell restart, thumbs, DNF, Fla
                 echo -e "\033[1;33mUsage: \033[1;36mcleanreset\033[0m"
                 echo -e "  \033[38;5;248mSafe refresh: restarts GNOME Shell, clears thumbnails,\033[0m"
                 echo -e "  \033[38;5;248mcleans DNF & Flatpak, vacuums logs, reloads config\033[0m"
-                echo -e "  \033[38;5;248m  --help, -h    📖 Read the manual dummy\033[0m"
-                echo -e "  \033[38;5;248m📦 Unknown flag handling + rotating burns (Jun 2026)\033[0m"
+                echo -e "  \033[38;5;248m  --help, -h    📖 Show this help\033[0m"
+                echo -e "  \033[38;5;248mVersion: June 2026\033[0m"
                 return 0
         end
     end
@@ -31,7 +31,7 @@ function cleanreset --description 'Safe refresh: shell restart, thumbs, DNF, Fla
     echo "  ██╔══╝  ██╔═══╝ ██╔══██╗██╔══██║██╔══██║██╔══╝  ██║╚██╔╝██║██║"
     echo "  ███████╗██║     ██║  ██║██║  ██║██║  ██║███████╗██║ ╚═╝ ██║██║"
     echo "  ╚══════╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝╚═╝"
-    echo -e "\e[1;34m--- STARTING SAFE REFRESH bestie (keeping logins) ---\e[0m"
+    echo -e "\e[1;34m--- STARTING SAFE REFRESH (keeping logins) ---\e[0m"
     
     # Refresh GNOME Shell
     busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart_shell()'
@@ -49,5 +49,5 @@ function cleanreset --description 'Safe refresh: shell restart, thumbs, DNF, Fla
     # Reload Shell
     source ~/.config/fish/config.fish
     
-    echo -e "\e[1;32m--- REFRESH COMPLETE bestie! Apps & logins saved fr fr ---\e[0m"
+    echo -e "\e[1;32m--- REFRESH COMPLETE ---\e[0m"
 end

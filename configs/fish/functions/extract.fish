@@ -1,6 +1,6 @@
 # ══════════════════════════════════════════════════════════════
-# extract 📦 — EPRAHEMI INC. 🏢 Extraction is an art form 🎨
-# Unauthorized copying? I'll extract your kneecaps 🦵💥
+# extract 📦 — EPRAHEMI INC. 🏢 Archive extraction utility
+# Automated archive extraction and decompression tool
 # Fedora MacTahoe Eprahemi Edition © 2026 — decompress this
 # ══════════════════════════════════════════════════════════════
 function extract --description 'Extract any archive file — auto-detects format'
@@ -18,20 +18,15 @@ function extract --description 'Extract any archive file — auto-detects format
                 return 0
             case '-*'
                 set -l ex_burns
-                set ex_burns[1] "BRUH '\033[1;33m$argv[1]\033[1;33m' is not an archive bestie 💀"
-                set ex_burns[2] "'\033[1;33m$argv[1]\033[1;33m'??? That ain't extractable bestie 💅"
-                set ex_burns[3] "SIR THIS IS AN EXTRACTOR... '\033[1;33m$argv[1]\033[1;33m' is not a flag 🍔"
-                set ex_burns[4] "The extract council voted: '\033[1;33m$argv[1]\033[1;33m' is DENIED ⚖️"
-                set ex_burns[5] "BZZT! '\033[1;33m$argv[1]\033[1;33m' can't be extracted! 🎮💥"
-                set -l ex_idx (random 1 5)
-                echo -e "\033[1;31m✘ $ex_burns[$ex_idx]\033[0m"
-                echo -e "  \033[38;5;248m  Try \033[1;36mextract --help\033[38;5;248m bestie 📋\033[0m"
+                set ex_burns[1] "Error: '\033[1;33m$argv[1]\033[1;33m' is not a valid option"
+                echo -e "\033[1;31m✘ $ex_burns[1]\033[0m"
+                echo -e "  \033[38;5;248m  Try \033[1;36mextract --help\033[38;5;248m for details 📋\033[0m"
                 return 1
         end
     else
-        echo -e "\033[1;33mUsage bestie: \033[1;36mextract <archive> [destination]\033[0m"
+        echo -e "\033[1;33mUsage: \033[1;36mextract <archive> [destination]\033[0m"
         echo -e "  \033[38;5;248m  Supported: .tar.gz/.tgz .tar.bz2/.tbz2 .tar.xz/.txz .tar.zst .tar .gz .bz2 .xz .zst .zip .rar .7z .lz4\033[0m"
-        echo -e "  \033[38;5;248m  Run \033[1;36mextract --help\033[38;5;248m for the deets 💅\033[0m"
+        echo -e "  \033[38;5;248m  Run \033[1;36mextract --help\033[38;5;248m for details\033[0m"
         return 1
     end
 
@@ -39,7 +34,7 @@ function extract --description 'Extract any archive file — auto-detects format
     set -l dest "$argv[2]"
 
     if not test -f "$file"
-        echo -e "\033[1;31m❌ Oopsie bestie! File not found: \033[1;33m$file\033[0m"
+        echo -e "\033[1;31m❌ File not found: \033[1;33m$file\033[0m"
         return 1
     end
 
@@ -76,7 +71,7 @@ function extract --description 'Extract any archive file — auto-detects format
     else if string match -qr '\.lz4$' "$ext"
         set cmd "lz4 -d \"$file\""
     else
-        echo -e "\033[1;31m❌ Unsupported archive format bestie: \033[1;33m$ext\033[0m"
+        echo -e "\033[1;31m❌ Unsupported archive format: \033[1;33m$ext\033[0m"
         return 1
     end
 
@@ -93,7 +88,7 @@ function extract --description 'Extract any archive file — auto-detects format
                 set cmd "$cmd -o\"$dest\""
             end
         else
-            echo -e "\033[1;31m❌ That's not a directory bestie: \033[1;33m$dest\033[0m"
+            echo -e "\033[1;31m❌ Not a directory: \033[1;33m$dest\033[0m"
             return 1
         end
     end
@@ -114,7 +109,7 @@ function extract --description 'Extract any archive file — auto-detects format
     set -l elapsed (math (date +%s) - $start)
 
     if test $exit_code -eq 0
-        echo -e "  \033[1;32m✔ Extracted in $elapsed"s" bestie! 🔥\033[0m"
+        echo -e "  \033[1;32m✔ Extracted in $elapsed"s"\033[0m"
         if test -z "$dest"
             set -l dirname (string replace -r '\\.(tar\\.gz|tgz|tar\\.bz2|tbz2|tar\\.xz|txz|tar\\.zst|tar|zip|rar|7z|lz4)$' '' (basename "$file"))
             if test -d "$dirname"
@@ -125,7 +120,7 @@ function extract --description 'Extract any archive file — auto-detects format
             echo -e "  \033[1;36m📂 Extracted to: \033[1;37m$dest\033[0m"
         end
     else
-        echo -e "  \033[1;31m❌ Extraction failed bestie (exit $exit_code) 💀\033[0m"
+        echo -e "  \033[1;31m❌ Extraction failed (exit $exit_code)\033[0m"
         return 1
     end
 end

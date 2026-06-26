@@ -1,7 +1,6 @@
 # ══════════════════════════════════════════════════════════════
-# fish_greeting 👋 — EPRAHEMI INC. 🏢 Greetings programs!
-# Eprahemi welcomes you to the best shell (no cap) 🐟
-# Fedora MacTahoe Eprahemi Edition © 2026 — hello world fr
+# fish_greeting — Display figlet user greeting
+# Fedora MacTahoe Eprahemi Edition © 2026
 # ══════════════════════════════════════════════════════════════
 function fish_greeting --description 'Greeting: figlet user art'
     set -l user (whoami | string upper)

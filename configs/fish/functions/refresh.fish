@@ -1,6 +1,6 @@
 # ══════════════════════════════════════════════════════════════
-# refresh 🔄 — EPRAHEMI INC. 🏢 Refresh your life not my code 🔋
-# Eprahemi stays fresh like mint gum 🌿
+# refresh 🔄 — Deep system refresh utility
+# Cleans caches, restarts services, flushes DNS, and rebuilds desktop grids
 # Fedora MacTahoe Eprahemi Edition © 2026 — refreshed & blessed
 # ══════════════════════════════════════════════════════════════
 function refresh --description 'Deep system refresh: cache, services, extensions, DNS, desktop grid & more'
@@ -52,15 +52,8 @@ function refresh --description 'Deep system refresh: cache, services, extensions
                     echo -e "  \033[38;5;248m📦 Desktop refresh, D-Bus app grid, icon cache rebuild (Jun 2026)\033[0m"
                     return 0
                 case '*'
-                    set -l burns
-                    set burns[1] "BRUH '\033[1;33m$arg\033[1;33m' is not a refresh option 💀"
-                    set burns[2] "'\033[1;33m$arg\033[1;33m'??? That's not refreshing anything bestie 💅"
-                    set burns[3] "SIR THIS IS A REFRESH... '\033[1;33m$arg\033[1;33m' is not a flag 🍔"
-                    set burns[4] "The refresh council voted: '\033[1;33m$arg\033[1;33m' is DENIED ⚖️"
-                    set burns[5] "BZZT! '\033[1;33m$arg\033[1;33m' is not a valid option! 🎮💥"
-                    set -l bu_idx (random 1 5)
-                    echo -e "\033[1;31m✘ $burns[$bu_idx]\033[0m"
-                    echo -e "   \033[1;33mUse \033[1;36mrefresh --help\033[1;33m like a smart sigma 📖\033[0m"
+                    echo -e "\033[1;31m✘ Unknown option: '\033[1;33m$arg\033[1;31m'\033[0m"
+                    echo -e "   \033[1;33mUse \033[1;36mrefresh --help\033[1;33m for available options 📖\033[0m"
                     return 1
             end
         end
@@ -72,7 +65,7 @@ function refresh --description 'Deep system refresh: cache, services, extensions
     echo "  █████╗  ██████╔╝██████╔╝███████║███████║█████╗  ██╔████╔██║██║"
     echo "  ██╔══╝  ██╔═══╝ ██╔══██╗██╔══██║██╔══██║██╔══╝  ██║╚██╔╝██║██║"
     echo "  ███████╗██║     ██║  ██║██║  ██║██║  ██║███████╗██║ ╚═╝ ██║██║"
-    echo "  ╚══════╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝╚═╝"
+    echo "  ╚══════╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝╚═╝"
     echo -e "\033[1;33m╔══════════════════════════════════════════════════════════╗\033[0m"
     echo -e "\033[1;33m║           \033[1;36mNUKE DEEP SYSTEM REFRESH\033[1;33m                    ║\033[0m"
     echo -e "\033[1;33m╚══════════════════════════════════════════════════════════╝\033[0m"
@@ -86,9 +79,9 @@ function refresh --description 'Deep system refresh: cache, services, extensions
         set do_flatpak 1
         set do_pip 1
         set do_desktop 1
-        echo -e "  \033[1;34mMode: FULL SYSTEM REFRESH (we going ALL in bestie)\033[0m\n"
+        echo -e "  \033[1;34mMode: FULL SYSTEM REFRESH (full system)\033[0m\n"
     else
-        echo -e "  \033[1;34mMode: SELECTIVE CLEANUP (picking and choosing fam)\033[0m\n"
+        echo -e "  \033[1;34mMode: SELECTIVE CLEANUP\033[0m\n"
     end
 
     set -g __rf_total 0
@@ -133,7 +126,7 @@ function refresh --description 'Deep system refresh: cache, services, extensions
     if test $do_all -eq 1 -o $do_dnf -eq 1 -o $do_desktop -eq 1
         echo -e "  \033[1;33m🔑 Sudo needed for some tasks — enter password once...\033[0m"
         sudo -v 2>/dev/null
-        echo -e "  \033[1;32m✅ Sudo cached — let's roll bestie\033[0m\n"
+        echo -e "  \033[1;32m✅ Sudo cached — proceeding\033[0m\n"
     end
 
     if test $do_cache -eq 1
@@ -225,7 +218,7 @@ function refresh --description 'Deep system refresh: cache, services, extensions
     set -l elapsed (math "$end_time - $start_time")
 
     echo -e "\n\033[1;30m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m"
-    echo -e " \033[1;32m✨ REFRESH COMPLETE bestie! System's fresher than ever 🔥\033[0m   \033[1;37m⏱️  $elapsed sec   \033[1;36m$__rf_current/$__rf_total steps\033[0m"
+    echo -e " \033[1;32m✨ REFRESH COMPLETE\033[0m   \033[1;37m⏱️  $elapsed sec   \033[1;36m$__rf_current/$__rf_total steps\033[0m"
     echo -e " \033[1;36m  USER: "(string upper "$USER")"\033[0m"
 
     functions -e __refresh_anim __refresh_section
