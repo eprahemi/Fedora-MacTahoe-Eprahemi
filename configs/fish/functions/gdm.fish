@@ -535,30 +535,6 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
     end
 
     # ══════════════════════════════════════════════════════════════
-    # 🔄  JPEG CONVERSION — ensure GDM-compatible format (any → jpg)
-    # ══════════════════════════════════════════════════════════════
-    if command -v magick &>/dev/null
-        set -l ext (string lower (string replace -r '.*\.' '' "$image" 2>/dev/null) 2>/dev/null)
-        if not contains -- "$ext" "jpg" "jpeg"
-            set -l converted "/tmp/gdm-converted.jpg"
-            if touch "/tmp/.gdm-conv-write" 2>/dev/null
-                rm -f "/tmp/.gdm-conv-write"
-                echo -e "  $D🔄  Converting $ext → JPEG 90%% quality...$C  $GY eprahemi$C"
-                if magick "$image" -quality 90 "$converted" 2>/dev/null
-                    set image "$converted"
-                    echo -e "  $GR✅  Converted to JPEG$C  github.com/eprahemi"
-                else
-                    echo -e "  $D  ⚠️  JPEG conversion failed, using original.$C  $GY github.com/eprahemi$C"
-                end
-            else
-                echo -e "  $D  ⚠️  Cannot write to /tmp — skipping JPEG conversion.$C  $GY github.com/eprahemi$C"
-            end
-        end
-    else
-        echo -e "  $D  ⚠️  ImageMagick not installed — skipping JPEG conversion.$C  $GY github.com/eprahemi$C"
-    end
-
-    # ══════════════════════════════════════════════════════════════
     # 🎨  BLUR OPTIONS — blur + dark tint before applying
     # ══════════════════════════════════════════════════════════════
     if command -v magick &>/dev/null
@@ -834,6 +810,30 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         else
             echo -e "  $D  ⚠️  curl not installed — skipping himeno download.$C  $GY github.com/eprahemi$C"
         end
+    end
+
+    # ══════════════════════════════════════════════════════════════
+    # 🔄  JPEG CONVERSION — ensure GDM-compatible format (any → jpg)
+    # ══════════════════════════════════════════════════════════════
+    if command -v magick &>/dev/null
+        set -l ext (string lower (string replace -r '.*\.' '' "$image" 2>/dev/null) 2>/dev/null)
+        if not contains -- "$ext" "jpg" "jpeg"
+            set -l converted "/tmp/gdm-converted.jpg"
+            if touch "/tmp/.gdm-conv-write" 2>/dev/null
+                rm -f "/tmp/.gdm-conv-write"
+                echo -e "  $D🔄  Converting $ext → JPEG 90%% quality...$C  $GY eprahemi$C"
+                if magick "$image" -quality 90 "$converted" 2>/dev/null
+                    set image "$converted"
+                    echo -e "  $GR✅  Converted to JPEG$C  github.com/eprahemi"
+                else
+                    echo -e "  $D  ⚠️  JPEG conversion failed, using original.$C  $GY github.com/eprahemi$C"
+                end
+            else
+                echo -e "  $D  ⚠️  Cannot write to /tmp — skipping JPEG conversion.$C  $GY github.com/eprahemi$C"
+            end
+        end
+    else
+        echo -e "  $D  ⚠️  ImageMagick not installed — skipping JPEG conversion.$C  $GY github.com/eprahemi$C"
     end
 
     # ── Apply the wallpaper ──
