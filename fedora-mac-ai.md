@@ -14,7 +14,7 @@ Fedora MacTahoe is a Fedora Linux → macOS transformation project. It turns a s
 - **Repository:** `https://github.com/eprahemi/Fedora-MacTahoe-Eprahemi.git`
 - **Branch:** `main`
 - **Local repo path:** `/home/eprahemi/Documents/Codes University [Mine]/Eprahemi Websites/Fedora Mactahoe Eprahemi GTK theme + Icon + Sf Pro Font/`
-- **Latest commit:** `494b746c` — `fish: professionalize all prompts, errors, and comments`
+- **Latest commit:** `754231ed` — `fix(passgen): reformat >99999 error with clear separated options`
 - **Install script:** `install.sh` (2271 lines, 23 steps)
 - **Bootstrap script:** `bootstrap.sh` (299 lines)
 - **Upstream MacTahoe repo** (for theme compilation): `https://github.com/vinceliuice/MacTahoe-gtk-theme.git` (cloned to `/tmp/mactahoe-build/`)
