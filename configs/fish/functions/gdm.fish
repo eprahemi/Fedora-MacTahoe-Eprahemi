@@ -776,7 +776,9 @@ except:
         set results "$direct"
     else
         # 🛡️  GUARD: Minimum search term length (short = deadly slow)
-        if test (string length -- "$filename") -lt 3
+        # Skip guard if input contains / (it's a full/relative path)
+        set -l is_path (string match -r '/' "$filename")
+        if test -z "$is_path"; and test (string length -- "$filename") -lt 3
             echo ""
             echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
@@ -786,16 +788,19 @@ except:
             echo -e "  $RE╠══════════════════════════════════════════════════════════════╣$C"
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
             set -l se2 "  Use at least 3 characters to search."
-            set -l se3 "  Short searches match tens of thousands of"
-            set -l se4 "  files and take forever to complete."
+            set -l se3 "  Short searches match too many files and"
+            set -l se4 "  will take forever to complete."
             echo -e "  $RE║$C  $D$se2$C$(printf '%*s' (math "60 - "(string length "$se2")) '')$RE║$C"
             echo -e "  $RE║$C  $D$se3$C$(printf '%*s' (math "60 - "(string length "$se3")) '')$RE║$C"
             echo -e "  $RE║$C  $D$se4$C$(printf '%*s' (math "60 - "(string length "$se4")) '')$RE║$C"
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
-            set -l se5 "  Use the full path for short filenames:"
-            set -l se6 "  gdm /path/to/b.jpg"
+            set -l se5 "  Instead, copy the full path of your image"
+            set -l se6 "  and paste it here:"
+            set -l se7 "  gdm /path/to/your/image.jpg"
             echo -e "  $RE║$C  $YE$se5$C$(printf '%*s' (math "60 - "(string length "$se5")) '')$RE║$C"
-            echo -e "  $RE║$C  $CY$se6$C$(printf '%*s' (math "60 - "(string length "$se6")) '')$RE║$C"
+            echo -e "  $RE║$C  $YE$se6$C$(printf '%*s' (math "60 - "(string length "$se6")) '')$RE║$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            echo -e "  $RE║$C  $CY$se7$C$(printf '%*s' (math "60 - "(string length "$se7")) '')$RE║$C"
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
             set -l br "  eprahemi  •  github.com/eprahemi"
             echo -e "  $RE║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
