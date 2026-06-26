@@ -569,3 +569,25 @@ Box inner width = 62 chars. Line total = 66 chars.
 8. **Always use `gio trash`** instead of `rm -rf` for user files. Never permanently delete user data.
 9. **When applying fixes to other users**, augment their existing theme files. Never replace or delete their per-user copies.
 10. **`edit-symbolic` and `document-edit-symbolic` ARE present in MacTahoe-dark** — if user reports them missing, rebuild icon cache and restart GNOME Settings first.
+
+---
+
+## Done
+
+### Progress
+
+- **`passwd` function — redesigned status box with match line (new file `passwd.fish`, ~271 lines):** Toggles per-user passwordless sudo in `/etc/sudoers`. Subcommands: `on`, `off`, `enable`, `disable`, `toggle`, `status`, `--help`. Finds `username ALL=(ALL) NOPASSWD: ALL` line and comments/uncomments it. Backs up to `/tmp/sudoers.bak`, validates with `visudo -c`, reverts on failure. High-end box with figlet eprahemi art. **New redesigned status display:** nested title box inside `┌─┐` frame, `🖿 FILE` / `👤 USER` with tree-connector (┌─/│/└─), state inside nested `┌─┐` box with ✅❌⚠️, **🔍 MATCH line showing exact line number and content from `/etc/sudoers`**, branded `eprahemi • github.com/eprahemi` footer. Commits: `0420f56`, `b5819b8`, `2576e1e` + latest uncommitted status redesign.
+
+### Relevant Files
+
+| File | Purpose |
+|------|---------|
+| `configs/fish/functions/passwd.fish` (~271 lines) | Toggle passwordless sudo — `on`/`off`/`enable`/`disable`/`toggle`/`status`/`--help`. Edits per-user NOPASSWD line in `/etc/sudoers`. High-end branded box with figlet eprahemi art. **Redesigned status display with match line showing line number and content.** Backup + visudo validation + revert on failure. |
+
+## Critical Context
+
+- `passwd` edits `/etc/sudoers` directly — line format `{user} ALL=(ALL) NOPASSWD: ALL` (uncommented) or `#{user} ...` (commented)
+- `passwd` uses `sudo sed -ri` with escaped parens `\(ALL\)` and `#&` (entire match) for commenting; backreference `\1` with `($user)` for uncommenting
+- `passwd` state detection uses `sudo grep -Eqs` with split regex variables (`$user` + `$rx_gap`) to avoid Fish `$user[...]` array-index parsing
+- `passwd` inner function `__pw_show_status` uses `--no-scope-shadowing` to access outer locals; re-greps with `sudo grep -nE` to find exact line number + content for the MATCH display
+- `passwd` validates with `sudo visudo -c -f /etc/sudoers` after every edit; reverts from `/tmp/sudoers.bak` on failure

@@ -36,24 +36,90 @@ function passwd --description 'Toggle passwordless sudo for the current user —
 
     # ─── Status display helper ───
     function __pw_show_status --no-scope-shadowing
-        echo -e "\n  $CY╔══════════════════════════════════════════════════════════════╗$C"
-        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-        set -l th2 "  🛡️  PASSWORDLESS SUDO  —  "(string upper "$user")
-        echo -e "  $CY║$C  $WH$th2$C$(printf '%*s' (math "60 - "(string length -- "$th2")) '')$CY║$C"
-        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-        echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
-        echo -e "  $CY║$C  $D  File:  $C$GY/etc/sudoers$C$(printf '%*s' (math "60 - 26") '')$CY║$C"
-        set -l ulen (string length -- "$user")
-        echo -e "  $CY║$C  $D  User:  $C$WH$user$C$(printf '%*s' (math "46 - $ulen") '')$CY║$C"
-        if test "$uncommented" -eq 1
-            echo -e "  $CY║$C  $D  State: $C$GR✅  Enabled (NOPASSWD active)$C$(printf '%*s' (math "60 - 37") '')$CY║$C"
-        else if test "$commented" -eq 1
-            echo -e "  $CY║$C  $D  State: $C$RE❌  Disabled (line commented)$C$(printf '%*s' (math "60 - 39") '')$CY║$C"
-        else
-            echo -e "  $CY║$C  $D  State: $C$YE⚠️   Missing (no NOPASSWD line found)$C$(printf '%*s' (math "60 - 47") '')$CY║$C"
+        set -l ln_num ""
+        set -l ln_text ""
+        set -l line_info (sudo grep -nE "^\s*#*\s*$user\s+ALL=\(ALL\)\s+NOPASSWD:\s+ALL" "$sudoers" 2>/dev/null | head -1)
+        if test -n "$line_info"
+            # Fish 3.x array indexing — first field is line number
+            set -l parts (string split -n ":" -- "$line_info")
+            set ln_num $parts[1]
+            set ln_text (string sub -s (math (string length "$ln_num") + 2) "$line_info")
         end
-        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-        echo -e "  $CY║$C  $D  eprahemi  •  github.com/eprahemi$(printf '%*s' (math "60 - 33") '')$CY║$C"
+
+        # Truncate line text if too long
+        if test (string length -- "$ln_text") -gt 52
+            set ln_text (string sub -l 52 "$ln_text")"…"
+        end
+
+        set -l ulen (string length -- "$user")
+        set -l llen (string length -- "$ln_text")
+        set -l nlen (string length -- "$ln_num")
+        set -l title_suffix (string upper "$user")
+        # Inner width is 62 chars (between the two ║)
+        set -l IW 62
+
+        echo -e "\n  $CY╔══════════════════════════════════════════════════════════════╗$C"
+        echo -e "  $CY║$C$(printf '%*s' $IW '')$CY║$C"
+        echo -e "  $CY║$C    $CY┌────────────────────────────────────────────────────┐$C    $CY║$C"
+        set -l title "🛡️  PASSWORDLESS SUDO  —  $title_suffix"
+        set -l title_len (string length -- "$title")
+        set -l title_pad (math "56 - $title_len")
+        echo -e "  $CY║$C    $CY│$C  $WH$title$C$(printf '%*s' $title_pad '')$CY│$C    $CY║$C"
+        echo -e "  $CY║$C    $CY└────────────────────────────────────────────────────┘$C    $CY║$C"
+        echo -e "  $CY║$C$(printf '%*s' $IW '')$CY║$C"
+        echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+        echo -e "  $CY║$C$(printf '%*s' $IW '')$CY║$C"
+
+        # FILE line
+        set -l fline "🖿  FILE     /etc/sudoers"
+        set -l flen (string length -- "$fline")
+        echo -e "  $CY║$C    $D┌─ $fline$C$(printf '%*s' (math "57 - $flen") '')$CY║$C"
+        echo -e "  $CY║$C    $D│$C$(printf '%*s' 57 '')$CY║$C"
+
+        # USER line
+        set -l uline "👤  USER     $user"
+        set -l uline_len (string length -- "$uline")
+        echo -e "  $CY║$C    $D└─ $uline$C$(printf '%*s' (math "57 - $uline_len") '')$CY║$C"
+
+        echo -e "  $CY║$C$(printf '%*s' $IW '')$CY║$C"
+
+        # STATE box
+        echo -e "  $CY║$C    $D┌────────────────────────────────────────────────────┐$C  $CY║$C"
+        if test "$uncommented" -eq 1
+            set -l state_line "✅  STATE:  $B Enabled   (NOPASSWD is active)"
+            set -l state_len (string length -- "$state_line")
+            echo -e "  $CY║$C    $D│$C  $GR$state_line$C$(printf '%*s' (math "55 - $state_len") '')$D│$C  $CY║$C"
+        else if test "$commented" -eq 1
+            set -l state_line "❌  STATE:  $B Disabled  (line is commented)"
+            set -l state_len (string length -- "$state_line")
+            echo -e "  $CY║$C    $D│$C  $RE$state_line$C$(printf '%*s' (math "55 - $state_len") '')$D│$C  $CY║$C"
+        else
+            set -l state_line "⚠️   STATE:  $B Missing   (no NOPASSWD line found)"
+            set -l state_len (string length -- "$state_line")
+            echo -e "  $CY║$C    $D│$C  $YE$state_line$C$(printf '%*s' (math "55 - $state_len") '')$D│$C  $CY║$C"
+        end
+        echo -e "  $CY║$C    $D└────────────────────────────────────────────────────┘$C  $CY║$C"
+        echo -e "  $CY║$C$(printf '%*s' $IW '')$CY║$C"
+
+        # MATCH line
+        if test -n "$ln_num" -a -n "$ln_text"
+            set -l match_line "🔍  MATCH     Line $ln_num:  $ln_text"
+            set -l match_len (string length -- "$match_line")
+            set -l match_pad (math "57 - $match_len")
+            if test $match_pad -lt 0
+                set match_pad 0
+            end
+            echo -e "  $CY║$C    $D┌─ $match_line$C$(printf '%*s' $match_pad '')$CY║$C"
+        else
+            echo -e "  $CY║$C    $D┌─ 🔍  MATCH     (no matching line in sudoers)$C$(printf '%*s' 8 '')$CY║$C"
+        end
+        echo -e "  $CY║$C    $D└────────────────────────────────────────────────────┘$C  $CY║$C"
+        echo -e "  $CY║$C$(printf '%*s' $IW '')$CY║$C"
+
+        # Footer branding
+        set -l brand "eprahemi  •  github.com/eprahemi"
+        set -l brand_len (string length -- "$brand")
+        echo -e "  $CY║$C    $D$brand$C$(printf '%*s' (math "57 - $brand_len") '')$CY║$C"
         echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
         echo ""
     end
