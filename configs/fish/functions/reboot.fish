@@ -97,6 +97,10 @@ function reboot --description 'ﾉｼ(>_<)ﾉ  Restart the system with style'
     echo -e ""
 
     sleep 1
+    if test $status -ne 0
+        echo -e "  $GY  ✧  Cancelled.$C"
+        return 0
+    end
     if set -q argv[1]
         sudo command reboot $argv
     else

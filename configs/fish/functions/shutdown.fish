@@ -98,6 +98,10 @@ function shutdown --description 'ﾉｼ(>_<)ﾉ  Power off the system with style
     echo -e ""
 
     sleep 1
+    if test $status -ne 0
+        echo -e "  $GY  ✧  Cancelled.$C"
+        return 0
+    end
     if set -q argv[1]
         sudo command shutdown $argv
     else

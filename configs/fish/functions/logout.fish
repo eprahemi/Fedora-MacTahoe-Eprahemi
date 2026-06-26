@@ -66,5 +66,9 @@ function logout --description '(ﾉｼ>_<)ﾉ  Kicks you out of the login screen
     echo -e ""
 
     sleep 1
+    if test $status -ne 0
+        echo -e "  $GY  ✧  Cancelled.$C"
+        return 0
+    end
     gnome-session-quit --logout
 end
