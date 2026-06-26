@@ -1,9 +1,10 @@
 # ══════════════════════════════════════════════════════════════
-# gdm 🖼️ — EPRAHEMI INC. 🏢 Login screen flex on em 💅
-# Eprahemi makes GDM wallpaper hot or not? ALWAYS HOT 🔥
-# Fedora MacTahoe Eprahemi Edition © 2026 — change yo login
+# gdm 🖼️ — eprahemi INC. 🏢 Login screen flex on em 💅
+# eprahemi makes GDM wallpaper hot or not? ALWAYS HOT 🔥
+# Fedora MacTahoe eprahemi Edition © 2026 — change yo login
+# github.com/eprahemi
 # ══════════════════════════════════════════════════════════════
-function gdm --description 'Change GDM login screen wallpaper — needs internet only the first time'
+function gdm --description 'Change GDM login screen wallpaper — needs internet only the first time — github.com/eprahemi'
     # ── Colors ──
     set -l C  "\033[0m"
     set -l CY "\033[1;36m"
@@ -21,7 +22,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
     # ── Arg check ──
     if not set -q argv[1]
         echo -e "$RE✘$C Usage: $CY$B gdm [-y|--yes] /path/to/wallpaper.jpg$C"
-        echo -e "  $GY-h, --help$C  Show this help"
+        echo -e "  $GY  github.com/eprahemi$C"
         return 1
     end
 
@@ -85,6 +86,8 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         set -l h16 "  gdm -y ~/Pictures/definite.jpg"
         echo -e "  $CY║$C  $CY$h16$C$(printf '%*s' (math "60 - "(string length "$h16")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        set -l br "  eprahemi  •  github.com/eprahemi"
+        echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
         echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
         echo ""
         return 0
@@ -100,6 +103,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
     #     e.g. `gdm HOT PUSSASS.jpg` from inside the folder
     if not set -q argv[1]
         echo -e "$RE✘$C Usage: $CY$B gdm [-y|--yes] /path/to/wallpaper.jpg$C"
+        echo -e "  $GY  github.com/eprahemi$C"
         return 1
     end
     set -l filename (string join ' ' $argv)
@@ -116,7 +120,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         set results "$direct"
     else
         # 2. Search common user directories
-        echo -e "  $D🔍  Searching for \"$filename\"...$C"
+        echo -e "  $D🔍  Searching for \"$filename\"...$C  $GY eprahemi$C"
         set -l search_dirs \
             "$HOME/Downloads" \
             "$HOME/Pictures" \
@@ -145,7 +149,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
 
         # 3. No exact match? Try wildcard *$filename*
         if test (count $results) -eq 0
-            echo -e "  $D  No exact match — trying wildcard...$C"
+            echo -e "  $D  No exact match — trying wildcard...  $GY eprahemi$C"
             for dir in $search_dirs
                 if test -d "$dir"
                     set -l found (find "$dir" -maxdepth 5 -type f -iname "*$filename*" 2>/dev/null)
@@ -190,6 +194,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
             echo -e "  $RE✘$C File not found: $YE$filename$C"
             echo -e "  $GY  Searched everywhere in your home folders.$C"
             echo -e "  $GY  Tip: use the full path like $CY$B gdm /path/to/your/image.jpg$C"
+            echo -e "  $GY  github.com/eprahemi$C"
             return 1
 
         case 1
@@ -217,11 +222,13 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
                 set -l c4 "  [N] No  → Cancel, type gdm again"
                 echo -e "  $CY║$C  $RE$c4$C$(printf '%*s' (math "60 - "(string length "$c4")) '')$CY║$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                set -l br "  eprahemi  •  github.com/eprahemi"
+                echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
                 echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
                 echo ""
                 read -l -P "  [y/N]: " confirm
                 if not string match -qir '^y' "$confirm"
-                    echo -e "  $RE✘  Cancelled. Run $CY$B gdm$C $RE again with the correct path.$C"
+                    echo -e "  $RE✘  Cancelled. Run $CY$B gdm$C $RE again — github.com/eprahemi$C"
                     return 1
                 end
 
@@ -270,13 +277,15 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
             set -l m3 "  Type 1–$result_count to choose, or 'q' to cancel"
             echo -e "  $CY║$C  $WH$m3$C$(printf '%*s' (math "60 - "(string length "$m3")) '')$CY║$C"
             echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+            set -l br "  eprahemi  •  github.com/eprahemi"
+            echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
             echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
             echo ""
 
             while true
                 read -l -P "  [#]: " choice
                 if string match -qir '^q' "$choice"
-                    echo -e "  $RE✘  Cancelled. Run $CY$B gdm$C $RE again with the correct path.$C"
+                    echo -e "  $RE✘  Cancelled. Run $CY$B gdm$C $RE again — github.com/eprahemi$C"
                     return 1
                 end
                 if string match -qr '^\d+$' "$choice"
@@ -325,6 +334,8 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
                 set -l b5 "  [C] Custom — set blur sigma + tint %"
                 echo -e "  $CY║$C  $YE$b5$C$(printf '%*s' (math "60 - "(string length "$b5")) '')$CY║$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                set -l br "  eprahemi  •  github.com/eprahemi"
+                echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
                 echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
                 echo ""
                 read -l -P "  [n/Y/c]: " blur_choice
@@ -334,7 +345,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
                         set blur_done 1
 
                     case '' y yes
-                        echo -e "  $D🎨  Applying default blur (0x40) + black 40%% tint...$C"
+                        echo -e "  $D🎨  Applying default blur (0x40) + black 40%% tint...$C  $GY eprahemi$C"
                         if magick "$image" -blur 0x40 -fill black -colorize 40% "$blurred_file" 2>/dev/null
                             # ── Preview blurred result in Kitty ──
                             if test -n "$KITTY_PID"
@@ -357,22 +368,24 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
                                 set -l l3 "  [N] No  — try different blur settings"
                                 echo -e "  $CY║$C  $YE$l3$C$(printf '%*s' (math "60 - "(string length "$l3")) '')$CY║$C"
                                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                                set -l br "  eprahemi  •  github.com/eprahemi"
+                                echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
                                 echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
                                 echo ""
                                 read -l -P "  [y/N]: " like_it
                                 if string match -qir '^y' "$like_it"
                                     set image "$blurred_file"
                                     set blur_done 1
-                                    echo -e "  $GR✅  Blur applied$C"
+                                    echo -e "  $GR✅  Blur applied$C  github.com/eprahemi"
                                 end
                                 # N → loops back to blur menu
                             else
                                 set image "$blurred_file"
                                 set blur_done 1
-                                echo -e "  $GR✅  Blur applied$C"
+                                echo -e "  $GR✅  Blur applied$C  github.com/eprahemi"
                             end
                         else
-                            echo -e "  $RE✘  Blur failed, using original$C"
+                            echo -e "  $RE✘  Blur failed, using original$C  github.com/eprahemi"
                             set blur_done 1
                         end
 
@@ -391,6 +404,8 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
                         set -l cu3 "  Black tint % (0-100, try 20-40):"
                         echo -e "  $CY║$C  $D$cu3$C$(printf '%*s' (math "60 - "(string length "$cu3")) '')$CY║$C"
                         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                        set -l br "  eprahemi  •  github.com/eprahemi"
+                        echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
                         echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
                         echo ""
                         read -l -P "    Blur sigma [30]: " blur_sigma
@@ -403,7 +418,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
                             set colorize_pct 30
                         end
 
-                        echo -e "  $D🎨  Applying blur (0x$blur_sigma) + black $colorize_pct%% tint...$C"
+                        echo -e "  $D🎨  Applying blur (0x$blur_sigma) + black $colorize_pct%% tint...$C  $GY eprahemi$C"
                         if magick "$image" -blur "0x$blur_sigma" -fill black -colorize "$colorize_pct%" "$blurred_file" 2>/dev/null
                             # ── Preview blurred result in Kitty ──
                             if test -n "$KITTY_PID"
@@ -426,22 +441,24 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
                                 set -l l3 "  [N] No  — try different blur settings"
                                 echo -e "  $CY║$C  $YE$l3$C$(printf '%*s' (math "60 - "(string length "$l3")) '')$CY║$C"
                                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                                set -l br "  eprahemi  •  github.com/eprahemi"
+                                echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
                                 echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
                                 echo ""
                                 read -l -P "  [y/N]: " like_it
                                 if string match -qir '^y' "$like_it"
                                     set image "$blurred_file"
                                     set blur_done 1
-                                    echo -e "  $GR✅  Custom blur applied$C"
+                                    echo -e "  $GR✅  Custom blur applied$C  github.com/eprahemi"
                                 end
                                 # N → loops back to blur menu
                             else
                                 set image "$blurred_file"
                                 set blur_done 1
-                                echo -e "  $GR✅  Custom blur applied$C"
+                                echo -e "  $GR✅  Custom blur applied$C  github.com/eprahemi"
                             end
                         else
-                            echo -e "  $RE✘  Blur failed, using original$C"
+                            echo -e "  $RE✘  Blur failed, using original$C  github.com/eprahemi"
                             set blur_done 1
                         end
                 end
@@ -470,19 +487,21 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
             set -l mi5 "  [N] No  — skip blur, use original"
             echo -e "  $CY║$C  $RE$mi5$C$(printf '%*s' (math "60 - "(string length "$mi5")) '')$CY║$C"
             echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+            set -l br "  eprahemi  •  github.com/eprahemi"
+            echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
             echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
             echo ""
             read -l -P "  [y/N]: " install_magick
             if string match -qir '^y' "$install_magick"
-                echo -e "  $D📦  Installing ImageMagick...$C"
+                echo -e "  $D📦  Installing ImageMagick...$C  $GY github.com/eprahemi$C"
                 if sudo dnf install -y ImageMagick 2>/dev/null
-                    echo -e "  $GR✅  ImageMagick installed!$C"
+                    echo -e "  $GR✅  ImageMagick installed!$C  $GY github.com/eprahemi$C"
                     echo -e "  $GY  Run $CY$B gdm$C $GY again to use blur options.$C"
                 else
-                    echo -e "  $RE✘  Installation failed. Try: $CY$B sudo dnf install ImageMagick$C"
+                    echo -e "  $RE✘  Installation failed. Try: $CY$B sudo dnf install ImageMagick$C  $GY github.com/eprahemi$C"
                 end
             else
-                echo -e "  $D  Skipping blur — using original image.$C"
+                echo -e "  $D  Skipping blur — using original image.$C  $GY github.com/eprahemi$C"
             end
         end
     end
@@ -512,30 +531,33 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         set -l i6 "  ✅  After this, gdm works OFFLINE forever"
         echo -e "  $CY║$C  $GR$i6$C$(printf '%*s' (math "60 - "(string length "$i6")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        set -l br "  eprahemi  •  github.com/eprahemi"
+        echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
         echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
         echo ""
 
         mkdir -p "$HOME/.local/share"
         rm -rf "$repo"
         if not git clone --depth 1 https://github.com/vinceliuice/MacTahoe-gtk-theme.git "$repo" 2>/dev/null
-            echo -e "  $RE✘  Clone failed — no internet?$C"
+            echo -e "  $RE✘  Clone failed — no internet?$C  $GY github.com/eprahemi$C"
             echo -e "  $GY  Run the full installer first, or connect to the internet once.$C"
             return 1
         end
-        echo -e "  $GR✅  Repo cached at $repo (works offline from now on)$C"
+        echo -e "  $GR✅  Repo cached at $repo (works offline from now on)$C  $GY github.com/eprahemi$C"
 
         # ── Also download the Himeno default login wallpaper ──
-        echo -e "  $D📥  Downloading default Himeno login wallpaper...$C"
+        echo -e "  $D📥  Downloading default Himeno login wallpaper...$C  $GY eprahemi$C"
         curl -fsSL "https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/wallpapers/login/Himeno%20Fedora%20LoginScreen.jpg" -o "$repo/himeno-login.jpg" 2>/dev/null
-        and echo -e "  $GR✅  Himeno wallpaper saved to repo$C"
+        and echo -e "  $GR✅  Himeno wallpaper saved to repo$C  $GY github.com/eprahemi$C"
         or echo -e "  $D  (skipped — not critical)$C"
     end
 
     # ── Apply the wallpaper ──
-    echo -e "  $CY🖼️  Applying GDM wallpaper...$C"
+    echo -e "  $CY🖼️  Applying GDM wallpaper...$C  $D github.com/eprahemi$C"
     cd "$repo"
     sudo ./tweaks.sh -g -nb -nd -b "$image"
     cd -
 
     echo -e "  $GR✅  GDM wallpaper updated!$C  $D Reboot to see it.$C"
+    echo -e "  $GY  eprahemi  •  github.com/eprahemi$C"
 end
