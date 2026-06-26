@@ -320,7 +320,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                 set -l b3 "  [N] No — use original image"
                 echo -e "  $CY║$C  $GR$b3$C$(printf '%*s' (math "60 - "(string length "$b3")) '')$CY║$C"
-                set -l b4 "  [Y] Yes — default blur 0x30 and fill darker 30%"
+                set -l b4 "  [Y] Yes — Default Blur"
                 echo -e "  $CY║$C  $CY$b4$C$(printf '%*s' (math "60 - "(string length "$b4")) '')$CY║$C"
                 set -l b5 "  [C] Custom — set blur sigma + tint %"
                 echo -e "  $CY║$C  $YE$b5$C$(printf '%*s' (math "60 - "(string length "$b5")) '')$CY║$C"
@@ -334,8 +334,8 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
                         set blur_done 1
 
                     case '' y yes
-                        echo -e "  $D🎨  Applying default blur (0x30) + black 30%% tint...$C"
-                        if magick "$image" -blur 0x30 -fill black -colorize 30% "$blurred_file" 2>/dev/null
+                        echo -e "  $D🎨  Applying default blur (0x40) + black 40%% tint...$C"
+                        if magick "$image" -blur 0x40 -fill black -colorize 40% "$blurred_file" 2>/dev/null
                             # ── Preview blurred result in Kitty ──
                             if test -n "$KITTY_PID"
                                 echo ""
