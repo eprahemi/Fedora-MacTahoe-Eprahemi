@@ -318,15 +318,10 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         set -l RE "\033[1;31m"
         set -l GY "\033[38;5;248m"
         set -l D  "\033[2m"
-        set -l wp_bg "$HOME/.local/share/backgrounds/Himeno Fedora LoginScreen.jpg"
         set -l wp_repo "$HOME/.local/share/mactahoe-gtk/himeno-login.jpg"
         set -l wp_url "https://raw.githubusercontent.com/eprahemi/FedoraTahoe-GDM/main/himeno-login.jpg"
 
-        if test -f "$wp_bg"
-            echo -e "  $D🖼️  Found Himeno login wallpaper in ~/.local/share/backgrounds/$C"
-            gdm --yes "$wp_bg"
-        else if test -f "$wp_repo"
-            echo -e "  $D🖼️  Found Himeno login wallpaper in cached repo$C"
+        if test -f "$wp_repo"
             gdm --yes "$wp_repo"
         else
             # Try downloading silently up to 3 times
