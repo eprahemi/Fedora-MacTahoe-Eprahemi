@@ -195,8 +195,11 @@ for m in matches:
         else
             echo -e "\033[1;31m✘ Password too long: \033[1;33m$length\033[1;31m characters\033[0m"
             echo -e "  \033[38;5;248m  Maximum supported length is \033[1;33m99,999\033[38;5;248m characters\033[0m"
-            echo -e "  \033[38;5;248m  To generate: \033[1;36mpassgen gen $length\033[0m  \033[38;5;248mor  \033[1;36mpassgen $length --force\033[0m"
-            echo -e "  \033[38;5;248m  To analyze as password: \033[1;36mpassgen check $length\033[0m"
+            echo -e "  \033[38;5;248m  To generate:\033[0m"
+            echo -e "    \033[1;36mpassgen gen $length\033[0m"
+            echo -e "    \033[1;36mpassgen --force $length\033[0m"
+            echo -e "  \033[38;5;248m  To analyze as password:\033[0m"
+            echo -e "    \033[1;36mpassgen check $length\033[0m"
             return 1
         end
     end
