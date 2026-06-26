@@ -83,7 +83,7 @@ function func --description 'Function archive: list/search/show all fish command
             case stayawake; echo "stayawake [dur|--display|--stop]"
             case getdata; echo "getdata [--list|--venv]"
             case clean;   echo "clean [--all|--pip|--dry-run]"
-            case gdm;     echo "gdm [-y|--yes] [image]"
+            case gdm;     echo "gdm [-y|--yes] [image]  — auto-search"
             case gdm-default; echo "gdm-default"
             case refresh; echo "refresh [-k|--all|--cache|--dns|--dnf|...]"
             case myip;    echo "myip"

@@ -40,7 +40,8 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY║$C  $D  Changes the GDM login screen background.$C                    $CY║$C"
         echo -e "  $CY║$C  $D  First run  → needs internet (clones repo once).$C             $CY║$C"
         echo -e "  $CY║$C  $D  After that → works OFFLINE (cached repo).$C                   $CY║$C"
-        echo -e "  $CY║$C  $D  Relative filenames work — no need for full paths.$C           $CY║$C"
+        echo -e "  $CY║$C  $D  🔍  System-wide search across all your folders.$C             $CY║$C"
+        echo -e "  $CY║$C  $D  Multiple matches? Pick one with 1/2/3…$C                      $CY║$C"
         echo -e "  $CY║$C  $D  Use $CY-y$C $D or $CY--yes$C $D to skip confirmation.$C                      $CY║$C"
         echo -e "  $CY║$C$GY$(printf '%s' '                                                                 ')$CY║$C"
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
@@ -62,43 +63,172 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         set -e argv[1]
     end
 
-    # ── Join all args so unquoted filenames with spaces work — ──
+    # ── Join all args so unquoted filenames with spaces work ──
     #     e.g. `gdm HOT PUSSASS.jpg` from inside the folder
     if not set -q argv[1]
         echo -e "$RE✘$C Usage: $CY$B gdm [-y|--yes] /path/to/wallpaper.jpg$C"
         return 1
     end
     set -l filename (string join ' ' $argv)
-    set -l image (realpath "$filename" 2>/dev/null)
-    if not test -f "$image"
-        echo -e "  $RE✘$C File not found: $YE$filename$C"
-        echo -e "  $GY  Tip: you can just type the filename if you're in the same folder.$C"
-        return 1
+
+    # ══════════════════════════════════════════════════════════════
+    # 🔍  SEARCH ENGINE — finds the image everywhere
+    # ══════════════════════════════════════════════════════════════
+    set -l image ""
+    set -l results
+
+    # 1. Try direct path first
+    set -l direct (realpath "$filename" 2>/dev/null)
+    if test -f "$direct"
+        set results "$direct"
+    else
+        # 2. Search common user directories
+        echo -e "  $D🔍  Searching for \"$filename\"...$C"
+        set -l search_dirs \
+            "$HOME/Downloads" \
+            "$HOME/Pictures" \
+            "$HOME/Documents" \
+            "$HOME/Desktop" \
+            "$HOME/Videos" \
+            "$HOME/Music" \
+            "$HOME/Templates" \
+            "$HOME/Public" \
+            "$HOME/.config/Wallpapers" \
+            "$HOME/.local/share/backgrounds" \
+            "$HOME/.local/share/wallpapers" \
+            "$HOME/.local/share/mactahoe-gtk" \
+            "$HOME/Pictures/Wallpapers"
+
+        for dir in $search_dirs
+            if test -d "$dir"
+                set -l found (find "$dir" -maxdepth 5 -type f -iname "$filename" 2>/dev/null)
+                if test -n "$found"
+                    for f in $found
+                        set -a results (realpath "$f" 2>/dev/null)
+                    end
+                end
+            end
+        end
+
+        # 3. No exact match? Try wildcard *$filename*
+        if test (count $results) -eq 0
+            echo -e "  $D  No exact match — trying wildcard...$C"
+            for dir in $search_dirs
+                if test -d "$dir"
+                    set -l found (find "$dir" -maxdepth 5 -type f -iname "*$filename*" 2>/dev/null)
+                    if test -n "$found"
+                        for f in $found
+                            set -a results (realpath "$f" 2>/dev/null)
+                        end
+                    end
+                end
+            end
+        end
+
+        # 4. Still nothing? Try in CWD as last resort
+        if test (count $results) -eq 0
+            set -l cwd_find (find (pwd) -maxdepth 1 -type f -iname "*$filename*" 2>/dev/null)
+            if test -n "$cwd_find"
+                for f in $cwd_find
+                    set -a results (realpath "$f" 2>/dev/null)
+                end
+            end
+        end
     end
 
-    # ── Confirmation prompt ──
-    if test $skip_confirm -eq 0
-        echo ""
-        echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
-        echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
-        echo -e "  $CY║$C  $WH🖼️  DO YOU MEAN THIS?$C                                   $CY║$C"
-        echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
-        echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
-        echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
-        printf "  $CY║$C    $YE%s$C  $CY║$C\n" "$image"
-        echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
-        echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
-        echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
-        echo -e "  $CY║$C  $GR  [Y] Yes → Apply wallpaper$C                             $CY║$C"
-        echo -e "  $CY║$C  $RE  [N] No  → Cancel, type gdm again$C                      $CY║$C"
-        echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
-        echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
-        echo ""
-        read -l -P "  [y/N]: " confirm
-        if not string match -qir '^y' "$confirm"
-            echo -e "  $RE✘  Cancelled. Run $CY$B gdm$C $RE again with the correct path.$C"
-            return 1
+    # Deduplicate
+    if test (count $results) -gt 1
+        set -l deduped
+        for r in $results
+            if not contains -- $r $deduped
+                set -a deduped $r
+            end
         end
+        set results $deduped
+    end
+
+    set -l result_count (count $results)
+
+    # ══════════════════════════════════════════════════════════════
+    # 🎯  RESULT HANDLER — single confirm / multi picker
+    # ══════════════════════════════════════════════════════════════
+    switch $result_count
+        case 0
+            echo -e "  $RE✘$C File not found: $YE$filename$C"
+            echo -e "  $GY  Searched everywhere in your home folders.$C"
+            echo -e "  $GY  Tip: use the full path like $CY$B gdm /path/to/your/image.jpg$C"
+            return 1
+
+        case 1
+            set image $results[1]
+            if test $skip_confirm -eq 0
+                echo ""
+                echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
+                echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+                echo -e "  $CY║$C  $WH🖼️  DO YOU MEAN THIS?$C                                   $CY║$C"
+                echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+                echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+                echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+                printf "  $CY║$C    $YE%s$C  $CY║$C\n" "$image"
+                echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+                echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+                echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+                echo -e "  $CY║$C  $GR  [Y] Yes → Apply wallpaper$C                             $CY║$C"
+                echo -e "  $CY║$C  $RE  [N] No  → Cancel, type gdm again$C                      $CY║$C"
+                echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+                echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
+                echo ""
+                read -l -P "  [y/N]: " confirm
+                if not string match -qir '^y' "$confirm"
+                    echo -e "  $RE✘  Cancelled. Run $CY$B gdm$C $RE again with the correct path.$C"
+                    return 1
+                end
+            end
+
+        case '*'
+            echo ""
+            echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
+            echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+            echo -e "  $CY║$C  $WH🖼️  MULTIPLE MATCHES$C                                  $CY║$C"
+            echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+            echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+            echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+            printf "  $CY║$C    File $WH\"%s\"$C found in $YE%d$C locations:$C\n" "$filename" $result_count
+            echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+
+            for i in (seq $result_count)
+                set -l path $results[$i]
+                set -l display "$path"
+                if test (string length "$display") -gt 55
+                    set display (string sub -l 52 "$display")"..."
+                end
+                set -l num_str (printf "%2d" $i)
+                echo -e "  $CY║$C  $GR"'['$num_str']'"$C  $D$display$C  $CY║$C"
+            end
+
+            echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+            echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+            echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+            printf "  $CY║$C  $WH  Type 1–%d to choose, or 'q' to cancel$C     $CY║$C\n" $result_count
+            echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+            echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
+            echo ""
+
+            while true
+                read -l -P "  [#]: " choice
+                if string match -qir '^q' "$choice"
+                    echo -e "  $RE✘  Cancelled. Run $CY$B gdm$C $RE again with the correct path.$C"
+                    return 1
+                end
+                if string match -qr '^\d+$' "$choice"
+                    set -l num (math "$choice" 2>/dev/null)
+                    if test $num -ge 1 -a $num -le $result_count
+                        set image $results[$num]
+                        break
+                    end
+                end
+                echo -e "  $RE  Invalid — type 1-$result_count or q.$C"
+            end
     end
 
     # ── Persistent MacTahoe repo (kept after first clone) ──
