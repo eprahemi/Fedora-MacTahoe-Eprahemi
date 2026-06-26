@@ -329,31 +329,19 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
             echo -e "  $D🖼️  Found Himeno login wallpaper in cached repo$C"
             gdm --yes "$wp_repo"
         else
-            echo ""
-            echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
-            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-            echo -e "  $CY║$C  $WH🌐  DOWNLOADING HIMENO LOGIN WALLPAPER$C                    $CY║$C"
-            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-            echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
-            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-            echo -e "  $CY║$C  $D  Himeno wallpaper not found locally.$C                          $CY║$C"
-            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-            echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
-            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-            echo -e "  $CY║$C  $D  Checking internet connection...$C                          $CY║$C"
-            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-            echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
-            echo ""
-            # Check internet connectivity before download attempt
-            set -l has_net 0
-            if command -v curl &>/dev/null
-                curl -fsSL -o /dev/null --connect-timeout 5 "https://github.com" 2>/dev/null
-                and set has_net 1
-            else if command -v ping &>/dev/null
-                ping -c 1 -W 5 "github.com" 2>/dev/null
-                and set has_net 1
+            # Try downloading silently up to 3 times
+            set -l dl_ok 0
+            for attempt in (seq 3)
+                mkdir -p "$HOME/.local/share/mactahoe-gtk"
+                if curl -fsSL --connect-timeout 5 "$wp_url" -o "$wp_repo" 2>/dev/null
+                    set dl_ok 1
+                    break
+                end
+                if test $attempt -lt 3
+                    sleep 1
+                end
             end
-            if test $has_net -eq 0
+            if test $dl_ok -eq 0
                 echo ""
                 echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
                 echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
@@ -383,27 +371,6 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
                 echo ""
                 return 1
             end
-            echo ""
-            echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
-            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-            echo -e "  $CY║$C  $WH🌐  DOWNLOADING HIMENO LOGIN WALLPAPER$C                    $CY║$C"
-            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-            echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
-            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-            echo -e "  $CY║$C  $D  Downloading from FedoraTahoe-GDM repo...$C                $CY║$C"
-            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-            echo -e "  $CY║$C  $YE  📦  Saving to ~/.local/share/mactahoe-gtk/$C              $CY║$C"
-            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-            echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
-            echo ""
-            mkdir -p "$HOME/.local/share/mactahoe-gtk"
-            if not curl -fsSL "$wp_url" -o "$wp_repo" 2>/dev/null
-                echo -e "  $RE✘  Download failed — no internet?$C"
-                echo -e "  $GY  Run gdm with any image, or connect to the internet.$C"
-                echo -e "  $GY  github.com/eprahemi/FedoraTahoe-GDM$C"
-                return 1
-            end
-            echo -e "  $GR✅  Himeno login wallpaper saved to repo$C"
             gdm --yes "$wp_repo"
         end
         return $status
