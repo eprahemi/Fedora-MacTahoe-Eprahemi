@@ -11,10 +11,18 @@
 
 Fedora MacTahoe is a Fedora Linux → macOS transformation project. It turns a standard Fedora Workstation GNOME desktop into a macOS-like experience with GTK themes, icon themes, SF Pro font, Big Sur sounds, GNOME extensions, custom keybindings, Kitty terminal, Fish shell, and GDM login screen theming.
 
-- **Repository:** `https://github.com/eprahemi/Fedora-MacTahoe-Eprahemi.git`
+- **Repository (main):** `https://github.com/eprahemi/Fedora-MacTahoe-Eprahemi.git` (a.k.a. "Fedoratahoe")
+- **Repository (GDM companion):** `https://github.com/eprahemi/FedoraTahoe-GDM.git`
 - **Branch:** `main`
 - **Local repo path:** `/home/eprahemi/Documents/Codes University [Mine]/Eprahemi Websites/Fedora Mactahoe Eprahemi GTK theme + Icon + Sf Pro Font/`
-- **Latest commit:** `754231ed` — `fix(passgen): reformat >99999 error with clear separated options`
+- **Latest commit:** `a2206e2e` — `gdm.fish: fix read -l scoping bug (loop-local vars lost after while break) + switch/case → if/else with string match`
+
+### ⚠️ CRITICAL — Repo Path Mistake
+Do NOT search with glob patterns like `*Eprahemi*` — the directory has "Mactahoe" (not "MacTahoe"), and glob won't match. Use the **exact literal path** from this file:
+```
+/home/eprahemi/Documents/Codes University [Mine]/Eprahemi Websites/Fedora Mactahoe Eprahemi GTK theme + Icon + Sf Pro Font/
+```
+The `gdm.fish` source file lives at `configs/fish/functions/gdm.fish` inside this repo. When the user says "push to fedoratahoe", they mean the main `Fedora-MacTahoe-Eprahemi` repo. The `FedoraTahoe-GDM` repo is a separate companion for GDM shell theme files (no gdm.fish).
 - **Install script:** `install.sh` (2271 lines, 23 steps)
 - **Bootstrap script:** `bootstrap.sh` (299 lines)
 - **Upstream MacTahoe repo** (for theme compilation): `https://github.com/vinceliuice/MacTahoe-gtk-theme.git` (cloned to `/tmp/mactahoe-build/`)
@@ -25,13 +33,14 @@ Fedora MacTahoe is a Fedora Linux → macOS transformation project. It turns a s
 | Fish functions | `~/.config/fish/functions/*.fish` |
 | Config source | `$BUNDLE/configs/fish/functions/*.fish` |
 | Wallpapers | `~/.local/share/backgrounds/` (XDG data) |
-| MacTahoe cached repo | `~/.local/share/mactahoe-gtk/` |
+| **FedoraTahoe-GDM clone** (gdm.fish engine) | **`~/.local/share/mactahoe-gdm/`** ← DO NOT confuse with `/tmp/mactahoe-gtk` |
+| Upstream MacTahoe GTK theme clone (install.sh) | `/tmp/mactahoe-gtk` (vinceliuice/MacTahoe-gtk-theme) |
 | Kitty config | `~/.config/kitty/kitty.conf` |
 | GTK settings | `~/.config/gtk-3.0/settings.ini`, `~/.config/gtk-4.0/settings.ini` |
 | Starship | `~/.config/starship.toml` |
 | Fastfetch | `~/.config/fastfetch/config.jsonc` |
 | Dconf backup | `configs/dconf/full-backup.ini` |
-| GDM undo backup | `~/.local/share/mactahoe-gtk/.gdm-undo-copy.jpg` |
+| GDM undo backup | `~/.local/share/mactahoe-gdm/.gdm-undo-copy.jpg` |
 | Icon themes | `~/.local/share/icons/MacTahoe/`, `~/.local/share/icons/MacTahoe-dark/` |
 | Big Sur sounds | `~/.local/share/sounds/bigsur/` |
 | Eprahemi License | `~/Documents/EPRAHEMI — PUBLIC LICENSE & REUSE TERMS.md` |
@@ -102,7 +111,7 @@ Bootstrap passes `INSTALL_DISCORD`, `INSTALL_DESKTOP_WALLPAPER`, `INSTALL_WALLPA
 
 ## 4. GDM WALLPAPER SWITCHER (`gdm` Fish Function)
 
-### File: `configs/fish/functions/gdm.fish` (~907 lines)
+### File: `configs/fish/functions/gdm.fish` (~2051 lines)
 
 A persistent GDM wallpaper switching function that works entirely offline after the repo is cached once.
 
@@ -131,7 +140,7 @@ A persistent GDM wallpaper switching function that works entirely offline after 
   9. `~/Templates`
   10. `~/Public`
   11. `~/.local/share/wallpapers`
-  12. `~/.local/share/mactahoe-gtk`
+  12. `~/.local/share/mactahoe-gdm`
   13. `~/.config/Wallpapers`
 - Supports spaces in filenames (joins args with `string join ' '`)
 - Supports interactive multi-match picker (1/2/3 from all results)
@@ -168,11 +177,11 @@ A persistent GDM wallpaper switching function that works entirely offline after 
 
 ### `gdm default` Flow (3-tier fallback)
 1. `~/.local/share/backgrounds/Himeno Fedora LoginScreen.jpg`
-2. `~/.local/share/mactahoe-gtk/himeno-login.jpg`
+2. `~/.local/share/mactahoe-gdm/himeno-login.jpg`
 3. Download from GitHub raw URL
 
 ### `gdm info` Flow
-1. Reads `~/.local/share/mactahoe-gtk/.gdm-undo-copy.jpg` (backup kept from last apply)
+1. Reads `~/.local/share/mactahoe-gdm/.gdm-undo-copy.jpg` (backup kept from last apply)
 2. Two-section nested frame: FILE DETAILS + IMAGE INFORMATION
 3. Shows filename, dir, size, date (current ts — not file mtime), format, colorspace, depth, DPI, MP, aspect, blur status, source path
 4. All padding adjusted for emoji double-width (emoji renders 2 cols, Fish string length counts as 1)
@@ -180,7 +189,7 @@ A persistent GDM wallpaper switching function that works entirely offline after 
 6. Displayed in branded high-end box with eprahemi footer
 
 ### `gdm save` Flow (re-added per user request)
-1. Reads `~/.local/share/mactahoe-gtk/.gdm-undo-copy.jpg`
+1. Reads `~/.local/share/mactahoe-gdm/.gdm-undo-copy.jpg`
 2. Generates **16-char encrypted-looking name** — first ~6 chars = Unix timestamp in base36 (decodes to date), remaining ~10 chars = pure random via python3 `secrets`
 3. Each save = unique name — collision protection with `_1`, `_2`, … suffix
 4. Shows **decoded applied date** (`🕒  Applied:  26 Jun 2026  16:56`) alongside the encrypted name
@@ -221,17 +230,23 @@ The `gdm-default.fish` was deleted — merged into `gdm.fish`.
 
 ---
 
-## 6. TWEAKS.SH (Upstream MacTahoe)
+## 6. GDM WALLPAPER ENGINE (`gdm-wallpaper.sh`)
 
-File: `~/.local/share/mactahoe-gtk/tweaks.sh` (393 lines)
+**This is the user's own work** — NOT from vinceliuice/MacTahoe-gtk-theme.
 
-Used by both `install.sh` and `gdm.fish` to apply GDM theme:
-- `sudo ./tweaks.sh -g -nb -nd -b "$image"` — apply GDM theme with wallpaper
-- `sudo ./tweaks.sh -g -nb -nd` — apply GDM theme without wallpaper
-- `sudo ./tweaks.sh -f` — apply Firefox macOS theme
-- `sudo ./tweaks.sh -r -g` — revert GDM theme
+| What | Where |
+|------|-------|
+| **Source repo** | `https://github.com/eprahemi/FedoraTahoe-GDM.git` |
+| **Cloned to** | `~/.local/share/mactahoe-gdm/` |
+| **Main script** | `gdm-wallpaper.sh` (NOT tweaks.sh) |
+| **Original name** | Was `tweaks.sh`, renamed to `gdm-wallpaper.sh` |
 
-The upstream repo at `~/.local/share/mactahoe-gtk/` is a clone of `https://github.com/vinceliuice/MacTahoe-gtk-theme.git`.
+Used by `gdm.fish` to apply GDM wallpaper:
+- `sudo ./gdm-wallpaper.sh -g -nb -nd -b "$image"` — apply GDM theme with wallpaper
+- `sudo ./gdm-wallpaper.sh -g -nb -nd` — apply GDM theme without wallpaper
+- `sudo ./gdm-wallpaper.sh -r -g` — revert GDM theme
+
+This is a COMPLETELY separate thing from `/tmp/mactahoe-gtk/tweaks.sh` (which install.sh clones from upstream vinceliuice/MacTahoe-gtk-theme for the INITIAL one-time GDM theme install). The runtime GDM wallpaper switcher is the user's own `FedoraTahoe-GDM` repo.
 
 ---
 
@@ -313,7 +328,7 @@ All 26 Fish function files were purged of unprofessional/brainrot/childish langu
 ## 9. TESTING RESULTS
 
 - **PNG → JPEG 90%:** 3.5 MB → 326-754 KB, visually lossless
-- **GDM wallpaper apply:** Works via `sudo ./tweaks.sh -g -nb -nd -b "$image"` 
+- **GDM wallpaper apply (gdm.fish runtime):** Works via `sudo ./gdm-wallpaper.sh -g -nb -nd -b "$image"` from FedoraTahoe-GDM repo at `~/.local/share/mactahoe-gdm` 
 - **Fish function auto-install:** `cp -f "$cfg/fish/functions/"*.fish "$HOME/.config/fish/functions/"`
 - **Fastfetch config:** `PLACEHOLDER_USER_HOME` sed replacement works for dynamic paths
 
@@ -361,7 +376,7 @@ Fedora Mactahoe Eprahemi GTK theme + Icon + Sf Pro Font/
 │   │       ├── extract.fish
 │   │       ├── fish_greeting.fish
 │   │       ├── func.fish       # Function archive
-│   │       ├── gdm.fish        # GDM wallpaper switcher (~907 lines)
+│   │   ├── gdm.fish        # GDM wallpaper switcher (~2051 lines)
 │   │       ├── getdata.fish
 │   │       ├── hollywood.fish
 │   │       ├── l.fish
@@ -410,6 +425,7 @@ Fedora Mactahoe Eprahemi GTK theme + Icon + Sf Pro Font/
 ## 12. RECENT COMMITS (Latest on top)
 
 ```
+a2206e2e gdm.fish: fix read -l scoping bug (loop-local vars lost after while break) + switch/case → if/else with string match
 494b746c fish: professionalize all prompts, errors, and comments (27 files)
 c232f29a gdm: keep only info subcommand, remove undo/save
 46f878a2 fix(gdm): move JPEG conversion to right before apply (after blur)
@@ -436,11 +452,16 @@ bash install.sh               # Full 23-step installer
 # Install (from internet)
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/bootstrap.sh)"
 
-# GDM theme apply
-sudo ./tweaks.sh -g -nb -nd -b /path/to/image.jpg
-sudo ./tweaks.sh -g -nb -nd              # Without wallpaper
-sudo ./tweaks.sh -r -g                   # Revert GDM theme
-sudo ./tweaks.sh -f                      # Firefox macOS theme
+# GDM wallpaper apply (runtime — gdm.fish clones FedoraTahoe-GDM)
+sudo ./gdm-wallpaper.sh -g -nb -nd -b /path/to/image.jpg
+sudo ./gdm-wallpaper.sh -g -nb -nd              # Without wallpaper
+sudo ./gdm-wallpaper.sh -r -g                   # Revert GDM theme
+
+# GDM theme install (install.sh — clones upstream MacTahoe-gtk-theme)
+sudo /tmp/mactahoe-gtk/tweaks.sh -g -nb -nd -b /path/to/image.jpg
+sudo /tmp/mactahoe-gtk/tweaks.sh -g -nb -nd
+sudo /tmp/mactahoe-gtk/tweaks.sh -r -g
+sudo /tmp/mactahoe-gtk/tweaks.sh -f             # Firefox macOS theme
 
 # Icon cache rebuild
 gtk-update-icon-cache ~/.local/share/icons/MacTahoe-dark/
@@ -450,8 +471,8 @@ gtk-update-icon-cache ~/.local/share/icons/MacTahoe/
 ---
 
 ## 14. VERSION HISTORY
-- **Current:** `494b746c` (fish professionalization)
-- **Previous:** `c232f29a` (gdm undo/save removal)
+- **Current:** `a2206e2e` (gdm.fish read -l scoping fix)
+- **Previous:** `494b746c` (fish professionalization)
 - **Initial work:** Multiple commits from earlier sessions (gdm.fish creation, blur system, etc.)
 
 ---
@@ -494,6 +515,7 @@ These caused (or would cause) the script to abort silently on edge cases.
 | 24 | install.sh | `qr-code-symbolic.svg` missing — GNOME 48+ WiFi QR button no icon | Created + copied to actions/symbolic + actions/scalable |
 | 25 | install.sh | GResource icons at new-style paths (`scalable/actions/`) not found | Added 16 new-style dirs to `index.theme` + `mkdir` |
 | 26 | install.sh | Icon cache not rebuilt after install | `gtk-update-icon-cache` per theme + in finalize |
+| 27 | gdm.fish | `read -l` inside `while` loop — variable scoped to loop body, DESTROYED after `break` exits loop. Affected all 10 `read` calls, most visible: `blur_choice` was `c` after read but `""` at matching logic. | Changed all 10 `read -l -P` → `read -P` (function-scoped instead of loop-scoped) |
 
 ### 🟠 CLASS C: CONTENT / UX ISSUES
 
@@ -579,6 +601,12 @@ Box inner width = 62 chars. Line total = 66 chars.
 8. **Always use `gio trash`** instead of `rm -rf` for user files. Never permanently delete user data.
 9. **When applying fixes to other users**, augment their existing theme files. Never replace or delete their per-user copies.
 10. **`edit-symbolic` and `document-edit-symbolic` ARE present in MacTahoe-dark** — if user reports them missing, rebuild icon cache and restart GNOME Settings first.
+11. **Fish `read -l` inside a `while` loop creates a LOOP-LOCAL variable** that gets DESTROYED when the loop exits via `break`. If the variable is needed after the loop, use `read` (without `-l`) for function-scoped, or `read -g` for global. This affected ALL 10 `read -l` calls in `gdm.fish` — most visibly `blur_choice` was set to `c` by `read` but empty by the time the `if/else` matched it.
+12. **Never search the repo path with glob patterns** — the directory name has "Mactahoe" (not "MacTahoe"), so `*Eprahemi*` won't match. Always use the **exact literal path** from `fedora-mac-ai.md` line 16. When the user says "push to fedoratahoe" or "push to main Fedoratahoe", they mean the `Fedora-MacTahoe-Eprahemi` repo at `https://github.com/eprahemi/Fedora-MacTahoe-Eprahemi.git`.
+13. **`mactahoe-gdm` vs `mactahoe-gtk` are TWO COMPLETELY DIFFERENT THINGS:**
+    - **`~/.local/share/mactahoe-gdm`** — Runtime GDM wallpaper engine. Cloned by `gdm.fish` from `https://github.com/eprahemi/FedoraTahoe-GDM.git`. Uses `gdm-wallpaper.sh` (user's own script, renamed from the original `tweaks.sh`). NOT from vinceliuice.
+    - **`/tmp/mactahoe-gtk`** — Install-time upstream GTK theme. Cloned by `install.sh` from `https://github.com/vinceliuice/MacTahoe-gtk-theme.git`. Uses `tweaks.sh`. Only used during initial installation for GDM theme + Firefox theming setup.
+    - **NEVER confuse these two.** When editing gdm.fish runtime paths, use `mactahoe-gdm`. The `gdm-wallpaper.sh` script is the user's own work from `FedoraTahoe-GDM`.
 
 ---
 

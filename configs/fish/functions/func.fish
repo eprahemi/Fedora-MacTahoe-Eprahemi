@@ -298,11 +298,8 @@ function func --description 'Function archive: list/search/show all fish command
                 continue
             end
 
-            # Truncate long descriptions
+            # ── Display full description (line has no right border, so no truncation needed) ──
             set -l desc $fn_d[$idx]
-            if test (string length "$desc") -gt 50
-                set desc (string sub -l 47 "$desc")"..."
-            end
 
             printf "  $esc│$N  $esc%-13s$N  $W%s$N\n" "$f" "$desc"
             printf "  $esc│$N    $D%s Usage: $C%s$N  $D│  %s lines$N\n" " " "$fn_u[$idx]" "$fn_l[$idx]"
