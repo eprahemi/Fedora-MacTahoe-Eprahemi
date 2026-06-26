@@ -28,16 +28,23 @@ function logout --description '(ﾉｼ>_<)ﾉ  Kicks you out of the login screen
 
     # ── Confirm ──
     echo -e ""
-    echo -e "  $GY┌────────────────────────────────────────────────────┐$C"
-    echo -e "  $GY│$C$(printf '%*s' 52 '')$GY│$C"
-    echo -e "  $GY│$C     $WHﾉｼ(>_<)ﾉ  Kick you out of the login screen?$C$GY│$C"
-    echo -e "  $GY│$C$(printf '%*s' 52 '')$GY│$C"
-    echo -e "  $GY│$C     $D  Logout will terminate all running$C$GY           │$C"
-    echo -e "  $GY│$C     $D  applications and return to GDM.$C$GY          │$C"
-    echo -e "  $GY│$C$(printf '%*s' 52 '')$GY│$C"
-    echo -e "  $GY└────────────────────────────────────────────────────┘$C"
-    echo -e "  $CY  [y/N]$C $D  —  Say yes to disappear$C"
-    read -l answer
+    echo -e "  $GY┌──────────────────────────────────────────────────────────────┐$C"
+    echo -e "  $GY│$C$(printf '%*s' 62 '')$GY│$C"
+    set -l line1 " ﾉｼ(>_<)ﾉ   —   Farewell, $USER?"
+    echo -e "  $GY│$C    $WH$line1$C$(printf '%*s' (math "58 - "(string length -- "$line1")) '')$GY│$C"
+    echo -e "  $GY│$C$(printf '%*s' 62 '')$GY│$C"
+    echo -e "  $GY│$C    $D ──────────────────────────────────────────────────────$C $GY│$C"
+    echo -e "  $GY│$C$(printf '%*s' 62 '')$GY│$C"
+    echo -e "  $GY│$C      $D This will end your session and return$C$GY              │$C"
+    echo -e "  $GY│$C      $D to the GDM login screen. All running$C$GY               │$C"
+    echo -e "  $GY│$C      $D applications will be terminated.$C$GY                   │$C"
+    echo -e "  $GY│$C$(printf '%*s' 62 '')$GY│$C"
+    echo -e "  $GY│$C    $D ──────────────────────────────────────────────────────$C $GY│$C"
+    echo -e "  $GY│$C$(printf '%*s' 62 '')$GY│$C"
+    echo -e "  $GY│$C       $GR ❮$C $WH Y $C$GR ❯$C  $D Yes, log out$C   $RE ❮$C $WH N $C$RE ❯$C  $D Cancel$C$GY           │$C"
+    echo -e "  $GY│$C$(printf '%*s' 62 '')$GY│$C"
+    echo -e "  $GY└──────────────────────────────────────────────────────────────┘$C"
+    read -l -P '  ❯ ' answer
     if test "$answer" != "y"; and test "$answer" != "Y"
         echo -e "  $GY  ✧  Stay a little longer then.$C"
         return 0
@@ -45,12 +52,13 @@ function logout --description '(ﾉｼ>_<)ﾉ  Kicks you out of the login screen
 
     # ── Bye bye ──
     echo -e ""
-    echo -e "  $GY┌────────────────────────────────────────────────────┐$C"
-    echo -e "  $GY│$C$(printf '%*s' 52 '')$GY│$C"
-    echo -e "  $GY│$C     $WH✧  Sayonara,  $CY$USER$WH!$C$GY                   │$C"
-    echo -e "  $GY│$C     $D  (ﾉｼ>_<)ﾉ   See you on the other side$C$GY       │$C"
-    echo -e "  $GY│$C$(printf '%*s' 52 '')$GY│$C"
-    echo -e "  $GY└────────────────────────────────────────────────────┘$C"
+    echo -e "  $GY┌──────────────────────────────────────────────────────────────┐$C"
+    echo -e "  $GY│$C$(printf '%*s' 62 '')$GY│$C"
+    set -l bye_line "✧  Sayonara,  $USER!"
+    echo -e "  $GY│$C    $WH $bye_line$C$(printf '%*s' (math "58 - "(string length -- "$bye_line")) '')$GY│$C"
+    echo -e "  $GY│$C    $D   ﾉｼ(>_<)ﾉ   See you on the other side$C$GY              │$C"
+    echo -e "  $GY│$C$(printf '%*s' 62 '')$GY│$C"
+    echo -e "  $GY└──────────────────────────────────────────────────────────────┘$C"
     echo -e ""
 
     sleep 1
