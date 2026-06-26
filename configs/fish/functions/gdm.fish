@@ -42,7 +42,8 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY║$C  $D  After that → works OFFLINE (cached repo).$C                   $CY║$C"
         echo -e "  $CY║$C  $D  🔍  System-wide search across all your folders.$C             $CY║$C"
         echo -e "  $CY║$C  $D  Multiple matches? Pick one with 1/2/3…$C                      $CY║$C"
-        echo -e "  $CY║$C  $D  Use $CY-y$C $D or $CY--yes$C $D to skip confirmation.$C                      $CY║$C"
+        echo -e "  $CY║$C  $D  🎨  Optional blur + dark tint before applying.$C              $CY║$C"
+        echo -e "  $CY║$C  $D  Use $CY-y$C $D or $CY--yes$C $D to skip all prompts.$C                       $CY║$C"
         echo -e "  $CY║$C$GY$(printf '%s' '                                                                 ')$CY║$C"
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
@@ -229,6 +230,79 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
                 end
                 echo -e "  $RE  Invalid — type 1-$result_count or q.$C"
             end
+    end
+
+    # ══════════════════════════════════════════════════════════════
+    # 🎨  BLUR OPTIONS — blur + dark tint before applying
+    # ══════════════════════════════════════════════════════════════
+    if command -v magick &>/dev/null
+        if test $skip_confirm -eq 0
+            echo ""
+            echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
+            echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+            echo -e "  $CY║$C  $WH🎨  BLUR BACKGROUND?$C                                   $CY║$C"
+            echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+            echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+            echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+            echo -e "  $CY║$C  Add blur + dark overlay to the wallpaper?$C                  $CY║$C"
+            echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+            echo -e "  $CY║$C  $GR  [N] No$C — use original image$C                         $CY║$C"
+            echo -e "  $CY║$C  $CY  [Y] Yes$C — default blur 0x30 + black 30%$C             $CY║$C"
+            echo -e "  $CY║$C  $YE  [C] Custom$C — set blur sigma + tint %%$C                $CY║$C"
+            echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+            echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
+            echo ""
+            read -l -P "  [n/Y/c]: " blur_choice
+        else
+            set blur_choice "n"
+        end
+
+        switch (string lower "$blur_choice")
+            case '' y yes
+                set -l blurred "$HOME/.cache/gdm-blurred.jpg"
+                mkdir -p "$HOME/.cache"
+                echo -e "  $D🎨  Applying default blur (0x30) + black 30%% tint...$C"
+                if magick "$image" -blur 0x30 -fill black -colorize 30% "$blurred" 2>/dev/null
+                    set image "$blurred"
+                    echo -e "  $GR✅  Blur applied$C"
+                else
+                    echo -e "  $RE✘  Blur failed, using original$C"
+                end
+
+            case c custom
+                echo ""
+                echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
+                echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+                echo -e "  $CY║$C  $WH🎨  CUSTOM BLUR$C                                       $CY║$C"
+                echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+                echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+                echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+                echo -e "  $CY║$C  $D  Blur sigma$C $D(0=auto, try 20-50):$C                     $CY║$C"
+                echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+                echo -e "  $CY║$C  $D  Black tint %%$C $D(0-100, try 20-40):$C                    $CY║$C"
+                echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+                echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
+                echo ""
+                read -l -P "    Blur sigma [30]: " blur_sigma
+                read -l -P "    Black tint % [30]: " colorize_pct
+
+                if test -z "$blur_sigma"
+                    set blur_sigma 30
+                end
+                if test -z "$colorize_pct"
+                    set colorize_pct 30
+                end
+
+                set -l blurred "$HOME/.cache/gdm-blurred.jpg"
+                mkdir -p "$HOME/.cache"
+                echo -e "  $D🎨  Applying blur (0x$blur_sigma) + black $colorize_pct%% tint...$C"
+                if magick "$image" -blur "0x$blur_sigma" -fill black -colorize "$colorize_pct%" "$blurred" 2>/dev/null
+                    set image "$blurred"
+                    echo -e "  $GR✅  Custom blur applied$C"
+                else
+                    echo -e "  $RE✘  Blur failed, using original$C"
+                end
+        end
     end
 
     # ── Persistent MacTahoe repo (kept after first clone) ──
