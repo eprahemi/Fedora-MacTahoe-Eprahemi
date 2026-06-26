@@ -678,6 +678,62 @@ except:
     set -l filename (string join ' ' -- $argv)
 
     # ══════════════════════════════════════════════════════════════
+    # 🛡️  GUARD: Reject non-image files (pdf, txt, doc, mp4, etc.)
+    # ══════════════════════════════════════════════════════════════
+    set -l img_exts jpg jpeg png gif bmp webp tiff tif svg ico heic heif avif jp2
+    set -l ext_match (string match -r '\.([^./]+)$' "$filename" 2>/dev/null)
+    if test -n "$ext_match"
+        set -l ext_lower (string lower -- "$ext_match[2]" 2>/dev/null)
+        if not contains -- "$ext_lower" $img_exts
+            echo ""
+            echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            set -l ie1 "  ✘  INVALID FILE TYPE"
+            echo -e "  $RE║$C  $WH$ie1$C$(printf '%*s' (math "60 - "(string length "$ie1")) '')$RE║$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            echo -e "  $RE╠══════════════════════════════════════════════════════════════╣$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            set -l ie2 "  \"$filename\" is not an image file."
+            set -l ie2_len (string length -- "$ie2")
+            if test $ie2_len -gt 56
+                set ie2 (string sub -l 53 "$ie2")"..."
+                set ie2_len 56
+            end
+            echo -e "  $RE║$C    $YE$ie2$C$(printf '%*s' (math "58 - $ie2_len") '')$RE║$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            set -l ie3 "  Supported: jpg png gif bmp webp tiff svg ico heic avif"
+            echo -e "  $RE║$C  $D$ie3$C$(printf '%*s' (math "60 - "(string length "$ie3")) '')$RE║$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            set -l br "  eprahemi  •  github.com/eprahemi"
+            echo -e "  $RE║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
+            echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
+            echo ""
+            return 1
+        end
+    else
+        # No extension at all — also block
+        echo ""
+        echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
+        echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+        set -l ie1 "  ✘  INVALID FILE TYPE"
+        echo -e "  $RE║$C  $WH$ie1$C$(printf '%*s' (math "60 - "(string length "$ie1")) '')$RE║$C"
+        echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+        echo -e "  $RE╠══════════════════════════════════════════════════════════════╣$C"
+        echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+        set -l ie2 "  No file extension detected."
+        echo -e "  $RE║$C    $YE$ie2$C$(printf '%*s' (math "58 - "(string length "$ie2")) '')$RE║$C"
+        echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+        set -l ie3 "  Supported: jpg png gif bmp webp tiff svg ico heic avif"
+        echo -e "  $RE║$C  $D$ie3$C$(printf '%*s' (math "60 - "(string length "$ie3")) '')$RE║$C"
+        echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+        set -l br "  eprahemi  •  github.com/eprahemi"
+        echo -e "  $RE║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
+        echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
+        echo ""
+        return 1
+    end
+
+    # ══════════════════════════════════════════════════════════════
     # 🔍  SEARCH ENGINE — finds the image everywhere
     # ══════════════════════════════════════════════════════════════
     set -l image ""
