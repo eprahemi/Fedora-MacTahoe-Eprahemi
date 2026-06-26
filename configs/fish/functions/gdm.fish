@@ -288,11 +288,10 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
             if test $__rs -ne 0
                 set __cc (math $__cc + 1)
                 if test $__cc -ge 2
-                    echo -e "  $D  → Proceeding with current wallpaper...  $C  $GY eprahemi$C"
-                    set current_confirm "y"
-                    break
+                    echo -e "  $D  → Cancelled.  $C  $GY eprahemi$C"
+                    return 1
                 end
-                echo -e "  $D  (Ctrl+C again to exit)  $C  $GY eprahemi$C"
+                echo -e "  $D  (Ctrl+C again to cancel)  $C  $GY eprahemi$C"
                 continue
             end
             break
@@ -935,11 +934,10 @@ except:
                     if test $__rs -ne 0
                         set __cc (math $__cc + 1)
                         if test $__cc -ge 2
-                            echo -e "  $D  → Proceeding with this wallpaper...  $C  $GY eprahemi$C"
-                            set confirm "y"
-                            break
+                            echo -e "  $D  → Cancelled.  $C  $GY eprahemi$C"
+                            return 1
                         end
-                        echo -e "  $D  (Ctrl+C again to exit)  $C  $GY eprahemi$C"
+                        echo -e "  $D  (Ctrl+C again to cancel)  $C  $GY eprahemi$C"
                         continue
                     end
                     break
