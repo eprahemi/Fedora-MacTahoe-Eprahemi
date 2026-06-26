@@ -727,7 +727,7 @@ except:
     # ══════════════════════════════════════════════════════════════
     # 🛡️  GUARD: Reject non-image files (pdf, txt, doc, mp4, etc.)
     # ══════════════════════════════════════════════════════════════
-    set -l img_exts jpg jpeg png gif bmp webp tiff tif svg ico heic heif avif jp2
+    set -l img_exts jpg jpeg png gif bmp webp tiff tif svg ico heic heif avif jp2 jfif jfi pjpeg pjp
     set -l ext_match (string match -r '\.([^./]+)$' "$filename" 2>/dev/null)
     if test -n "$ext_match"
         set -l ext_lower (string lower -- "$ext_match[2]" 2>/dev/null)
@@ -748,7 +748,7 @@ except:
             end
             echo -e "  $RE║$C    $YE$ie2$C$(printf '%*s' (math "58 - $ie2_len") '')$RE║$C"
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
-            set -l ie3 "  Supported: jpg png gif bmp webp tiff svg ico heic avif"
+            set -l ie3 "  Supported: jpg png gif bmp webp tiff svg ico heic avif jfif"
             echo -e "  $RE║$C  $D$ie3$C$(printf '%*s' (math "60 - "(string length "$ie3")) '')$RE║$C"
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
             set -l br "  eprahemi  •  github.com/eprahemi"
@@ -832,7 +832,7 @@ except:
 
     # Filter to image files only — weed out .py, .mjs, .js, etc.
     set -l img_results
-    set -l img_regex '\.(jpg|jpeg|png|gif|bmp|webp|tiff?|svg|ico|heic|heif|avif|jp2)$'
+    set -l img_regex '\.(jpg|jpeg|png|gif|bmp|webp|tiff?|svg|ico|heic|heif|avif|jp2|jfif|jfi|pjpeg|pjp)$'
     for r in $results
         if string match -riq -- "$img_regex" "$r"
             set -a img_results "$r"
