@@ -265,8 +265,8 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
             echo ""
         end
 
-        read -l -P "  [y/N]: " current_confirm
-        if not string match -qir '^y' "$current_confirm"
+        read -l -P "  [Y/n]: " current_confirm
+        if not test -z "$current_confirm"; and not string match -qir '^y' "$current_confirm"
             echo -e "  $RE✘  Cancelled. Run $CY$B gdm$C $RE again — github.com/eprahemi$C"
             return 1
         end
@@ -452,8 +452,8 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
                 echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
                 echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
                 echo ""
-                read -l -P "  [y/N]: " confirm
-                if not string match -qir '^y' "$confirm"
+                read -l -P "  [Y/n]: " confirm
+                if not test -z "$confirm"; and not string match -qir '^y' "$confirm"
                     echo -e "  $RE✘  Cancelled. Run $CY$B gdm$C $RE again — github.com/eprahemi$C"
                     return 1
                 end
