@@ -35,7 +35,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
                 "h"       "gdm -h  or  gdm --help" \
                 "help"    "gdm -h  or  gdm --help"
             set -l suggestion ""
-            for i in (seq 2 (count $known_commands) 2)
+            for i in (seq 1 2 (count $known_commands))
                 if test "$stripped" = "$known_commands[$i]"
                     set suggestion $known_commands[(math $i + 1)]
                     break
@@ -801,7 +801,7 @@ except:
                 echo ""
                 echo -e "  $RE┌────────────────────────────────────────────────────────────┐$C"
                 echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
-                echo -e "  $RE│$C     $WH✘  Unknown option: $CY$first$C$(printf '%*s' (math "55 - "(string length "$first")) '')$RE│$C"
+                echo -e "  $RE│$C     $WH✘  Unknown option: $CY$first$C$(printf '%*s' (math "55 - "(string length -- "$first")) '')$RE│$C"
                 echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
                 echo -e "  $RE│$C  $D  Valid commands:$C$RE                                   │$C"
                 echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
