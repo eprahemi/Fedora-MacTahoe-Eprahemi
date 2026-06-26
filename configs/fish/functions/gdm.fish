@@ -32,6 +32,22 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         set -l h1 "  🖼️  GDM WALLPAPER SWITCHER"
         echo -e "  $CY║$C  $WH$h1$C$(printf '%*s' (math "60 - "(string length "$h1")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        # ── Figlet "eprahemi" copyright ──
+        if command -v figlet &>/dev/null
+            set -l fig_lines (figlet -f small "eprahemi" | string split "\n")
+            for fl in $fig_lines
+                if test -n "$fl"
+                    set -l fl_trim "$fl"
+                    if test (string length "$fl_trim") -gt 58
+                        set fl_trim (string sub -l 55 "$fl_trim")"..."
+                    end
+                    echo -e "  $CY║$C  $YE$fl_trim$C$(printf '%*s' (math "60 - "(string length "$fl_trim")) '')$CY║$C"
+                else
+                    echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                end
+            end
+            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        end
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         set -l h2 "    gdm filename.jpg"
@@ -208,6 +224,13 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
                     echo -e "  $RE✘  Cancelled. Run $CY$B gdm$C $RE again with the correct path.$C"
                     return 1
                 end
+
+                # ── Preview image in Kitty terminal (interactive only) ──
+                if test -n "$KITTY_PID"
+                    echo ""
+                    kitty +kitten icat --align left "$image" 2>/dev/null
+                    echo ""
+                end
             end
 
         case '*'
@@ -260,6 +283,13 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
                     set -l num (math "$choice" 2>/dev/null)
                     if test $num -ge 1 -a $num -le $result_count
                         set image $results[$num]
+
+                        # ── Preview image in Kitty terminal ──
+                        if test -n "$KITTY_PID"
+                            echo ""
+                            kitty +kitten icat --align left "$image" 2>/dev/null
+                            echo ""
+                        end
                         break
                     end
                 end
