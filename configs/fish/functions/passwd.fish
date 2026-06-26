@@ -1,7 +1,7 @@
 # ══════════════════════════════════════════════════════════════
 # passwd — Toggle passwordless sudo for the current user
 # Finds the "username ALL=(ALL) NOPASSWD: ALL" line in
-# /etc/sudoers and comments/uncomments it.
+# /etc/sudoers and comments/uncomments it, or creates it.
 # Fedora MacTahoe Eprahemi Edition © 2026
 # ══════════════════════════════════════════════════════════════
 function passwd --description 'Toggle passwordless sudo for the current user — usage: passwd [enable|disable|toggle|status|--help]'
@@ -18,111 +18,6 @@ function passwd --description 'Toggle passwordless sudo for the current user —
 
     set -l user (whoami)
     set -l sudoers /etc/sudoers
-
-    # ─── Regex fragments (separate variables to avoid Fish parsing $user[...]) ───
-    set -l rx_gap "[[:space:]]+ALL=\(ALL\)[[:space:]]+NOPASSWD:[[:space:]]+ALL"
-    set -l rx_user_uc "^[[:space:]]*$user$rx_gap"
-    set -l rx_user_cm "^[[:space:]]*#[[:space:]]*$user$rx_gap"
-
-    # ─── Detect current state ───
-    set -l uncommented 0
-    set -l commented 0
-    if sudo grep -Eqs "$rx_user_uc" "$sudoers" 2>/dev/null
-        set uncommented 1
-    end
-    if sudo grep -Eqs "$rx_user_cm" "$sudoers" 2>/dev/null
-        set commented 1
-    end
-
-    # ─── Status display helper ───
-    function __pw_show_status --no-scope-shadowing
-        set -l ln_num ""
-        set -l ln_text ""
-        set -l line_info (sudo grep -nE "^\s*#*\s*$user\s+ALL=\(ALL\)\s+NOPASSWD:\s+ALL" "$sudoers" 2>/dev/null | head -1)
-        if test -n "$line_info"
-            # Fish 3.x array indexing — first field is line number
-            set -l parts (string split -n ":" -- "$line_info")
-            set ln_num $parts[1]
-            set ln_text (string sub -s (math (string length "$ln_num") + 2) "$line_info")
-        end
-
-        # Truncate line text if too long
-        if test (string length -- "$ln_text") -gt 52
-            set ln_text (string sub -l 52 "$ln_text")"…"
-        end
-
-        set -l ulen (string length -- "$user")
-        set -l llen (string length -- "$ln_text")
-        set -l nlen (string length -- "$ln_num")
-        set -l title_suffix (string upper "$user")
-        # Inner width is 62 chars (between the two ║)
-        set -l IW 62
-
-        echo -e "\n  $CY╔══════════════════════════════════════════════════════════════╗$C"
-        echo -e "  $CY║$C$(printf '%*s' $IW '')$CY║$C"
-        echo -e "  $CY║$C    $CY┌────────────────────────────────────────────────────┐$C    $CY║$C"
-        set -l title "🛡️  PASSWORDLESS SUDO  —  $title_suffix"
-        set -l title_len (string length -- "$title")
-        set -l title_pad (math "56 - $title_len")
-        echo -e "  $CY║$C    $CY│$C  $WH$title$C$(printf '%*s' $title_pad '')$CY│$C    $CY║$C"
-        echo -e "  $CY║$C    $CY└────────────────────────────────────────────────────┘$C    $CY║$C"
-        echo -e "  $CY║$C$(printf '%*s' $IW '')$CY║$C"
-        echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
-        echo -e "  $CY║$C$(printf '%*s' $IW '')$CY║$C"
-
-        # FILE line
-        set -l fline "🖿  FILE     /etc/sudoers"
-        set -l flen (string length -- "$fline")
-        echo -e "  $CY║$C    $D┌─ $fline$C$(printf '%*s' (math "57 - $flen") '')$CY║$C"
-        echo -e "  $CY║$C    $D│$C$(printf '%*s' 57 '')$CY║$C"
-
-        # USER line
-        set -l uline "👤  USER     $user"
-        set -l uline_len (string length -- "$uline")
-        echo -e "  $CY║$C    $D└─ $uline$C$(printf '%*s' (math "57 - $uline_len") '')$CY║$C"
-
-        echo -e "  $CY║$C$(printf '%*s' $IW '')$CY║$C"
-
-        # STATE box
-        echo -e "  $CY║$C    $D┌────────────────────────────────────────────────────┐$C  $CY║$C"
-        if test "$uncommented" -eq 1
-            set -l state_line "✅  STATE:  $B Enabled   (NOPASSWD is active)"
-            set -l state_len (string length -- "$state_line")
-            echo -e "  $CY║$C    $D│$C  $GR$state_line$C$(printf '%*s' (math "55 - $state_len") '')$D│$C  $CY║$C"
-        else if test "$commented" -eq 1
-            set -l state_line "❌  STATE:  $B Disabled  (line is commented)"
-            set -l state_len (string length -- "$state_line")
-            echo -e "  $CY║$C    $D│$C  $RE$state_line$C$(printf '%*s' (math "55 - $state_len") '')$D│$C  $CY║$C"
-        else
-            set -l state_line "⚠️   STATE:  $B Missing   (no NOPASSWD line found)"
-            set -l state_len (string length -- "$state_line")
-            echo -e "  $CY║$C    $D│$C  $YE$state_line$C$(printf '%*s' (math "55 - $state_len") '')$D│$C  $CY║$C"
-        end
-        echo -e "  $CY║$C    $D└────────────────────────────────────────────────────┘$C  $CY║$C"
-        echo -e "  $CY║$C$(printf '%*s' $IW '')$CY║$C"
-
-        # MATCH line
-        if test -n "$ln_num" -a -n "$ln_text"
-            set -l match_line "🔍  MATCH     Line $ln_num:  $ln_text"
-            set -l match_len (string length -- "$match_line")
-            set -l match_pad (math "57 - $match_len")
-            if test $match_pad -lt 0
-                set match_pad 0
-            end
-            echo -e "  $CY║$C    $D┌─ $match_line$C$(printf '%*s' $match_pad '')$CY║$C"
-        else
-            echo -e "  $CY║$C    $D┌─ 🔍  MATCH     (no matching line in sudoers)$C$(printf '%*s' 8 '')$CY║$C"
-        end
-        echo -e "  $CY║$C    $D└────────────────────────────────────────────────────┘$C  $CY║$C"
-        echo -e "  $CY║$C$(printf '%*s' $IW '')$CY║$C"
-
-        # Footer branding
-        set -l brand "eprahemi  •  github.com/eprahemi"
-        set -l brand_len (string length -- "$brand")
-        echo -e "  $CY║$C    $D$brand$C$(printf '%*s' (math "57 - $brand_len") '')$CY║$C"
-        echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
-        echo ""
-    end
 
     # ─── Help ───
     if test "$argv[1]" = "--help" -o "$argv[1]" = "-h"
@@ -160,7 +55,7 @@ function passwd --description 'Toggle passwordless sudo for the current user —
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         set -l u2 "    passwd enable"
         echo -e "  $CY║$C  $CY$B$u2$C$(printf '%*s' (math "60 - "(string length -- "$u2")) '')$CY║$C"
-        set -l d2 "    Uncomment NOPASSWD line for the current user"
+        set -l d2 "    Add or uncomment NOPASSWD line for the current user"
         echo -e "  $CY║$C  $D$d2$C$(printf '%*s' (math "60 - "(string length -- "$d2")) '')$CY║$C"
 
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
@@ -194,12 +89,143 @@ function passwd --description 'Toggle passwordless sudo for the current user —
         return 0
     end
 
-    # ─── No args / status ───
+    # ════════════════════════════════════════════════════════════════
+    #  READ-ONLY PATH — status / no-args (no sudo password prompt)
+    # ════════════════════════════════════════════════════════════════
     if test (count $argv) -eq 0 -o "$argv[1]" = "status"
-        __pw_show_status
-        functions -e __pw_show_status
+        # Try non-interactive sudo first — no password prompt
+        if not sudo -n true 2>/dev/null
+            echo -e "\n  $YE⚠️   Cannot check status without authentication.$C"
+            echo -e "  $D    Run $CY$B'sudo passwd status'$C$D or $CY$B'passwd enable'$C$D first to authenticate.$C\n"
+            return 0
+        end
+
+        # ─── Regex fragments (separate variables to avoid Fish parsing $user[...]) ───
+        set -l rx_gap_s "[[:space:]]+ALL=\(ALL\)[[:space:]]+NOPASSWD:[[:space:]]+ALL"
+        set -l rx_uc_s "^[[:space:]]*$user$rx_gap_s"
+        set -l rx_cm_s "^[[:space:]]*#[[:space:]]*$user$rx_gap_s"
+
+        # ─── Detect current state (sudo -n = no prompt) ───
+        set -l ro_uncommented 0
+        set -l ro_commented 0
+        if sudo -n grep -Eqs "$rx_uc_s" "$sudoers" 2>/dev/null
+            set ro_uncommented 1
+        end
+        if sudo -n grep -Eqs "$rx_cm_s" "$sudoers" 2>/dev/null
+            set ro_commented 1
+        end
+
+        # ─── Build & show status box ───
+        set -l ro_line_info (sudo -n grep -nE "^\s*#*\s*$user\s+ALL=\(ALL\)\s+NOPASSWD:\s+ALL" "$sudoers" 2>/dev/null | head -1)
+        set -l ro_ln_num ""
+        set -l ro_ln_text ""
+        if test -n "$ro_line_info"
+            set -l parts (string split -n ":" -- "$ro_line_info")
+            set ro_ln_num $parts[1]
+            set ro_ln_text (string sub -s (math (string length "$ro_ln_num") + 2) "$ro_line_info")
+        end
+        if test (string length -- "$ro_ln_text") -gt 52
+            set ro_ln_text (string sub -l 52 "$ro_ln_text")"…"
+        end
+
+        set -l title_suffix (string upper "$user")
+        set -l IW 62
+
+        echo -e "\n  $CY╔══════════════════════════════════════════════════════════════╗$C"
+        echo -e "  $CY║$C$(printf '%*s' $IW '')$CY║$C"
+        echo -e "  $CY║$C    $CY┌────────────────────────────────────────────────────┐$C    $CY║$C"
+        set -l title "🛡️  PASSWORDLESS SUDO  —  $title_suffix"
+        set -l title_len (string length -- "$title")
+        set -l title_pad (math "56 - $title_len")
+        echo -e "  $CY║$C    $CY│$C  $WH$title$C$(printf '%*s' $title_pad '')$CY│$C    $CY║$C"
+        echo -e "  $CY║$C    $CY└────────────────────────────────────────────────────┘$C    $CY║$C"
+        echo -e "  $CY║$C$(printf '%*s' $IW '')$CY║$C"
+        echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+        echo -e "  $CY║$C$(printf '%*s' $IW '')$CY║$C"
+
+        # FILE line
+        set -l fline "🖿  FILE     /etc/sudoers"
+        set -l flen (string length -- "$fline")
+        echo -e "  $CY║$C    $D┌─ $fline$C$(printf '%*s' (math "57 - $flen") '')$CY║$C"
+        echo -e "  $CY║$C    $D│$C$(printf '%*s' 57 '')$CY║$C"
+
+        # USER line
+        set -l uline "👤  USER     $user"
+        set -l uline_len (string length -- "$uline")
+        echo -e "  $CY║$C    $D└─ $uline$C$(printf '%*s' (math "57 - $uline_len") '')$CY║$C"
+
+        echo -e "  $CY║$C$(printf '%*s' $IW '')$CY║$C"
+
+        # STATE box
+        echo -e "  $CY║$C    $D┌────────────────────────────────────────────────────┐$C  $CY║$C"
+        if test "$ro_uncommented" -eq 1
+            set -l state_line "✅  STATE:  $B Enabled   (NOPASSWD is active)"
+            set -l state_len (string length -- "$state_line")
+            echo -e "  $CY║$C    $D│$C  $GR$state_line$C$(printf '%*s' (math "55 - $state_len") '')$D│$C  $CY║$C"
+        else if test "$ro_commented" -eq 1
+            set -l state_line "❌  STATE:  $B Disabled  (line is commented)"
+            set -l state_len (string length -- "$state_line")
+            echo -e "  $CY║$C    $D│$C  $RE$state_line$C$(printf '%*s' (math "55 - $state_len") '')$D│$C  $CY║$C"
+        else
+            set -l state_line "⚠️   STATE:  $B Missing   (no NOPASSWD line found)"
+            set -l state_len (string length -- "$state_line")
+            echo -e "  $CY║$C    $D│$C  $YE$state_line$C$(printf '%*s' (math "55 - $state_len") '')$D│$C  $CY║$C"
+        end
+        echo -e "  $CY║$C    $D└────────────────────────────────────────────────────┘$C  $CY║$C"
+        echo -e "  $CY║$C$(printf '%*s' $IW '')$CY║$C"
+
+        # MATCH line
+        if test -n "$ro_ln_num" -a -n "$ro_ln_text"
+            set -l match_line "🔍  MATCH     Line $ro_ln_num:  $ro_ln_text"
+            set -l match_len (string length -- "$match_line")
+            set -l match_pad (math "57 - $match_len")
+            if test $match_pad -lt 0
+                set match_pad 0
+            end
+            echo -e "  $CY║$C    $D┌─ $match_line$C$(printf '%*s' $match_pad '')$CY║$C"
+        else
+            echo -e "  $CY║$C    $D┌─ 🔍  MATCH     (no matching line in sudoers)$C$(printf '%*s' 8 '')$CY║$C"
+        end
+        echo -e "  $CY║$C    $D└────────────────────────────────────────────────────┘$C  $CY║$C"
+        echo -e "  $CY║$C$(printf '%*s' $IW '')$CY║$C"
+
+        # Footer branding
+        set -l brand "eprahemi  •  github.com/eprahemi"
+        set -l brand_len (string length -- "$brand")
+        echo -e "  $CY║$C    $D$brand$C$(printf '%*s' (math "57 - $brand_len") '')$CY║$C"
+        echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
+        echo ""
+
+        # ─── Prompt to add if missing ───
+        if test "$ro_uncommented" -eq 0 -a "$ro_commented" -eq 0
+            echo -n "  $YE⚠️   No NOPASSWD line found for $CY$B$user$C$YE.  Add one?$C $D[$C$GR Y$C$D/$C$RE n$C$D]$C "
+            set -l answer (string lower (read -l -n 1 ans; echo "$ans"))
+            if test "$answer" = "y" -o "$answer" = ""
+                # ─── Add new NOPASSWD line ───
+                set -l bak_file /tmp/sudoers.bak
+                echo -e "  $D📝  Adding NOPASSWD line for $CY$B$user$C$D ...$C"
+                sudo cp "$sudoers" "$bak_file"
+                echo "$user ALL=(ALL) NOPASSWD: ALL" | sudo tee -a "$sudoers" >/dev/null 2>&1
+                if sudo visudo -c -f "$sudoers" &>/dev/null
+                    sudo rm -f "$bak_file"
+                    echo -e "  $GR✅  Passwordless sudo enabled for $CY$B$user$C\n"
+                else
+                    sudo cp "$bak_file" "$sudoers"
+                    sudo rm -f "$bak_file"
+                    echo -e "\n  $RE✘  visudo validation failed — change reverted.$C"
+                    echo -e "  $D    The sudoers file may have been corrupted. No changes applied.$C\n"
+                    return 1
+                end
+            else
+                echo ""
+            end
+        end
         return 0
     end
+
+    # ════════════════════════════════════════════════════════════════
+    #  WRITE PATH — enable / disable / toggle (prompts for sudo)
+    # ════════════════════════════════════════════════════════════════
 
     # ─── Validate subcommand ───
     if test "$argv[1]" != "enable" -a "$argv[1]" != "disable" -a "$argv[1]" != "toggle" \
@@ -207,6 +233,21 @@ function passwd --description 'Toggle passwordless sudo for the current user —
         echo -e "\n  $RE✘  Unknown subcommand: $CY$B$argv[1]$C"
         echo -e "  $D    Usage: $CY$Bpasswd$C $D[on|off|enable|disable|toggle|status|--help]$C\n"
         return 1
+    end
+
+    # ─── Regex fragments (write path — uses normal sudo) ───
+    set -l rx_gap "[[:space:]]+ALL=\(ALL\)[[:space:]]+NOPASSWD:[[:space:]]+ALL"
+    set -l rx_user_uc "^[[:space:]]*$user$rx_gap"
+    set -l rx_user_cm "^[[:space:]]*#[[:space:]]*$user$rx_gap"
+
+    # ─── Detect current state (normal sudo — will prompt for password) ───
+    set -l uncommented 0
+    set -l commented 0
+    if sudo grep -Eqs "$rx_user_uc" "$sudoers" 2>/dev/null
+        set uncommented 1
+    end
+    if sudo grep -Eqs "$rx_user_cm" "$sudoers" 2>/dev/null
+        set commented 1
     end
 
     # ─── Resolve action ───
@@ -239,18 +280,27 @@ function passwd --description 'Toggle passwordless sudo for the current user —
     sudo cp "$sudoers" "$bak_file"
 
     if test "$do_enable" -eq 1
-        echo -e "\n  $D📝  Enabling passwordless sudo for $CY$B$user$C ...$C"
-        # Remove leading # and any whitespace between # and username
-        # $user followed by ) is safe — no [ adjacency issue
-        sudo sed -ri "s/^[[:space:]]*#[[:space:]]*($user)/\1/" "$sudoers"
+        if test "$commented" -eq 1
+            # Line exists but commented — uncomment it
+            echo -e "\n  $D📝  Enabling passwordless sudo for $CY$B$user$C$D ...$C"
+            sudo sed -ri "s/^[[:space:]]*#[[:space:]]*($user)/\1/" "$sudoers"
+        else
+            # Line doesn't exist at all — append a new one
+            echo -e "\n  $D📝  Adding NOPASSWD line for $CY$B$user$C$D ...$C"
+            echo "$user ALL=(ALL) NOPASSWD: ALL" | sudo tee -a "$sudoers" >/dev/null 2>&1
+        end
     else
-        echo -e "\n  $D📝  Disabling passwordless sudo for $CY$B$user$C ...$C"
-        # Build pattern safely: $user enclosed in (...) so [ doesn't touch it
-        # $sed_gap cannot touch $user (Fish array-index issue), and
-        # we must capture the full username + rest to keep the line intact.
-        # Use & (entire match) and a safe pattern without capturing beyond $user.
-        set -l sed_gap "[[:space:]]+ALL=\(ALL\)[[:space:]]+NOPASSWD:[[:space:]]+ALL"
-        sudo sed -ri "s/^[[:space:]]*$user$sed_gap/#&/" "$sudoers"
+        if test "$uncommented" -eq 1
+            # Line exists and is active — comment it out
+            echo -e "\n  $D📝  Disabling passwordless sudo for $CY$B$user$C$D ...$C"
+            set -l sed_gap "[[:space:]]+ALL=\(ALL\)[[:space:]]+NOPASSWD:[[:space:]]+ALL"
+            sudo sed -ri "s/^[[:space:]]*$user$sed_gap/#&/" "$sudoers"
+        else
+            # Line doesn't exist at all — nothing to disable
+            sudo rm -f "$bak_file"
+            echo -e "\n  $YE⚠️   No NOPASSWD line found for $CY$B$user$C$YE — nothing to disable.$C\n"
+            return 0
+        end
     end
 
     # ─── Validate with visudo ───
