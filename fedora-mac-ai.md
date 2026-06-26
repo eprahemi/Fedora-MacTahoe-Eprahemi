@@ -14,7 +14,7 @@ Fedora MacTahoe is a Fedora Linux → macOS transformation project. It turns a s
 - **Repository:** `https://github.com/eprahemi/Fedora-MacTahoe-Eprahemi.git`
 - **Branch:** `main`
 - **Local repo path:** `/home/eprahemi/Documents/Codes University [Mine]/Eprahemi Websites/Fedora Mactahoe Eprahemi GTK theme + Icon + Sf Pro Font/`
-- **Latest commit:** `c232f29a` — `gdm: keep only info subcommand, remove undo/save`
+- **Latest commit:** `494b746c` — `fish: professionalize all prompts, errors, and comments`
 - **Install script:** `install.sh` (2271 lines, 23 steps)
 - **Bootstrap script:** `bootstrap.sh` (299 lines)
 - **Upstream MacTahoe repo** (for theme compilation): `https://github.com/vinceliuice/MacTahoe-gtk-theme.git` (cloned to `/tmp/mactahoe-build/`)
@@ -225,6 +225,16 @@ The upstream repo at `~/.local/share/mactahoe-gtk/` is a clone of `https://githu
 
 ---
 
+### Fish Professionalization (Jun 2026)
+
+All 26 Fish function files were purged of unprofessional/brainrot/childish language:
+- **Removed:** "bestie", "fr fr", "BRUH", "no cap", "slay", "sigma" (as slang), "💀", "💅", "🔥" (as flavor), 40-item rotating insult array in command-not-found handler, 20-item burn arrays, "Read the manual dummy", "rotating burns", "oopsie", "ain't"
+- **Replaced with:** Professional error messages (`"Error: Unknown flag"`), clear success messages, "Show this help message", "Version: June 2026"
+- **Kept:** Utility emojis (✅ ❌ ⚠️ 📋 🔧), project attribution, all escape codes/colors, all logic
+- **Strictly** `"sigma"` in gdm.fish is the ImageMagick blur parameter (`-blur 0xN`), NOT slang — left as-is
+- 26 files changed, 828 insertions, 434 deletions
+- Commit: `494b746c`
+
 ## 7. KEY DESIGN DECISIONS
 
 ### Zero Hardcoded Paths
@@ -389,6 +399,7 @@ Fedora Mactahoe Eprahemi GTK theme + Icon + Sf Pro Font/
 ## 12. RECENT COMMITS (Latest on top)
 
 ```
+494b746c fish: professionalize all prompts, errors, and comments (27 files)
 c232f29a gdm: keep only info subcommand, remove undo/save
 46f878a2 fix(gdm): move JPEG conversion to right before apply (after blur)
 c6e83e28 feat(gdm): auto-convert non-JPEG images to JPEG 90% quality for GDM
@@ -428,8 +439,8 @@ gtk-update-icon-cache ~/.local/share/icons/MacTahoe/
 ---
 
 ## 14. VERSION HISTORY
-- **Current:** `c232f29a` (after rebase + push)
-- **Previous:** `46f878a2`, `c6e83e28`, `125eb741` (original 3 commits for this session's features)
+- **Current:** `494b746c` (fish professionalization)
+- **Previous:** `c232f29a` (gdm undo/save removal)
 - **Initial work:** Multiple commits from earlier sessions (gdm.fish creation, blur system, etc.)
 
 ---
