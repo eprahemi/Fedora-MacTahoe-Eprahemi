@@ -30,10 +30,10 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo ""
         echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-        set -l h1 "  🖼️  GDM WALLPAPER SWITCHER"
-        echo -e "  $CY║$C  $WH$h1$C$(printf '%*s' (math "60 - "(string length "$h1")) '')$CY║$C"
+        set -l t1 "  🖼️  GDM WALLPAPER SWITCHER"
+        echo -e "  $CY║$C  $WH$t1$C$(printf '%*s' (math "60 - "(string length "$t1")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-        # ── Figlet "eprahemi" copyright ──
+        # ── Figlet "eprahemi" copyright (surprise!) ──
         if command -v figlet &>/dev/null
             set -l fig_lines (figlet -f small "eprahemi" | string split "\n")
             for fl in $fig_lines
@@ -51,44 +51,89 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         end
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-        set -l h2 "    gdm filename.jpg"
-        echo -e "  $CY║$C  $CY$B$h2$C$(printf '%*s' (math "60 - "(string length "$h2")) '')$CY║$C"
-        set -l h3 "    gdm /path/to/image.jpg"
-        echo -e "  $CY║$C  $CY$B$h3$C$(printf '%*s' (math "60 - "(string length "$h3")) '')$CY║$C"
-        set -l h4 "    gdm default"
-        echo -e "  $CY║$C  $CY$B$h4$C$(printf '%*s' (math "60 - "(string length "$h4")) '')$CY║$C"
-        set -l h5 "    gdm -y|--yes filename.jpg"
-        echo -e "  $CY║$C  $CY$B$h5$C$(printf '%*s' (math "60 - "(string length "$h5")) '')$CY║$C"
+        set -l s1 "  📋  USAGE"
+        echo -e "  $CY║$C  $WH$s1$C$(printf '%*s' (math "60 - "(string length "$s1")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-        set -l h5 "  Changes the GDM login screen background."
-        echo -e "  $CY║$C  $D$h5$C$(printf '%*s' (math "60 - "(string length "$h5")) '')$CY║$C"
-        set -l h6 "  First run  → needs internet (clones repo once)."
-        echo -e "  $CY║$C  $D$h6$C$(printf '%*s' (math "60 - "(string length "$h6")) '')$CY║$C"
-        set -l h7 "  After that → works OFFLINE (cached repo)."
-        echo -e "  $CY║$C  $D$h7$C$(printf '%*s' (math "60 - "(string length "$h7")) '')$CY║$C"
-        set -l h8 "  🔍  System-wide search across all your folders."
-        echo -e "  $CY║$C  $D$h8$C$(printf '%*s' (math "60 - "(string length "$h8")) '')$CY║$C"
-        set -l h9 "  Multiple matches? Pick one with 1/2/3…"
-        echo -e "  $CY║$C  $D$h9$C$(printf '%*s' (math "60 - "(string length "$h9")) '')$CY║$C"
-        set -l h10 "  🎨  Optional blur + dark tint before applying."
-        echo -e "  $CY║$C  $D$h10$C$(printf '%*s' (math "60 - "(string length "$h10")) '')$CY║$C"
-        set -l h11 "  Use -y or --yes to skip all prompts."
-        echo -e "  $CY║$C  $D$h11$C$(printf '%*s' (math "60 - "(string length "$h11")) '')$CY║$C"
+        set -l u1 "    gdm filename.jpg"
+        echo -e "  $CY║$C  $CY$B$u1$C$(printf '%*s' (math "60 - "(string length "$u1")) '')$CY║$C"
+        set -l u2 "    gdm /path/to/image.jpg"
+        echo -e "  $CY║$C  $CY$B$u2$C$(printf '%*s' (math "60 - "(string length "$u2")) '')$CY║$C"
+        set -l u3 "    gdm default"
+        echo -e "  $CY║$C  $CY$B$u3$C$(printf '%*s' (math "60 - "(string length "$u3")) '')$CY║$C"
+        set -l u4 "    gdm -y|--yes filename.jpg"
+        echo -e "  $CY║$C  $CY$B$u4$C$(printf '%*s' (math "60 - "(string length "$u4")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-        set -l h12 "  Examples:"
-        echo -e "  $CY║$C  $GR$h12$C$(printf '%*s' (math "60 - "(string length "$h12")) '')$CY║$C"
-        set -l h13 "  gdm my-image.jpg"
-        echo -e "  $CY║$C  $CY$h13$C$(printf '%*s' (math "60 - "(string length "$h13")) '')$CY║$C"
-        set -l h14 "  gdm ~/Pictures/my-wallpaper.jpg"
-        echo -e "  $CY║$C  $CY$h14$C$(printf '%*s' (math "60 - "(string length "$h14")) '')$CY║$C"
-        set -l h15 "  gdm HOT PUSSASS.jpg"
-        echo -e "  $CY║$C  $CY$h15$C$(printf '%*s' (math "60 - "(string length "$h15")) '')$CY║$C"
-        set -l h16 "  gdm -y ~/Pictures/definite.jpg"
-        echo -e "  $CY║$C  $CY$h16$C$(printf '%*s' (math "60 - "(string length "$h16")) '')$CY║$C"
-        set -l h17 "  gdm default"
-        echo -e "  $CY║$C  $CY$h17$C$(printf '%*s' (math "60 - "(string length "$h17")) '')$CY║$C"
+        set -l s2 "  🔥  FEATURES"
+        echo -e "  $CY║$C  $WH$s2$C$(printf '%*s' (math "60 - "(string length "$s2")) '')$CY║$C"
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        set -l f1 "  🔍  System-wide search across 13 user folders"
+        echo -e "  $CY║$C  $D$f1$C$(printf '%*s' (math "60 - "(string length "$f1")) '')$CY║$C"
+        set -l f2 "  🖼️  Kitty inline image preview before applying"
+        echo -e "  $CY║$C  $D$f2$C$(printf '%*s' (math "60 - "(string length "$f2")) '')$CY║$C"
+        set -l f3 "  🎨  Optional blur + dark tint (ImageMagick)"
+        echo -e "  $CY║$C  $D$f3$C$(printf '%*s' (math "60 - "(string length "$f3")) '')$CY║$C"
+        set -l f4 "  🔄  Blur preview loop — retry until you like it"
+        echo -e "  $CY║$C  $D$f4$C$(printf '%*s' (math "60 - "(string length "$f4")) '')$CY║$C"
+        set -l f5 "  🏷️  Multi-match picker — pick 1/2/3 from all results"
+        echo -e "  $CY║$C  $D$f5$C$(printf '%*s' (math "60 - "(string length "$f5")) '')$CY║$C"
+        set -l f6 "  ⚡  -y / --yes flag to skip all prompts + blur"
+        echo -e "  $CY║$C  $D$f6$C$(printf '%*s' (math "60 - "(string length "$f6")) '')$CY║$C"
+        set -l f7 "  🔁  gdm default — restore Himeno login screen"
+        echo -e "  $CY║$C  $D$f7$C$(printf '%*s' (math "60 - "(string length "$f7")) '')$CY║$C"
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        set -l s3 "  🎨  BLUR SYSTEM"
+        echo -e "  $CY║$C  $WH$s3$C$(printf '%*s' (math "60 - "(string length "$s3")) '')$CY║$C"
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        set -l bl1 "  Default   → -blur 0x40  +  40% black tint"
+        echo -e "  $CY║$C  $D$bl1$C$(printf '%*s' (math "60 - "(string length "$bl1")) '')$CY║$C"
+        set -l bl2 "  Custom    → choose sigma (20-50) + tint % (20-40)"
+        echo -e "  $CY║$C  $D$bl2$C$(printf '%*s' (math "60 - "(string length "$bl2")) '')$CY║$C"
+        set -l bl3 "  Preview   → see result in Kitty, say N to retry"
+        echo -e "  $CY║$C  $D$bl3$C$(printf '%*s' (math "60 - "(string length "$bl3")) '')$CY║$C"
+        set -l bl4 "  No Kitty  → \"Continue / Try again\" text prompt"
+        echo -e "  $CY║$C  $D$bl4$C$(printf '%*s' (math "60 - "(string length "$bl4")) '')$CY║$C"
+        set -l bl5 "  No Magick → auto-offer to install it for you"
+        echo -e "  $CY║$C  $D$bl5$C$(printf '%*s' (math "60 - "(string length "$bl5")) '')$CY║$C"
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        set -l s4 "  📝  EXAMPLES"
+        echo -e "  $CY║$C  $GR$s4$C$(printf '%*s' (math "60 - "(string length "$s4")) '')$CY║$C"
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        set -l e1 "  gdm my-image.jpg"
+        echo -e "  $CY║$C  $CY$e1$C$(printf '%*s' (math "60 - "(string length "$e1")) '')$CY║$C"
+        set -l e2 "  gdm ~/Pictures/my-wallpaper.jpg"
+        echo -e "  $CY║$C  $CY$e2$C$(printf '%*s' (math "60 - "(string length "$e2")) '')$CY║$C"
+        set -l e3 "  gdm HOT PUSSASS.jpg"
+        echo -e "  $CY║$C  $CY$e3$C$(printf '%*s' (math "60 - "(string length "$e3")) '')$CY║$C"
+        set -l e4 "  gdm -y ~/Pictures/definite.jpg"
+        echo -e "  $CY║$C  $CY$e4$C$(printf '%*s' (math "60 - "(string length "$e4")) '')$CY║$C"
+        set -l e5 "  gdm default"
+        echo -e "  $CY║$C  $CY$e5$C$(printf '%*s' (math "60 - "(string length "$e5")) '')$CY║$C"
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        set -l s5 "  💡  NOTES"
+        echo -e "  $CY║$C  $WH$s5$C$(printf '%*s' (math "60 - "(string length "$s5")) '')$CY║$C"
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        set -l n1 "  • Spaces in names work: gdm HOT PUSS.jpg"
+        echo -e "  $CY║$C  $D$n1$C$(printf '%*s' (math "60 - "(string length "$n1")) '')$CY║$C"
+        set -l n2 "  • Reboot required for GDM changes to take effect"
+        echo -e "  $CY║$C  $D$n2$C$(printf '%*s' (math "60 - "(string length "$n2")) '')$CY║$C"
+        set -l n3 "  • Internet only needed ONCE (first run clones repo)"
+        echo -e "  $CY║$C  $D$n3$C$(printf '%*s' (math "60 - "(string length "$n3")) '')$CY║$C"
+        set -l n4 "  • Works 100% offline after repo is cached"
+        echo -e "  $CY║$C  $D$n4$C$(printf '%*s' (math "60 - "(string length "$n4")) '')$CY║$C"
+        set -l n5 "  • Kitty + ImageMagick are optional, not required"
+        echo -e "  $CY║$C  $D$n5$C$(printf '%*s' (math "60 - "(string length "$n5")) '')$CY║$C"
+        set -l n6 "  • Zero hardcoded paths — 100% portable"
+        echo -e "  $CY║$C  $D$n6$C$(printf '%*s' (math "60 - "(string length "$n6")) '')$CY║$C"
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         set -l br "  eprahemi  •  github.com/eprahemi"
         echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
@@ -224,12 +269,12 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         end
     end
 
-    # Deduplicate
+    # Deduplicate (paths with spaces: always quote $r)
     if test (count $results) -gt 1
         set -l deduped
         for r in $results
-            if not contains -- $r $deduped
-                set -a deduped $r
+            if not contains -- "$r" $deduped
+                set -a deduped "$r"
             end
         end
         set results $deduped
@@ -249,7 +294,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
             return 1
 
         case 1
-            set image $results[1]
+            set image "$results[1]"
             if test $skip_confirm -eq 0
                 echo ""
                 echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
@@ -342,7 +387,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
                 if string match -qr '^\d+$' "$choice"
                     set -l num (math "$choice" 2>/dev/null)
                     if test $num -ge 1 -a $num -le $result_count
-                        set image $results[$num]
+                        set image "$results[$num]"
 
                         # ── Preview image in Kitty terminal ──
                         if test -n "$KITTY_PID"
