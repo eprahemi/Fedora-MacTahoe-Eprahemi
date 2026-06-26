@@ -393,6 +393,16 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
             end
         end
 
+        # ══════════════════════════════════════════════════════════
+        # 🛡️  GUARD D: Replace broken/empty/? values with "Unknown"
+        # ══════════════════════════════════════════════════════════
+        for __var in fmt csp dep dims dpi mp aspect blur source gdm_size gdm_date
+            set -l __val (eval "echo \$$__var" 2>/dev/null)
+            if test -z "$__val"; or string match -qr '^\?+$' "$__val"
+                set "$__var" "Unknown"
+            end
+        end
+
         # ─── Split path + read original name ───
         set -l f_dir (dirname "$last_file")
         set f_dir (string replace -r "^$HOME" "~" "$f_dir")
@@ -459,7 +469,10 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY║$C    $D│$C  $WH🎨  IMAGE TECHNOLOGY$C$(printf '%*s' 34 '')$D│$C  $CY║$C"
 
         # Line: Format | Colorspace | Bit depth
-        set -l dep_str (string join -- '' "$dep" '-bit')
+        set -l dep_str "$dep"
+        if string match -qr '^\d+$' "$dep"
+            set dep_str (string join -- '' "$dep" '-bit')
+        end
         set -l fc_label "🖼️  "
         set -l fc_content "$fc_label$CY$fmt$C    $D🎨$C  $csp    $D🔲$C  $dep_str"
         set -l fc_plain  "$fc_label$fmt  🎨  $csp  🔲  $dep_str"
@@ -1036,8 +1049,27 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $D  ⚠️  ImageMagick not installed — skipping JPEG conversion.$C  $GY github.com/eprahemi$C"
     end
 
-    # ── Gather metadata for gdm info cache ──
-    #     Default blur-settings if not written by any path
+    # ══════════════════════════════════════════════════════════════
+    # 🛡️  GUARD A: Auto-install ImageMagick if missing (no prompt)
+    # ══════════════════════════════════════════════════════════════
+    if not command -v magick &>/dev/null
+        if command -v sudo &>/dev/null
+            echo -e "  $D  🛡️  magick not installed — auto-installing for metadata...$C  $GY eprahemi$C"
+            if sudo dnf install -y ImageMagick 2>/dev/null
+                echo -e "  $GR  ✅  ImageMagick installed by safety guard$C  github.com/eprahemi"
+            else
+                echo -e "  $D  ⚠️  Auto-install of ImageMagick failed. Metadata will be partial.$C  $GY eprahemi$C"
+            end
+        else
+            echo -e "  $D  ⚠️  sudo unavailable — cannot auto-install ImageMagick.$C  $GY eprahemi$C"
+        end
+    end
+
+    # ══════════════════════════════════════════════════════════════
+    # 🛡️  GUARD B+C: Gather metadata with 3x retry + field validation
+    # ══════════════════════════════════════════════════════════════
+
+    # Default blur-settings if not written by any path
     if not test -f /tmp/.gdm-info/blur-settings.txt
         echo "No blur applied" > /tmp/.gdm-info/blur-settings.txt
     end
@@ -1053,103 +1085,182 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
     end
     set orig_path (string replace -r "^$HOME" "~" "$orig_path")
 
-    set -l fmt "?"
-    set -l csp "?"
-    set -l dep "?"
-    set -l dims "?x?"
-    set -l dpi "?"
-    set -l mp "?"
-    set -l aspect "?"
-    set -l f_bytes "?"
-    set -l f_size "?"
-    set -l f_date "?"
+    set -l retry_count 0
+    set -l cache_ok 0
 
-    if command -v magick &>/dev/null
-        set fmt (magick identify -format "%m" "$image" 2>/dev/null)
-        set csp (magick identify -format "%[colorspace]" "$image" 2>/dev/null)
-        set dep (magick identify -format "%[depth]" "$image" 2>/dev/null)
-        set dims (magick identify -format "%wx%h" "$image" 2>/dev/null)
-        set dpi (magick identify -format "%xx%y" "$image" 2>/dev/null)
+    while test $cache_ok -eq 0; and test $retry_count -lt 3
+        set retry_count (math "$retry_count + 1")
 
-        # Megapixels + aspect ratio via python3
-        set -l w_str (string split "x" "$dims" 2>/dev/null)[1]
-        set -l h_str (string split "x" "$dims" 2>/dev/null)[2]
-        if test -n "$w_str"; and test -n "$h_str"
-            set mp (python3 -c "
-import sys
-w = int(sys.argv[1])
-h = int(sys.argv[2])
-print(f'{w*h/1000000:.1f}')
-" "$w_str" "$h_str" 2>/dev/null)
-            set aspect (python3 -c "
-import sys, math
-w = int(sys.argv[1])
-h = int(sys.argv[2])
-g = math.gcd(w, h)
-print(f'{w//g}:{h//g}')
-" "$w_str" "$h_str" 2>/dev/null)
+        if test $retry_count -gt 1
+            echo -e "  $D  🔄  Retry $retry_count/3 — gathering metadata again...$C  $GY eprahemi$C"
+        end
+
+        # ── Reset vars for this attempt ──
+        set -l fmt "?"; set -l csp "?"; set -l dep "?"
+        set -l dims "?x?"; set -l dpi "?"; set -l mp "?"
+        set -l aspect "?"; set -l f_bytes "?"; set -l f_size "?"
+        set -l f_date "?"; set -l f_mtime ""
+
+        # ── Gather technical metadata via magick ──
+        if command -v magick &>/dev/null
+            set fmt (magick identify -format "%m" "$image" 2>/dev/null)
+            set csp (magick identify -format "%[colorspace]" "$image" 2>/dev/null)
+            set dep (magick identify -format "%[depth]" "$image" 2>/dev/null)
+            set dims (magick identify -format "%wx%h" "$image" 2>/dev/null)
+            set dpi (magick identify -format "%xx%y" "$image" 2>/dev/null)
+
+            # Megapixels + aspect ratio via python3
+            set -l w_str (string split "x" "$dims" 2>/dev/null)[1]
+            set -l h_str (string split "x" "$dims" 2>/dev/null)[2]
+            if test -n "$w_str"; and test -n "$h_str"
+                set mp (python3 -c "
+        import sys
+        w = int(sys.argv[1])
+        h = int(sys.argv[2])
+        print(f'{w*h/1000000:.1f}')
+        " "$w_str" "$h_str" 2>/dev/null)
+                set aspect (python3 -c "
+        import sys, math
+        w = int(sys.argv[1])
+        h = int(sys.argv[2])
+        g = math.gcd(w, h)
+        print(f'{w//g}:{h//g}')
+        " "$w_str" "$h_str" 2>/dev/null)
+            end
+        end
+
+        # ── File size + date from stat ──
+        set -l stat_target "$image"
+        if test -f /tmp/.gdm-info/original-path.txt
+            set -l op (string trim < /tmp/.gdm-info/original-path.txt 2>/dev/null)
+            if test -f "$op"
+                set stat_target "$op"
+            end
+        end
+        if command -v stat &>/dev/null
+            set f_bytes (stat -c "%s" "$stat_target" 2>/dev/null)
+            set f_mtime (stat -c "%y" "$stat_target" 2>/dev/null | string sub -l 16)
+        end
+
+        # ── Human-readable size ──
+        if command -v python3 &>/dev/null; and test "$f_bytes" != "?"
+            set f_size (python3 -c "
+        import sys
+        n = int(sys.argv[1])
+        if n >= 1073741824:
+            print(f'{n/1073741824:.1f} GB')
+        elif n >= 1048576:
+            print(f'{n/1048576:.1f} MB')
+        elif n >= 1024:
+            print(f'{n/1024:.1f} KB')
+        else:
+            print(f'{n} B')
+        " "$f_bytes" 2>/dev/null)
+        else
+            set f_size "$f_bytes B"
+        end
+
+        # ── Format date ──
+        if command -v python3 &>/dev/null; and test -n "$f_mtime"
+            set f_date (python3 -c "
+        import sys
+        from datetime import datetime
+        try:
+            dt = datetime.strptime(sys.argv[1].strip(), '%Y-%m-%d %H:%M')
+            print(dt.strftime('%d %b %Y  %H:%M'))
+        except:
+            print(sys.argv[1])
+        " "$f_mtime" 2>/dev/null)
+        else
+            set f_date "$f_mtime"
+        end
+
+        # ── Write to temporary cache file ──
+        set -l tmp_cache "/tmp/.gdm-info-tmp.txt"
+        mkdir -p "$repo"
+        echo "FORMAT: $fmt"        >  "$tmp_cache"
+        echo "COLORSPACE: $csp"    >> "$tmp_cache"
+        echo "DEPTH: $dep"         >> "$tmp_cache"
+        echo "DIMS: $dims"         >> "$tmp_cache"
+        echo "DPI: $dpi"           >> "$tmp_cache"
+        echo "MP: $mp"             >> "$tmp_cache"
+        echo "ASPECT: $aspect"     >> "$tmp_cache"
+        echo "BLUR: $blur_desc"    >> "$tmp_cache"
+        echo "SOURCE: $orig_path"  >> "$tmp_cache"
+        echo "SIZE: $f_size"       >> "$tmp_cache"
+        echo "DATE: $f_date"       >> "$tmp_cache"
+
+        # ══════════════════════════════════════════════════════════
+        # 🛡️  GUARD C: Validate every field in the cache
+        # ══════════════════════════════════════════════════════════
+        set -l fields_ok 1
+        set -l validation_errors ""
+
+        for pair in "FORMAT:$fmt" "COLORSPACE:$csp" "DEPTH:$dep" "DIMS:$dims" "DPI:$dpi" "MP:$mp" "ASPECT:$aspect" "BLUR:$blur_desc" "SOURCE:$orig_path"
+            set -l fname (string split ":" "$pair")[1]
+            set -l fval  (string split ":" "$pair")[2]
+            if test -z "$fval"; or string match -qr '^\?+$' "$fval"
+                set fields_ok 0
+                set validation_errors "$validation_errors  ↑ $fname "
+            end
+        end
+        # Check size + date separately (they can be legitimately "?" if stat fails)
+        if test -z "$f_size"
+            set fields_ok 0
+            set validation_errors "$validation_errors  ↑ SIZE "
+        end
+        if test -z "$f_date"
+            set fields_ok 0
+            set validation_errors "$validation_errors  ↑ DATE "
+        end
+
+        if test $fields_ok -eq 1
+            # All fields valid — move to final location
+            cp "$tmp_cache" "$repo/.gdm-info.txt" 2>/dev/null
+            rm -f "$tmp_cache"
+            set cache_ok 1
+            if test $retry_count -gt 1
+                echo -e "  $GR  ✅  Cache validated on retry $retry_count/3$C  github.com/eprahemi"
+            end
+        else
+            # Validation failed
+            echo -e "  $D  ⚠️  Metadata validation failed (attempt $retry_count/3):$C  $GY eprahemi$C"
+            echo -e "  $D    $validation_errors$C"
+            rm -f "$tmp_cache"
+            if test $retry_count -lt 3
+                echo -e "  $D    🔄  Will retry...$C"
+            end
         end
     end
 
-    # File size + date from stat (use original if possible, else final $image)
-    set -l stat_target "$image"
-    if test -f /tmp/.gdm-info/original-path.txt
-        set -l op (string trim < /tmp/.gdm-info/original-path.txt 2>/dev/null)
-        if test -f "$op"
-            set stat_target "$op"
+    # ══════════════════════════════════════════════════════════════
+    # 🛡️  GUARD C (fallback): If still invalid, write with Unknown
+    # ══════════════════════════════════════════════════════════════
+    if test $cache_ok -eq 0
+        echo -e "  $D  ⚠️  Metadata incomplete after 3 retries — writing with Unknown markers.$C  $GY eprahemi$C"
+
+        # Fill empty/? fields with "Unknown"
+        for __var in fmt csp dep dims dpi mp aspect blur_desc orig_path f_size f_date
+            set -l __val (eval "echo \$$__var" 2>/dev/null)
+            if test -z "$__val"; or string match -qr '^\?+$' "$__val"
+                set "$__var" "Unknown"
+            end
         end
-    end
-    if command -v stat &>/dev/null
-        set f_bytes (stat -c "%s" "$stat_target" 2>/dev/null)
-        set f_mtime (stat -c "%y" "$stat_target" 2>/dev/null | string sub -l 16)
-    end
 
-    # Human-readable size
-    if command -v python3 &>/dev/null; and test "$f_bytes" != "?"
-        set f_size (python3 -c "
-import sys
-n = int(sys.argv[1])
-if n >= 1073741824:
-    print(f'{n/1073741824:.1f} GB')
-elif n >= 1048576:
-    print(f'{n/1048576:.1f} MB')
-elif n >= 1024:
-    print(f'{n/1024:.1f} KB')
-else:
-    print(f'{n} B')
-" "$f_bytes" 2>/dev/null)
-    else
-        set f_size "$f_bytes B"
+        mkdir -p "$repo"
+        echo "FORMAT: $fmt"        >  "$repo/.gdm-info.txt"
+        echo "COLORSPACE: $csp"    >> "$repo/.gdm-info.txt"
+        echo "DEPTH: $dep"         >> "$repo/.gdm-info.txt"
+        echo "DIMS: $dims"         >> "$repo/.gdm-info.txt"
+        echo "DPI: $dpi"           >> "$repo/.gdm-info.txt"
+        echo "MP: $mp"             >> "$repo/.gdm-info.txt"
+        echo "ASPECT: $aspect"     >> "$repo/.gdm-info.txt"
+        echo "BLUR: $blur_desc"    >> "$repo/.gdm-info.txt"
+        echo "SOURCE: $orig_path"  >> "$repo/.gdm-info.txt"
+        echo "SIZE: $f_size"       >> "$repo/.gdm-info.txt"
+        echo "DATE: $f_date"       >> "$repo/.gdm-info.txt"
+        echo -e "  $D  🛡️  Cache written with Unknown — info display will handle gracefully.$C  $GY eprahemi$C"
     end
-
-    # Format date
-    if command -v python3 &>/dev/null; and test "$f_mtime" != "?"
-        set f_date (python3 -c "
-import sys
-from datetime import datetime
-try:
-    dt = datetime.strptime(sys.argv[1].strip(), '%Y-%m-%d %H:%M')
-    print(dt.strftime('%d %b %Y  %H:%M'))
-except:
-    print(sys.argv[1])
-" "$f_mtime" 2>/dev/null)
-    else
-        set f_date "$f_mtime"
-    end
-
-    # ── Write .gdm-info.txt cache file to repo ──
-    mkdir -p "$repo"
-    echo "FORMAT: $fmt"        > "$repo/.gdm-info.txt"
-    echo "COLORSPACE: $csp"    >> "$repo/.gdm-info.txt"
-    echo "DEPTH: $dep"         >> "$repo/.gdm-info.txt"
-    echo "DIMS: $dims"         >> "$repo/.gdm-info.txt"
-    echo "DPI: $dpi"           >> "$repo/.gdm-info.txt"
-    echo "MP: $mp"             >> "$repo/.gdm-info.txt"
-    echo "ASPECT: $aspect"     >> "$repo/.gdm-info.txt"
-    echo "BLUR: $blur_desc"    >> "$repo/.gdm-info.txt"
-    echo "SOURCE: $orig_path"  >> "$repo/.gdm-info.txt"
-    echo "SIZE: $f_size"       >> "$repo/.gdm-info.txt"
-    echo "DATE: $f_date"       >> "$repo/.gdm-info.txt"
 
     # ── Apply the wallpaper ──
     # Guard: sudo must be installed
