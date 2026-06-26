@@ -19,10 +19,34 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
     # ── Flags ──
     set -l skip_confirm 0
 
-    # ── Arg check ──
+    # ── Arg check (no args → show all usages in a box) ──
     if not set -q argv[1]
-        echo -e "$RE✘$C Usage: $CY$B gdm [-y|--yes] /path/to/wallpaper.jpg$C"
-        echo -e "  $GY  github.com/eprahemi$C"
+        echo ""
+        echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        set -l n1 "  🖼️  GDM WALLPAPER SWITCHER"
+        echo -e "  $CY║$C  $WH$n1$C$(printf '%*s' (math "60 - "(string length "$n1")) '')$CY║$C"
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        set -l n2 "    gdm filename.jpg"
+        echo -e "  $CY║$C  $CY$B$n2$C$(printf '%*s' (math "60 - "(string length "$n2")) '')$CY║$C"
+        set -l n3 "    gdm /path/to/image.jpg"
+        echo -e "  $CY║$C  $CY$B$n3$C$(printf '%*s' (math "60 - "(string length "$n3")) '')$CY║$C"
+        set -l n4 "    gdm default"
+        echo -e "  $CY║$C  $CY$B$n4$C$(printf '%*s' (math "60 - "(string length "$n4")) '')$CY║$C"
+        set -l n5 "    gdm -y|--yes filename.jpg"
+        echo -e "  $CY║$C  $CY$B$n5$C$(printf '%*s' (math "60 - "(string length "$n5")) '')$CY║$C"
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        set -l n6 "  🔍  gdm --help   →  full features + blur"
+        echo -e "  $CY║$C  $D$n6$C$(printf '%*s' (math "60 - "(string length "$n6")) '')$CY║$C"
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        set -l br "  eprahemi  •  github.com/eprahemi"
+        echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
+        echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
+        echo ""
         return 1
     end
 
