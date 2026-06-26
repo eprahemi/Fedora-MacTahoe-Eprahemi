@@ -55,8 +55,10 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY║$C  $CY$B$h2$C$(printf '%*s' (math "60 - "(string length "$h2")) '')$CY║$C"
         set -l h3 "    gdm /path/to/image.jpg"
         echo -e "  $CY║$C  $CY$B$h3$C$(printf '%*s' (math "60 - "(string length "$h3")) '')$CY║$C"
-        set -l h4 "    gdm -y|--yes filename.jpg"
+        set -l h4 "    gdm default"
         echo -e "  $CY║$C  $CY$B$h4$C$(printf '%*s' (math "60 - "(string length "$h4")) '')$CY║$C"
+        set -l h5 "    gdm -y|--yes filename.jpg"
+        echo -e "  $CY║$C  $CY$B$h5$C$(printf '%*s' (math "60 - "(string length "$h5")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         set -l h5 "  Changes the GDM login screen background."
         echo -e "  $CY║$C  $D$h5$C$(printf '%*s' (math "60 - "(string length "$h5")) '')$CY║$C"
@@ -85,6 +87,8 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY║$C  $CY$h15$C$(printf '%*s' (math "60 - "(string length "$h15")) '')$CY║$C"
         set -l h16 "  gdm -y ~/Pictures/definite.jpg"
         echo -e "  $CY║$C  $CY$h16$C$(printf '%*s' (math "60 - "(string length "$h16")) '')$CY║$C"
+        set -l h17 "  gdm default"
+        echo -e "  $CY║$C  $CY$h17$C$(printf '%*s' (math "60 - "(string length "$h17")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         set -l br "  eprahemi  •  github.com/eprahemi"
         echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
@@ -97,6 +101,53 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
     if contains -- "$argv[1]" "-y" "--yes"
         set skip_confirm 1
         set -e argv[1]
+    end
+
+    # ── "default" subcommand: restore Himeno login wallpaper ──
+    if set -q argv[1]; and contains -- "$argv[1]" "default" "--default"
+        set -e argv[1]
+        set -l C  "\033[0m"
+        set -l CY "\033[1;36m"
+        set -l GR "\033[1;32m"
+        set -l YE "\033[1;33m"
+        set -l RE "\033[1;31m"
+        set -l GY "\033[38;5;248m"
+        set -l D  "\033[2m"
+        set -l wp_config "$HOME/.config/Wallpapers/Himeno Fedora LoginScreen.jpg"
+        set -l wp_repo "$HOME/.local/share/mactahoe-gtk/himeno-login.jpg"
+        set -l wp_url "https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/wallpapers/login/Himeno%20Fedora%20LoginScreen.jpg"
+
+        if test -f "$wp_config"
+            echo -e "  $D🖼️  Found Himeno login wallpaper in ~/.config/Wallpapers/$C"
+            gdm --yes "$wp_config"
+        else if test -f "$wp_repo"
+            echo -e "  $D🖼️  Found Himeno login wallpaper in cached repo$C"
+            gdm --yes "$wp_repo"
+        else
+            echo ""
+            echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
+            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+            echo -e "  $CY║$C  $WH🌐  DOWNLOADING HIMENO LOGIN WALLPAPER$C                    $CY║$C"
+            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+            echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+            echo -e "  $CY║$C  $D  Himeno wallpaper not found locally.$C                          $CY║$C"
+            echo -e "  $CY║$C  $D  Downloading from the Fedora MacTahoe repo...$C                 $CY║$C"
+            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+            echo -e "  $CY║$C  $YE  📦  Saving to ~/.local/share/mactahoe-gtk/$C                   $CY║$C"
+            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+            echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
+            echo ""
+            mkdir -p "$HOME/.local/share/mactahoe-gtk"
+            if not curl -fsSL "$wp_url" -o "$wp_repo" 2>/dev/null
+                echo -e "  $RE✘  Download failed — no internet?$C"
+                echo -e "  $GY  Run gdm with any image, or connect to the internet.$C"
+                return 1
+            end
+            echo -e "  $GR✅  Himeno login wallpaper saved to repo$C"
+            gdm --yes "$wp_repo"
+        end
+        return $status
     end
 
     # ── Join all args so unquoted filenames with spaces work ──

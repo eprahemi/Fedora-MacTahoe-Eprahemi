@@ -28,7 +28,7 @@ function func --description 'Function archive: list/search/show all fish command
 
     set -l cat_name[3] "⚙️  System"
     set -l cat_esc[3]  $R
-    set -l cat_func[3] "clean cleanreset refresh gdm gdm-default"
+    set -l cat_func[3] "clean cleanreset refresh gdm"
 
     set -l cat_name[4] "📊  Diagnostics"
     set -l cat_esc[4]  $B
@@ -50,7 +50,7 @@ function func --description 'Function archive: list/search/show all fish command
         switch $f
             case c v n weather;           echo 1
             case cat l p mkgif extract;   echo 2
-            case clean cleanreset refresh gdm gdm-default; echo 3
+            case clean cleanreset refresh gdm; echo 3
             case testdrive getdata myip stats calc qr; echo 4
             case matrix hollywood stayawake fish_greeting; echo 5
             case func passgen;            echo 6
@@ -83,8 +83,7 @@ function func --description 'Function archive: list/search/show all fish command
             case stayawake; echo "stayawake [dur|--display|--stop]"
             case getdata; echo "getdata [--list|--venv]"
             case clean;   echo "clean [--all|--pip|--dry-run]"
-            case gdm;     echo "gdm [-y|--yes] [image]  — auto-search"
-            case gdm-default; echo "gdm-default"
+            case gdm;     echo "gdm [-y|--yes|default] [image]  — auto-search | default wallpaper"
             case refresh; echo "refresh [-k|--all|--cache|--dns|--dnf|...]"
             case myip;    echo "myip"
             case stats;   echo "stats"
