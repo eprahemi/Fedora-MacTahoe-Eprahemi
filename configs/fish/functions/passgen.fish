@@ -60,7 +60,7 @@ function passgen --description '🔑 Password generator and analyzer — 18 opti
             case --get
                 set get_label $argv[2]
                 set -e argv[1..2]
-            case --force -f -F
+            case --force -f -F -force
                 set force_mode yes
                 set -e argv[1]
             case --list
@@ -76,7 +76,7 @@ function passgen --description '🔑 Password generator and analyzer — 18 opti
                 echo -e "  \033[38;5;248m  --count, -n N    Number of passwords (def: 1)\033[0m"
                 echo -e "  \033[38;5;248m  --passphrase -P  Word-based passphrase\033[0m"
                 echo -e "  \033[38;5;248m  --words, -w N    Words in passphrase (def: 4)\033[0m"
-                echo -e "  \033[38;5;248m  --force, -f, -F\033[0m      \033[1;37mOverride 99,999 limit\033[0m"
+                echo -e "  \033[38;5;248m  --force, -f, -F, -force\033[0m      \033[1;37mOverride 99,999 limit\033[0m"
                 echo -e "  \033[38;5;248m  --no-lower       Exclude lowercase\033[0m"
                 echo -e "  \033[38;5;248m  --no-upper       Exclude uppercase\033[0m"
                 echo -e "  \033[38;5;248m  --no-digits      Exclude digits\033[0m"
