@@ -271,9 +271,9 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
             return 1
         end
 
-        # Pass to gdm so it flows through search → confirm → blur → apply
+        # Pass to gdm with --yes so it skips the redundant "DO YOU MEAN THIS?" confirm
         echo -e "  $D  Using current desktop wallpaper: $bg_path$C"
-        gdm "$bg_path"
+        gdm --yes "$bg_path"
         return $status
     end
 
