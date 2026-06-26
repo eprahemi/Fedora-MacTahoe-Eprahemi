@@ -424,7 +424,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         end
 
         # ═══════════════════════════════════════════════════════════════
-        # INFO BOX — TWO SECTIONS: FILE DETAILS + IMAGE TECHNOLOGY
+        # INFO BOX — TWO SECTIONS: FILE DETAILS + IMAGE INFORMATION
         # ═══════════════════════════════════════════════════════════════
         echo ""
         echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
@@ -464,9 +464,9 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         if test $sd_pad -lt 0; set sd_pad 0; end
         echo -e "  $CY║$C    $D│$C  $sd_content$(printf '%*s' $sd_pad '')$D│$C  $CY║$C"
 
-        # ── SECTION 2: IMAGE TECHNOLOGY ──
+        # ── SECTION 2: IMAGE INFORMATION ──
         echo -e "  $CY║$C    $D├──────────────────────────────────────────────────────┤$C  $CY║$C"
-        echo -e "  $CY║$C    $D│$C  $WH🎨  IMAGE TECHNOLOGY$C$(printf '%*s' 34 '')$D│$C  $CY║$C"
+        echo -e "  $CY║$C    $D│$C  $WH🎨  IMAGE INFORMATION$C$(printf '%*s' 34 '')$D│$C  $CY║$C"
 
         # Line: Format | Colorspace | Bit depth
         set -l dep_str "$dep"
@@ -1058,10 +1058,50 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
             if sudo dnf install -y ImageMagick 2>/dev/null
                 echo -e "  $GR  ✅  ImageMagick installed by safety guard$C  github.com/eprahemi"
             else
-                echo -e "  $D  ⚠️  Auto-install of ImageMagick failed. Metadata will be partial.$C  $GY eprahemi$C"
+                echo -e ""
+                echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
+                echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                set -l gu1 "  ✘  IMAGEMAGICK INSTALL FAILED"
+                echo -e "  $RE║$C  $WH$gu1$C$(printf '%*s' (math "60 - "(string length "$gu1")) '')$RE║$C"
+                echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                echo -e "  $RE╠══════════════════════════════════════════════════════════════╣$C"
+                echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                set -l gu2 "  ImageMagick is required for metadata + blur."
+                echo -e "  $RE║$C  $D$gu2$C$(printf '%*s' (math "60 - "(string length "$gu2")) '')$RE║$C"
+                set -l gu3 "  Install it manually, then run gdm again:"
+                echo -e "  $RE║$C  $D$gu3$C$(printf '%*s' (math "60 - "(string length "$gu3")) '')$RE║$C"
+                echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                set -l gu4 "    sudo dnf install ImageMagick"
+                echo -e "  $RE║$C  $YE$gu4$C$(printf '%*s' (math "60 - "(string length "$gu4")) '')$RE║$C"
+                echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                set -l br "  eprahemi  •  github.com/eprahemi"
+                echo -e "  $RE║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
+                echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
+                echo ""
+                return 1
             end
         else
-            echo -e "  $D  ⚠️  sudo unavailable — cannot auto-install ImageMagick.$C  $GY eprahemi$C"
+            echo -e ""
+            echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            set -l gu1 "  ✘  SUDO NOT AVAILABLE"
+            echo -e "  $RE║$C  $WH$gu1$C$(printf '%*s' (math "60 - "(string length "$gu1")) '')$RE║$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            echo -e "  $RE╠══════════════════════════════════════════════════════════════╣$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            set -l gu2 "  sudo is required to install ImageMagick."
+            echo -e "  $RE║$C  $D$gu2$C$(printf '%*s' (math "60 - "(string length "$gu2")) '')$RE║$C"
+            set -l gu3 "  Install it manually, then run gdm again:"
+            echo -e "  $RE║$C  $D$gu3$C$(printf '%*s' (math "60 - "(string length "$gu3")) '')$RE║$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            set -l gu4 "    sudo dnf install ImageMagick"
+            echo -e "  $RE║$C  $YE$gu4$C$(printf '%*s' (math "60 - "(string length "$gu4")) '')$RE║$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            set -l br "  eprahemi  •  github.com/eprahemi"
+            echo -e "  $RE║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
+            echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
+            echo ""
+            return 1
         end
     end
 
