@@ -281,7 +281,22 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
             echo ""
         end
 
-        read -l -P "  [Y/n]: " current_confirm
+        set -l __cc 0
+        while true
+            read -l -P "  [Y/n]: " current_confirm
+            set -l __rs $status
+            if test $__rs -ne 0
+                set __cc (math $__cc + 1)
+                if test $__cc -ge 2
+                    echo -e "  $D  → Proceeding with current wallpaper...  $C  $GY eprahemi$C"
+                    set current_confirm "y"
+                    break
+                end
+                echo -e "  $D  (Ctrl+C again to exit)  $C  $GY eprahemi$C"
+                continue
+            end
+            break
+        end
         if not test -z "$current_confirm"; and not string match -qir '^y' "$current_confirm"
             echo -e "  $RE✘  Cancelled. Run $CY$B gdm$C $RE again — github.com/eprahemi$C"
             return 1
@@ -824,6 +839,30 @@ except:
 
         case 1
             set image "$results[1]"
+            # 🛡️  GUARD: Reject empty/null images before any prompt
+            if not test -s "$image"
+                echo ""
+                echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
+                echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                set -l ee1 "  ✘  EMPTY OR NULL IMAGE"
+                echo -e "  $RE║$C  $WH$ee1$C$(printf '%*s' (math "60 - "(string length "$ee1")) '')$RE║$C"
+                echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                echo -e "  $RE╠══════════════════════════════════════════════════════════════╣$C"
+                echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                set -l ee2 "  The selected image has zero bytes or doesn't"
+                set -l ee3 "  exist. GDM cannot apply an empty file."
+                echo -e "  $RE║$C  $D$ee2$C$(printf '%*s' (math "60 - "(string length "$ee2")) '')$RE║$C"
+                echo -e "  $RE║$C  $D$ee3$C$(printf '%*s' (math "60 - "(string length "$ee3")) '')$RE║$C"
+                echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                set -l ee4 "  Choose a valid image and run gdm again."
+                echo -e "  $RE║$C  $YE$ee4$C$(printf '%*s' (math "60 - "(string length "$ee4")) '')$RE║$C"
+                echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                set -l br "  eprahemi  •  github.com/eprahemi"
+                echo -e "  $RE║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
+                echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
+                echo ""
+                return 1
+            end
             if test $skip_confirm -eq 0; and test $skip_double_confirm -eq 0
                 echo ""
                 echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
@@ -852,7 +891,22 @@ except:
                 echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
                 echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
                 echo ""
-                read -l -P "  [Y/n]: " confirm
+                set -l __cc 0
+                while true
+                    read -l -P "  [Y/n]: " confirm
+                    set -l __rs $status
+                    if test $__rs -ne 0
+                        set __cc (math $__cc + 1)
+                        if test $__cc -ge 2
+                            echo -e "  $D  → Proceeding with this wallpaper...  $C  $GY eprahemi$C"
+                            set confirm "y"
+                            break
+                        end
+                        echo -e "  $D  (Ctrl+C again to exit)  $C  $GY eprahemi$C"
+                        continue
+                    end
+                    break
+                end
                 if not test -z "$confirm"; and not string match -qir '^y' "$confirm"
                     echo -e "  $RE✘  Cancelled. Run $CY$B gdm$C $RE again — github.com/eprahemi$C"
                     return 1
@@ -908,8 +962,40 @@ except:
             echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
             echo ""
 
+            set -l __cc 0
             while true
                 read -l -P "  [#]: " choice
+                set -l __rs $status
+                if test $__rs -ne 0
+                    set __cc (math $__cc + 1)
+                    if test $__cc -ge 2
+                        echo -e "  $D  → Skipping to blur section...  $C  $GY eprahemi$C"
+                        set image "$results[1]"
+                        if not test -s "$image"
+                            echo ""
+                            echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
+                            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                            set -l ee1 "  ✘  EMPTY OR NULL IMAGE"
+                            echo -e "  $RE║$C  $WH$ee1$C$(printf '%*s' (math "60 - "(string length "$ee1")) '')$RE║$C"
+                            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                            echo -e "  $RE╠══════════════════════════════════════════════════════════════╣$C"
+                            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                            set -l ee2 "  The first match has zero bytes or doesn't"
+                            set -l ee3 "  exist. Choose a different image."
+                            echo -e "  $RE║$C  $D$ee2$C$(printf '%*s' (math "60 - "(string length "$ee2")) '')$RE║$C"
+                            echo -e "  $RE║$C  $D$ee3$C$(printf '%*s' (math "60 - "(string length "$ee3")) '')$RE║$C"
+                            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                            set -l br "  eprahemi  •  github.com/eprahemi"
+                            echo -e "  $RE║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
+                            echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
+                            echo ""
+                            return 1
+                        end
+                        break
+                    end
+                    echo -e "  $D  (Ctrl+C again to skip to blur)  $C  $GY eprahemi$C"
+                    continue
+                end
                 if string match -qir '^q' "$choice"
                     echo -e "  $RE✘  Cancelled. Run $CY$B gdm$C $RE again — github.com/eprahemi$C"
                     return 1
@@ -918,6 +1004,27 @@ except:
                     set -l num (math "$choice" 2>/dev/null)
                     if test $num -ge 1 -a $num -le $result_count
                         set image "$results[$num]"
+                        # 🛡️  GUARD: Reject empty/null images before proceeding
+                        if not test -s "$image"
+                            echo ""
+                            echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
+                            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                            set -l ee1 "  ✘  EMPTY OR NULL IMAGE"
+                            echo -e "  $RE║$C  $WH$ee1$C$(printf '%*s' (math "60 - "(string length "$ee1")) '')$RE║$C"
+                            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                            echo -e "  $RE╠══════════════════════════════════════════════════════════════╣$C"
+                            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                            set -l ee2 "  That match has zero bytes or doesn't exist."
+                            set -l ee3 "  Choose a different image from the list."
+                            echo -e "  $RE║$C  $D$ee2$C$(printf '%*s' (math "60 - "(string length "$ee2")) '')$RE║$C"
+                            echo -e "  $RE║$C  $D$ee3$C$(printf '%*s' (math "60 - "(string length "$ee3")) '')$RE║$C"
+                            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                            set -l br "  eprahemi  •  github.com/eprahemi"
+                            echo -e "  $RE║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
+                            echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
+                            echo ""
+                            return 1
+                        end
 
                         # ── Preview image in Kitty terminal ──
                         if test -n "$KITTY_PID"
@@ -977,7 +1084,22 @@ except:
                 echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
                 echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
                 echo ""
-                read -l -P "  [n/Y/c]: " blur_choice
+                set -l __cc 0
+                while true
+                    read -l -P "  [n/Y/c]: " blur_choice
+                    set -l __rs $status
+                    if test $__rs -ne 0
+                        set __cc (math $__cc + 1)
+                        if test $__cc -ge 2
+                            echo -e "  $D  → Applying default blur...  $C  $GY eprahemi$C"
+                            set blur_choice "y"
+                            break
+                        end
+                        echo -e "  $D  (Ctrl+C again to apply default blur)  $C  $GY eprahemi$C"
+                        continue
+                    end
+                    break
+                end
 
                 switch (string lower "$blur_choice")
                     case n no
@@ -1025,8 +1147,39 @@ except:
                         echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
                         echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
                         echo ""
-                        read -l -P "    Blur sigma [30]: " blur_sigma
-                        read -l -P "    Black tint % [30]: " colorize_pct
+                        set -l __cc 0
+                        while true
+                            read -l -P "    Blur sigma [30]: " blur_sigma
+                            set -l __rs $status
+                            if test $__rs -ne 0
+                                set __cc (math $__cc + 1)
+                                if test $__cc -ge 2
+                                    echo -e "  $D  → Using defaults (30 / 30)...  $C  $GY eprahemi$C"
+                                    set blur_sigma 30
+                                    set colorize_pct 30
+                                    break 2
+                                end
+                                echo -e "  $D  (Ctrl+C again to use defaults)  $C  $GY eprahemi$C"
+                                continue
+                            end
+                            break
+                        end
+                        set -l __cc 0
+                        while true
+                            read -l -P "    Black tint % [30]: " colorize_pct
+                            set -l __rs $status
+                            if test $__rs -ne 0
+                                set __cc (math $__cc + 1)
+                                if test $__cc -ge 2
+                                    echo -e "  $D  → Using default tint (30%)...  $C  $GY eprahemi$C"
+                                    set colorize_pct 30
+                                    break
+                                end
+                                echo -e "  $D  (Ctrl+C again to use default)  $C  $GY eprahemi$C"
+                                continue
+                            end
+                            break
+                        end
 
                         if test -z "$blur_sigma"
                             set blur_sigma 30
@@ -1062,7 +1215,22 @@ except:
                                 echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
                                 echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
                                 echo ""
-                                read -l -P "  [y/N]: " like_it
+                                set -l __cc 0
+                                while true
+                                    read -l -P "  [y/N]: " like_it
+                                    set -l __rs $status
+                                    if test $__rs -ne 0
+                                        set __cc (math $__cc + 1)
+                                        if test $__cc -ge 2
+                                            echo -e "  $D  → Accepting blur...  $C  $GY eprahemi$C"
+                                            set like_it "y"
+                                            break
+                                        end
+                                        echo -e "  $D  (Ctrl+C again to accept)  $C  $GY eprahemi$C"
+                                        continue
+                                    end
+                                    break
+                                end
                                 if string match -qir '^y' "$like_it"
                                     set image "$blurred_file"
                                     echo "Blur 0x$blur_sigma + black $colorize_pct%" > /tmp/.gdm-info/blur-settings.txt
@@ -1076,7 +1244,22 @@ except:
                                 echo -e "  $D  💻  Preview requires Kitty terminal — blur applied without preview.$C"
                                 echo -e "  $GR✅  Custom blur applied$C  github.com/eprahemi"
                                 echo ""
-                                read -l -P "  [Y] Continue  [N] Try again: " non_kitty_ok
+                                set -l __cc 0
+                                while true
+                                    read -l -P "  [Y] Continue  [N] Try again: " non_kitty_ok
+                                    set -l __rs $status
+                                    if test $__rs -ne 0
+                                        set __cc (math $__cc + 1)
+                                        if test $__cc -ge 2
+                                            echo -e "  $D  → Continuing with blur...  $C  $GY eprahemi$C"
+                                            set non_kitty_ok "y"
+                                            break
+                                        end
+                                        echo -e "  $D  (Ctrl+C again to continue)  $C  $GY eprahemi$C"
+                                        continue
+                                    end
+                                    break
+                                end
                                 if string match -qir '^n' "$non_kitty_ok"
                                     # loop back to blur menu
                                 else
@@ -1119,7 +1302,22 @@ except:
             echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
             echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
             echo ""
-            read -l -P "  [y/N]: " install_magick
+            set -l __cc 0
+            while true
+                read -l -P "  [y/N]: " install_magick
+                set -l __rs $status
+                if test $__rs -ne 0
+                    set __cc (math $__cc + 1)
+                    if test $__cc -ge 2
+                        echo -e "  $D  → Skipping ImageMagick install...  $C  $GY eprahemi$C"
+                        set install_magick "n"
+                        break
+                    end
+                    echo -e "  $D  (Ctrl+C again to skip install)  $C  $GY eprahemi$C"
+                    continue
+                end
+                break
+            end
             if string match -qir '^y' "$install_magick"
                 echo -e "  $D📦  Installing ImageMagick...$C  $GY github.com/eprahemi$C"
                 if sudo dnf install -y ImageMagick 2>/dev/null
@@ -1193,7 +1391,21 @@ except:
             echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
             echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
             echo ""
-            read -l -P "  [y/N]: " install_git
+            set -l __cc 0
+            while true
+                read -l -P "  [y/N]: " install_git
+                set -l __rs $status
+                if test $__rs -ne 0
+                    set __cc (math $__cc + 1)
+                    if test $__cc -ge 2
+                        echo -e "  $RE✘  Cancelled — git is required.$C  $GY github.com/eprahemi$C"
+                        return 1
+                    end
+                    echo -e "  $D  (Ctrl+C again to cancel)  $C  $GY eprahemi$C"
+                    continue
+                end
+                break
+            end
             if string match -qir '^y' "$install_git"
                 echo -e "  $D📦  Installing git...$C  $GY github.com/eprahemi$C"
                 if not sudo dnf install -y git 2>/dev/null
