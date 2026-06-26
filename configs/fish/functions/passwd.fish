@@ -173,8 +173,11 @@ function passwd --description 'Toggle passwordless sudo for the current user —
     else
         echo -e "\n  $D📝  Disabling passwordless sudo for $CY$B$user$C ...$C"
         # Build pattern safely: $user enclosed in (...) so [ doesn't touch it
-        set -l sed_gap "[[:space:]]+ALL=(ALL)[[:space:]]+NOPASSWD:[[:space:]]+ALL"
-        sudo sed -ri "s/^[[:space:]]*($user)$sed_gap/#\1/" "$sudoers"
+        # $sed_gap cannot touch $user (Fish array-index issue), and
+        # we must capture the full username + rest to keep the line intact.
+        # Use & (entire match) and a safe pattern without capturing beyond $user.
+        set -l sed_gap "[[:space:]]+ALL=\(ALL\)[[:space:]]+NOPASSWD:[[:space:]]+ALL"
+        sudo sed -ri "s/^[[:space:]]*$user$sed_gap/#&/" "$sudoers"
     end
 
     # ─── Validate with visudo ───
