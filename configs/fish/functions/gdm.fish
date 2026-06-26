@@ -1860,15 +1860,6 @@ except:
     cd -
 
     if string match -q '*himeno-login*' "$image"
-        # Rainbow cycle for Himeno text
-        set -l r 255 255 255 255 200 100  50  50  50  50 100 200
-        set -l g 50  100 180 220 255 220 200 100  50  50  50  50
-        set -l b 50  50  50  50  50  50 100 200 255 255 200 100
-        for i in (seq 12)
-            echo -ne "\r  \033[38;2;$r[$i];$g[$i];$b[$i]m✧  Himeno-chan wallpaper appears! ✧ (ﾉ◕ヮ◕)\033[0m"
-            sleep 0.08
-        end
-        echo -e "\r  \033[38;2;255;50;50m✧\033[0m \033[38;2;255;180;50mHimeno-chan\033[0m \033[38;2;50;220;50mwallpaper\033[0m \033[38;2;50;200;255mappears!\033[0m \033[38;2;200;50;255m✧\033[0m \033[38;2;255;80;180m(ﾉ◕ヮ◕)\033[0m"
         echo -e "  $D  ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣤⣶⣶⣶⣶⣶⣄⣠⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀$C"
         echo -e "  $D  ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣤⣖⣯⣿⣶⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣶⣶⣶⣦⣤⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀$C"
         echo -e "  $D  ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣶⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣶⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀$C"
@@ -1917,6 +1908,17 @@ except:
         printf "  $GY│$C  $D•$C $CY%-20s$C $D%-26s$C$GY│$C\n" "gdm save" "save to ~/Pictures/"
         echo -e "  $GY└────────────────────────────────────────────────────┘$C"
         echo -e "  $GY  eprahemi  •  github.com/eprahemi$C"
+        echo ""
+        # Forever rainbow cycle at the bottom
+        set -l r 255 255 255 255 200 100  50  50  50  50 100 200
+        set -l g 50  100 180 220 255 220 200 100  50  50  50  50
+        set -l b 50  50  50  50  50  50 100 200 255 255 200 100
+        while true
+            for i in (seq 12)
+                echo -ne "\r  \033[38;2;$r[$i];$g[$i];$b[$i]m✧  Himeno-chan wallpaper appears! ✧ (ﾉ◕ヮ◕)\033[0m"
+                sleep 0.08
+            end
+        end
     else
         echo -e "  $GR✅  GDM wallpaper updated!$C"
         echo -e "  $GY┌────────────────────────────────────────────────────┐$C"
