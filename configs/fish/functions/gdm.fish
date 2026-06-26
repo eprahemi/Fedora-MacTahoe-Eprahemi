@@ -449,6 +449,42 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         else
             set blur_choice "n"
         end
+    else
+        # ── ImageMagick not installed prompt ──
+        if test $skip_confirm -eq 0
+            echo ""
+            echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
+            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+            set -l mi1 "  ⚠️  IMAGEMAGICK NOT INSTALLED"
+            echo -e "  $CY║$C  $WH$mi1$C$(printf '%*s' (math "60 - "(string length "$mi1")) '')$CY║$C"
+            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+            echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+            set -l mi2 "  Blur + dark tint requires ImageMagick."
+            echo -e "  $CY║$C  $D$mi2$C$(printf '%*s' (math "60 - "(string length "$mi2")) '')$CY║$C"
+            set -l mi3 "  It is NOT installed on your system."
+            echo -e "  $CY║$C  $YE$mi3$C$(printf '%*s' (math "60 - "(string length "$mi3")) '')$CY║$C"
+            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+            set -l mi4 "  [Y] Yes — install it now"
+            echo -e "  $CY║$C  $GR$mi4$C$(printf '%*s' (math "60 - "(string length "$mi4")) '')$CY║$C"
+            set -l mi5 "  [N] No  — skip blur, use original"
+            echo -e "  $CY║$C  $RE$mi5$C$(printf '%*s' (math "60 - "(string length "$mi5")) '')$CY║$C"
+            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+            echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
+            echo ""
+            read -l -P "  [y/N]: " install_magick
+            if string match -qir '^y' "$install_magick"
+                echo -e "  $D📦  Installing ImageMagick...$C"
+                if sudo dnf install -y ImageMagick 2>/dev/null
+                    echo -e "  $GR✅  ImageMagick installed!$C"
+                    echo -e "  $GY  Run $CY$B gdm$C $GY again to use blur options.$C"
+                else
+                    echo -e "  $RE✘  Installation failed. Try: $CY$B sudo dnf install ImageMagick$C"
+                end
+            else
+                echo -e "  $D  Skipping blur — using original image.$C"
+            end
+        end
     end
 
     # ── Persistent MacTahoe repo (kept after first clone) ──
