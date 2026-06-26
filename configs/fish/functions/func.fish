@@ -40,7 +40,7 @@ function func --description 'Function archive: list/search/show all fish command
 
     set -l cat_name[6] "🔧  Utility"
     set -l cat_esc[6]  $C
-    set -l cat_func[6] "func passgen"
+    set -l cat_func[6] "func passgen passwd"
 
     set -l cat_cnt (count $cat_name)
 
@@ -53,7 +53,7 @@ function func --description 'Function archive: list/search/show all fish command
             case clean cleanreset refresh gdm; echo 3
             case testdrive getdata myip stats calc qr; echo 4
             case matrix hollywood stayawake fish_greeting; echo 5
-            case func passgen;            echo 6
+            case func passgen passwd;     echo 6
             case '*';                     echo 0
         end
     end
@@ -94,6 +94,7 @@ function func --description 'Function archive: list/search/show all fish command
             case extract; echo "extract <archive> [dest]"
             case func;    echo "func [search|show]"
             case passgen; echo "passgen [opts]"
+            case passwd;  echo "passwd [on|off|enable|disable|toggle|status|--help]"
             case '*';     echo "$u"
         end
     end
