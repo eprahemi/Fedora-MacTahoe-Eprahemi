@@ -961,13 +961,14 @@ except:
                     set -l trimmed (string sub -l 52 "$remaining")
                     set -l match_end (string match -r ".* " "$trimmed")
                     set -l split_pos (string length -- "$match_end")
+                    set -l part; set -l rest
                     if test -n "$match_end"; and test "$split_pos" -gt 10
                         set -l split (math "$split_pos - 1")
-                        set -l part (string sub -l $split "$remaining")
-                        set -l rest (string sub -s (math "$split_pos + 1") "$remaining")
+                        set part (string sub -l $split "$remaining")
+                        set rest (string sub -s (math "$split_pos + 1") "$remaining")
                     else
-                        set -l part "$trimmed"
-                        set -l rest (string sub -s 53 "$remaining")
+                        set part "$trimmed"
+                        set rest (string sub -s 53 "$remaining")
                     end
                     if test $line_num -eq 1
                         set -l m_line "$prefix$part"
