@@ -955,20 +955,23 @@ except:
                 set -l num_str (printf "%2d" $i)
                 set -l prefix "  [$num_str]  "
                 set -l max_w (math "60 - "(string length "$prefix"))
-                if test (string length "$path") -le $max_w
-                    set -l m_line "$prefix$path"
-                    echo -e "  $CY║$C  $GR$m_line$C$(printf '%*s' (math "60 - "(string length "$m_line")) '')$CY║$C"
-                else
-                    set -l part1 (string sub -l $max_w "$path")
-                    set -l part2 (string sub -s (math "$max_w + 1") "$path")
-                    set -l m_line1 "$prefix$part1"
-                    echo -e "  $CY║$C  $GR$m_line1$C$(printf '%*s' (math "60 - "(string length "$m_line1")) '')$CY║$C"
-                    set -l indent "        "
-                    set -l m_line2 "$indent$part2"
-                    if test (string length "$m_line2") -gt 60
-                        set m_line2 (string sub -l 57 "$m_line2")"..."
+                set -l indent "        "
+                set -l cont_w (math "60 - "(string length "$indent"))
+                set -l remaining "$path"
+                set -l first_line 1
+                while test -n "$remaining"
+                    if test $first_line -eq 1
+                        set -l part (string sub -l $max_w "$remaining")
+                        set -l m_line "$prefix$part"
+                        echo -e "  $CY║$C  $GR$m_line$C$(printf '%*s' (math "60 - "(string length "$m_line")) '')$CY║$C"
+                        set remaining (string sub -s (math "$max_w + 1") "$remaining")
+                        set first_line 0
+                    else
+                        set -l part (string sub -l $cont_w "$remaining")
+                        set -l m_line "$indent$part"
+                        echo -e "  $CY║$C  $GR$m_line$C$(printf '%*s' (math "60 - "(string length "$m_line")) '')$CY║$C"
+                        set remaining (string sub -s (math "$cont_w + 1") "$remaining")
                     end
-                    echo -e "  $CY║$C  $GR$m_line2$C$(printf '%*s' (math "60 - "(string length "$m_line2")) '')$CY║$C"
                 end
             end
 
