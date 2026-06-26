@@ -124,7 +124,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY║$C  $D$f8$C$(printf '%*s' (math "60 - "(string length "$f8")) '')$CY║$C"
         set -l f9 "  ℹ️   gdm info — show last applied GDM wallpaper details"
         echo -e "  $CY║$C  $D$f9$C$(printf '%*s' (math "60 - "(string length "$f9")) '')$CY║$C"
-        set -l f10 "  💾  gdm save  — save wallpaper to ~/Pictures/ with encrypted name"
+        set -l f10 "  💾  gdm save  — save wallpaper to ~/Pictures/ (16-char encrypted name)"
         echo -e "  $CY║$C  $D$f10$C$(printf '%*s' (math "60 - "(string length "$f10")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
@@ -347,22 +347,61 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         set -l repo_dir "$HOME/.local/share/mactahoe-gtk"
         set -l last_file "$repo_dir/.gdm-undo-copy.jpg"
         if not test -f "$last_file"
-            echo -e "  $RE✘  No GDM wallpaper to save.$C"
-            echo -e "  $GY  Apply a wallpaper first with $CY$B gdm filename.jpg$C"
-            echo -e "  $GY  github.com/eprahemi$C"
+            echo ""
+            echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            set -l sv_e1 "  ✘  NO WALLPAPER TO SAVE"
+            echo -e "  $RE║$C  $WH$sv_e1$C$(printf '%*s' (math "60 - "(string length "$sv_e1")) '')$RE║$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            echo -e "  $RE╠══════════════════════════════════════════════════════════════╣$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            set -l sv_e2 "  Apply a wallpaper first:"
+            echo -e "  $RE║$C  $D$sv_e2$C$(printf '%*s' (math "60 - "(string length "$sv_e2")) '')$RE║$C"
+            set -l sv_e3 "    gdm filename.jpg"
+            echo -e "  $RE║$C  $CY$sv_e3$C$(printf '%*s' (math "60 - "(string length "$sv_e3")) '')$RE║$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            set -l br "  eprahemi  •  github.com/eprahemi"
+            echo -e "  $RE║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
+            echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
+            echo ""
             return 1
         end
 
-        # Generate random 8-char alphanumeric filename
-        set -l rand_name (python3 -c "
-import secrets, string
-print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(8)))
+        # Generate 16-char encrypted-like name with timestamp meaning
+        # First ~6 chars = current Unix timestamp in base36 (looks random, decodes to date)
+        # Remaining ~10 chars = pure random
+        set -l ts_b36 (python3 -c "
+import sys
+n = int(__import__('time').time())
+alpha = '0123456789abcdefghijklmnopqrstuvwxyz'
+res = ''
+while n > 0:
+    res = alpha[n % 36] + res
+    n //= 36
+print(res or '0')
 " 2>/dev/null)
-        if test -z "$rand_name"
-            # Fallback: use od + head
-            set rand_name (tr -dc 'A-Za-z0-9' < /dev/urandom 2>/dev/null | head -c 8)
+        if test -z "$ts_b36"; or test "$ts_b36" = "0"
+            set ts_b36 "000000"
+        end
+        set -l ts_len (string length -- "$ts_b36")
+        set -l rand_needed (math "16 - $ts_len")
+        if test $rand_needed -lt 0
+            set ts_b36 (string sub -l 16 "$ts_b36")
+            set rand_needed 0
+        end
+        set -l rand_part ""
+        if test $rand_needed -gt 0
+            set rand_part (python3 -c "
+import secrets, string
+print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range($rand_needed)))
+" 2>/dev/null)
+        end
+        set -l rand_name "$ts_b36$rand_part"
+        if test -z "$rand_name"; or test (string length -- "$rand_name") -lt 16
+            # Fallback: generate fully random 16-char
+            set rand_name (tr -dc 'A-Za-z0-9' < /dev/urandom 2>/dev/null | head -c 16)
             if test -z "$rand_name"
-                set rand_name "GDM_Save"
+                set rand_name "GDM_Save_Unknown"
             end
         end
 
@@ -407,6 +446,26 @@ print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in rang
         set -l sv4_len (string length -- "$sv4_plain")
         echo -e "  $GR║$C  $D$sv4$C$(printf '%*s' (math "60 - $sv4_len - 1") '')$GR║$C"
         echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
+
+        # Show decoded date as a nice detail
+        set -l decoded_date (python3 -c "
+import sys, time
+alpha = '0123456789abcdefghijklmnopqrstuvwxyz'
+try:
+    n = 0
+    for c in '$ts_b36':
+        n = n * 36 + alpha.index(c)
+    print(time.strftime('%d %b %Y  %H:%M', time.localtime(n)))
+except:
+    print('')
+" 2>/dev/null)
+        if test -n "$decoded_date"
+            set -l sv5 "  🕒  Applied:  $D$decoded_date$C"
+            set -l sv5_plain "  🕒  Applied:  $decoded_date"
+            set -l sv5_len (string length -- "$sv5_plain")
+            echo -e "  $GR║$C  $sv5$(printf '%*s' (math "60 - $sv5_len - 1") '')$GR║$C"
+            echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
+        end
 
         set -l br "  eprahemi  •  github.com/eprahemi"
         echo -e "  $GR║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$GR║$C"

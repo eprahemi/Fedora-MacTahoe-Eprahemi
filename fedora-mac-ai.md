@@ -179,11 +179,13 @@ A persistent GDM wallpaper switching function that works entirely offline after 
 5. Source path truncated with `…` prefix showing end of path
 6. Displayed in branded high-end box with eprahemi footer
 
-### `gdm save` Flow (NEW — re-added per user request)
+### `gdm save` Flow (re-added per user request)
 1. Reads `~/.local/share/mactahoe-gtk/.gdm-undo-copy.jpg`
-2. Generates random 8-char alphanumeric name via python3 `secrets.choice(string.ascii_letters + string.digits)`
-3. Copies to `~/Pictures/<random>.jpg` with collision protection (`_1`, `_2`, … suffix)
-4. Shows beautiful green branded box with path + encrypted-looking filename
+2. Generates **16-char encrypted-looking name** — first ~6 chars = Unix timestamp in base36 (decodes to date), remaining ~10 chars = pure random via python3 `secrets`
+3. Each save = unique name — collision protection with `_1`, `_2`, … suffix
+4. Shows **decoded applied date** (`🕒  Applied:  26 Jun 2026  16:56`) alongside the encrypted name
+5. **Error prompt**: beautiful red branded box if no wallpaper applied yet
+6. Shows beautiful green branded box with path + encrypted filename + decoded date
 
 ### Undo (REMOVED PERMANENTLY)
 - `gdm undo` subcommand was removed per user request — will not be re-added
