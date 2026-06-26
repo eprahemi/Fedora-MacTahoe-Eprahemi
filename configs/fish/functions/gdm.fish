@@ -83,6 +83,12 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
             return 1
         end
         echo -e "  $GR✅  Repo cached at $repo (works offline from now on)$C"
+
+        # ── Also download the Himeno default login wallpaper ──
+        echo -e "  $D📥  Downloading default Himeno login wallpaper...$C"
+        curl -fsSL "https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/wallpapers/login/Himeno%20Fedora%20LoginScreen.jpg" -o "$repo/himeno-login.jpg" 2>/dev/null
+        and echo -e "  $GR✅  Himeno wallpaper saved to repo$C"
+        or echo -e "  $D  (skipped — not critical)$C"
     end
 
     # ── Apply the wallpaper ──
