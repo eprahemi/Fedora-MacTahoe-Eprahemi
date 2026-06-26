@@ -896,6 +896,9 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $GY  Install it and try again.  github.com/eprahemi$C"
         return 1
     end
+    # Save a copy for 'gdm info'
+    mkdir -p "$repo"
+    cp "$image" "$repo/.gdm-undo-copy.jpg"
     echo -e "  $CY🖼️  Applying GDM wallpaper...$C  $D github.com/eprahemi$C"
     cd "$repo"
     sudo ./tweaks.sh -g -nb -nd -b "$image"
