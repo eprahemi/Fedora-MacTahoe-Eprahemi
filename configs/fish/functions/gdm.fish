@@ -333,7 +333,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         return $status
     end
 
-    # ── "info" subcommand: show current GDM wallpaper details ──
+    # ── "info" subcommand: beautiful GDM wallpaper details with preview ──
     if set -q argv[1]; and contains -- "$argv[1]" "info" "--info" "-info"
         set -e argv[1]
         set -l last_file "$HOME/.local/share/mactahoe-gtk/.gdm-undo-copy.jpg"
@@ -343,34 +343,126 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
             echo -e "  $GY  github.com/eprahemi$C"
             return 1
         end
-        set -l f_size (command -v stat &>/dev/null; and stat -c "%s" "$last_file" 2>/dev/null; or echo "?")
+
+        # ─── Gather metadata ───
+        set -l f_bytes (command -v stat &>/dev/null; and stat -c "%s" "$last_file" 2>/dev/null; or echo "?")
         set -l f_dims (command -v identify &>/dev/null; and magick identify -format "%wx%h" "$last_file" 2>/dev/null; or echo "?x?")
-        if test "$f_size" != "?"
-            if test $f_size -ge 1048576
-                set f_size (math "$f_size / 1048576")" MB"
-            else if test $f_size -ge 1024
-                set f_size (math "$f_size / 1024")" KB"
-            else
-                set f_size "$f_size B"
-            end
+        set -l f_mtime (command -v stat &>/dev/null; and stat -c "%y" "$last_file" 2>/dev/null | string sub -l 16; or echo "?")
+
+        # Human-readable size with python3 rounding
+        set -l f_size "$f_bytes B"
+        if command -v python3 &>/dev/null; and test "$f_bytes" != "?"
+            set f_size (python3 -c "
+import sys
+n = int(sys.argv[1])
+if n >= 1073741824:
+    print(f'{n/1073741824:.1f} GB')
+elif n >= 1048576:
+    print(f'{n/1048576:.1f} MB')
+elif n >= 1024:
+    print(f'{n/1024:.1f} KB')
+else:
+    print(f'{n} B')
+" "$f_bytes")
         end
+
+        # Format date: "2026-06-26 14:32" → "26 Jun 2026  14:32"
+        set -l f_date "$f_mtime"
+        if command -v python3 &>/dev/null; and test "$f_mtime" != "?"
+            set f_date (python3 -c "
+import sys
+from datetime import datetime
+try:
+    dt = datetime.strptime(sys.argv[1].strip(), '%Y-%m-%d %H:%M')
+    print(dt.strftime('%d %b %Y  %H:%M'))
+except:
+    print(sys.argv[1])
+" "$f_mtime")
+        end
+
+        # ─── Split path ───
+        set -l f_dir (dirname "$last_file")
+        set -l f_name (basename "$last_file")
+        set f_dir (string replace -r "^$HOME" "~" "$f_dir")
+
+        # ─── Kitty image preview (before the info box) ───
+        if test -n "$KITTY_PID"
+            echo ""
+            echo -e "  $CY┌── $WH🖼️  WALLPAPER PREVIEW $D(Kitty)$C$(printf '%*s' 27 '')$CY──┐$C"
+            kitty +kitten icat --align left "$last_file" 2>/dev/null
+            echo -e "  $CY└$(printf '%*s' 58 '')┘$C"
+            echo ""
+        end
+
+        # ═══════════════════════════════════════════════════════════════
+        # INFO BOX — nested details section
+        # All lines: 62 chars between ║
+        #   ║    ┌─...─┐  ║  (4 left + box + 2 right = 62)
+        #   ║    │      │  ║  (4 + 1 + cont + 2 + 1 + 2 = 62)
+        #   ║    └─...─┘  ║  (4 + 1 + n + 1 + 2 = 62, n=54)
+        # ═══════════════════════════════════════════════════════════════
         echo ""
         echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-        set -l i1 "  📄  LAST APPLIED WALLPAPER"
-        echo -e "  $CY║$C  $WH$i1$C$(printf '%*s' (math "60 - "(string length "$i1")) '')$CY║$C"
+        set -l i_title "  🖼️  LAST APPLIED GDM WALLPAPER"
+        echo -e "  $CY║$C  $WH$i_title$C$(printf '%*s' (math "60 - "(string length "$i_title")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-        set -l i2_len (string length "$last_file")
-        set -l i2_disp "$last_file"
-        if test $i2_len -gt 54
-            set i2_disp (string sub -l 51 "$last_file")"..."
-            set i2_len 54
-        end
-        echo -e "  $CY║$C  $D  Path:$C  $YE$i2_disp$C$(printf '%*s' (math "56 - $i2_len") '')$CY║$C"
-        echo -e "  $CY║$C  $D  Size:$C  $f_size$(printf '%*s' (math "56 - "(string length "$f_size")) '')$CY║$C"
-        echo -e "  $CY║$C  $D  Dims:$C  $f_dims$(printf '%*s' (math "56 - "(string length "$f_dims")) '')$CY║$C"
+
+        # ── Nested info frame (54 ─ wide, ┐ at 59, │ at 59) ──
+        echo -e "  $CY║$C    $D┌──────────────────────────────────────────────────────┐$C  $CY║$C"
+        echo -e "  $CY║$C    $D│$C  $WH📄  FILE$C$(printf '%*s' 45 '')$D│$C  $CY║$C"
+
+        # Dir line
+        set -l f_dir_label "📂  Dir "
+        set -l f_dir_val "$f_dir/"
+        set -l f_dir_full "$f_dir_label$f_dir_val"
+        set -l f_dir_len (string length -- "$f_dir_full")
+        set -l f_dir_pad (math "50 - $f_dir_len")
+        if test $f_dir_pad -lt 0; set f_dir_pad 0; end
+        echo -e "  $CY║$C    $D│$C  $D$f_dir_label$C$GY$f_dir_val$C$(printf '%*s' $f_dir_pad '')$D│$C  $CY║$C"
+
+        # File line
+        set -l f_file_label "📎  File "
+        set -l f_file_full "$f_file_label$f_name"
+        set -l f_file_len (string length -- "$f_file_full")
+        set -l f_file_pad (math "50 - $f_file_len")
+        if test $f_file_pad -lt 0; set f_file_pad 0; end
+        echo -e "  $CY║$C    $D│$C  $D$f_file_label$C$YE$f_name$C$(printf '%*s' $f_file_pad '')$D│$C  $CY║$C"
+
+        # Separator inside frame
+        echo -e "  $CY║$C    $D│$C$(printf '%*s' 52 '')$D│$C  $CY║$C"
+
+        # Size + Dims on one line (two columns)
+        set -l size_label "💾  Size "
+        set -l dims_label "📐  Dims "
+        set -l left_col "$size_label$CY$f_size$C"
+        set -l right_col "$dims_label$GR$f_dims$C"
+        # Left part: label + value (padded to ~26)
+        set -l left_full "$size_label$f_size"
+        set -l left_len (string length -- "$left_full")
+        set -l left_pad (math "26 - $left_len")
+        if test $left_pad -lt 0; set left_pad 0; end
+        set -l l_part "$D$size_label$C$CY$f_size$C$(printf '%*s' $left_pad '')"
+        set -l r_part "$D$dims_label$C$GR$f_dims$C"
+        set -l row_full "$size_label$f_size$dims_label$f_dims"
+        set -l row_len (string length -- "$row_full")
+        set -l row_pad (math "50 - $row_len")
+        if test $row_pad -lt 0; set row_pad 0; end
+        echo -e "  $CY║$C    $D│$C  $D$size_label$C$CY$f_size$C  $D$dims_label$C$GR$f_dims$C$(printf '%*s' $row_pad '')$D│$C  $CY║$C"
+
+        # Date line
+        set -l date_label "🕒  Added "
+        set -l date_full "$date_label$f_date"
+        set -l date_len (string length -- "$date_full")
+        set -l date_pad (math "50 - $date_len")
+        if test $date_pad -lt 0; set date_pad 0; end
+        echo -e "  $CY║$C    $D│$C  $D$date_label$C$f_date$C$(printf '%*s' $date_pad '')$D│$C  $CY║$C"
+
+        # Frame bottom
+        echo -e "  $CY║$C    $D└──────────────────────────────────────────────────────┘$C  $CY║$C"
+
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         set -l br "  eprahemi  •  github.com/eprahemi"
         echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
