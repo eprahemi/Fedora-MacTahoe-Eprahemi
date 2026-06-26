@@ -128,8 +128,8 @@ function passwd --description 'Toggle passwordless sudo for the current user —
             set ro_ln_num $parts[1]
             set ro_ln_text (string sub -s (math (string length "$ro_ln_num") + 2) "$ro_line_info")
         end
-        if test (string length -- "$ro_ln_text") -gt 52
-            set ro_ln_text (string sub -l 52 "$ro_ln_text")"…"
+        if test (string length -- "$ro_ln_text") -gt 30
+            set ro_ln_text (string sub -l 30 "$ro_ln_text")"…"
         end
 
         set -l title_suffix (string upper "$user")
@@ -147,56 +147,76 @@ function passwd --description 'Toggle passwordless sudo for the current user —
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$(printf '%*s' $IW '')$CY║$C"
 
-        # FILE line
+        # FILE line — prefix 7 = (4 spaces + ┌─ space)
         set -l fline "🖿  FILE     /etc/sudoers"
         set -l flen (string length -- "$fline")
-        echo -e "  $CY║$C    $D┌─ $fline$C$(printf '%*s' (math "57 - $flen") '')$CY║$C"
+        set -l fpad (math "55 - $flen")
+        if test $fpad -lt 0; set fpad 0; end
+        echo -e "  $CY║$C    $D┌─ $fline$C$(printf '%*s' $fpad '')$CY║$C"
         echo -e "  $CY║$C    $D│$C$(printf '%*s' 57 '')$CY║$C"
 
-        # USER line
+        # USER line — prefix 7 = (4 spaces + └─ space)
         set -l uline "👤  USER     $user"
         set -l uline_len (string length -- "$uline")
-        echo -e "  $CY║$C    $D└─ $uline$C$(printf '%*s' (math "57 - $uline_len") '')$CY║$C"
+        set -l upad (math "55 - $uline_len")
+        if test $upad -lt 0; set upad 0; end
+        echo -e "  $CY║$C    $D└─ $uline$C$(printf '%*s' $upad '')$CY║$C"
 
         echo -e "  $CY║$C$(printf '%*s' $IW '')$CY║$C"
 
-        # STATE box
-        echo -e "  $CY║$C    $D┌────────────────────────────────────────────────────┐$C  $CY║$C"
+        # STATE box — 54 ─ so ┐ aligns with content │
+        echo -e "  $CY║$C    $D┌──────────────────────────────────────────────────────┐$C  $CY║$C"
         if test "$ro_uncommented" -eq 1
-            set -l state_line "✅  STATE:  $B Enabled   (NOPASSWD is active)"
-            set -l state_len (string length -- "$state_line")
-            echo -e "  $CY║$C    $D│$C  $GR$state_line$C$(printf '%*s' (math "55 - $state_len") '')$D│$C  $CY║$C"
+            set -l state_text "✅  STATE:  Enabled   (NOPASSWD is active)"
+            set -l state_len (string length -- "$state_text")
+            set -l state_pad (math "50 - $state_len")
+            if test $state_pad -lt 0; set state_pad 0; end
+            echo -e "  $CY║$C    $D│$C  $GR✅  STATE:  $B Enabled   (NOPASSWD is active)$C$(printf '%*s' $state_pad '')$D│$C  $CY║$C"
         else if test "$ro_commented" -eq 1
-            set -l state_line "❌  STATE:  $B Disabled  (line is commented)"
-            set -l state_len (string length -- "$state_line")
-            echo -e "  $CY║$C    $D│$C  $RE$state_line$C$(printf '%*s' (math "55 - $state_len") '')$D│$C  $CY║$C"
+            set -l state_text "❌  STATE:  Disabled  (line is commented)"
+            set -l state_len (string length -- "$state_text")
+            set -l state_pad (math "50 - $state_len")
+            if test $state_pad -lt 0; set state_pad 0; end
+            echo -e "  $CY║$C    $D│$C  $RE❌  STATE:  $B Disabled  (line is commented)$C$(printf '%*s' $state_pad '')$D│$C  $CY║$C"
         else
-            set -l state_line "⚠️   STATE:  $B Missing   (no NOPASSWD line found)"
-            set -l state_len (string length -- "$state_line")
-            echo -e "  $CY║$C    $D│$C  $YE$state_line$C$(printf '%*s' (math "55 - $state_len") '')$D│$C  $CY║$C"
+            set -l state_text "⚠️   STATE:  Missing   (no NOPASSWD line found)"
+            set -l state_len (string length -- "$state_text")
+            set -l state_pad (math "50 - $state_len")
+            if test $state_pad -lt 0; set state_pad 0; end
+            echo -e "  $CY║$C    $D│$C  $YE⚠️   STATE:  $B Missing   (no NOPASSWD line found)$C$(printf '%*s' $state_pad '')$D│$C  $CY║$C"
         end
-        echo -e "  $CY║$C    $D└────────────────────────────────────────────────────┘$C  $CY║$C"
+        echo -e "  $CY║$C    $D└──────────────────────────────────────────────────────┘$C  $CY║$C"
         echo -e "  $CY║$C$(printf '%*s' $IW '')$CY║$C"
 
-        # MATCH line
+        # MATCH line — limit total to 55 so 7+55=62 fits
         if test -n "$ro_ln_num" -a -n "$ro_ln_text"
-            set -l match_line "🔍  MATCH     Line $ro_ln_num:  $ro_ln_text"
-            set -l match_len (string length -- "$match_line")
-            set -l match_pad (math "57 - $match_len")
-            if test $match_pad -lt 0
-                set match_pad 0
+            set -l match_text "🔍  MATCH     Line $ro_ln_num:  $ro_ln_text"
+            set -l match_len (string length -- "$match_text")
+            if test $match_len -gt 55
+                set -l over (math "$match_len - 55")
+                set -l before_len (string length -- "$ro_ln_text")
+                set ro_ln_text (string sub -l (math "$before_len - $over - 1") "$ro_ln_text")"…"
+                set match_text "🔍  MATCH     Line $ro_ln_num:  $ro_ln_text"
+                set match_len (string length -- "$match_text")
             end
-            echo -e "  $CY║$C    $D┌─ $match_line$C$(printf '%*s' $match_pad '')$CY║$C"
+            set -l match_pad (math "55 - $match_len")
+            echo -e "  $CY║$C    $D┌─ $match_text$C$(printf '%*s' $match_pad '')$CY║$C"
         else
-            echo -e "  $CY║$C    $D┌─ 🔍  MATCH     (no matching line in sudoers)$C$(printf '%*s' 8 '')$CY║$C"
+            set -l nomatch_text "🔍  MATCH     (no matching line in sudoers)"
+            set -l nomatch_len (string length -- "$nomatch_text")
+            set -l nomatch_pad (math "55 - $nomatch_len")
+            if test $nomatch_pad -lt 0; set nomatch_pad 0; end
+            echo -e "  $CY║$C    $D┌─ $nomatch_text$C$(printf '%*s' $nomatch_pad '')$CY║$C"
         end
-        echo -e "  $CY║$C    $D└────────────────────────────────────────────────────┘$C  $CY║$C"
+        echo -e "  $CY║$C    $D└──────────────────────────────────────────────────────┘$C  $CY║$C"
         echo -e "  $CY║$C$(printf '%*s' $IW '')$CY║$C"
 
-        # Footer branding
+        # Footer branding — prefix=4, total between ║=62, pad=58-len
         set -l brand "eprahemi  •  github.com/eprahemi"
         set -l brand_len (string length -- "$brand")
-        echo -e "  $CY║$C    $D$brand$C$(printf '%*s' (math "57 - $brand_len") '')$CY║$C"
+        set -l brand_pad (math "58 - $brand_len")
+        if test $brand_pad -lt 0; set brand_pad 0; end
+        echo -e "  $CY║$C    $D$brand$C$(printf '%*s' $brand_pad '')$CY║$C"
         echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
         echo ""
 
