@@ -68,6 +68,10 @@ function shutdown --description 'ﾉｼ(>_<)ﾉ  Power off the system with style
     echo -e "  $GY│$C$(printf '%*s' 62 '')$GY│$C"
     echo -e "  $GY└──────────────────────────────────────────────────────────────┘$C"
     read -l -P '  ❯ ' answer
+    if test $status -ne 0
+        echo -e "  $GY  ✧  Cancelled.$C"
+        return 0
+    end
     if test $has_now -eq 1
         # Y is default — only n/N cancels
         if test "$answer" = "n"; or test "$answer" = "N"

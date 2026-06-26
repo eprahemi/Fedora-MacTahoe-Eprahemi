@@ -45,6 +45,10 @@ function logout --description '(ﾉｼ>_<)ﾉ  Kicks you out of the login screen
     echo -e "  $GY│$C$(printf '%*s' 62 '')$GY│$C"
     echo -e "  $GY└──────────────────────────────────────────────────────────────┘$C"
     read -l -P '  ❯ ' answer
+    if test $status -ne 0
+        echo -e "  $GY  ✧  Cancelled.$C"
+        return 0
+    end
     if test "$answer" != "y"; and test "$answer" != "Y"
         echo -e "  $GY  ✧  Stay a little longer then.$C"
         return 0
