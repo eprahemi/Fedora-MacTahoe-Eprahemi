@@ -320,7 +320,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                 set -l b3 "  [N] No — use original image"
                 echo -e "  $CY║$C  $GR$b3$C$(printf '%*s' (math "60 - "(string length "$b3")) '')$CY║$C"
-                set -l b4 "  [Y] Yes — default blur 0x30 + black 30%"
+                set -l b4 "  [Y] Yes — default blur 0x30 and fill darker 30%"
                 echo -e "  $CY║$C  $CY$b4$C$(printf '%*s' (math "60 - "(string length "$b4")) '')$CY║$C"
                 set -l b5 "  [C] Custom — set blur sigma + tint %"
                 echo -e "  $CY║$C  $YE$b5$C$(printf '%*s' (math "60 - "(string length "$b5")) '')$CY║$C"
