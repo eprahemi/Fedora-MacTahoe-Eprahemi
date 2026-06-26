@@ -773,19 +773,11 @@ except:
         # 2. Search common user directories
         echo -e "  $D🔍  Searching for \"$filename\"...$C  $GY eprahemi$C"
         set -l search_dirs \
-            "$HOME/.local/share/backgrounds" \
-            "$HOME/Pictures/Wallpapers" \
             "$HOME/Pictures" \
             "$HOME/Downloads" \
-            "$HOME/Desktop" \
             "$HOME/Documents" \
             "$HOME/Videos" \
-            "$HOME/Music" \
-            "$HOME/Templates" \
-            "$HOME/Public" \
-            "$HOME/.local/share/wallpapers" \
-            "$HOME/.local/share/mactahoe-gtk" \
-            "$HOME/.config/Wallpapers"
+            "$HOME/Music"
 
         for dir in $search_dirs
             if test -d "$dir"
