@@ -40,6 +40,8 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY║$C  $CY$B$n4$C$(printf '%*s' (math "60 - "(string length "$n4")) '')$CY║$C"
         set -l n5 "    gdm default"
         echo -e "  $CY║$C  $CY$B$n5$C$(printf '%*s' (math "60 - "(string length "$n5")) '')$CY║$C"
+        set -l n5b "    gdm info"
+        echo -e "  $CY║$C  $CY$B$n5b$C$(printf '%*s' (math "60 - "(string length "$n5b")) '')$CY║$C"
         set -l n6 "    gdm -y|--yes filename.jpg"
         echo -e "  $CY║$C  $CY$B$n6$C$(printf '%*s' (math "60 - "(string length "$n6")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
@@ -93,6 +95,8 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY║$C  $CY$B$u4$C$(printf '%*s' (math "60 - "(string length "$u4")) '')$CY║$C"
         set -l u5 "    gdm -y|--yes filename.jpg"
         echo -e "  $CY║$C  $CY$B$u5$C$(printf '%*s' (math "60 - "(string length "$u5")) '')$CY║$C"
+        set -l u6 "    gdm info"
+        echo -e "  $CY║$C  $CY$B$u6$C$(printf '%*s' (math "60 - "(string length "$u6")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
@@ -115,6 +119,8 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY║$C  $D$f7$C$(printf '%*s' (math "60 - "(string length "$f7")) '')$CY║$C"
         set -l f8 "  🖥️  gdm current — use current desktop wallpaper"
         echo -e "  $CY║$C  $D$f8$C$(printf '%*s' (math "60 - "(string length "$f8")) '')$CY║$C"
+        set -l f9 "  ℹ️   gdm info — show last applied GDM wallpaper details"
+        echo -e "  $CY║$C  $D$f9$C$(printf '%*s' (math "60 - "(string length "$f9")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
@@ -149,6 +155,8 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY║$C  $CY$e5$C$(printf '%*s' (math "60 - "(string length "$e5")) '')$CY║$C"
         set -l e6 "  gdm current"
         echo -e "  $CY║$C  $CY$e6$C$(printf '%*s' (math "60 - "(string length "$e6")) '')$CY║$C"
+        set -l e7 "  gdm info"
+        echo -e "  $CY║$C  $CY$e7$C$(printf '%*s' (math "60 - "(string length "$e7")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
@@ -324,6 +332,52 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
             gdm --yes "$wp_repo"
         end
         return $status
+    end
+
+    # ── "info" subcommand: show current GDM wallpaper details ──
+    if set -q argv[1]; and contains -- "$argv[1]" "info" "--info"
+        set -e argv[1]
+        set -l last_file "$HOME/.local/share/mactahoe-gtk/.gdm-undo-copy.jpg"
+        if not test -f "$last_file"
+            echo -e "  $RE✘  No GDM wallpaper info available.$C"
+            echo -e "  $GY  Apply a wallpaper first with $CY$B gdm filename.jpg$C"
+            echo -e "  $GY  github.com/eprahemi$C"
+            return 1
+        end
+        set -l f_size (command -v stat &>/dev/null; and stat -c "%s" "$last_file" 2>/dev/null; or echo "?")
+        set -l f_dims (command -v identify &>/dev/null; and magick identify -format "%wx%h" "$last_file" 2>/dev/null; or echo "?x?")
+        if test "$f_size" != "?"
+            if test $f_size -ge 1048576
+                set f_size (math "$f_size / 1048576")" MB"
+            else if test $f_size -ge 1024
+                set f_size (math "$f_size / 1024")" KB"
+            else
+                set f_size "$f_size B"
+            end
+        end
+        echo ""
+        echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        set -l i1 "  📄  LAST APPLIED WALLPAPER"
+        echo -e "  $CY║$C  $WH$i1$C$(printf '%*s' (math "60 - "(string length "$i1")) '')$CY║$C"
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        set -l i2_len (string length "$last_file")
+        set -l i2_disp "$last_file"
+        if test $i2_len -gt 54
+            set i2_disp (string sub -l 51 "$last_file")"..."
+            set i2_len 54
+        end
+        echo -e "  $CY║$C  $D  Path:$C  $YE$i2_disp$C$(printf '%*s' (math "56 - $i2_len") '')$CY║$C"
+        echo -e "  $CY║$C  $D  Size:$C  $f_size$(printf '%*s' (math "56 - "(string length "$f_size")) '')$CY║$C"
+        echo -e "  $CY║$C  $D  Dims:$C  $f_dims$(printf '%*s' (math "56 - "(string length "$f_dims")) '')$CY║$C"
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        set -l br "  eprahemi  •  github.com/eprahemi"
+        echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
+        echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
+        echo ""
+        return 0
     end
 
     # ── Join all args so unquoted filenames with spaces work ──
