@@ -59,10 +59,10 @@ function shutdown --description 'ﾉｼ(>_<)ﾉ  Power off the system with style
     echo -e "  $GY│$C    $D ──────────────────────────────────────────────────────$C $GY│$C"
     echo -e "  $GY│$C$(printf '%*s' 62 '')$GY│$C"
     if test $has_now -eq 1
-        set -l ch " $GR ❮$C $WH Y $C$GR ❯$C [Y/n]  $D Yes, shut down$C   $RE ❮$C $WH N $C$RE ❯$C  $D Cancel"
+        set -l ch "  ❮  $GR$B Y $C$GY ❯$C   $D Yes, shut down$C    ❮  $RE n $C$GY ❯$C   $D Cancel"
         echo -e "  $GY│$C      $ch$C$(printf '%*s' (math "60 - "(string length -- "$ch")) '')$GY│$C"
     else
-        set -l ch " $GR ❮$C $WH Y $C$GR ❯$C  $D Yes, shut down$C   $RE ❮$C $WH N $C$RE ❯$C [y/N]  $D Cancel"
+        set -l ch "  ❮  $GR y $C$GY ❯$C   $D Yes, shut down$C    ❮  $RE$B N $C$GY ❯$C   $D Cancel"
         echo -e "  $GY│$C      $ch$C$(printf '%*s' (math "60 - "(string length -- "$ch")) '')$GY│$C"
     end
     echo -e "  $GY│$C$(printf '%*s' 62 '')$GY│$C"
