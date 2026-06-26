@@ -935,25 +935,41 @@ except:
             echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
             echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
             set -l m2 "  File \"$filename\" found in $result_count locations:"
-            set -l m2_trim "$m2"
-            if test (string length "$m2_trim") -gt 60
-                set m2_trim (string sub -l 57 "$m2")"..."
+            if test (string length "$m2") -le 60
+                echo -e "  $CY║$C  $m2$C$(printf '%*s' (math "60 - "(string length "$m2")) '')$CY║$C"
+            else
+                set -l m2_part1 (string sub -l 58 "$m2")
+                set -l m2_part2 (string sub -s 59 "$m2")
+                echo -e "  $CY║$C  $m2_part1$C$(printf '%*s' (math "60 - "(string length "$m2_part1")) '')$CY║$C"
+                set -l m2_indent "  "
+                set -l m2_line2 "$m2_indent$m2_part2"
+                if test (string length "$m2_line2") -gt 60
+                    set m2_line2 (string sub -l 57 "$m2_line2")"..."
+                end
+                echo -e "  $CY║$C  $m2_line2$C$(printf '%*s' (math "60 - "(string length "$m2_line2")) '')$CY║$C"
             end
-            echo -e "  $CY║$C  $m2_trim$C$(printf '%*s' (math "60 - "(string length "$m2_trim")) '')$CY║$C"
             echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
 
             for i in (seq $result_count)
                 set -l path $results[$i]
-                set -l disp "$path"
-                if test (string length "$disp") -gt 54
-                    set disp (string sub -l 51 "$disp")"..."
-                end
                 set -l num_str (printf "%2d" $i)
-                set -l m_line "  [$num_str]  $disp"
-                if test (string length "$m_line") -gt 60
-                    set m_line (string sub -l 57 "$m_line")"..."
+                set -l prefix "  [$num_str]  "
+                set -l max_w (math "60 - "(string length "$prefix"))
+                if test (string length "$path") -le $max_w
+                    set -l m_line "$prefix$path"
+                    echo -e "  $CY║$C  $GR$m_line$C$(printf '%*s' (math "60 - "(string length "$m_line")) '')$CY║$C"
+                else
+                    set -l part1 (string sub -l $max_w "$path")
+                    set -l part2 (string sub -s (math "$max_w + 1") "$path")
+                    set -l m_line1 "$prefix$part1"
+                    echo -e "  $CY║$C  $GR$m_line1$C$(printf '%*s' (math "60 - "(string length "$m_line1")) '')$CY║$C"
+                    set -l indent "        "
+                    set -l m_line2 "$indent$part2"
+                    if test (string length "$m_line2") -gt 60
+                        set m_line2 (string sub -l 57 "$m_line2")"..."
+                    end
+                    echo -e "  $CY║$C  $GR$m_line2$C$(printf '%*s' (math "60 - "(string length "$m_line2")) '')$CY║$C"
                 end
-                echo -e "  $CY║$C  $GR$m_line$C$(printf '%*s' (math "60 - "(string length "$m_line")) '')$CY║$C"
             end
 
             echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
