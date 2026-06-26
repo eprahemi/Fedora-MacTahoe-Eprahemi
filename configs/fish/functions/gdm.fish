@@ -3,7 +3,7 @@
 # Fedora MacTahoe eprahemi Edition © 2026
 # github.com/eprahemi
 # ══════════════════════════════════════════════════════════════
-function gdm --description 'Change GDM login screen wallpaper — needs internet only the first time — github.com/eprahemi'
+function gdm --description 'Change GDM login screen wallpaper — needs internet only the first time — github.com/eprahemi/FedoraTahoe-GDM'
     # ── Colors ──
     set -l C  "\033[0m"
     set -l CY "\033[1;36m"
@@ -174,7 +174,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY║$C  $D$n1$C$(printf '%*s' (math "60 - "(string length "$n1")) '')$CY║$C"
         set -l n2 "  • Reboot required for GDM changes to take effect"
         echo -e "  $CY║$C  $D$n2$C$(printf '%*s' (math "60 - "(string length "$n2")) '')$CY║$C"
-        set -l n3 "  • Internet only needed ONCE (first run clones repo)"
+        set -l n3 "  • Internet only needed ONCE (clones FedoraTahoe-GDM repo)"
         echo -e "  $CY║$C  $D$n3$C$(printf '%*s' (math "60 - "(string length "$n3")) '')$CY║$C"
         set -l n4 "  • Works 100% offline after repo is cached"
         echo -e "  $CY║$C  $D$n4$C$(printf '%*s' (math "60 - "(string length "$n4")) '')$CY║$C"
@@ -320,7 +320,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         set -l D  "\033[2m"
         set -l wp_bg "$HOME/.local/share/backgrounds/Himeno Fedora LoginScreen.jpg"
         set -l wp_repo "$HOME/.local/share/mactahoe-gtk/himeno-login.jpg"
-        set -l wp_url "https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/wallpapers/login/Himeno%20Fedora%20LoginScreen.jpg"
+        set -l wp_url "https://raw.githubusercontent.com/eprahemi/FedoraTahoe-GDM/main/himeno-login.jpg"
 
         if test -f "$wp_bg"
             echo -e "  $D🖼️  Found Himeno login wallpaper in ~/.local/share/backgrounds/$C"
@@ -337,9 +337,62 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
             echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
             echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
             echo -e "  $CY║$C  $D  Himeno wallpaper not found locally.$C                          $CY║$C"
-            echo -e "  $CY║$C  $D  Downloading from the Fedora MacTahoe repo...$C                 $CY║$C"
             echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-            echo -e "  $CY║$C  $YE  📦  Saving to ~/.local/share/mactahoe-gtk/$C                   $CY║$C"
+            echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+            echo -e "  $CY║$C  $D  Checking internet connection...$C                          $CY║$C"
+            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+            echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
+            echo ""
+            # Check internet connectivity before download attempt
+            set -l has_net 0
+            if command -v curl &>/dev/null
+                curl -fsSL -o /dev/null --connect-timeout 5 "https://github.com" 2>/dev/null
+                and set has_net 1
+            else if command -v ping &>/dev/null
+                ping -c 1 -W 5 "github.com" 2>/dev/null
+                and set has_net 1
+            end
+            if test $has_net -eq 0
+                echo ""
+                echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
+                echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                set -l ni1 "  🌐  INTERNET NEEDED"
+                echo -e "  $RE║$C  $WH$ni1$C$(printf '%*s' (math "60 - "(string length "$ni1")) '')$RE║$C"
+                echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                echo -e "  $RE╠══════════════════════════════════════════════════════════════╣$C"
+                echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                set -l ni2 "  The default Himeno wallpaper was not found"
+                set -l ni3 "  locally, and an internet connection is"
+                set -l ni4 "  required to download it from the repo."
+                echo -e "  $RE║$C  $D$ni2$C$(printf '%*s' (math "60 - "(string length "$ni2")) '')$RE║$C"
+                echo -e "  $RE║$C  $D$ni3$C$(printf '%*s' (math "60 - "(string length "$ni3")) '')$RE║$C"
+                echo -e "  $RE║$C  $D$ni4$C$(printf '%*s' (math "60 - "(string length "$ni4")) '')$RE║$C"
+                echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                set -l ni5 "  Connect to the internet, or apply a custom"
+                set -l ni6 "  wallpaper instead:"
+                set -l ni7 "    gdm /path/to/your/image.jpg"
+                echo -e "  $RE║$C  $YE$ni5$C$(printf '%*s' (math "60 - "(string length "$ni5")) '')$RE║$C"
+                echo -e "  $RE║$C  $YE$ni6$C$(printf '%*s' (math "60 - "(string length "$ni6")) '')$RE║$C"
+                echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                echo -e "  $RE║$C  $CY$ni7$C$(printf '%*s' (math "60 - "(string length "$ni7")) '')$RE║$C"
+                echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                set -l br "  eprahemi  •  github.com/eprahemi"
+                echo -e "  $RE║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
+                echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
+                echo ""
+                return 1
+            end
+            echo ""
+            echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
+            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+            echo -e "  $CY║$C  $WH🌐  DOWNLOADING HIMENO LOGIN WALLPAPER$C                    $CY║$C"
+            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+            echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+            echo -e "  $CY║$C  $D  Downloading from FedoraTahoe-GDM repo...$C                $CY║$C"
+            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+            echo -e "  $CY║$C  $YE  📦  Saving to ~/.local/share/mactahoe-gtk/$C              $CY║$C"
             echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
             echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
             echo ""
@@ -347,6 +400,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
             if not curl -fsSL "$wp_url" -o "$wp_repo" 2>/dev/null
                 echo -e "  $RE✘  Download failed — no internet?$C"
                 echo -e "  $GY  Run gdm with any image, or connect to the internet.$C"
+                echo -e "  $GY  github.com/eprahemi/FedoraTahoe-GDM$C"
                 return 1
             end
             echo -e "  $GR✅  Himeno login wallpaper saved to repo$C"
@@ -1400,10 +1454,29 @@ except:
         end
     end
 
-    # ── Persistent MacTahoe repo (kept after first clone) ──
+    # ── Persistent FedoraTahoe-GDM repo (first run clones; re-clones if files missing) ──
     set -l repo "$HOME/.local/share/mactahoe-gtk"
 
-    if not test -f "$repo/tweaks.sh"
+    # Critical files required for the wallpaper engine to work
+    set -l critical_files \
+        "$repo/tweaks.sh" \
+        "$repo/libs/lib-core.sh" \
+        "$repo/libs/lib-install.sh" \
+        "$repo/other/gdm/gnome-shell-theme.gresource.xml"
+
+    set -l need_clone 0
+    if not test -d "$repo"
+        set need_clone 1
+    else
+        for __cf in $critical_files
+            if not test -f "$__cf"
+                set need_clone 1
+                break
+            end
+        end
+    end
+
+    if test $need_clone -eq 1
         echo ""
         echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
@@ -1412,23 +1485,51 @@ except:
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-        set -l i2 "  This is the first time you're running gdm."
+        set -l i2 "  The GDM wallpaper engine requires a local copy"
         echo -e "  $CY║$C  $D$i2$C$(printf '%*s' (math "60 - "(string length "$i2")) '')$CY║$C"
-        set -l i3 "  It needs to download the MacTahoe theme repo"
+        set -l i3 "  of the FedoraTahoe-GDM repo."
         echo -e "  $CY║$C  $D$i3$C$(printf '%*s' (math "60 - "(string length "$i3")) '')$CY║$C"
-        set -l i4 "  to set up the GDM theme engine."
-        echo -e "  $CY║$C  $D$i4$C$(printf '%*s' (math "60 - "(string length "$i4")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-        set -l i5 "  📦  Downloading ~5 MB to ~/.local/share/mactahoe-gtk"
-        echo -e "  $CY║$C  $YE$i5$C$(printf '%*s' (math "60 - "(string length "$i5")) '')$CY║$C"
+        set -l i4 "  Checking internet connection..."
+        echo -e "  $CY║$C  $YE$i4$C$(printf '%*s' (math "60 - "(string length "$i4")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-        set -l i6 "  ✅  After this, gdm works OFFLINE forever"
-        echo -e "  $CY║$C  $GR$i6$C$(printf '%*s' (math "60 - "(string length "$i6")) '')$CY║$C"
-        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-        set -l br "  eprahemi  •  github.com/eprahemi"
-        echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
         echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
         echo ""
+
+        # ── Check internet connectivity before clone ──
+        set -l has_net 0
+        if command -v curl &>/dev/null
+            curl -fsSL -o /dev/null --connect-timeout 5 "https://github.com" 2>/dev/null
+            and set has_net 1
+        else if command -v ping &>/dev/null
+            ping -c 1 -W 5 "github.com" 2>/dev/null
+            and set has_net 1
+        end
+        if test $has_net -eq 0
+            echo ""
+            echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            set -l ni1 "  🌐  INTERNET NEEDED"
+            echo -e "  $RE║$C  $WH$ni1$C$(printf '%*s' (math "60 - "(string length "$ni1")) '')$RE║$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            echo -e "  $RE╠══════════════════════════════════════════════════════════════╣$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            set -l ni2 "  The GDM wallpaper engine is not installed yet,"
+            set -l ni3 "  and an internet connection is required to"
+            set -l ni4 "  download it from GitHub."
+            echo -e "  $RE║$C  $D$ni2$C$(printf '%*s' (math "60 - "(string length "$ni2")) '')$RE║$C"
+            echo -e "  $RE║$C  $D$ni3$C$(printf '%*s' (math "60 - "(string length "$ni3")) '')$RE║$C"
+            echo -e "  $RE║$C  $D$ni4$C$(printf '%*s' (math "60 - "(string length "$ni4")) '')$RE║$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            set -l ni5 "  Please connect to the internet and try again."
+            echo -e "  $RE║$C  $YE$ni5$C$(printf '%*s' (math "60 - "(string length "$ni5")) '')$RE║$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            set -l br "  eprahemi  •  github.com/eprahemi"
+            echo -e "  $RE║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
+            echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
+            echo ""
+            return 1
+        end
 
         mkdir -p "$HOME/.local/share"
         rm -rf "$repo"
@@ -1443,7 +1544,7 @@ except:
             echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
             echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
             echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-            set -l gi2 "  git is required to download the theme repo."
+            set -l gi2 "  git is required to download the repo."
             echo -e "  $CY║$C  $D$gi2$C$(printf '%*s' (math "60 - "(string length "$gi2")) '')$CY║$C"
             set -l gi3 "  It is NOT installed on your system."
             echo -e "  $CY║$C  $YE$gi3$C$(printf '%*s' (math "60 - "(string length "$gi3")) '')$CY║$C"
@@ -1485,22 +1586,13 @@ except:
             end
         end
 
-        if not git clone --depth 1 https://github.com/vinceliuice/MacTahoe-gtk-theme.git "$repo" 2>/dev/null
+        if not git clone --depth 1 https://github.com/eprahemi/FedoraTahoe-GDM.git "$repo" 2>/dev/null
             echo -e "  $RE✘  Clone failed — no internet?$C  $GY github.com/eprahemi$C"
-            echo -e "  $GY  Run the full installer first, or connect to the internet once.$C"
+            echo -e "  $GY  Connect to the internet and try again.$C"
+            echo -e "  $GY  github.com/eprahemi/FedoraTahoe-GDM$C"
             return 1
         end
-        echo -e "  $GR✅  Repo cached at $repo (works offline from now on)$C  $GY github.com/eprahemi$C"
-
-        # ── Also download the Himeno default login wallpaper ──
-        if command -v curl &>/dev/null
-            echo -e "  $D📥  Downloading default Himeno login wallpaper...$C  $GY eprahemi$C"
-            curl -fsSL "https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/wallpapers/login/Himeno%20Fedora%20LoginScreen.jpg" -o "$repo/himeno-login.jpg" 2>/dev/null
-            and echo -e "  $GR✅  Himeno wallpaper saved to repo$C  $GY github.com/eprahemi$C"
-            or echo -e "  $D  (skipped — not critical)$C"
-        else
-            echo -e "  $D  ⚠️  curl not installed — skipping himeno download.$C  $GY github.com/eprahemi$C"
-        end
+        echo -e "  $GR✅  FedoraTahoe-GDM cached at $repo (works offline from now on)$C  $GY github.com/eprahemi$C"
     end
 
     # ══════════════════════════════════════════════════════════════
