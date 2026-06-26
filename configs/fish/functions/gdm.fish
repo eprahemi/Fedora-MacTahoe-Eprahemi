@@ -383,13 +383,12 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
             end
             if command -v stat &>/dev/null
                 set -l f_bytes (stat -c "%s" "$last_file" 2>/dev/null)
-                set -l f_mtime (stat -c "%y" "$last_file" 2>/dev/null | string sub -l 16)
                 if command -v python3 &>/dev/null; and test -n "$f_bytes"
                     set gdm_size (python3 -c "import sys; n=int(sys.argv[1]); print(f'{n/1048576:.1f} MB' if n>=1048576 else (f'{n/1024:.1f} KB' if n>=1024 else f'{n} B'))" "$f_bytes" 2>/dev/null)
                 end
-                if command -v python3 &>/dev/null; and test -n "$f_mtime"
-                    set gdm_date (python3 -c "import sys; from datetime import datetime; dt=datetime.strptime(sys.argv[1].strip(),'%Y-%m-%d %H:%M'); print(dt.strftime('%d %b %Y  %H:%M'))" "$f_mtime" 2>/dev/null)
-                end
+            end
+            if command -v date &>/dev/null
+                set gdm_date (date +"%d %b %Y  %H:%M" 2>/dev/null)
             end
         end
 
@@ -417,7 +416,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         # ─── Kitty image preview ───
         if test -n "$KITTY_PID"
             echo ""
-            echo -e "  $CY┌── $WH🖼️  WALLPAPER PREVIEW $D(Kitty)$C$(printf '%*s' 27 '')$CY──┐$C"
+            echo -e "  $CY┌── $WH🖼️  WALLPAPER PREVIEW $D(Kitty)$C$(printf '%*s' 25 '')$CY──┐$C"
             kitty +kitten icat --align left "$last_file" 2>/dev/null
             echo -e "  $CY└$(printf '%*s' 58 '')┘$C"
             echo ""
@@ -437,38 +436,38 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
 
         # ── SECTION 1: FILE DETAILS (54 ─ wide nested frame) ──
         echo -e "  $CY║$C    $D┌──────────────────────────────────────────────────────┐$C  $CY║$C"
-        echo -e "  $CY║$C    $D│$C  $WH📄  FILE DETAILS$C$(printf '%*s' 37 '')$D│$C  $CY║$C"
+        echo -e "  $CY║$C    $D│$C  $WH📄  FILE DETAILS$C$(printf '%*s' 36 '')$D│$C  $CY║$C"
 
-        # File name line — bold + green
+        # File name line — bold + green (📎 emoji visual +1)
         set -l fn_label "📎  "
         set -l fn_line "$fn_label$f_name"
         set -l fn_len (string length -- "$fn_line")
-        set -l fn_pad (math "50 - $fn_len")
+        set -l fn_pad (math "50 - $fn_len - 1")
         if test $fn_pad -lt 0; set fn_pad 0; end
         echo -e "  $CY║$C    $D│$C  $fn_label$GR$B$f_name$C$(printf '%*s' $fn_pad '')$D│$C  $CY║$C"
 
-        # Dir line — dim gray
+        # Dir line — dim gray (📍 emoji visual +1)
         set -l dr_label "📍  "
         set -l dr_line "$dr_label$f_dir/"
         set -l dr_len (string length -- "$dr_line")
-        set -l dr_pad (math "50 - $dr_len")
+        set -l dr_pad (math "50 - $dr_len - 1")
         if test $dr_pad -lt 0; set dr_pad 0; end
         echo -e "  $CY║$C    $D│$C  $D$dr_label$C$GY$f_dir/$C$(printf '%*s' $dr_pad '')$D│$C  $CY║$C"
 
-        # Size + Date on one line (two columns, 50 chars)
+        # Size + Date on one line (💾🕒 emoji visual +2)
         set -l sd_label  "💾  "
         set -l sd_content "$sd_label$GR$gdm_size$C  $D🕒$C  $gdm_date"
         set -l sd_plain  "$sd_label$gdm_size  🕒  $gdm_date"
         set -l sd_len    (string length -- "$sd_plain")
-        set -l sd_pad    (math "50 - $sd_len")
+        set -l sd_pad    (math "50 - $sd_len - 2")
         if test $sd_pad -lt 0; set sd_pad 0; end
         echo -e "  $CY║$C    $D│$C  $sd_content$(printf '%*s' $sd_pad '')$D│$C  $CY║$C"
 
         # ── SECTION 2: IMAGE INFORMATION ──
         echo -e "  $CY║$C    $D├──────────────────────────────────────────────────────┤$C  $CY║$C"
-        echo -e "  $CY║$C    $D│$C  $WH🎨  IMAGE INFORMATION$C$(printf '%*s' 34 '')$D│$C  $CY║$C"
+        echo -e "  $CY║$C    $D│$C  $WH🎨  IMAGE INFORMATION$C$(printf '%*s' 31 '')$D│$C  $CY║$C"
 
-        # Line: Format | Colorspace | Bit depth
+        # Line: Format | Colorspace | Bit depth (🎨🔲 emoji visual +2; 🖼️ is 2-wide already)
         set -l dep_str "$dep"
         if string match -qr '^\d+$' "$dep"
             set dep_str (string join -- '' "$dep" '-bit')
@@ -477,39 +476,43 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         set -l fc_content "$fc_label$CY$fmt$C    $D🎨$C  $csp    $D🔲$C  $dep_str"
         set -l fc_plain  "$fc_label$fmt  🎨  $csp  🔲  $dep_str"
         set -l fc_len    (string length -- "$fc_plain")
-        set -l fc_pad    (math "50 - $fc_len")
+        set -l fc_pad    (math "50 - $fc_len - 2")
         if test $fc_pad -lt 0; set fc_pad 0; end
         echo -e "  $CY║$C    $D│$C  $fc_content$(printf '%*s' $fc_pad '')$D│$C  $CY║$C"
 
-        # Line: Aspect ratio | Megapixels | DPI
+        # Line: Aspect ratio | Megapixels | DPI (📏📐🔳 emoji visual +3)
         set -l mp_str "$mp MP"
         set -l am_label "📏  "
         set -l am_content "$am_label$CY$aspect$C    $D📐$C  $mp_str    $D🔳$C  $dpi"
         set -l am_plain  "$am_label$aspect  📐  $mp_str  🔳  $dpi"
         set -l am_len    (string length -- "$am_plain")
-        set -l am_pad    (math "50 - $am_len")
+        set -l am_pad    (math "50 - $am_len - 3")
         if test $am_pad -lt 0; set am_pad 0; end
         echo -e "  $CY║$C    $D│$C  $am_content$(printf '%s%*s' '' $am_pad '')$D│$C  $CY║$C"
 
-        # Line: Blur status
+        # Line: Blur status (🌀 emoji visual +1)
         set -l bl_label "🌀  "
         set -l bl_content "$bl_label$blur"
         set -l bl_len   (string length -- "$bl_content")
-        set -l bl_pad   (math "50 - $bl_len")
+        set -l bl_pad   (math "50 - $bl_len - 1")
         if test $bl_pad -lt 0; set bl_pad 0; end
         echo -e "  $CY║$C    $D│$C  $bl_content$(printf '%*s' $bl_pad '')$D│$C  $CY║$C"
 
-        # Line: Source path
+        # Line: Source path (📂 emoji visual +1; keep end of path)
         set -l sr_label "📂  Source  "
         set -l sr_val "$source"
-        set -l sr_max   (math "50 - "(string length -- "$sr_label"))
-        if test (string length -- "$sr_val") -gt $sr_max
-            set sr_val (string sub -l (math "$sr_max - 3") "$source")"..."
-        end
-        set -l sr_content "$sr_label$GY$sr_val$C"
         set -l sr_plain  "$sr_label$sr_val"
         set -l sr_len    (string length -- "$sr_plain")
-        set -l sr_pad    (math "50 - $sr_len")
+        set -l sr_max    (math "50 - 1")  # 50 inner width minus 1 for emoji visual
+        if test $sr_len -gt $sr_max
+            set -l max_val (math "$sr_max - "(string length -- "$sr_label"))
+            # Keep last N chars with … prefix
+            set -l keep (math "$max_val - 1")  # -1 for …
+            set sr_val "…"(string sub -s (math (string length -- "$sr_val") - $keep + 1) "$sr_val")
+            set sr_plain "$sr_label$sr_val"
+            set sr_len (string length -- "$sr_plain")
+        end
+        set -l sr_pad    (math "50 - $sr_len - 1")
         if test $sr_pad -lt 0; set sr_pad 0; end
         echo -e "  $CY║$C    $D│$C  $D$sr_label$C$GY$sr_val$C$(printf '%*s' $sr_pad '')$D│$C  $CY║$C"
 
@@ -1139,7 +1142,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         set -l fmt "?"; set -l csp "?"; set -l dep "?"
         set -l dims "?x?"; set -l dpi "?"; set -l mp "?"
         set -l aspect "?"; set -l f_bytes "?"; set -l f_size "?"
-        set -l f_date "?"; set -l f_mtime ""
+        set -l f_date "?"
 
         # ── Gather technical metadata via magick ──
         if command -v magick &>/dev/null
@@ -1169,7 +1172,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
             end
         end
 
-        # ── File size + date from stat ──
+        # ── File size from stat; date = current timestamp ──
         set -l stat_target "$image"
         if test -f /tmp/.gdm-info/original-path.txt
             set -l op (string trim < /tmp/.gdm-info/original-path.txt 2>/dev/null)
@@ -1179,7 +1182,10 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         end
         if command -v stat &>/dev/null
             set f_bytes (stat -c "%s" "$stat_target" 2>/dev/null)
-            set f_mtime (stat -c "%y" "$stat_target" 2>/dev/null | string sub -l 16)
+        end
+        # Date: use current timestamp so user sees when they applied it, not file mtime
+        if command -v date &>/dev/null
+            set f_date (date +"%d %b %Y  %H:%M" 2>/dev/null)
         end
 
         # ── Human-readable size ──
@@ -1198,21 +1204,6 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         " "$f_bytes" 2>/dev/null)
         else
             set f_size "$f_bytes B"
-        end
-
-        # ── Format date ──
-        if command -v python3 &>/dev/null; and test -n "$f_mtime"
-            set f_date (python3 -c "
-        import sys
-        from datetime import datetime
-        try:
-            dt = datetime.strptime(sys.argv[1].strip(), '%Y-%m-%d %H:%M')
-            print(dt.strftime('%d %b %Y  %H:%M'))
-        except:
-            print(sys.argv[1])
-        " "$f_mtime" 2>/dev/null)
-        else
-            set f_date "$f_mtime"
         end
 
         # ── Write to temporary cache file ──
