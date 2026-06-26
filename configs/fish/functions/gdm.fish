@@ -958,13 +958,9 @@ except:
                 set -l remaining "$path"
                 set -l line_num 1
                 while test -n "$remaining"
-                    if test $line_num -eq 1
-                        set trimmed (string sub -l 52 "$remaining")
-                    else
-                        set trimmed (string sub -l 52 "$remaining")
-                    end
+                    set -l trimmed (string sub -l 52 "$remaining")
                     set -l last_space (string last " " "$trimmed")
-                    if test "$last_space" -gt 10
+                    if test -n "$last_space"; and test "$last_space" -gt 10
                         set -l split (math "$last_space - 1")
                         set -l part (string sub -l $split "$remaining")
                         set -l rest (string sub -s (math "$split + 2") "$remaining")
