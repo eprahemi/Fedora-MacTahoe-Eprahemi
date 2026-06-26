@@ -339,7 +339,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
 
         set -l __cc 0
         while true
-            read -l -P "  [Y/n]: " current_confirm
+            read -P "  [Y/n]: " current_confirm
             set -l __rs $status
             if test $__rs -ne 0
                 set __cc (math $__cc + 1)
@@ -1057,7 +1057,7 @@ except:
                 echo ""
                 set -l __cc 0
                 while true
-                    read -l -P "  [Y/n]: " confirm
+                    read -P "  [Y/n]: " confirm
                     set -l __rs $status
                     if test $__rs -ne 0
                         set __cc (math $__cc + 1)
@@ -1164,7 +1164,7 @@ except:
 
             set -l __cc 0
             while true
-                read -l -P "  [#]: " choice
+                read -P "  [#]: " choice
                 set -l __rs $status
                 if test $__rs -ne 0
                     set __cc (math $__cc + 1)
@@ -1265,7 +1265,7 @@ except:
                 echo ""
                 set -l __cc 0
                 while true
-                    read -l -P "  [n/Y/c]: " blur_choice
+                    read -P "  [n/Y/c]: " blur_choice
                     set -l __rs $status
                     if test $__rs -ne 0
                         set __cc (math $__cc + 1)
@@ -1279,171 +1279,187 @@ except:
                     break
                 end
 
-                switch (string lower "$blur_choice")
-                    case n no
-                        echo "No blur applied" > /tmp/.gdm-info/blur-settings.txt
-                        set blur_done 1
+                # ── Sanitize input: trim whitespace before matching ──
+                set blur_choice (string trim "$blur_choice" | string lower)
 
-                    case '' y yes
-                        echo -e "  $D🎨  Applying default blur (0x40) + black 40%% tint...$C  $GY eprahemi$C"
-                        if magick "$image" -blur 0x40 -fill black -colorize 40% "$blurred_file" 2>/dev/null
-                            # ── Preview blurred result in Kitty ──
-                            if test -n "$KITTY_PID"
-                                echo ""
-                                kitty +kitten icat --align left "$blurred_file" 2>/dev/null
-                                echo ""
-                            else
-                                echo -e "  $D  💻  Preview requires Kitty terminal — blur applied without preview.$C"
-                            end
-                            # Apply immediately — no LIKE THE RESULT? prompt for default
-                            set image "$blurred_file"
-                            echo "Blur 0x40 + black 40%" > /tmp/.gdm-info/blur-settings.txt
-                            set blur_done 1
-                            echo -e "  $GR✅  Default blur applied$C  github.com/eprahemi"
-                        else
-                            echo -e "  $RE✘  Blur failed — image may be corrupt or unsupported. Using original.$C  $GY github.com/eprahemi$C"
-                            echo "No blur applied (blur failed)" > /tmp/.gdm-info/blur-settings.txt
-                            set blur_done 1
-                        end
+                # ── Match input with explicit regex (avoids switch/case pattern ambiguity) ──
+                if string match -qir '^n' "$blur_choice"
+                    echo "No blur applied" > /tmp/.gdm-info/blur-settings.txt
+                    set blur_done 1
 
-                    case c custom
-                        echo ""
-                        echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
-                        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                        set -l cu1 "  🎨  CUSTOM BLUR"
-                        echo -e "  $CY║$C  $WH$cu1$C$(printf '%*s' (math "60 - "(string length "$cu1")) '')$CY║$C"
-                        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                        echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
-                        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                        set -l cu2 "  Blur sigma (0=auto, try 20-50):"
-                        echo -e "  $CY║$C  $D$cu2$C$(printf '%*s' (math "60 - "(string length "$cu2")) '')$CY║$C"
-                        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                        set -l cu3 "  Black tint % (0-100, try 20-40):"
-                        echo -e "  $CY║$C  $D$cu3$C$(printf '%*s' (math "60 - "(string length "$cu3")) '')$CY║$C"
-                        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                        set -l br "  eprahemi  •  github.com/eprahemi"
-                        echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
-                        echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
-                        echo ""
-                        set -l __cc 0
-                        while true
-                            read -l -P "    Blur sigma [30]: " blur_sigma
-                            set -l __rs $status
-                            if test $__rs -ne 0
-                                set __cc (math $__cc + 1)
-                                if test $__cc -ge 2
-                                    echo -e "  $D  → Exiting.  $C  $GY eprahemi$C"
-                                    return 1
-                                end
-                                echo -e "  $D  (Ctrl+C again to exit)  $C  $GY eprahemi$C"
-                                continue
+                else if string match -qir '^c' "$blur_choice"
+                    echo ""
+                    echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
+                    echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                    set -l cu1 "  🎨  CUSTOM BLUR"
+                    echo -e "  $CY║$C  $WH$cu1$C$(printf '%*s' (math "60 - "(string length "$cu1")) '')$CY║$C"
+                    echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                    echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+                    echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                    set -l cu2 "  Blur sigma (0=auto, try 20-50):"
+                    echo -e "  $CY║$C  $D$cu2$C$(printf '%*s' (math "60 - "(string length "$cu2")) '')$CY║$C"
+                    echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                    set -l cu3 "  Black tint % (0-100, try 20-40):"
+                    echo -e "  $CY║$C  $D$cu3$C$(printf '%*s' (math "60 - "(string length "$cu3")) '')$CY║$C"
+                    echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                    set -l br "  eprahemi  •  github.com/eprahemi"
+                    echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
+                    echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
+                    echo ""
+                    set -l __cc 0
+                    while true
+                        read -P "    Blur sigma [30]: " blur_sigma
+                        set -l __rs $status
+                        if test $__rs -ne 0
+                            set __cc (math $__cc + 1)
+                            if test $__cc -ge 2
+                                echo -e "  $D  → Exiting.  $C  $GY eprahemi$C"
+                                return 1
                             end
-                            break
+                            echo -e "  $D  (Ctrl+C again to exit)  $C  $GY eprahemi$C"
+                            continue
                         end
-                        set -l __cc 0
-                        while true
-                            read -l -P "    Black tint % [30]: " colorize_pct
-                            set -l __rs $status
-                            if test $__rs -ne 0
-                                set __cc (math $__cc + 1)
-                                if test $__cc -ge 2
-                                    echo -e "  $D  → Exiting.  $C  $GY eprahemi$C"
-                                    return 1
-                                end
-                                echo -e "  $D  (Ctrl+C again to exit)  $C  $GY eprahemi$C"
-                                continue
+                        break
+                    end
+                    set -l __cc 0
+                    while true
+                        read -P "    Black tint % [30]: " colorize_pct
+                        set -l __rs $status
+                        if test $__rs -ne 0
+                            set __cc (math $__cc + 1)
+                            if test $__cc -ge 2
+                                echo -e "  $D  → Exiting.  $C  $GY eprahemi$C"
+                                return 1
                             end
-                            break
+                            echo -e "  $D  (Ctrl+C again to exit)  $C  $GY eprahemi$C"
+                            continue
                         end
+                        break
+                    end
 
-                        if test -z "$blur_sigma"
-                            set blur_sigma 30
-                        end
-                        if test -z "$colorize_pct"
-                            set colorize_pct 30
-                        end
+                    if test -z "$blur_sigma"
+                        set blur_sigma 30
+                    end
+                    if test -z "$colorize_pct"
+                        set colorize_pct 30
+                    end
 
-                        echo -e "  $D🎨  Applying blur (0x$blur_sigma) + black $colorize_pct%% tint...$C  $GY eprahemi$C"
-                        if magick "$image" -blur "0x$blur_sigma" -fill black -colorize "$colorize_pct%" "$blurred_file" 2>/dev/null
-                            # ── Preview blurred result in Kitty ──
-                            if test -n "$KITTY_PID"
-                                echo ""
-                                kitty +kitten icat --align left "$blurred_file" 2>/dev/null
-                                echo ""
-                            end
-                            # ── Ask if user likes it (only in Kitty) ──
-                            if test -n "$KITTY_PID"
-                                echo ""
-                                echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
-                                echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                                set -l l1 "  👍  LIKE THE RESULT?"
-                                echo -e "  $CY║$C  $WH$l1$C$(printf '%*s' (math "60 - "(string length "$l1")) '')$CY║$C"
-                                echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                                echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
-                                echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                                set -l l2 "  [Y] Yes — apply this blurred version"
-                                echo -e "  $CY║$C  $GR$l2$C$(printf '%*s' (math "60 - "(string length "$l2")) '')$CY║$C"
-                                set -l l3 "  [N] No  — try different blur settings"
-                                echo -e "  $CY║$C  $YE$l3$C$(printf '%*s' (math "60 - "(string length "$l3")) '')$CY║$C"
-                                echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                                set -l br "  eprahemi  •  github.com/eprahemi"
-                                echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
-                                echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
-                                echo ""
-                                set -l __cc 0
-                                while true
-                                    read -l -P "  [y/N]: " like_it
-                                    set -l __rs $status
-                                    if test $__rs -ne 0
-                                        set __cc (math $__cc + 1)
-                                        if test $__cc -ge 2
-                                            echo -e "  $D  → Exiting.  $C  $GY eprahemi$C"
-                                            return 1
-                                        end
-                                        echo -e "  $D  (Ctrl+C again to exit)  $C  $GY eprahemi$C"
-                                        continue
+                    echo -e "  $D🎨  Applying blur (0x$blur_sigma) + black $colorize_pct%% tint...$C  $GY eprahemi$C"
+                    if magick "$image" -blur "0x$blur_sigma" -fill black -colorize "$colorize_pct%" "$blurred_file" 2>/dev/null
+                        # ── Preview blurred result in Kitty ──
+                        if test -n "$KITTY_PID"
+                            echo ""
+                            kitty +kitten icat --align left "$blurred_file" 2>/dev/null
+                            echo ""
+                        end
+                        # ── Ask if user likes it (only in Kitty) ──
+                        if test -n "$KITTY_PID"
+                            echo ""
+                            echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
+                            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                            set -l l1 "  👍  LIKE THE RESULT?"
+                            echo -e "  $CY║$C  $WH$l1$C$(printf '%*s' (math "60 - "(string length "$l1")) '')$CY║$C"
+                            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                            echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+                            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                            set -l l2 "  [Y] Yes — apply this blurred version"
+                            echo -e "  $CY║$C  $GR$l2$C$(printf '%*s' (math "60 - "(string length "$l2")) '')$CY║$C"
+                            set -l l3 "  [N] No  — try different blur settings"
+                            echo -e "  $CY║$C  $YE$l3$C$(printf '%*s' (math "60 - "(string length "$l3")) '')$CY║$C"
+                            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                            set -l br "  eprahemi  •  github.com/eprahemi"
+                            echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
+                            echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
+                            echo ""
+                            set -l __cc 0
+                            while true
+                                read -P "  [y/N]: " like_it
+                                set -l __rs $status
+                                if test $__rs -ne 0
+                                    set __cc (math $__cc + 1)
+                                    if test $__cc -ge 2
+                                        echo -e "  $D  → Exiting.  $C  $GY eprahemi$C"
+                                        return 1
                                     end
-                                    break
+                                    echo -e "  $D  (Ctrl+C again to exit)  $C  $GY eprahemi$C"
+                                    continue
                                 end
-                                if string match -qir '^y' "$like_it"
-                                    set image "$blurred_file"
-                                    echo "Blur 0x$blur_sigma + black $colorize_pct%" > /tmp/.gdm-info/blur-settings.txt
-                                    set blur_done 1
-                                    echo -e "  $GR✅  Custom blur applied$C  github.com/eprahemi"
-                                end
-                                # N → loops back to blur menu
-                            else
+                                break
+                            end
+                            if string match -qir '^y' "$like_it"
                                 set image "$blurred_file"
                                 echo "Blur 0x$blur_sigma + black $colorize_pct%" > /tmp/.gdm-info/blur-settings.txt
-                                echo -e "  $D  💻  Preview requires Kitty terminal — blur applied without preview.$C"
+                                set blur_done 1
                                 echo -e "  $GR✅  Custom blur applied$C  github.com/eprahemi"
-                                echo ""
-                                set -l __cc 0
-                                while true
-                                    read -l -P "  [Y] Continue  [N] Try again: " non_kitty_ok
-                                    set -l __rs $status
-                                    if test $__rs -ne 0
-                                        set __cc (math $__cc + 1)
-                                        if test $__cc -ge 2
-                                            echo -e "  $D  → Exiting.  $C  $GY eprahemi$C"
-                                            return 1
-                                        end
-                                        echo -e "  $D  (Ctrl+C again to exit)  $C  $GY eprahemi$C"
-                                        continue
-                                    end
-                                    break
-                                end
-                                if string match -qir '^n' "$non_kitty_ok"
-                                    # loop back to blur menu
-                                else
-                                    set blur_done 1
-                                end
                             end
+                            # N → loops back to blur menu
                         else
-                            echo -e "  $RE✘  Custom blur failed — image may be corrupt or unsupported. Using original.$C  $GY github.com/eprahemi$C"
-                            echo "No blur applied (blur failed)" > /tmp/.gdm-info/blur-settings.txt
-                            set blur_done 1
+                            set image "$blurred_file"
+                            echo "Blur 0x$blur_sigma + black $colorize_pct%" > /tmp/.gdm-info/blur-settings.txt
+                            echo -e "  $D  💻  Preview requires Kitty terminal — blur applied without preview.$C"
+                            echo -e "  $GR✅  Custom blur applied$C  github.com/eprahemi"
+                            echo ""
+                            set -l __cc 0
+                            while true
+                                read -P "  [Y] Continue  [N] Try again: " non_kitty_ok
+                                set -l __rs $status
+                                if test $__rs -ne 0
+                                    set __cc (math $__cc + 1)
+                                    if test $__cc -ge 2
+                                        echo -e "  $D  → Exiting.  $C  $GY eprahemi$C"
+                                        return 1
+                                    end
+                                    echo -e "  $D  (Ctrl+C again to exit)  $C  $GY eprahemi$C"
+                                    continue
+                                end
+                                break
+                            end
+                            if string match -qir '^n' "$non_kitty_ok"
+                                # loop back to blur menu
+                            else
+                                set blur_done 1
+                            end
                         end
+                    else
+                        set -l _blur_status $status
+                        if test $_blur_status -eq 130
+                            echo -e "  $D  → Cancelled.$C  $GY eprahemi$C"
+                            return 1
+                        end
+                        echo -e "  $RE✘  Custom blur failed — image may be corrupt or unsupported. Using original.$C  $GY github.com/eprahemi$C"
+                        echo "No blur applied (blur failed)" > /tmp/.gdm-info/blur-settings.txt
+                        set blur_done 1
+                    end
+
+                else if test -z "$blur_choice"; or string match -qir '^y' "$blur_choice"
+                    echo -e "  $D🎨  Applying default blur (0x40) + black 40%% tint...$C  $GY eprahemi$C"
+                    if magick "$image" -blur 0x40 -fill black -colorize 40% "$blurred_file" 2>/dev/null
+                        # ── Preview blurred result in Kitty ──
+                        if test -n "$KITTY_PID"
+                            echo ""
+                            kitty +kitten icat --align left "$blurred_file" 2>/dev/null
+                            echo ""
+                        else
+                            echo -e "  $D  💻  Preview requires Kitty terminal — blur applied without preview.$C"
+                        end
+                        # Apply immediately — no LIKE THE RESULT? prompt for default
+                        set image "$blurred_file"
+                        echo "Blur 0x40 + black 40%" > /tmp/.gdm-info/blur-settings.txt
+                        set blur_done 1
+                        echo -e "  $GR✅  Default blur applied$C  github.com/eprahemi"
+                    else
+                        set -l _blur_status $status
+                        if test $_blur_status -eq 130
+                            echo -e "  $D  → Cancelled.$C  $GY eprahemi$C"
+                            return 1
+                        end
+                        echo -e "  $RE✘  Blur failed — image may be corrupt or unsupported. Using original.$C  $GY github.com/eprahemi$C"
+                        echo "No blur applied (blur failed)" > /tmp/.gdm-info/blur-settings.txt
+                        set blur_done 1
+                    end
+
+                else
+                    echo -e "  $D  Hmm, I didn't understand \"$blur_choice\" — try again.$C  $GY eprahemi$C"
                 end
             end
         else
@@ -1477,7 +1493,7 @@ except:
             echo ""
             set -l __cc 0
             while true
-                read -l -P "  [y/N]: " install_magick
+                read -P "  [y/N]: " install_magick
                 set -l __rs $status
                 if test $__rs -ne 0
                     set __cc (math $__cc + 1)
@@ -1610,7 +1626,7 @@ except:
             echo ""
             set -l __cc 0
             while true
-                read -l -P "  [y/N]: " install_git
+                read -P "  [y/N]: " install_git
                 set -l __rs $status
                 if test $__rs -ne 0
                     set __cc (math $__cc + 1)
@@ -1680,6 +1696,11 @@ except:
                     set image "$converted"
                     echo -e "  $GR✅  Converted to JPEG$C  github.com/eprahemi"
                 else
+                    set -l _conv_status $status
+                    if test $_conv_status -eq 130
+                        echo -e "  $D  → Cancelled.$C  $GY eprahemi$C"
+                        return 1
+                    end
                     echo -e "  $D  ⚠️  JPEG conversion failed, using original.$C  $GY github.com/eprahemi$C"
                 end
             else
