@@ -116,6 +116,12 @@ function passwd --description 'Toggle passwordless sudo for the current user —
         echo -e "  $CY║$C  $D$d5$C$(printf '%*s' (math "60 - "(string length -- "$d5")) '')$CY║$C"
 
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        set -l u6 "    passwd on / passwd off"
+        echo -e "  $CY║$C  $CY$B$u6$C$(printf '%*s' (math "60 - "(string length -- "$u6")) '')$CY║$C"
+        set -l d6 "    Shorthand for enable / disable"
+        echo -e "  $CY║$C  $D$d6$C$(printf '%*s' (math "60 - "(string length -- "$d6")) '')$CY║$C"
+
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY║$C  $D  eprahemi  •  github.com/eprahemi$(printf '%*s' (math "60 - 33") '')$CY║$C"
         echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
         echo ""
@@ -130,18 +136,19 @@ function passwd --description 'Toggle passwordless sudo for the current user —
     end
 
     # ─── Validate subcommand ───
-    if test "$argv[1]" != "enable" -a "$argv[1]" != "disable" -a "$argv[1]" != "toggle"
+    if test "$argv[1]" != "enable" -a "$argv[1]" != "disable" -a "$argv[1]" != "toggle" \
+       -a "$argv[1]" != "on" -a "$argv[1]" != "off"
         echo -e "\n  $RE✘  Unknown subcommand: $CY$B$argv[1]$C"
-        echo -e "  $D    Usage: $CY$Bpasswd$C $D[enable|disable|toggle|status|--help]$C\n"
+        echo -e "  $D    Usage: $CY$Bpasswd$C $D[on|off|enable|disable|toggle|status|--help]$C\n"
         return 1
     end
 
     # ─── Resolve action ───
     set -l do_enable 0
     switch "$argv[1]"
-        case enable
+        case enable on
             set do_enable 1
-        case disable
+        case disable off
             set do_enable 0
         case toggle
             if test "$uncommented" -eq 1
