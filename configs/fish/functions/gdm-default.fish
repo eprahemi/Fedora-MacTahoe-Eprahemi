@@ -52,7 +52,7 @@ function gdm-default --description 'Restore Himeno Fedora login screen — check
         echo -e "  $GR✅  Himeno login wallpaper saved to repo$C"
     end
 
-    # ── Apply it via gdm ──
+    # ── Apply it via gdm (--yes skips confirmation) ──
     echo -e "  $CY🔄  Applying to GDM...$C"
-    gdm "$wp_target"
+    gdm --yes "$wp_target"
 end

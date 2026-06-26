@@ -15,9 +15,12 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
     set -l D  "\033[2m"
     set -l B  "\033[1m"
 
+    # ── Flags ──
+    set -l skip_confirm 0
+
     # ── Arg check ──
     if not set -q argv[1]
-        echo -e "$RE✘$C Usage: $CY$B gdm /path/to/wallpaper.jpg$C"
+        echo -e "$RE✘$C Usage: $CY$B gdm [-y|--yes] /path/to/wallpaper.jpg$C"
         echo -e "  $GY-h, --help$C  Show this help"
         return 1
     end
@@ -32,32 +35,70 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY║$C    $CY$B gdm filename.jpg$C                                          $CY║$C"
         echo -e "  $CY║$C    $CY$B gdm /path/to/image.jpg$C                                    $CY║$C"
-        echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY║$C    $CY$B gdm -y|--yes filename.jpg$C                                 $CY║$C"
+        echo -e "  $CY║$C$GY$(printf '%s' '                                                                 ')$CY║$C"
         echo -e "  $CY║$C  $D  Changes the GDM login screen background.$C                    $CY║$C"
         echo -e "  $CY║$C  $D  First run  → needs internet (clones repo once).$C             $CY║$C"
         echo -e "  $CY║$C  $D  After that → works OFFLINE (cached repo).$C                   $CY║$C"
         echo -e "  $CY║$C  $D  Relative filenames work — no need for full paths.$C           $CY║$C"
-        echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY║$C  $D  Use $CY-y$C $D or $CY--yes$C $D to skip confirmation.$C                      $CY║$C"
+        echo -e "  $CY║$C$GY$(printf '%s' '                                                                 ')$CY║$C"
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY║$C  $GR  Examples:$C                                                   $CY║$C"
         echo -e "  $CY║$C  $CY  gdm my-image.jpg$C                                            $CY║$C"
         echo -e "  $CY║$C  $CY  gdm ~/Pictures/my-wallpaper.jpg$C                             $CY║$C"
         echo -e "  $CY║$C  $CY  gdm HOT PUSSASS.jpg$C                                         $CY║$C"
+        echo -e "  $CY║$C  $CY  gdm -y ~/Pictures/definite.jpg$C                              $CY║$C"
         echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
         echo ""
         return 0
     end
 
+    # ── Parse -y / --yes flag ──
+    if contains -- "$argv[1]" "-y" "--yes"
+        set skip_confirm 1
+        set -e argv[1]
+    end
+
     # ── Join all args so unquoted filenames with spaces work — ──
     #     e.g. `gdm HOT PUSSASS.jpg` from inside the folder
+    if not set -q argv[1]
+        echo -e "$RE✘$C Usage: $CY$B gdm [-y|--yes] /path/to/wallpaper.jpg$C"
+        return 1
+    end
     set -l filename (string join ' ' $argv)
     set -l image (realpath "$filename" 2>/dev/null)
     if not test -f "$image"
         echo -e "  $RE✘$C File not found: $YE$filename$C"
         echo -e "  $GY  Tip: you can just type the filename if you're in the same folder.$C"
         return 1
+    end
+
+    # ── Confirmation prompt ──
+    if test $skip_confirm -eq 0
+        echo ""
+        echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
+        echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY║$C  $WH🖼️  DO YOU MEAN THIS?$C                                   $CY║$C"
+        echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+        echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+        printf "  $CY║$C    $YE%s$C  $CY║$C\n" "$image"
+        echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+        echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY║$C  $GR  [Y] Yes → Apply wallpaper$C                             $CY║$C"
+        echo -e "  $CY║$C  $RE  [N] No  → Cancel, type gdm again$C                      $CY║$C"
+        echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
+        echo ""
+        read -l -P "  [y/N]: " confirm
+        if not string match -qir '^y' "$confirm"
+            echo -e "  $RE✘  Cancelled. Run $CY$B gdm$C $RE again with the correct path.$C"
+            return 1
+        end
     end
 
     # ── Persistent MacTahoe repo (kept after first clone) ──
