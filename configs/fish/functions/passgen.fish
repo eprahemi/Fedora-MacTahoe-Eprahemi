@@ -60,7 +60,7 @@ function passgen --description '🔑 Password generator and analyzer — 18 opti
             case --get
                 set get_label $argv[2]
                 set -e argv[1..2]
-            case --force -f
+            case --force -f -F
                 set force_mode yes
                 set -e argv[1]
             case --list
@@ -76,7 +76,7 @@ function passgen --description '🔑 Password generator and analyzer — 18 opti
                 echo -e "  \033[38;5;248m  --count, -n N    Number of passwords (def: 1)\033[0m"
                 echo -e "  \033[38;5;248m  --passphrase -P  Word-based passphrase\033[0m"
                 echo -e "  \033[38;5;248m  --words, -w N    Words in passphrase (def: 4)\033[0m"
-                echo -e "  \033[38;5;248m  --force, -f      Override 99,999 limit\033[0m"
+                echo -e "  \033[38;5;248m  --force, -f, -F\033[0m      \033[1;37mOverride 99,999 limit\033[0m"
                 echo -e "  \033[38;5;248m  --no-lower       Exclude lowercase\033[0m"
                 echo -e "  \033[38;5;248m  --no-upper       Exclude uppercase\033[0m"
                 echo -e "  \033[38;5;248m  --no-digits      Exclude digits\033[0m"
@@ -99,7 +99,7 @@ function passgen --description '🔑 Password generator and analyzer — 18 opti
                 echo -e "  \033[38;5;248m--count, -n N\033[0m         \033[1;37mNumber of passwords (default: 1)\033[0m"
                 echo -e "  \033[38;5;248m--passphrase, -P\033[0m      \033[1;37mGenerate a passphrase (words)\033[0m"
                 echo -e "  \033[38;5;248m--words, -w N\033[0m         \033[1;37mNumber of words for passphrase (default: 4)\033[0m"
-                echo -e "  \033[38;5;248m--force, -f\033[0m           \033[1;37mOverride max-length limit\033[0m"
+                echo -e "  \033[38;5;248m--force, -f, -F\033[0m           \033[1;37mOverride max-length limit\033[0m"
                 echo -e "  \033[38;5;248m--no-lower\033[0m            \033[1;37mExclude lowercase letters\033[0m"
                 echo -e "  \033[38;5;248m--no-upper\033[0m            \033[1;37mExclude uppercase letters\033[0m"
                 echo -e "  \033[38;5;248m--no-digits\033[0m           \033[1;37mExclude digits\033[0m"
@@ -195,7 +195,7 @@ for m in matches:
         else
             echo -e "\033[1;31m✘ Password too long: \033[1;33m$length\033[1;31m characters\033[0m"
             echo -e "  \033[38;5;248m  Maximum supported length is \033[1;33m99,999\033[38;5;248m characters\033[0m"
-            echo -e "  \033[38;5;248m  To generate: \033[1;36mpassgen gen $length\033[0m"
+            echo -e "  \033[38;5;248m  To generate: \033[1;36mpassgen gen $length\033[0m  \033[38;5;248mor  \033[1;36mpassgen $length --force\033[0m"
             echo -e "  \033[38;5;248m  To analyze as password: \033[1;36mpassgen check $length\033[0m"
             return 1
         end
