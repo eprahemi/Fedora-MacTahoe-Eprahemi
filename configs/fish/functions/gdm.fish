@@ -1412,7 +1412,7 @@ except:
 
     # Critical files required for the wallpaper engine to work
     set -l critical_files \
-        "$repo/tweaks.sh" \
+        "$repo/gdm-wallpaper.sh" \
         "$repo/libs/lib-core.sh" \
         "$repo/libs/lib-install.sh" \
         "$repo/other/gdm/gnome-shell-theme.gresource.xml"
@@ -1856,9 +1856,14 @@ except:
     rm -rf /tmp/.gdm-info
     echo -e "  $CY🖼️  Applying GDM wallpaper...$C  $D github.com/eprahemi$C"
     cd "$repo"
-    sudo ./tweaks.sh -g -nb -nd -b "$image"
+    sudo ./gdm-wallpaper.sh -g -nb -nd -b "$image"
     cd -
 
-    echo -e "  $GR✅  GDM wallpaper updated!$C  $D Reboot to see it.$C"
+    echo -e "  $GR✅  GDM wallpaper updated!$C"
+    echo -e "  $GY┌────────────────────────────────────────────────────┐$C"
+    printf "  $GY│$C  $D•$C $WH%-20s$C $D%-26s$C$GY│$C\n" "Logout or Reboot" "to see it"
+    printf "  $GY│$C  $D•$C $CY%-20s$C $D%-26s$C$GY│$C\n" "gdm info" "view image details"
+    printf "  $GY│$C  $D•$C $CY%-20s$C $D%-26s$C$GY│$C\n" "gdm save" "save to ~/Pictures/"
+    echo -e "  $GY└────────────────────────────────────────────────────┘$C"
     echo -e "  $GY  eprahemi  •  github.com/eprahemi$C"
 end
