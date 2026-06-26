@@ -18,6 +18,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
 
     # ── Flags ──
     set -l skip_confirm 0
+    set -l skip_double_confirm 0
 
     # ── Arg check (no args → show all usages in a box) ──
     if not set -q argv[1]
@@ -271,10 +272,11 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
             return 1
         end
 
-        # Pass to gdm with --yes so it skips the redundant "DO YOU MEAN THIS?" confirm
+        # Set up for blur/apply — skip redundant DO YOU MEAN THIS? but keep blur
         echo -e "  $D  Using current desktop wallpaper: $bg_path$C"
-        gdm --yes "$bg_path"
-        return $status
+        set skip_double_confirm 1
+        set argv[1] "$bg_path"
+        # Fall through → default check (won't match) → search → blur → apply
     end
 
     # ── "default" subcommand: restore Himeno login wallpaper ──
@@ -424,7 +426,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
 
         case 1
             set image "$results[1]"
-            if test $skip_confirm -eq 0
+            if test $skip_confirm -eq 0; and test $skip_double_confirm -eq 0
                 echo ""
                 echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
