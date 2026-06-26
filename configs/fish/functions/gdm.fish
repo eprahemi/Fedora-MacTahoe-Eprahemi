@@ -22,15 +22,54 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
     # ── Guard: triple+ dashes (---, ----, ---info) before string match crashes ──
     for arg in $argv
         if string match -qr '^---' -- "$arg" 2>/dev/null
+            # Strip all leading dashes to get the intended command
+            set -l stripped (string replace -r -- '^-+' '' "$arg")
+            # Known valid commands and their correct forms
+            set -l known_commands \
+                "current" "gdm current" \
+                "default" "gdm default" \
+                "info"    "gdm info" \
+                "save"    "gdm save" \
+                "yes"     "gdm -y  or  gdm --yes" \
+                "y"       "gdm -y  or  gdm --yes" \
+                "h"       "gdm -h  or  gdm --help" \
+                "help"    "gdm -h  or  gdm --help"
+            set -l suggestion ""
+            for i in (seq 2 (count $known_commands) 2)
+                if test "$stripped" = "$known_commands[$i]"
+                    set suggestion $known_commands[(math $i + 1)]
+                    break
+                end
+            end
+
             echo ""
-            echo -e "  $RE┌────────────────────────────────────────────────────────────┐$C"
-            echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
-            echo -e "  $RE│$C     $WH✘  Invalid option: $CY$arg$C$(printf '%*s' (math "55 - "(string length "$arg")) '')$RE│$C"
-            echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
-            echo -e "  $RE│$C  $D  Use single or double dashes only ($C$GY--$C$D, $C$GY-$C$D).$C$RE         │$C"
-            echo -e "  $RE│$C  $D  Example: $C$CY gdm --info$C$D  or  $C$CY gdm -h$C$RE$D$C$RE           │$C"
-            echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
-            echo -e "  $RE└────────────────────────────────────────────────────────────┘$C"
+            if test -n "$suggestion"
+                # Known command — suggest the correct form
+                echo -e "  $RE┌────────────────────────────────────────────────────────────┐$C"
+                echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
+                echo -e "  $RE│$C     $D  Did you mean:  $WH$suggestion$C$(printf '%*s' (math "55 - "(string length "$suggestion")) '')$RE│$C"
+                echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
+                echo -e "  $RE│$C  $D  Use single or double dashes only ($C$GY--$C$D, $C$GY-$C$D).$C$RE         │$C"
+                echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
+                echo -e "  $RE└────────────────────────────────────────────────────────────┘$C"
+            else
+                # Unknown command — show full usage
+                echo -e "  $RE┌────────────────────────────────────────────────────────────┐$C"
+                echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
+                echo -e "  $RE│$C     $WH✘  Unknown option: $CY$stripped$C$(printf '%*s' (math "55 - "(string length "$stripped")) '')$RE│$C"
+                echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
+                echo -e "  $RE│$C  $D  Valid commands:$C$RE                                   │$C"
+                echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
+                echo -e "  $RE│$C    $GY gdm current$C    $D  use current desktop wallpaper$C$RE        │$C"
+                echo -e "  $RE│$C    $GY gdm default$C    $D  summon the waifu Himeno-chan$C$RE         │$C"
+                echo -e "  $RE│$C    $GY gdm info$C       $D  show wallpaper details$C$RE               │$C"
+                echo -e "  $RE│$C    $GY gdm save$C       $D  save to ~/Pictures/$C$RE                  │$C"
+                echo -e "  $RE│$C    $GY gdm --yes$C      $D  apply without prompts$C$RE                │$C"
+                echo -e "  $RE│$C    $GY gdm -h$C         $D  show full help$C$RE                       │$C"
+                echo -e "  $RE│$C    $GY gdm /path$C      $D  apply a specific image$C$RE               │$C"
+                echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
+                echo -e "  $RE└────────────────────────────────────────────────────────────┘$C"
+            end
             echo -e "  $GY  eprahemi  •  github.com/eprahemi$C"
             return 1
         end
@@ -737,6 +776,49 @@ except:
         echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
         echo ""
         return 0
+    end
+
+    # ── Guard: unknown flags (--unknown, -z, etc.) ──
+    if set -q argv[1]
+        set -l first "$argv[1]"
+        # Only intercept dash-prefixed args — plain words could be filenames
+        if string match -qr '^-{1,2}[a-zA-Z]' -- "$first"
+            # Strip leading dashes to extract the intended word
+            set -l stripped (string replace -r -- '^-+' '' "$first")
+            # Known flags/subcommands
+            set -l known_options \
+                "h" "help" \
+                "y" "yes" \
+                "current" ""
+            set -l is_known 0
+            for i in (seq 1 (count $known_options))
+                if test "$stripped" = "$known_options[$i]"
+                    set is_known 1
+                    break
+                end
+            end
+            if test $is_known -eq 0
+                echo ""
+                echo -e "  $RE┌────────────────────────────────────────────────────────────┐$C"
+                echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
+                echo -e "  $RE│$C     $WH✘  Unknown option: $CY$first$C$(printf '%*s' (math "55 - "(string length "$first")) '')$RE│$C"
+                echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
+                echo -e "  $RE│$C  $D  Valid commands:$C$RE                                   │$C"
+                echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
+                echo -e "  $RE│$C    $GY gdm current$C    $D  use current desktop wallpaper$C$RE        │$C"
+                echo -e "  $RE│$C    $GY gdm default$C    $D  summon the waifu Himeno-chan$C$RE         │$C"
+                echo -e "  $RE│$C    $GY gdm info$C       $D  show wallpaper details$C$RE               │$C"
+                echo -e "  $RE│$C    $GY gdm save$C       $D  save to ~/Pictures/$C$RE                  │$C"
+                echo -e "  $RE│$C    $GY gdm --yes$C      $D  apply without prompts$C$RE                │$C"
+                echo -e "  $RE│$C    $GY gdm -h$C         $D  show full help$C$RE                       │$C"
+                echo -e "  $RE│$C    $GY gdm filename$C   $D  search & apply an image$C$RE              │$C"
+                echo -e "  $RE│$C    $GY gdm /path$C      $D  apply a specific image$C$RE               │$C"
+                echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
+                echo -e "  $RE└────────────────────────────────────────────────────────────┘$C"
+                echo -e "  $GY  eprahemi  •  github.com/eprahemi$C"
+                return 1
+            end
+        end
     end
 
     # ── Join all args so unquoted filenames with spaces work ──
