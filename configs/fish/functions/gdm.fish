@@ -959,11 +959,12 @@ except:
                 set -l line_num 1
                 while test -n "$remaining"
                     set -l trimmed (string sub -l 52 "$remaining")
-                    set -l last_space (string last " " "$trimmed")
-                    if test -n "$last_space"; and test "$last_space" -gt 10
-                        set -l split (math "$last_space - 1")
+                    set -l match_end (string match -r ".* " "$trimmed")
+                    set -l split_pos (string length -- "$match_end")
+                    if test -n "$match_end"; and test "$split_pos" -gt 10
+                        set -l split (math "$split_pos - 1")
                         set -l part (string sub -l $split "$remaining")
-                        set -l rest (string sub -s (math "$split + 2") "$remaining")
+                        set -l rest (string sub -s (math "$split_pos + 1") "$remaining")
                     else
                         set -l part "$trimmed"
                         set -l rest (string sub -s 53 "$remaining")
