@@ -19,6 +19,7 @@ function passgen --description '🔑 Password generator and analyzer — 18 opti
     set -l save_label ""
     set -l get_label ""
     set -l force_mode no
+    set -l gen_mode no
 
     # ── Parse arguments ──
     while set -q argv[1]
@@ -124,6 +125,7 @@ function passgen --description '🔑 Password generator and analyzer — 18 opti
                 return 0
             case gen
                 # passgen gen <N> — generate with bypass of length limit
+                set gen_mode yes
                 set force_mode yes
                 set -e argv[1]
                 if set -q argv[1]
@@ -189,7 +191,9 @@ for m in matches:
 
     # ── Sanity check: no one needs a 100k-char password ──
     if test "$length" -gt 99999
-        if test "$force_mode" = yes
+        if test "$gen_mode" = yes
+            # gen subcommand silently bypasses the limit
+        else if test "$force_mode" = yes
             echo -e "  \033[1;33m🔥 Force mode activated\033[0m"
             echo -e "  \033[38;5;248m  Generating \033[1;33m$length\033[38;5;248m characters...\033[0m"
         else
