@@ -89,7 +89,7 @@ function passgen --description '🔑 Password generator and analyzer — 18 opti
                 return 0
             case --help -h
                 echo -e "\033[1;33mUsage: \033[1;36mpassgen [options]\033[0m"
-                echo -e "  \033[38;5;248m<number>\033[0m           \033[1;37mPassword length preset\033[0m"
+                echo -e "  \033[38;5;248m<number>\033[0m           \033[1;37mPassword length preset (max 128; use -l for larger)\033[0m"
                 echo -e "  \033[38;5;248m<password>\033[0m         \033[1;37mAnalyze a password\'s strength\033[0m"
                 echo -e "  \033[38;5;248m--length, -l N\033[0m     \033[1;37mPassword length (default: 16)\033[0m"
                 echo -e "  \033[38;5;248m--count, -n N\033[0m      \033[1;37mNumber of passwords (default: 1)\033[0m"
@@ -150,7 +150,7 @@ for m in matches:
                     echo -e "  \033[38;5;248m  Try \033[1;36mpassgen --help\033[38;5;248m or \033[1;36mpassgen opts\033[38;5;248m for the full menu 📋\033[0m"
                     return 1
                 end
-                if string match -qr '^\d+$' "$argv[1]"
+                if string match -qr '^\d+$' "$argv[1]" && test "$argv[1]" -le 128
                     set length $argv[1]
                     set -e argv[1]
                 else
