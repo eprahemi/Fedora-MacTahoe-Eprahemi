@@ -778,7 +778,10 @@ except:
         # 🛡️  GUARD: Minimum search term length (short = deadly slow)
         # Skip guard if input contains / (it's a full/relative path)
         set -l is_path (string match -r '/' "$filename")
-        if test -z "$is_path"; and test (string length -- "$filename") -lt 3
+        # Check the stem (before any extension) — "b.jpg" has a 5-char
+        # filename but the meaningful search term "b" is still too short
+        set -l stem (string replace -r '\..*$' '' "$filename")
+        if test -z "$is_path"; and test (string length -- "$stem") -lt 3
             echo ""
             echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
