@@ -31,6 +31,11 @@ function shutdown --description 'ﾉｼ(>_<)ﾉ  Power off the system with style
         return $status
     end
 
+    # ── Subcommand: "now" → treat as no-arg (shutdown immediately) ──
+    if set -q argv[1]; and contains -- "$argv[1]" "now"
+        set -e argv[1]
+    end
+
     # ── Confirm ──
     echo -e ""
     echo -e "  $GY┌──────────────────────────────────────────────────────────────┐$C"

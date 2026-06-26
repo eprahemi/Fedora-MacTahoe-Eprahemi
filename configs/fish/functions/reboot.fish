@@ -31,6 +31,11 @@ function reboot --description 'ﾉｼ(>_<)ﾉ  Restart the system with style'
         return $status
     end
 
+    # ── Subcommand: "now" → treat as no-arg (reboot immediately) ──
+    if set -q argv[1]; and contains -- "$argv[1]" "now"
+        set -e argv[1]
+    end
+
     # ── Confirm ──
     echo -e ""
     echo -e "  $GY┌──────────────────────────────────────────────────────────────┐$C"
