@@ -91,26 +91,36 @@ function passwd --description 'Toggle passwordless sudo for the current user —
 
     # ════════════════════════════════════════════════════════════════
     #  READ-ONLY PATH — status / no-args
-    #  Uses normal sudo (prompts for password naturally if needed)
+    #  Tries sudo -n first (no prompt if creds cached).  If that fails,
+    #  shows a hint instead of prompting — avoids unnecessary sudo auth
+    #  for a read-only check.
     # ════════════════════════════════════════════════════════════════
     if test (count $argv) -eq 0 -o "$argv[1]" = "status"
+        # ─── Check if sudo credentials are cached (no prompt) ───
+        if not sudo -n true 2>/dev/null
+            echo -e "\n  $YE⚠️   Cannot check status without authentication.$C"
+            echo -e "  $D    Run $CY$B'passwd enable'$C$D first to authenticate and enable, or$C"
+            echo -e "  $D    use $CY$B'sudo -v'$C$D to cache credentials then $CY$B'passwd status'$C$D.$C\n"
+            return 0
+        end
+
         # ─── Regex fragments (separate variables to avoid Fish parsing $user[...]) ───
         set -l rx_gap_s "[[:space:]]+ALL=\(ALL\)[[:space:]]+NOPASSWD:[[:space:]]+ALL"
         set -l rx_uc_s "^[[:space:]]*$user$rx_gap_s"
         set -l rx_cm_s "^[[:space:]]*#[[:space:]]*$user$rx_gap_s"
 
-        # ─── Detect current state (normal sudo — will prompt for password if not cached) ───
+        # ─── Detect current state (sudo -n = no prompt since we verified above) ───
         set -l ro_uncommented 0
         set -l ro_commented 0
-        if sudo grep -Eqs "$rx_uc_s" "$sudoers" 2>/dev/null
+        if sudo -n grep -Eqs "$rx_uc_s" "$sudoers" 2>/dev/null
             set ro_uncommented 1
         end
-        if sudo grep -Eqs "$rx_cm_s" "$sudoers" 2>/dev/null
+        if sudo -n grep -Eqs "$rx_cm_s" "$sudoers" 2>/dev/null
             set ro_commented 1
         end
 
         # ─── Build & show status box ───
-        set -l ro_line_info (sudo grep -nE "^\s*#*\s*$user\s+ALL=\(ALL\)\s+NOPASSWD:\s+ALL" "$sudoers" 2>/dev/null | head -1)
+        set -l ro_line_info (sudo -n grep -nE "^\s*#*\s*$user\s+ALL=\(ALL\)\s+NOPASSWD:\s+ALL" "$sudoers" 2>/dev/null | head -1)
         set -l ro_ln_num ""
         set -l ro_ln_text ""
         if test -n "$ro_line_info"
