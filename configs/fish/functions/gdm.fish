@@ -775,6 +775,35 @@ except:
     if test -f "$direct"
         set results "$direct"
     else
+        # 🛡️  GUARD: Minimum search term length (short = deadly slow)
+        if test (string length -- "$filename") -lt 3
+            echo ""
+            echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            set -l se1 "  ✘  SEARCH TERM TOO SHORT"
+            echo -e "  $RE║$C  $WH$se1$C$(printf '%*s' (math "60 - "(string length "$se1")) '')$RE║$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            echo -e "  $RE╠══════════════════════════════════════════════════════════════╣$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            set -l se2 "  Use at least 3 characters to search."
+            set -l se3 "  Short searches match tens of thousands of"
+            set -l se4 "  files and take forever to complete."
+            echo -e "  $RE║$C  $D$se2$C$(printf '%*s' (math "60 - "(string length "$se2")) '')$RE║$C"
+            echo -e "  $RE║$C  $D$se3$C$(printf '%*s' (math "60 - "(string length "$se3")) '')$RE║$C"
+            echo -e "  $RE║$C  $D$se4$C$(printf '%*s' (math "60 - "(string length "$se4")) '')$RE║$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            set -l se5 "  Use the full path for short filenames:"
+            set -l se6 "  gdm /path/to/b.jpg"
+            echo -e "  $RE║$C  $YE$se5$C$(printf '%*s' (math "60 - "(string length "$se5")) '')$RE║$C"
+            echo -e "  $RE║$C  $CY$se6$C$(printf '%*s' (math "60 - "(string length "$se6")) '')$RE║$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            set -l br "  eprahemi  •  github.com/eprahemi"
+            echo -e "  $RE║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
+            echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
+            echo ""
+            return 1
+        end
+
         # 2. Search common user directories
         echo -e "  $D🔍  Searching for \"$filename\"...$C  $GY eprahemi$C"
         set -l search_dirs \
