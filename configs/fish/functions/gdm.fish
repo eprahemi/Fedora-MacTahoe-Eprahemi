@@ -954,24 +954,33 @@ except:
                 set -l path $results[$i]
                 set -l num_str (printf "%2d" $i)
                 set -l prefix "  [$num_str]  "
-                set -l max_w (math "60 - "(string length "$prefix"))
-                set -l indent "        "
-                set -l cont_w (math "60 - "(string length "$indent"))
+                set -l cont_indent "        "
                 set -l remaining "$path"
-                set -l first_line 1
+                set -l line_num 1
                 while test -n "$remaining"
-                    if test $first_line -eq 1
-                        set -l part (string sub -l $max_w "$remaining")
-                        set -l m_line "$prefix$part"
-                        echo -e "  $CY║$C  $GR$m_line$C$(printf '%*s' (math "60 - "(string length "$m_line")) '')$CY║$C"
-                        set remaining (string sub -s (math "$max_w + 1") "$remaining")
-                        set first_line 0
+                    if test $line_num -eq 1
+                        set trimmed (string sub -l 52 "$remaining")
                     else
-                        set -l part (string sub -l $cont_w "$remaining")
-                        set -l m_line "$indent$part"
-                        echo -e "  $CY║$C  $GR$m_line$C$(printf '%*s' (math "60 - "(string length "$m_line")) '')$CY║$C"
-                        set remaining (string sub -s (math "$cont_w + 1") "$remaining")
+                        set trimmed (string sub -l 52 "$remaining")
                     end
+                    set -l last_space (string last " " "$trimmed")
+                    if test "$last_space" -gt 10
+                        set -l split (math "$last_space - 1")
+                        set -l part (string sub -l $split "$remaining")
+                        set -l rest (string sub -s (math "$split + 2") "$remaining")
+                    else
+                        set -l part "$trimmed"
+                        set -l rest (string sub -s 53 "$remaining")
+                    end
+                    if test $line_num -eq 1
+                        set -l m_line "$prefix$part"
+                        echo -e "  $CY║$C  $m_line$C$(printf '%*s' (math "60 - "(string length "$m_line")) '')$CY║$C"
+                    else
+                        set -l m_line "$cont_indent$part"
+                        echo -e "  $CY║$C  $m_line$C$(printf '%*s' (math "60 - "(string length "$m_line")) '')$CY║$C"
+                    end
+                    set remaining "$rest"
+                    set line_num (math "$line_num + 1")
                 end
             end
 
