@@ -4,30 +4,52 @@
 # Fedora MacTahoe Eprahemi Edition © 2026 — change yo login
 # ══════════════════════════════════════════════════════════════
 function gdm --description 'Change GDM login screen wallpaper — needs internet only the first time'
+    # ── Colors ──
+    set -l C  "\033[0m"
+    set -l CY "\033[1;36m"
+    set -l GR "\033[1;32m"
+    set -l YE "\033[1;33m"
+    set -l RE "\033[1;31m"
+    set -l WH "\033[1;37m"
+    set -l GY "\033[38;5;248m"
+    set -l D  "\033[2m"
+    set -l B  "\033[1m"
+
     # ── Arg check ──
     if not set -q argv[1]
-        echo -e "\033[1;31m✘ Usage: \033[1;36mgdm /path/to/wallpaper.jpg\033[0m"
-        echo -e "  \033[38;5;248m  -h, --help     Show this help\033[0m"
+        echo -e "$RE✘$C Usage: $CY$B gdm /path/to/wallpaper.jpg$C"
+        echo -e "  $GY-h, --help$C  Show this help"
         return 1
     end
 
     if contains -- "$argv[1]" "-h" "--help"
-        echo -e "\033[1;33mUsage: \033[1;36mgdm /path/to/image.jpg\033[0m"
-        echo -e "  \033[38;5;248m  Changes the GDM (login screen) background to your chosen image.\033[0m"
-        echo -e "  \033[38;5;248m  Clones MacTahoe repo once to ~/.local/share/mactahoe-gtk/ (needs internet).\033[0m"
-        echo -e "  \033[38;5;248m  After that, it reuses the cached repo — works OFFLINE.\033[0m"
-        echo -e ""
-        echo -e "  \033[1;36mExamples:\033[0m"
-        echo -e "    \033[1;36mgdm ~/Pictures/my-wallpaper.jpg\033[0m"
-        echo -e "    \033[1;36mgdm ~/.config/Wallpapers/Himeno\ Fedora\ LoginScreen.jpg\033[0m"
-        echo -e ""
-        echo -e "  \033[38;5;248m📦 GDM wallpaper switcher — needs internet only first time (Jun 2026)\033[0m"
+        echo ""
+        echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
+        echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY║$C  $WH🖼️  GDM WALLPAPER SWITCHER                                $C  $CY║$C"
+        echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+        echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY║$C    $CY$B gdm /path/to/image.jpg$C                                    $CY║$C"
+        echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY║$C  $D  Changes the GDM login screen background.$C                    $CY║$C"
+        echo -e "  $CY║$C  $D  First run  → needs internet (clones repo once).$C             $CY║$C"
+        echo -e "  $CY║$C  $D  After that → works OFFLINE (cached repo).$C                   $CY║$C"
+        echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+        echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY║$C  $GR  Examples:$C                                                   $CY║$C"
+        echo -e "  $CY║$C  $CY  gdm ~/Pictures/my-wallpaper.jpg$C                             $CY║$C"
+        echo -e "  $CY║$C  $CY  gdm ~/.config/Wallpapers/Himeno Fedora LoginScreen.jpg$C       $CY║$C"
+        echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
+        echo ""
         return 0
     end
 
     set -l image (realpath "$argv[1]" 2>/dev/null)
     if not test -f "$image"
-        echo -e "\033[1;31m✘ File not found: \033[1;33m$argv[1]\033[0m"
+        echo -e "  $RE✘$C File not found: $YE$argv[1]$C"
         return 1
     end
 
@@ -35,22 +57,39 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
     set -l repo "$HOME/.local/share/mactahoe-gtk"
 
     if not test -f "$repo/tweaks.sh"
-        echo -e "  \033[1;36m📦 Cloning MacTahoe theme repo (one-time, needs internet)...\033[0m"
+        echo ""
+        echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
+        echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY║$C  $WH🌐  INTERNET NEEDED — ONE TIME ONLY$C                         $CY║$C"
+        echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+        echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY║$C  $D  This is the first time you're running gdm.$C                   $CY║$C"
+        echo -e "  $CY║$C  $D  It needs to download the MacTahoe theme repo$C                 $CY║$C"
+        echo -e "  $CY║$C  $D  to set up the GDM theme engine.$C                              $CY║$C"
+        echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY║$C  $YE  📦  Downloading ~5 MB to ~/.local/share/mactahoe-gtk$C  $CY║$C"
+        echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY║$C  $GR  ✅  After this, gdm works OFFLINE forever$C                    $CY║$C"
+        echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
+        echo ""
+
         mkdir -p "$HOME/.local/share"
         rm -rf "$repo"
         if not git clone --depth 1 https://github.com/vinceliuice/MacTahoe-gtk-theme.git "$repo" 2>/dev/null
-            echo -e "  \033[1;31m✘ Clone failed — no internet?\033[0m"
-            echo -e "  \033[38;5;248m  Run the full installer first, or connect to the internet once.\033[0m"
+            echo -e "  $RE✘  Clone failed — no internet?$C"
+            echo -e "  $GY  Run the full installer first, or connect to the internet once.$C"
             return 1
         end
-        echo -e "  \033[1;32m✅ Repo cached at $repo (works offline from now on)\033[0m"
+        echo -e "  $GR✅  Repo cached at $repo (works offline from now on)$C"
     end
 
-    # ── Apply the wallpaper (repo is cached — no internet needed) ──
-    echo -e "  \033[1;36m🖼️  Applying GDM wallpaper...\033[0m"
+    # ── Apply the wallpaper ──
+    echo -e "  $CY🖼️  Applying GDM wallpaper...$C"
     cd "$repo"
     sudo ./tweaks.sh -g -nb -nd -b "$image"
     cd -
 
-    echo -e "  \033[1;32m✅ GDM wallpaper updated! Reboot to see it.\033[0m"
+    echo -e "  $GR✅  GDM wallpaper updated!$C  $D Reboot to see it.$C"
 end
