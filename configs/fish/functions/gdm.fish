@@ -433,6 +433,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
                             else
                                 set image "$blurred_file"
                                 set blur_done 1
+                                echo -e "  $D  💻  Preview requires Kitty terminal — blur applied without preview.$C"
                                 echo -e "  $GR✅  Blur applied$C  github.com/eprahemi"
                             end
                         else
@@ -506,6 +507,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
                             else
                                 set image "$blurred_file"
                                 set blur_done 1
+                                echo -e "  $D  💻  Preview requires Kitty terminal — blur applied without preview.$C"
                                 echo -e "  $GR✅  Custom blur applied$C  github.com/eprahemi"
                             end
                         else
