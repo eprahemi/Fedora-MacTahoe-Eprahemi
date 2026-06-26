@@ -500,9 +500,8 @@ for name, rate in rates:
             echo -e "  \033[1;32m  ✔ This password is already strong! \033[38;5;248mBut here's a secure version anyway:\033[0m"
         end
 
-        # ── Options footer ──
-        echo -e "\n  \033[38;5;248m┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄\033[0m"
-        echo -e "  \033[1;33m📦 18 options available\033[0m   \033[38;5;248m\033[1;36mpassgen opts\033[38;5;248m to list them\033[0m"
+        # ── Branding footer ──
+        __passgen_branding
         return 0
     end
 
@@ -849,14 +848,43 @@ print('∞')
         __passgen_cracktime $entropy
     end
 
-    # ── Options footer ──
-    echo -e "\n  \033[38;5;248m┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄\033[0m"
-    echo -e "  \033[1;33m📦 18 options available\033[0m   \033[38;5;248m\033[1;36mpassgen opts\033[38;5;248m to list them\033[0m"
+    # ── Branding footer ──
+    __passgen_branding
 end
 
 # ══════════════════════════════════════════════════════════════
 # HELPER FUNCTIONS
 # ══════════════════════════════════════════════════════════════
+
+# ── BRANDING FOOTER (eprahemi copyright) ──
+function __passgen_branding --description 'Print eprahemi copyright footer with figlet or fallback ASCII'
+    set -l YE '\033[1;33m'
+    set -l D  '\033[38;5;248m'
+    set -l C  '\033[0m'
+
+    echo -e "\n  $D━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$C"
+    echo ""
+
+    if command -v figlet &>/dev/null
+        set -l fig_lines (figlet -f small "eprahemi" | string split "\n")
+        for fl in $fig_lines
+            if test -n "$fl"
+                echo -e "  $YE$fl$C"
+            end
+        end
+    else
+        echo -e "  $YE  ███████╗██████╗ ██████╗  █████╗ ██╗  ██╗███████╗███╗   ███╗██╗$C"
+        echo -e "  $YE  ██╔════╝██╔══██╗██╔══██╗██╔══██╗██║  ██║██╔════╝████╗ ████║██║$C"
+        echo -e "  $YE  █████╗  ██████╔╝██████╔╝███████║███████║█████╗  ██╔████╔██║██║$C"
+        echo -e "  $YE  ██╔══╝  ██╔═══╝ ██╔══██╗██╔══██║██╔══██║██╔══╝  ██║╚██╔╝██║██║$C"
+        echo -e "  $YE  ███████╗██║     ██║  ██║██║  ██║██║  ██║███████╗██║ ╚═╝ ██║██║$C"
+        echo -e "  $YE  ╚══════╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝╚═╝$C"
+    end
+
+    echo ""
+    echo -e "  $D━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$C"
+    echo -e "  \033[38;5;245m  eprahemi  •  github.com/eprahemi$C"
+end
 
 # ── STRENGTH SCORE ──
 function __passgen_score --description 'Calculate score 0-100 + grade from entropy and factors'
