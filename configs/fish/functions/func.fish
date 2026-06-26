@@ -330,49 +330,6 @@ function func --description 'Function archive: list/search/show all fish command
     end
 
     # ══════════════════════════════════════════════════════════════
-    # RENDER — Statistics Dashboard
-    # ══════════════════════════════════════════════════════════════
-    set -l avg 0
-    if test $tf -gt 0
-        set avg (math -s0 "$tl / $tf")
-    end
-
-    echo -e "  $C╭─ 📊  Statistics ──────────────────────────────────────╮$N"
-    printf "  $C│$N  $W%-20s$N $D%5s$N     $W%-10s$N $D%5s$N $Dlines    $C│$N\n" \
-        "Total Functions" $tf "Largest" $lg_lines
-    printf "  $C│$N  $W%-20s$N $D%5s$N     $W%-10s$N $D%5s$N $Dlines    $C│$N\n" \
-        "Total Lines" $tl "Smallest" $sm_lines
-    printf "  $C│$N  $W%-20s$N $D%5s$N     $W%-10s$N $D%-12s$N    $C│$N\n" \
-        "Average Lines" $avg " " " "
-    echo -e "  $C│$N  $D─────────────────────────────────────────────────────$N  $C│$N"
-    echo -e "  $C│$N  $DCategory breakdown:$N"
-
-    # 2-column layout (3 rows × 2 cols)
-    for row in 1 2 3
-        set -l li $row
-        set -l ri (math "$row + 3")
-
-        set -l left ""
-        if test $li -le $cat_cnt
-            set -l lc (count (string split ' ' -- $cat_func[$li]))
-            set left (printf "$cat_esc[$li]%-16s$N $D→$N $W%2d$N" "$cat_name[$li]" $lc)
-        end
-        set -l right ""
-        if test $ri -le $cat_cnt
-            set -l rc (count (string split ' ' -- $cat_func[$ri]))
-            set right (printf "$cat_esc[$ri]%-16s$N $D→$N $W%2d$N" "$cat_name[$ri]" $rc)
-        end
-        printf "  $C│$N    $D│$N  %-34s  %-34s$N  $D│$N\n" "$left" "$right"
-    end
-
-    echo -e "  $C│$N  $D─────────────────────────────────────────────────────$N  $C│$N"
-    # Format byte size with simple math, avoid printf %'d
-    set -l kb_s (math -s1 "$tb / 1024")
-    printf "  $C│$N  $W%-20s$N $D%10s$N $Dbytes (%s KB)$N           $C│$N\n" \
-        "Total Source Size" $tb $kb_s
-    echo -e "  $C╰──────────────────────────────────────────────────────────╯$N"
-    echo ""
-
     # ══════════════════════════════════════════════════════════════
     # RENDER — Help Footer
     # ══════════════════════════════════════════════════════════════
@@ -384,6 +341,10 @@ function func --description 'Function archive: list/search/show all fish command
     echo -e "  $D│$N  $Yfunc show$N $W<name>$N      $D— View full source code$N         $D│$N"
     echo -e "  $D│$N  $Ytype$N $W<name>$N             $D— Quick source peek$N             $D│$N"
     echo -e "  $D╰────────────────────────────────────────────────────╯$N"
+    echo ""
+    echo -e "  $GY  ╭──────────────────────────────────────────────────────╮$N"
+    echo -e "  $GY  │$N  $D↑  Scroll up to see all functions above$N               $GY│$N"
+    echo -e "  $GY  ╰──────────────────────────────────────────────────────╯$N"
     echo ""
 
     # ── Cleanup ──
