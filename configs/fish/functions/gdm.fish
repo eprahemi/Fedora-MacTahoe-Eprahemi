@@ -380,10 +380,16 @@ except:
 " "$f_mtime")
         end
 
-        # ─── Split path ───
+        # ─── Split path; read original name from .txt if it exists ───
         set -l f_dir (dirname "$last_file")
-        set -l f_name (basename "$last_file")
         set f_dir (string replace -r "^$HOME" "~" "$f_dir")
+        set -l name_txt "$HOME/.local/share/mactahoe-gtk/.gdm-undo-name.txt"
+        set -l f_name ""
+        if test -f "$name_txt"
+            set f_name (string trim < "$name_txt")
+        else
+            set f_name (basename "$last_file")
+        end
 
         # ─── Kitty image preview (before the info box) ───
         if test -n "$KITTY_PID"
@@ -988,9 +994,10 @@ except:
         echo -e "  $GY  Install it and try again.  github.com/eprahemi$C"
         return 1
     end
-    # Save a copy for 'gdm info'
+    # Save a copy and original name for 'gdm info'
     mkdir -p "$repo"
     cp "$image" "$repo/.gdm-undo-copy.jpg"
+    echo (basename "$image") > "$repo/.gdm-undo-name.txt"
     echo -e "  $CY🖼️  Applying GDM wallpaper...$C  $D github.com/eprahemi$C"
     cd "$repo"
     sudo ./tweaks.sh -g -nb -nd -b "$image"
