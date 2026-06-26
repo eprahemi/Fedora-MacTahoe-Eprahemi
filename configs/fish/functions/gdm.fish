@@ -130,8 +130,10 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY║$C  $D$n4$C$(printf '%*s' (math "60 - "(string length "$n4")) '')$CY║$C"
         set -l n5 "  • Kitty + ImageMagick are optional, not required"
         echo -e "  $CY║$C  $D$n5$C$(printf '%*s' (math "60 - "(string length "$n5")) '')$CY║$C"
-        set -l n6 "  • Zero hardcoded paths — 100% portable"
+        set -l n6 "  • Auto-detects missing git, curl, ImageMagick — offers install"
         echo -e "  $CY║$C  $D$n6$C$(printf '%*s' (math "60 - "(string length "$n6")) '')$CY║$C"
+        set -l n7 "  • Zero hardcoded paths — 100% portable"
+        echo -e "  $CY║$C  $D$n7$C$(printf '%*s' (math "60 - "(string length "$n7")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
@@ -146,6 +148,13 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
     if contains -- "$argv[1]" "-y" "--yes"
         set skip_confirm 1
         set -e argv[1]
+        # Guard: -y / --yes with no image after it
+        if not set -q argv[1]
+            echo -e "$RE✘$C Usage: $CY$B gdm [-y|--yes] /path/to/wallpaper.jpg$C"
+            echo -e "  $D  You used -y but forgot an image path.$C"
+            echo -e "  $GY  github.com/eprahemi$C"
+            return 1
+        end
     end
 
     # ── "default" subcommand: restore Himeno login wallpaper ──
@@ -305,11 +314,12 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
                 echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                 set -l c2_len (string length "$image")
+                set -l image_display "$image"
                 if test $c2_len -gt 56
-                    set c2 (string sub -l 53 "$image")"..."
+                    set image_display (string sub -l 53 "$image")"..."
                     set c2_len 56
                 end
-                echo -e "  $CY║$C    $YE$image$C$(printf '%*s' (math "58 - $c2_len") '')$CY║$C"
+                echo -e "  $CY║$C    $YE$image_display$C$(printf '%*s' (math "58 - $c2_len") '')$CY║$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                 echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
@@ -409,6 +419,13 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         if test $skip_confirm -eq 0
             set -l blurred_file "/tmp/gdm-blurred.jpg"
             set -l blur_done 0
+            # Guard: /tmp must be writable for blur output
+            if not touch "/tmp/.gdm-tmp-write" 2>/dev/null
+                echo -e "  $D  ⚠️  Cannot write to /tmp — blur unavailable. Using original.$C  $GY github.com/eprahemi$C"
+                set blur_done 1
+            else
+                rm -f "/tmp/.gdm-tmp-write"
+            end
             mkdir -p /tmp
 
             while test $blur_done -eq 0
@@ -488,7 +505,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
                                 end
                             end
                         else
-                            echo -e "  $RE✘  Blur failed, using original$C  github.com/eprahemi"
+                            echo -e "  $RE✘  Blur failed — image may be corrupt or unsupported. Using original.$C  $GY github.com/eprahemi$C"
                             set blur_done 1
                         end
 
@@ -568,7 +585,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
                                 end
                             end
                         else
-                            echo -e "  $RE✘  Blur failed, using original$C  github.com/eprahemi"
+                            echo -e "  $RE✘  Custom blur failed — image may be corrupt or unsupported. Using original.$C  $GY github.com/eprahemi$C"
                             set blur_done 1
                         end
                 end
@@ -648,6 +665,45 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
 
         mkdir -p "$HOME/.local/share"
         rm -rf "$repo"
+
+        # ── Guard: git must be installed ──
+        if not command -v git &>/dev/null
+            echo ""
+            echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
+            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+            set -l gi1 "  ⚠️  GIT NOT INSTALLED"
+            echo -e "  $CY║$C  $YE$gi1$C$(printf '%*s' (math "60 - "(string length "$gi1")) '')$CY║$C"
+            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+            echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+            set -l gi2 "  git is required to download the theme repo."
+            echo -e "  $CY║$C  $D$gi2$C$(printf '%*s' (math "60 - "(string length "$gi2")) '')$CY║$C"
+            set -l gi3 "  It is NOT installed on your system."
+            echo -e "  $CY║$C  $YE$gi3$C$(printf '%*s' (math "60 - "(string length "$gi3")) '')$CY║$C"
+            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+            set -l gi4 "  [Y] Yes — install git now"
+            echo -e "  $CY║$C  $GR$gi4$C$(printf '%*s' (math "60 - "(string length "$gi4")) '')$CY║$C"
+            set -l gi5 "  [N] No  — cancel"
+            echo -e "  $CY║$C  $RE$gi5$C$(printf '%*s' (math "60 - "(string length "$gi5")) '')$CY║$C"
+            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+            set -l br "  eprahemi  •  github.com/eprahemi"
+            echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
+            echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
+            echo ""
+            read -l -P "  [y/N]: " install_git
+            if string match -qir '^y' "$install_git"
+                echo -e "  $D📦  Installing git...$C  $GY github.com/eprahemi$C"
+                if not sudo dnf install -y git 2>/dev/null
+                    echo -e "  $RE✘  Git installation failed. Try: $CY$B sudo dnf install git$C"
+                    return 1
+                end
+                echo -e "  $GR✅  git installed!$C"
+            else
+                echo -e "  $RE✘  Cancelled — git is required.$C  $GY github.com/eprahemi$C"
+                return 1
+            end
+        end
+
         if not git clone --depth 1 https://github.com/vinceliuice/MacTahoe-gtk-theme.git "$repo" 2>/dev/null
             echo -e "  $RE✘  Clone failed — no internet?$C  $GY github.com/eprahemi$C"
             echo -e "  $GY  Run the full installer first, or connect to the internet once.$C"
@@ -656,13 +712,23 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $GR✅  Repo cached at $repo (works offline from now on)$C  $GY github.com/eprahemi$C"
 
         # ── Also download the Himeno default login wallpaper ──
-        echo -e "  $D📥  Downloading default Himeno login wallpaper...$C  $GY eprahemi$C"
-        curl -fsSL "https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/wallpapers/login/Himeno%20Fedora%20LoginScreen.jpg" -o "$repo/himeno-login.jpg" 2>/dev/null
-        and echo -e "  $GR✅  Himeno wallpaper saved to repo$C  $GY github.com/eprahemi$C"
-        or echo -e "  $D  (skipped — not critical)$C"
+        if command -v curl &>/dev/null
+            echo -e "  $D📥  Downloading default Himeno login wallpaper...$C  $GY eprahemi$C"
+            curl -fsSL "https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/wallpapers/login/Himeno%20Fedora%20LoginScreen.jpg" -o "$repo/himeno-login.jpg" 2>/dev/null
+            and echo -e "  $GR✅  Himeno wallpaper saved to repo$C  $GY github.com/eprahemi$C"
+            or echo -e "  $D  (skipped — not critical)$C"
+        else
+            echo -e "  $D  ⚠️  curl not installed — skipping himeno download.$C  $GY github.com/eprahemi$C"
+        end
     end
 
     # ── Apply the wallpaper ──
+    # Guard: sudo must be installed
+    if not command -v sudo &>/dev/null
+        echo -e "  $RE✘  sudo is required but not installed.$C"
+        echo -e "  $GY  Install it and try again.  github.com/eprahemi$C"
+        return 1
+    end
     echo -e "  $CY🖼️  Applying GDM wallpaper...$C  $D github.com/eprahemi$C"
     cd "$repo"
     sudo ./tweaks.sh -g -nb -nd -b "$image"
