@@ -318,7 +318,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         set -l RE "\033[1;31m"
         set -l GY "\033[38;5;248m"
         set -l D  "\033[2m"
-        set -l wp_repo "$HOME/.local/share/mactahoe-gtk/himeno-login.jpg"
+        set -l wp_repo "$HOME/.local/share/mactahoe-gdm/himeno-login.jpg"
         set -l wp_url "https://raw.githubusercontent.com/eprahemi/FedoraTahoe-GDM/main/himeno-login.jpg"
 
         if test -f "$wp_repo"
@@ -327,7 +327,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
             # Try downloading silently up to 3 times
             set -l dl_ok 0
             for attempt in (seq 3)
-                mkdir -p "$HOME/.local/share/mactahoe-gtk"
+                mkdir -p "$HOME/.local/share/mactahoe-gdm"
                 if curl -fsSL --connect-timeout 5 "$wp_url" -o "$wp_repo" 2>/dev/null
                     set dl_ok 1
                     break
@@ -365,7 +365,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
     # ── "save" subcommand: save current wallpaper to ~/Pictures/ ──
     if set -q argv[1]; and contains -- "$argv[1]" "save" "--save" "-save"
         set -e argv[1]
-        set -l repo_dir "$HOME/.local/share/mactahoe-gtk"
+        set -l repo_dir "$HOME/.local/share/mactahoe-gdm"
         set -l last_file "$repo_dir/.gdm-undo-copy.jpg"
         if not test -f "$last_file"
             echo ""
@@ -529,7 +529,7 @@ except:
     # ── "info" subcommand: beautiful GDM wallpaper details with preview ──
     if set -q argv[1]; and contains -- "$argv[1]" "info" "--info" "-info"
         set -e argv[1]
-        set -l repo_dir "$HOME/.local/share/mactahoe-gtk"
+        set -l repo_dir "$HOME/.local/share/mactahoe-gdm"
         set -l last_file "$repo_dir/.gdm-undo-copy.jpg"
         if not test -f "$last_file"
             echo -e "  $RE✘  No GDM wallpaper info available.$C"
@@ -1408,7 +1408,7 @@ except:
     end
 
     # ── Persistent FedoraTahoe-GDM repo (first run clones; re-clones if files missing) ──
-    set -l repo "$HOME/.local/share/mactahoe-gtk"
+    set -l repo "$HOME/.local/share/mactahoe-gdm"
 
     # Critical files required for the wallpaper engine to work
     set -l critical_files \
