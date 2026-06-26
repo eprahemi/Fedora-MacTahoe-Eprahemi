@@ -1355,7 +1355,7 @@ apply_wallpapers() {
   local wp_norm="/usr/share/backgrounds/Wallvault Wallpapers"
   local wp_18="/usr/share/backgrounds/Wallvault Wallpapers +18"
   local xml_dir="/usr/share/gnome-background-properties"
-  mkdir -p "$HOME/.config/Wallpapers"
+  mkdir -p "$HOME/.local/share/backgrounds"
 
   # ── Always wipe stock Fedora backgrounds ──
   if [ -d /usr/share/backgrounds ]; then
@@ -1482,9 +1482,9 @@ EOF
 
   # Set active desktop wallpaper
   if [ "${INSTALL_DESKTOP_WALLPAPER:-true}" = "true" ] && [ -f "$wp/desktop/Himeno Fedora.jpg" ]; then
-    cp "$wp/desktop/Himeno Fedora.jpg" "$HOME/.config/Wallpapers/"
-    gsettings set org.gnome.desktop.background picture-uri "file://$HOME/.config/Wallpapers/Himeno Fedora.jpg" 2>/dev/null || true
-    gsettings set org.gnome.desktop.background picture-uri-dark "file://$HOME/.config/Wallpapers/Himeno Fedora.jpg" 2>/dev/null || true
+    cp "$wp/desktop/Himeno Fedora.jpg" "$HOME/.local/share/backgrounds/"
+    gsettings set org.gnome.desktop.background picture-uri "file://$HOME/.local/share/backgrounds/Himeno Fedora.jpg" 2>/dev/null || true
+    gsettings set org.gnome.desktop.background picture-uri-dark "file://$HOME/.local/share/backgrounds/Himeno Fedora.jpg" 2>/dev/null || true
     gsettings set org.gnome.desktop.background picture-options "zoom" 2>/dev/null || true
     ok "Desktop wallpaper set"
   elif [ "${INSTALL_DESKTOP_WALLPAPER:-true}" = "true" ]; then
@@ -1492,9 +1492,9 @@ EOF
   else
     # User declined Himeno — fallback to 16.jpg from normal wallpapers
     if [ -f "$wp_norm/16.jpg" ]; then
-      cp "$wp_norm/16.jpg" "$HOME/.config/Wallpapers/default-wallpaper.jpg"
-      gsettings set org.gnome.desktop.background picture-uri "file://$HOME/.config/Wallpapers/default-wallpaper.jpg" 2>/dev/null || true
-      gsettings set org.gnome.desktop.background picture-uri-dark "file://$HOME/.config/Wallpapers/default-wallpaper.jpg" 2>/dev/null || true
+      cp "$wp_norm/16.jpg" "$HOME/.local/share/backgrounds/default-wallpaper.jpg"
+      gsettings set org.gnome.desktop.background picture-uri "file://$HOME/.local/share/backgrounds/default-wallpaper.jpg" 2>/dev/null || true
+      gsettings set org.gnome.desktop.background picture-uri-dark "file://$HOME/.local/share/backgrounds/default-wallpaper.jpg" 2>/dev/null || true
       gsettings set org.gnome.desktop.background picture-options "zoom" 2>/dev/null || true
       ok "Fallback wallpaper set (16.jpg)"
     fi
@@ -1502,8 +1502,8 @@ EOF
 
   # GDM login wallpaper — ALWAYS copied (mandatory)
   if [ -f "$wp/login/Himeno Fedora LoginScreen.jpg" ]; then
-    cp "$wp/login/Himeno Fedora LoginScreen.jpg" "$HOME/.config/Wallpapers/"
-    ok "Login screen wallpaper copied to ~/.config/Wallpapers/"
+    cp "$wp/login/Himeno Fedora LoginScreen.jpg" "$HOME/.local/share/backgrounds/"
+    ok "Login screen wallpaper copied to ~/.local/share/backgrounds/"
   fi
 }
 

@@ -287,13 +287,13 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         set -l RE "\033[1;31m"
         set -l GY "\033[38;5;248m"
         set -l D  "\033[2m"
-        set -l wp_config "$HOME/.config/Wallpapers/Himeno Fedora LoginScreen.jpg"
+        set -l wp_bg "$HOME/.local/share/backgrounds/Himeno Fedora LoginScreen.jpg"
         set -l wp_repo "$HOME/.local/share/mactahoe-gtk/himeno-login.jpg"
         set -l wp_url "https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/wallpapers/login/Himeno%20Fedora%20LoginScreen.jpg"
 
-        if test -f "$wp_config"
-            echo -e "  $D🖼️  Found Himeno login wallpaper in ~/.config/Wallpapers/$C"
-            gdm --yes "$wp_config"
+        if test -f "$wp_bg"
+            echo -e "  $D🖼️  Found Himeno login wallpaper in ~/.local/share/backgrounds/$C"
+            gdm --yes "$wp_bg"
         else if test -f "$wp_repo"
             echo -e "  $D🖼️  Found Himeno login wallpaper in cached repo$C"
             gdm --yes "$wp_repo"
@@ -347,19 +347,19 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         # 2. Search common user directories
         echo -e "  $D🔍  Searching for \"$filename\"...$C  $GY eprahemi$C"
         set -l search_dirs \
-            "$HOME/Downloads" \
+            "$HOME/.local/share/backgrounds" \
+            "$HOME/Pictures/Wallpapers" \
             "$HOME/Pictures" \
-            "$HOME/Documents" \
+            "$HOME/Downloads" \
             "$HOME/Desktop" \
+            "$HOME/Documents" \
             "$HOME/Videos" \
             "$HOME/Music" \
             "$HOME/Templates" \
             "$HOME/Public" \
-            "$HOME/.config/Wallpapers" \
-            "$HOME/.local/share/backgrounds" \
             "$HOME/.local/share/wallpapers" \
             "$HOME/.local/share/mactahoe-gtk" \
-            "$HOME/Pictures/Wallpapers"
+            "$HOME/.config/Wallpapers"
 
         for dir in $search_dirs
             if test -d "$dir"
