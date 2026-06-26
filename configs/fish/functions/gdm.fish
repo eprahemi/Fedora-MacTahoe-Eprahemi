@@ -30,26 +30,33 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY║$C    $CY$B gdm filename.jpg$C                                          $CY║$C"
         echo -e "  $CY║$C    $CY$B gdm /path/to/image.jpg$C                                    $CY║$C"
         echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY║$C  $D  Changes the GDM login screen background.$C                    $CY║$C"
         echo -e "  $CY║$C  $D  First run  → needs internet (clones repo once).$C             $CY║$C"
         echo -e "  $CY║$C  $D  After that → works OFFLINE (cached repo).$C                   $CY║$C"
+        echo -e "  $CY║$C  $D  Relative filenames work — no need for full paths.$C           $CY║$C"
         echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY║$C  $GR  Examples:$C                                                   $CY║$C"
+        echo -e "  $CY║$C  $CY  gdm my-image.jpg$C                                            $CY║$C"
         echo -e "  $CY║$C  $CY  gdm ~/Pictures/my-wallpaper.jpg$C                             $CY║$C"
-        echo -e "  $CY║$C  $CY  gdm ~/.config/Wallpapers/Himeno Fedora LoginScreen.jpg$C       $CY║$C"
+        echo -e "  $CY║$C  $CY  gdm HOT PUSSASS.jpg$C                                         $CY║$C"
         echo -e "  $CY║$C$GY$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
         echo ""
         return 0
     end
 
-    set -l image (realpath "$argv[1]" 2>/dev/null)
+    # ── Join all args so unquoted filenames with spaces work — ──
+    #     e.g. `gdm HOT PUSSASS.jpg` from inside the folder
+    set -l filename (string join ' ' $argv)
+    set -l image (realpath "$filename" 2>/dev/null)
     if not test -f "$image"
-        echo -e "  $RE✘$C File not found: $YE$argv[1]$C"
+        echo -e "  $RE✘$C File not found: $YE$filename$C"
+        echo -e "  $GY  Tip: you can just type the filename if you're in the same folder.$C"
         return 1
     end
 
