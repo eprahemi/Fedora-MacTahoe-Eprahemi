@@ -432,9 +432,15 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
                                 # N → loops back to blur menu
                             else
                                 set image "$blurred_file"
-                                set blur_done 1
                                 echo -e "  $D  💻  Preview requires Kitty terminal — blur applied without preview.$C"
                                 echo -e "  $GR✅  Blur applied$C  github.com/eprahemi"
+                                echo ""
+                                read -l -P "  [Y] Continue  [N] Try again: " non_kitty_ok
+                                if string match -qir '^n' "$non_kitty_ok"
+                                    # loop back to blur menu
+                                else
+                                    set blur_done 1
+                                end
                             end
                         else
                             echo -e "  $RE✘  Blur failed, using original$C  github.com/eprahemi"
@@ -506,9 +512,15 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
                                 # N → loops back to blur menu
                             else
                                 set image "$blurred_file"
-                                set blur_done 1
                                 echo -e "  $D  💻  Preview requires Kitty terminal — blur applied without preview.$C"
                                 echo -e "  $GR✅  Custom blur applied$C  github.com/eprahemi"
+                                echo ""
+                                read -l -P "  [Y] Continue  [N] Try again: " non_kitty_ok
+                                if string match -qir '^n' "$non_kitty_ok"
+                                    # loop back to blur menu
+                                else
+                                    set blur_done 1
+                                end
                             end
                         else
                             echo -e "  $RE✘  Blur failed, using original$C  github.com/eprahemi"
