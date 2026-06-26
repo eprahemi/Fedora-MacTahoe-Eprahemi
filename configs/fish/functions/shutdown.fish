@@ -32,7 +32,9 @@ function shutdown --description 'ﾉｼ(>_<)ﾉ  Power off the system with style
     end
 
     # ── Subcommand: "now" → treat as no-arg (shutdown immediately) ──
+    set -l has_now 0
     if set -q argv[1]; and contains -- "$argv[1]" "now"
+        set has_now 1
         set -e argv[1]
     end
 
@@ -56,13 +58,28 @@ function shutdown --description 'ﾉｼ(>_<)ﾉ  Power off the system with style
     echo -e "  $GY│$C$(printf '%*s' 62 '')$GY│$C"
     echo -e "  $GY│$C    $D ──────────────────────────────────────────────────────$C $GY│$C"
     echo -e "  $GY│$C$(printf '%*s' 62 '')$GY│$C"
-    echo -e "  $GY│$C       $GR ❮$C $WH Y $C$GR ❯$C  $D Yes, shut down$C   $RE ❮$C $WH N $C$RE ❯$C  $D Cancel$C$GY       │$C"
+    if test $has_now -eq 1
+        set -l ch " $GR ❮$C $WH Y $C$GR ❯$C [Y/n]  $D Yes, shut down$C   $RE ❮$C $WH N $C$RE ❯$C  $D Cancel"
+        echo -e "  $GY│$C      $ch$C$(printf '%*s' (math "60 - "(string length -- "$ch")) '')$GY│$C"
+    else
+        set -l ch " $GR ❮$C $WH Y $C$GR ❯$C  $D Yes, shut down$C   $RE ❮$C $WH N $C$RE ❯$C [y/N]  $D Cancel"
+        echo -e "  $GY│$C      $ch$C$(printf '%*s' (math "60 - "(string length -- "$ch")) '')$GY│$C"
+    end
     echo -e "  $GY│$C$(printf '%*s' 62 '')$GY│$C"
     echo -e "  $GY└──────────────────────────────────────────────────────────────┘$C"
     read -l -P '  ❯ ' answer
-    if test "$answer" != "y"; and test "$answer" != "Y"
-        echo -e "  $GY  ✧  Shutdown cancelled. Stay awhile.$C"
-        return 0
+    if test $has_now -eq 1
+        # Y is default — only n/N cancels
+        if test "$answer" = "n"; or test "$answer" = "N"
+            echo -e "  $GY  ✧  Shutdown cancelled. Stay awhile.$C"
+            return 0
+        end
+    else
+        # N is default — only y/Y confirms
+        if test "$answer" != "y"; and test "$answer" != "Y"
+            echo -e "  $GY  ✧  Shutdown cancelled. Stay awhile.$C"
+            return 0
+        end
     end
 
     # ── Bye bye ──
