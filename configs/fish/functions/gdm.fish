@@ -777,7 +777,10 @@ except:
             "$HOME/Downloads" \
             "$HOME/Documents" \
             "$HOME/Videos" \
-            "$HOME/Music"
+            "$HOME/Music" \
+            "$HOME/Desktop" \
+            "$HOME/Templates" \
+            "$HOME/Public"
 
         for dir in $search_dirs
             if test -d "$dir"
