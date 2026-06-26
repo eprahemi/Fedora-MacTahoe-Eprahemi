@@ -19,7 +19,6 @@ function passgen --description '🔑 Password generator and analyzer — 18 opti
     set -l save_label ""
     set -l get_label ""
     set -l force_mode no
-    set -l gen_mode no
 
     # ── Parse arguments ──
     while set -q argv[1]
@@ -71,7 +70,7 @@ function passgen --description '🔑 Password generator and analyzer — 18 opti
                 echo -e "\033[1;33m📋 \033[1;36mpassgen\033[1;33m options (18 total):\033[0m"
                 echo -e "  \033[38;5;248m  <number>         Set password length\033[0m"
                 echo -e "  \033[38;5;248m  <password>       Analyze a password\033[0m"
-                echo -e "  \033[38;5;248m  gen <N>          Generate (bypasses length limit)\033[0m"
+                echo -e "  \033[38;5;248m  gen <N>          Generate password explicitly\033[0m"
                 echo -e "  \033[38;5;248m  check <password> Analyze explicitly (for numeric passwords)\033[0m"
                 echo -e "  \033[38;5;248m  --length, -l N   Password length (def: 16)\033[0m"
                 echo -e "  \033[38;5;248m  --count, -n N    Number of passwords (def: 1)\033[0m"
@@ -94,7 +93,7 @@ function passgen --description '🔑 Password generator and analyzer — 18 opti
                 echo -e "\033[1;33mUsage: \033[1;36mpassgen\033[1;33m [options] [\033[1;36mgen\033[1;33m|\033[1;36mcheck\033[1;33m] [args]\033[0m"
                 echo -e "  \033[38;5;248m<number>\033[0m              \033[1;37mPassword length preset\033[0m"
                 echo -e "  \033[38;5;248m<password>\033[0m            \033[1;37mAnalyze a password\'s strength\033[0m"
-                echo -e "  \033[38;5;248mgen <N>\033[0m               \033[1;37mGenerate password (bypasses length limit)\033[0m"
+                echo -e "  \033[38;5;248mgen <N>\033[0m               \033[1;37mGenerate password explicitly\033[0m"
                 echo -e "  \033[38;5;248mcheck <password>\033[0m      \033[1;37mAnalyze a password explicitly\033[0m"
                 echo -e "  \033[38;5;248m--length, -l N\033[0m        \033[1;37mPassword length (default: 16)\033[0m"
                 echo -e "  \033[38;5;248m--count, -n N\033[0m         \033[1;37mNumber of passwords (default: 1)\033[0m"
@@ -124,9 +123,7 @@ function passgen --description '🔑 Password generator and analyzer — 18 opti
                 echo -e "    \033[1;36mpassgen --get email\033[0m      \033[1;37mRetrieve 'email' password\033[0m"
                 return 0
             case gen
-                # passgen gen <N> — generate with bypass of length limit
-                set gen_mode yes
-                set force_mode yes
+                # passgen gen <N> — explicit generate subcommand
                 set -e argv[1]
                 if set -q argv[1]
                     set length $argv[1]
@@ -191,19 +188,14 @@ for m in matches:
 
     # ── Sanity check: no one needs a 100k-char password ──
     if test "$length" -gt 99999
-        if test "$gen_mode" = yes
-            # gen subcommand silently bypasses the limit
-        else if test "$force_mode" = yes
+        if test "$force_mode" = yes
             echo -e "  \033[1;33m🔥 Force mode activated\033[0m"
             echo -e "  \033[38;5;248m  Generating \033[1;33m$length\033[38;5;248m characters...\033[0m"
         else
             echo -e "\033[1;31m✘ Password too long: \033[1;33m$length\033[1;31m characters\033[0m"
             echo -e "  \033[38;5;248m  Maximum supported length is \033[1;33m99,999\033[38;5;248m characters\033[0m"
-            echo -e "  \033[38;5;248m  To generate:\033[0m"
-            echo -e "    \033[1;36mpassgen gen $length\033[0m"
-            echo -e "    \033[1;36mpassgen --force $length\033[0m"
-            echo -e "  \033[38;5;248m  To analyze as password:\033[0m"
-            echo -e "    \033[1;36mpassgen check $length\033[0m"
+            echo -e "  \033[38;5;248m  To override the limit: \033[1;36mpassgen --force $length\033[0m"
+            echo -e "  \033[38;5;248m  To analyze as password: \033[1;36mpassgen check $length\033[0m"
             return 1
         end
     end
