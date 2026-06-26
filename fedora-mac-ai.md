@@ -225,7 +225,7 @@ The upstream repo at `~/.local/share/mactahoe-gtk/` is a clone of `https://githu
 
 ---
 
-### Fish Professionalization (Jun 2026)
+### Fish Professionalization + Subcommands (Jun 2026)
 
 All 26 Fish function files were purged of unprofessional/brainrot/childish language:
 - **Removed:** "bestie", "fr fr", "BRUH", "no cap", "slay", "sigma" (as slang), "💀", "💅", "🔥" (as flavor), 40-item rotating insult array in command-not-found handler, 20-item burn arrays, "Read the manual dummy", "rotating burns", "oopsie", "ain't"
@@ -233,7 +233,8 @@ All 26 Fish function files were purged of unprofessional/brainrot/childish langu
 - **Kept:** Utility emojis (✅ ❌ ⚠️ 📋 🔧), project attribution, all escape codes/colors, all logic
 - **Strictly** `"sigma"` in gdm.fish is the ImageMagick blur parameter (`-blur 0xN`), NOT slang — left as-is
 - 26 files changed, 828 insertions, 434 deletions
-- Commit: `494b746c`
+- **Passgen subcommands added:** `passgen gen <N>` (bypasses length limit) and `passgen check <pw>` (analyze any password including numeric). Removed ≤128 threshold hack. Bare numeric args still work (≤99999 as length, >99999 shows helpful error with gen/check hints).
+- Commits: `494b746c` (professionalization), `c28ba81` (threshold fix), `cd4a456` (gen/check subcommands)
 
 ## 7. KEY DESIGN DECISIONS
 
