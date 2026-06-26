@@ -784,7 +784,7 @@ except:
 
         for dir in $search_dirs
             if test -d "$dir"
-                set -l found (find "$dir" -maxdepth 5 -type f -iname "$filename" 2>/dev/null)
+                set -l found (find "$dir" -type f -iname "$filename" 2>/dev/null)
                 if test -n "$found"
                     for f in $found
                         set -a results (realpath "$f" 2>/dev/null)
@@ -798,7 +798,7 @@ except:
             echo -e "  $D  No exact match — trying wildcard...  $GY eprahemi$C"
             for dir in $search_dirs
                 if test -d "$dir"
-                    set -l found (find "$dir" -maxdepth 5 -type f -iname "*$filename*" 2>/dev/null)
+                    set -l found (find "$dir" -type f -iname "*$filename*" 2>/dev/null)
                     if test -n "$found"
                         for f in $found
                             set -a results (realpath "$f" 2>/dev/null)
