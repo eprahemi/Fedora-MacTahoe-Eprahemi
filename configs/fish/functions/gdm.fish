@@ -302,79 +302,152 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
     # ══════════════════════════════════════════════════════════════
     if command -v magick &>/dev/null
         if test $skip_confirm -eq 0
-            echo ""
-            echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
-            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-            set -l b1 "  🎨  BLUR BACKGROUND?"
-            echo -e "  $CY║$C  $WH$b1$C$(printf '%*s' (math "60 - "(string length "$b1")) '')$CY║$C"
-            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-            echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
-            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-            set -l b2 "  Add blur + dark overlay to the wallpaper?"
-            echo -e "  $CY║$C  $b2$C$(printf '%*s' (math "60 - "(string length "$b2")) '')$CY║$C"
-            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-            set -l b3 "  [N] No — use original image"
-            echo -e "  $CY║$C  $GR$b3$C$(printf '%*s' (math "60 - "(string length "$b3")) '')$CY║$C"
-            set -l b4 "  [Y] Yes — default blur 0x30 + black 30%"
-            echo -e "  $CY║$C  $CY$b4$C$(printf '%*s' (math "60 - "(string length "$b4")) '')$CY║$C"
-            set -l b5 "  [C] Custom — set blur sigma + tint %"
-            echo -e "  $CY║$C  $YE$b5$C$(printf '%*s' (math "60 - "(string length "$b5")) '')$CY║$C"
-            echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-            echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
-            echo ""
-            read -l -P "  [n/Y/c]: " blur_choice
-        else
-            set blur_choice "n"
-        end
+            set -l blurred_file "/tmp/gdm-blurred.jpg"
+            set -l blur_done 0
+            mkdir -p /tmp
 
-        switch (string lower "$blur_choice")
-            case '' y yes
-                set -l blurred "$HOME/.cache/gdm-blurred.jpg"
-                mkdir -p "$HOME/.cache"
-                echo -e "  $D🎨  Applying default blur (0x30) + black 30%% tint...$C"
-                if magick "$image" -blur 0x30 -fill black -colorize 30% "$blurred" 2>/dev/null
-                    set image "$blurred"
-                    echo -e "  $GR✅  Blur applied$C"
-                else
-                    echo -e "  $RE✘  Blur failed, using original$C"
-                end
-
-            case c custom
+            while test $blur_done -eq 0
                 echo ""
                 echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                set -l cu1 "  🎨  CUSTOM BLUR"
-                echo -e "  $CY║$C  $WH$cu1$C$(printf '%*s' (math "60 - "(string length "$cu1")) '')$CY║$C"
+                set -l b1 "  🎨  BLUR BACKGROUND?"
+                echo -e "  $CY║$C  $WH$b1$C$(printf '%*s' (math "60 - "(string length "$b1")) '')$CY║$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                 echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                set -l cu2 "  Blur sigma (0=auto, try 20-50):"
-                echo -e "  $CY║$C  $D$cu2$C$(printf '%*s' (math "60 - "(string length "$cu2")) '')$CY║$C"
+                set -l b2 "  Add blur + dark overlay to the wallpaper?"
+                echo -e "  $CY║$C  $b2$C$(printf '%*s' (math "60 - "(string length "$b2")) '')$CY║$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                set -l cu3 "  Black tint % (0-100, try 20-40):"
-                echo -e "  $CY║$C  $D$cu3$C$(printf '%*s' (math "60 - "(string length "$cu3")) '')$CY║$C"
+                set -l b3 "  [N] No — use original image"
+                echo -e "  $CY║$C  $GR$b3$C$(printf '%*s' (math "60 - "(string length "$b3")) '')$CY║$C"
+                set -l b4 "  [Y] Yes — default blur 0x30 + black 30%"
+                echo -e "  $CY║$C  $CY$b4$C$(printf '%*s' (math "60 - "(string length "$b4")) '')$CY║$C"
+                set -l b5 "  [C] Custom — set blur sigma + tint %"
+                echo -e "  $CY║$C  $YE$b5$C$(printf '%*s' (math "60 - "(string length "$b5")) '')$CY║$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                 echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
                 echo ""
-                read -l -P "    Blur sigma [30]: " blur_sigma
-                read -l -P "    Black tint % [30]: " colorize_pct
+                read -l -P "  [n/Y/c]: " blur_choice
 
-                if test -z "$blur_sigma"
-                    set blur_sigma 30
-                end
-                if test -z "$colorize_pct"
-                    set colorize_pct 30
-                end
+                switch (string lower "$blur_choice")
+                    case n no
+                        set blur_done 1
 
-                set -l blurred "$HOME/.cache/gdm-blurred.jpg"
-                mkdir -p "$HOME/.cache"
-                echo -e "  $D🎨  Applying blur (0x$blur_sigma) + black $colorize_pct%% tint...$C"
-                if magick "$image" -blur "0x$blur_sigma" -fill black -colorize "$colorize_pct%" "$blurred" 2>/dev/null
-                    set image "$blurred"
-                    echo -e "  $GR✅  Custom blur applied$C"
-                else
-                    echo -e "  $RE✘  Blur failed, using original$C"
+                    case '' y yes
+                        echo -e "  $D🎨  Applying default blur (0x30) + black 30%% tint...$C"
+                        if magick "$image" -blur 0x30 -fill black -colorize 30% "$blurred_file" 2>/dev/null
+                            # ── Preview blurred result in Kitty ──
+                            if test -n "$KITTY_PID"
+                                echo ""
+                                kitty +kitten icat --align left "$blurred_file" 2>/dev/null
+                                echo ""
+                            end
+                            # ── Ask if user likes it (only in Kitty) ──
+                            if test -n "$KITTY_PID"
+                                echo ""
+                                echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
+                                echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                                set -l l1 "  👍  LIKE THE RESULT?"
+                                echo -e "  $CY║$C  $WH$l1$C$(printf '%*s' (math "60 - "(string length "$l1")) '')$CY║$C"
+                                echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                                echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+                                echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                                set -l l2 "  [Y] Yes — apply this blurred version"
+                                echo -e "  $CY║$C  $GR$l2$C$(printf '%*s' (math "60 - "(string length "$l2")) '')$CY║$C"
+                                set -l l3 "  [N] No  — try different blur settings"
+                                echo -e "  $CY║$C  $YE$l3$C$(printf '%*s' (math "60 - "(string length "$l3")) '')$CY║$C"
+                                echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                                echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
+                                echo ""
+                                read -l -P "  [y/N]: " like_it
+                                if string match -qir '^y' "$like_it"
+                                    set image "$blurred_file"
+                                    set blur_done 1
+                                    echo -e "  $GR✅  Blur applied$C"
+                                end
+                                # N → loops back to blur menu
+                            else
+                                set image "$blurred_file"
+                                set blur_done 1
+                                echo -e "  $GR✅  Blur applied$C"
+                            end
+                        else
+                            echo -e "  $RE✘  Blur failed, using original$C"
+                            set blur_done 1
+                        end
+
+                    case c custom
+                        echo ""
+                        echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
+                        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                        set -l cu1 "  🎨  CUSTOM BLUR"
+                        echo -e "  $CY║$C  $WH$cu1$C$(printf '%*s' (math "60 - "(string length "$cu1")) '')$CY║$C"
+                        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                        echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+                        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                        set -l cu2 "  Blur sigma (0=auto, try 20-50):"
+                        echo -e "  $CY║$C  $D$cu2$C$(printf '%*s' (math "60 - "(string length "$cu2")) '')$CY║$C"
+                        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                        set -l cu3 "  Black tint % (0-100, try 20-40):"
+                        echo -e "  $CY║$C  $D$cu3$C$(printf '%*s' (math "60 - "(string length "$cu3")) '')$CY║$C"
+                        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                        echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
+                        echo ""
+                        read -l -P "    Blur sigma [30]: " blur_sigma
+                        read -l -P "    Black tint % [30]: " colorize_pct
+
+                        if test -z "$blur_sigma"
+                            set blur_sigma 30
+                        end
+                        if test -z "$colorize_pct"
+                            set colorize_pct 30
+                        end
+
+                        echo -e "  $D🎨  Applying blur (0x$blur_sigma) + black $colorize_pct%% tint...$C"
+                        if magick "$image" -blur "0x$blur_sigma" -fill black -colorize "$colorize_pct%" "$blurred_file" 2>/dev/null
+                            # ── Preview blurred result in Kitty ──
+                            if test -n "$KITTY_PID"
+                                echo ""
+                                kitty +kitten icat --align left "$blurred_file" 2>/dev/null
+                                echo ""
+                            end
+                            # ── Ask if user likes it (only in Kitty) ──
+                            if test -n "$KITTY_PID"
+                                echo ""
+                                echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
+                                echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                                set -l l1 "  👍  LIKE THE RESULT?"
+                                echo -e "  $CY║$C  $WH$l1$C$(printf '%*s' (math "60 - "(string length "$l1")) '')$CY║$C"
+                                echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                                echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+                                echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                                set -l l2 "  [Y] Yes — apply this blurred version"
+                                echo -e "  $CY║$C  $GR$l2$C$(printf '%*s' (math "60 - "(string length "$l2")) '')$CY║$C"
+                                set -l l3 "  [N] No  — try different blur settings"
+                                echo -e "  $CY║$C  $YE$l3$C$(printf '%*s' (math "60 - "(string length "$l3")) '')$CY║$C"
+                                echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                                echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
+                                echo ""
+                                read -l -P "  [y/N]: " like_it
+                                if string match -qir '^y' "$like_it"
+                                    set image "$blurred_file"
+                                    set blur_done 1
+                                    echo -e "  $GR✅  Custom blur applied$C"
+                                end
+                                # N → loops back to blur menu
+                            else
+                                set image "$blurred_file"
+                                set blur_done 1
+                                echo -e "  $GR✅  Custom blur applied$C"
+                            end
+                        else
+                            echo -e "  $RE✘  Blur failed, using original$C"
+                            set blur_done 1
+                        end
                 end
+            end
+        else
+            set blur_choice "n"
         end
     end
 
