@@ -974,31 +974,10 @@ except:
                 if test $__rs -ne 0
                     set __cc (math $__cc + 1)
                     if test $__cc -ge 2
-                        echo -e "  $D  → Skipping to blur section...  $C  $GY eprahemi$C"
-                        set image "$results[1]"
-                        if not test -s "$image"
-                            echo ""
-                            echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
-                            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
-                            set -l ee1 "  ✘  EMPTY OR NULL IMAGE"
-                            echo -e "  $RE║$C  $WH$ee1$C$(printf '%*s' (math "60 - "(string length "$ee1")) '')$RE║$C"
-                            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
-                            echo -e "  $RE╠══════════════════════════════════════════════════════════════╣$C"
-                            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
-                            set -l ee2 "  The first match has zero bytes or doesn't"
-                            set -l ee3 "  exist. Choose a different image."
-                            echo -e "  $RE║$C  $D$ee2$C$(printf '%*s' (math "60 - "(string length "$ee2")) '')$RE║$C"
-                            echo -e "  $RE║$C  $D$ee3$C$(printf '%*s' (math "60 - "(string length "$ee3")) '')$RE║$C"
-                            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
-                            set -l br "  eprahemi  •  github.com/eprahemi"
-                            echo -e "  $RE║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
-                            echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
-                            echo ""
-                            return 1
-                        end
-                        break
+                        echo -e "  $D  → Exiting.  $C  $GY eprahemi$C"
+                        return 1
                     end
-                    echo -e "  $D  (Ctrl+C again to skip to blur)  $C  $GY eprahemi$C"
+                    echo -e "  $D  (Ctrl+C again to exit)  $C  $GY eprahemi$C"
                     continue
                 end
                 if string match -qir '^q' "$choice"
@@ -1096,11 +1075,10 @@ except:
                     if test $__rs -ne 0
                         set __cc (math $__cc + 1)
                         if test $__cc -ge 2
-                            echo -e "  $D  → Applying default blur...  $C  $GY eprahemi$C"
-                            set blur_choice "y"
-                            break
+                            echo -e "  $D  → Exiting.  $C  $GY eprahemi$C"
+                            return 1
                         end
-                        echo -e "  $D  (Ctrl+C again to apply default blur)  $C  $GY eprahemi$C"
+                        echo -e "  $D  (Ctrl+C again to exit)  $C  $GY eprahemi$C"
                         continue
                     end
                     break
@@ -1159,12 +1137,10 @@ except:
                             if test $__rs -ne 0
                                 set __cc (math $__cc + 1)
                                 if test $__cc -ge 2
-                                    echo -e "  $D  → Using defaults (30 / 30)...  $C  $GY eprahemi$C"
-                                    set blur_sigma 30
-                                    set colorize_pct 30
-                                    break 2
+                                    echo -e "  $D  → Exiting.  $C  $GY eprahemi$C"
+                                    return 1
                                 end
-                                echo -e "  $D  (Ctrl+C again to use defaults)  $C  $GY eprahemi$C"
+                                echo -e "  $D  (Ctrl+C again to exit)  $C  $GY eprahemi$C"
                                 continue
                             end
                             break
@@ -1176,11 +1152,10 @@ except:
                             if test $__rs -ne 0
                                 set __cc (math $__cc + 1)
                                 if test $__cc -ge 2
-                                    echo -e "  $D  → Using default tint (30%)...  $C  $GY eprahemi$C"
-                                    set colorize_pct 30
-                                    break
+                                    echo -e "  $D  → Exiting.  $C  $GY eprahemi$C"
+                                    return 1
                                 end
-                                echo -e "  $D  (Ctrl+C again to use default)  $C  $GY eprahemi$C"
+                                echo -e "  $D  (Ctrl+C again to exit)  $C  $GY eprahemi$C"
                                 continue
                             end
                             break
@@ -1227,11 +1202,10 @@ except:
                                     if test $__rs -ne 0
                                         set __cc (math $__cc + 1)
                                         if test $__cc -ge 2
-                                            echo -e "  $D  → Accepting blur...  $C  $GY eprahemi$C"
-                                            set like_it "y"
-                                            break
+                                            echo -e "  $D  → Exiting.  $C  $GY eprahemi$C"
+                                            return 1
                                         end
-                                        echo -e "  $D  (Ctrl+C again to accept)  $C  $GY eprahemi$C"
+                                        echo -e "  $D  (Ctrl+C again to exit)  $C  $GY eprahemi$C"
                                         continue
                                     end
                                     break
@@ -1256,11 +1230,10 @@ except:
                                     if test $__rs -ne 0
                                         set __cc (math $__cc + 1)
                                         if test $__cc -ge 2
-                                            echo -e "  $D  → Continuing with blur...  $C  $GY eprahemi$C"
-                                            set non_kitty_ok "y"
-                                            break
+                                            echo -e "  $D  → Exiting.  $C  $GY eprahemi$C"
+                                            return 1
                                         end
-                                        echo -e "  $D  (Ctrl+C again to continue)  $C  $GY eprahemi$C"
+                                        echo -e "  $D  (Ctrl+C again to exit)  $C  $GY eprahemi$C"
                                         continue
                                     end
                                     break
@@ -1314,11 +1287,10 @@ except:
                 if test $__rs -ne 0
                     set __cc (math $__cc + 1)
                     if test $__cc -ge 2
-                        echo -e "  $D  → Skipping ImageMagick install...  $C  $GY eprahemi$C"
-                        set install_magick "n"
-                        break
+                        echo -e "  $D  → Exiting.  $C  $GY eprahemi$C"
+                        return 1
                     end
-                    echo -e "  $D  (Ctrl+C again to skip install)  $C  $GY eprahemi$C"
+                    echo -e "  $D  (Ctrl+C again to exit)  $C  $GY eprahemi$C"
                     continue
                 end
                 break
