@@ -93,11 +93,9 @@ pt13="  needs to be the main ride for this to work."
     echo ""
     # First press: acknowledge
     while true; do
-      read -r -n 1 key </dev/tty || true
-      if [ -n "$key" ]; then
-        echo -e "  ${DIM}ok, one more thing...${NC}"
-        break
-      fi
+      read -r -s -n 1 key < /dev/tty || true
+      echo -e "  ${DIM}ok, one more thing...${NC}"
+      break
     done
     # Second space: confirm
     echo ""
@@ -113,11 +111,9 @@ pt13="  needs to be the main ride for this to work."
     echo -e "  └─────────────────────────────────────────────────────────────┘"
     echo -en "  ${DIM}Waiting on you...${NC} "
     while true; do
-      read -r -n 1 key </dev/tty || true
-      if [ -n "$key" ]; then
-        echo -e "${GREEN}let's roll${NC}"
-        break
-      fi
+      read -r -s -n 1 key < /dev/tty || true
+      echo -e "${GREEN}let's roll${NC}"
+      break
     done
   fi
 fi
@@ -148,13 +144,8 @@ b3="  ◆  Press any key to begin"
 echo -e "  ${CYAN}║${NC}${YELLOW}${b3}${NC}$(printf '%*s' $((62 - ${#b3})) '')${CYAN}║${NC}"
 echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
 echo -en "  ${DIM}Waiting on you...${NC} "
-while true; do
-  read -r -n 1 key </dev/tty || true
-  if [ -n "$key" ]; then
-    echo -e "${GREEN}here we go${NC}"
-    break
-  fi
-done
+read -r -s -n 1 key < /dev/tty || true
+echo -e "${GREEN}here we go${NC}"
 
 # ── Discord optional prompt ──
 echo ""
