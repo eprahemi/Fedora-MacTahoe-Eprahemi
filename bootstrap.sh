@@ -244,21 +244,23 @@ echo -e "  ${CYAN}║${NC}${log5}$(printf '%*s' $((62 - ${#log5})) '')${CYAN}║
 echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 if confirm "Override GDM login screen? [Y/n]: " Y; then
-  # ── Second confirmation — this cannot be undone ──
+  # ── Second confirmation ──
   echo ""
   echo -e "  ${YELLOW}╔══════════════════════════════════════════════════════════════╗${NC}"
   echo -e "  ${YELLOW}║${NC}        ${BOLD}⚠  ARE YOU ABSOLUTELY SURE?  ⚠${NC}                   ${YELLOW}║${NC}"
   echo -e "  ${YELLOW}╠══════════════════════════════════════════════════════════════╣${NC}"
   echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
-  echo -e "  ${YELLOW}║${NC}  This will overwrite your current GDM login screen.            ${YELLOW}║${NC}"
-  echo -e "  ${YELLOW}║${NC}  ${BOLD}This action cannot be undone automatically.${NC}                 ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}  This will set the Himeno login screen as your GDM              ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}  background. Don't worry — you can change it anytime!            ${YELLOW}║${NC}"
   echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
-  echo -e "  ${YELLOW}║${NC}  If you ever want to revert, you'll need to re-run                ${YELLOW}║${NC}"
-  echo -e "  ${YELLOW}║${NC}  the installer or manually reset GDM.                             ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}  Just run ${BOLD}gdm${NC} in the terminal to switch to any picture       ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}  you like. The ${BOLD}gdm.fish${NC} function lets you change your          ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}  login screen wallpaper anytime with preview, blur, and            ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}  search — all from the terminal.                                   ${YELLOW}║${NC}"
   echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
   echo -e "  ${YELLOW}╚══════════════════════════════════════════════════════════════╝${NC}"
   echo ""
-  if confirm "Are you sure? This cannot be undone. [Y/n]: " Y; then
+  if confirm "Are you sure you want the GDM login screen? [Y/n]: " Y; then
     export INSTALL_LOGIN_WALLPAPER="true"
     echo -e "  ${GREEN}→ GDM login screen will be themed${NC}"
   else
