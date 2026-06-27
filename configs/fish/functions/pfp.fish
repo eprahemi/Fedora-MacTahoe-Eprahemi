@@ -456,6 +456,100 @@ except Exception:
 end
 
 # ──────────────────────────────────────────────────────────────
+# Internal: Search for an image across XDG user directories
+# Recursive, matches gdm.fish search engine style
+# ──────────────────────────────────────────────────────────────
+function __pfp_search --description 'Search for image across XDG dirs'
+    set -l query $argv[1]
+    if test -z "$query"
+        return 1
+    end
+
+    # ── Colors ──
+    set -l C  "\033[0m"
+    set -l GY "\033[38;5;248m"
+    set -l D  "\033[2m"
+
+    # ── Search 8 XDG directories ──
+    set -l search_dirs \
+        "$HOME/Pictures" \
+        "$HOME/Downloads" \
+        "$HOME/Documents" \
+        "$HOME/Videos" \
+        "$HOME/Music" \
+        "$HOME/Desktop" \
+        "$HOME/Templates" \
+        "$HOME/Public"
+
+    set -l results
+
+    # 1. Try exact filename match first
+    echo -e "  $D🔍  Searching for \"$query\"...$C  $GY eprahemi$C" >&2
+    for dir in $search_dirs
+        if test -d "$dir"
+            set -l found (find "$dir" -type f -iname "$query" 2>/dev/null)
+            if test -n "$found"
+                for f in $found
+                    set -a results (realpath "$f" 2>/dev/null)
+                end
+            end
+        end
+    end
+
+    # 2. Try wildcard match
+    if test (count $results) -eq 0
+        echo -e "  $D  No exact match — trying wildcard...  $GY eprahemi$C" >&2
+        for dir in $search_dirs
+            if test -d "$dir"
+                set -l found (find "$dir" -type f -iname "*$query*" 2>/dev/null)
+                if test -n "$found"
+                    for f in $found
+                        set -a results (realpath "$f" 2>/dev/null)
+                    end
+                end
+            end
+        end
+    end
+
+    # 3. Try current working directory
+    if test (count $results) -eq 0
+        set -l cwd_find (find (pwd) -maxdepth 1 -type f -iname "*$query*" 2>/dev/null)
+        if test -n "$cwd_find"
+            for f in $cwd_find
+                set -a results (realpath "$f" 2>/dev/null)
+            end
+        end
+    end
+
+    # Deduplicate
+    if test (count $results) -gt 1
+        set -l deduped
+        for r in $results
+            if not contains -- "$r" $deduped
+                set -a deduped "$r"
+            end
+        end
+        set results $deduped
+    end
+
+    # Filter to image files only
+    set -l img_results
+    set -l img_regex '\.(jpg|jpeg|png|gif|bmp|webp|tiff?|svg|svgz|ico|heic|heif|avif|jp2|jfif|jfi|pjpeg|pjp|psd|jxl)$'
+    for r in $results
+        if string match -riq -- "$img_regex" "$r"
+            set -a img_results "$r"
+        end
+    end
+    set results $img_results
+
+    # Output results (caller checks count)
+    for r in $results
+        echo "$r"
+    end
+end
+
+
+# ──────────────────────────────────────────────────────────────
 # Internal: Apply an image as the profile picture
 # ──────────────────────────────────────────────────────────────
 function __pfp_apply --description 'Internal: apply image as profile picture'
@@ -484,19 +578,111 @@ function __pfp_apply --description 'Internal: apply image as profile picture'
 
     set -l source_img (string join ' ' $argv)
 
-    # ── Check file exists ──
+    # ── Check file exists, else search ──
     if not test -f "$source_img"
-        echo -e ""
-        echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
-        echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
-        set -l e "  ✘  File not found: "(basename "$source_img")"  ✘"
-        echo -e "  $RE║$C  $WH$e$C$(printf '%*s' (math "60 - "(string length "$e")) '')$RE║$C"
-        echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
-        set -l br "  eprahemi  •  github.com/eprahemi"
-        echo -e "  $RE║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
-        echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
-        echo -e ""
-        return 1
+        # ── Search engine (gdm.fish style: XDG dirs, recursive) ──
+        set -l search_query (basename "$source_img")
+
+        # 🛡️  GUARD: Minimum search term length
+        set -l is_path (string match -r -- '/' "$source_img")
+        set -l stem (string replace -r -- '\..*$' '' "$search_query")
+        if test -z "$is_path"; and test (string length -- "$stem") -lt 3
+            echo -e ""
+            echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            set -l se1 "  ✘  SEARCH TERM TOO SHORT"
+            echo -e "  $RE║$C  $WH$se1$C$(printf '%*s' (math "60 - "(string length "$se1")) '')$RE║$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            echo -e "  $RE╠══════════════════════════════════════════════════════════════╣$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            set -l se2 "  Use at least 3 characters to search."
+            echo -e "  $RE║$C  $D$se2$C$(printf '%*s' (math "60 - "(string length "$se2")) '')$RE║$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            echo -e "  $RE╠══════════════════════════════════════════════════════════════╣$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            set -l se3 "  Instead, use the full path:"
+            echo -e "  $RE║$C  $YE$se3$C$(printf '%*s' (math "60 - "(string length "$se3")) '')$RE║$C"
+            set -l se4 "  pfp /path/to/your/image.jpg"
+            echo -e "  $RE║$C  $CY$se4$C$(printf '%*s' (math "60 - "(string length "$se4")) '')$RE║$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            set -l br "  eprahemi  •  github.com/eprahemi"
+            echo -e "  $RE║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
+            echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
+            echo -e ""
+            return 1
+        end
+
+        set -l search_results (__pfp_search "$search_query" 2>/dev/null)
+        set -l result_count (count $search_results)
+
+        switch $result_count
+            case 0
+                echo -e ""
+                echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
+                echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                set -l e "  ✘  File not found: "$search_query"  ✘"
+                echo -e "  $RE║$C  $WH$e$C$(printf '%*s' (math "60 - "(string length "$e")) '')$RE║$C"
+                echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                echo -e "  $RE╠══════════════════════════════════════════════════════════════╣$C"
+                echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                set -l se2 "  Searched all your home folders — nothing found."
+                echo -e "  $RE║$C  $D$se2$C$(printf '%*s' (math "60 - "(string length "$se2")) '')$RE║$C"
+                set -l se3 "  Use the full path: pfp /path/to/your/image.jpg"
+                echo -e "  $RE║$C  $YE$se3$C$(printf '%*s' (math "60 - "(string length "$se3")) '')$RE║$C"
+                echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                set -l br "  eprahemi  •  github.com/eprahemi"
+                echo -e "  $RE║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
+                echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
+                echo -e ""
+                return 1
+
+            case 1
+                set source_img "$search_results[1]"
+
+            case '*'
+                # Multiple results — interactive picker
+                echo -e ""
+                echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
+                echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                set -l mh "  Multiple images found — pick one:"
+                echo -e "  $CY║$C  $WH$mh$C$(printf '%*s' (math "60 - "(string length "$mh")) '')$CY║$C"
+                echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+                echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+
+                set -l idx 1
+                for r in $search_results
+                    set -l display (string sub -l 55 "$r")
+                    # Use separate label variable to avoid Fish $var[ array-index parsing
+                    set -l label (printf "[%2d]" $idx)
+                    echo -e "  $CY║$C  $GR$label$C  $D$display$C$(printf '%*s' (math "57 - "(string length "$display")) '')$CY║$C"
+                    set idx (math $idx + 1)
+                end
+
+                echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+                echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                set -l prompt "  Enter number [1-$result_count] or [0] to cancel:"
+                echo -e "  $CY║$C  $YE$prompt$C$(printf '%*s' (math "60 - "(string length "$prompt")) '')$CY║$C"
+                echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                set -l br "  eprahemi  •  github.com/eprahemi"
+                echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
+                echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
+                echo ""
+
+                while true
+                    read -p 'echo "  > "' choice
+                    if test "$choice" = "0"
+                        echo -e "  $D  Cancelled.$C"
+                        return 1
+                    end
+                    if string match -rq '^[0-9]+$' -- "$choice"; and test "$choice" -ge 1; and test "$choice" -le $result_count
+                        set source_img "$search_results[$choice]"
+                        break
+                    end
+                    echo -e "  $RE  Invalid choice. Enter 1-$result_count or 0 to cancel.$C"
+                end
+        end
     end
 
     # ── Check magick ──
