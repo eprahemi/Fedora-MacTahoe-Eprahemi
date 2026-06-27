@@ -157,6 +157,8 @@ echo -e "  ${CYAN}║${NC}  ${DIM}GNOME${NC} ${GNOME_VER}  ${DIM}◆  Kitty Term
 echo -e "  ${CYAN}║${NC}"'                                                              '"${CYAN}║${NC}"
 b3="  ◆  Press any key to begin"
 echo -e "  ${CYAN}║${NC}${YELLOW}${b3}${NC}$(printf '%*s' $((62 - ${#b3})) '')${CYAN}║${NC}"
+wp_line="  ⚠  Read yes/no prompts carefully — some choices are permanent!"
+echo -e "  ${CYAN}║${NC}  ${BOLD}${RED}${wp_line}${NC}$(printf '%*s' $((60 - ${#wp_line})) '')${CYAN}║${NC}"
 echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
 echo -en "  ${DIM}Waiting on you...${NC} "
 read -r -s -n 1 key < /dev/tty || true
