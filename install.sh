@@ -32,7 +32,8 @@ confirm() {
   local prompt="$1" default="${2:-}"
   local reply
   while true; do
-    read -rp "  ${DIM}${prompt}${NC} " reply
+    echo -en "  ${DIM}${prompt}${NC} " >/dev/tty
+    read -r reply </dev/tty || true
     case "${reply,,}" in
       y|yes) return 0 ;;
       n|no)  return 1 ;;
