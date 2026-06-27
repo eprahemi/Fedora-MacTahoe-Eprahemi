@@ -310,17 +310,6 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-
-        set -l cc2_disp (string replace -- "$HOME" '~' "$bg_path")
-        set -l cc2_len (string length "$cc2_disp")
-        if test $cc2_len -gt 56
-            set cc2_disp (string sub -l 53 "$cc2_disp")"..."
-            set cc2_len 56
-        end
-        echo -e "  $CY║$C    $YE$cc2_disp$C$(printf '%*s' (math "58 - $cc2_len") '')$CY║$C"
-        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-        echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
-        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         set -l cc3 "  [Y] Yes → Apply + blur options"
         echo -e "  $CY║$C  $GR$cc3$C$(printf '%*s' (math "60 - "(string length "$cc3")) '')$CY║$C"
         set -l cc4 "  [N] No  → Cancel"
