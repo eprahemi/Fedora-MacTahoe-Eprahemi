@@ -133,7 +133,7 @@ function pfp --description 'Manage your GNOME profile picture (avatar) — githu
                 echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                 echo -e "  $CY║$C  $GR  [Y] Yes  → Set as profile picture$C$(printf '%*s' 15 '')$CY║$C"
-                echo -e "  $CY║$C  $RE  [N] No   → Delete temp file$C$(printf '%*s' 18 '')$CY║$C"
+                echo -e "  $CY║$C  $RE  [N] No   → Cancel$C$(printf '%*s' 18 '')$CY║$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                 echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
                 echo -e ""
