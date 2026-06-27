@@ -100,7 +100,7 @@ function func --description 'Function archive: list/search/show all fish command
             case p;       echo "p  —  Fzf file preview"
             case extract; echo "extract <archive> [dest]  —  Extract any archive"
             case func;    echo "func [search|show]  —  Function archive"
-            case pfp;     echo "pfp [image|current|save|remove]  —  GNOME profile picture manager"
+            case pfp;     echo "pfp [image|current|info|save|remove]  —  GNOME profile picture manager"
             case passgen; echo "passgen [opts]  —  Password generator"
             case passwd;  echo "passwd [enable|disable|toggle|status]  —  Passwordless sudo"
             case '*';     echo "$u"

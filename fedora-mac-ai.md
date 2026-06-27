@@ -15,8 +15,7 @@ Fedora MacTahoe is a Fedora Linux → macOS transformation project. It turns a s
 - **Repository (GDM companion):** `https://github.com/eprahemi/FedoraTahoe-GDM.git`
 - **Branch:** `main`
 - **Local repo path:** `/home/eprahemi/Documents/Codes University [Mine]/Eprahemi Websites/Fedora Mactahoe Eprahemi GTK theme + Icon + Sf Pro Font/`
-- **Latest commit:** `a2206e2e` — `gdm.fish: fix read -l scoping bug (loop-local vars lost after while break) + switch/case → if/else with string match`
-- **Pending commit:** `pfp.fish` — new GNOME profile picture manager with Fernet-encrypted path display (no decrypt/list commands) + `func.fish` archive update
+- **Latest commit:** `c1d9a2b3` — `pfp.fish: new GNOME profile picture manager with Fernet encryption (no decrypt/list) + func.fish archive update`
 
 ### ⚠️ CRITICAL — Repo Path Mistake
 Do NOT search with glob patterns like `*Eprahemi*` — the directory has "Mactahoe" (not "MacTahoe"), and glob won't match. Use the **exact literal path** from this file:
@@ -269,17 +268,19 @@ New function for managing the GNOME AccountsService avatar with subcommands:
 | Subcommand | Description |
 |------------|-------------|
 | `pfp <image>` | Set profile picture (converts to 512×512 PNG via magick) |
-| `pfp current` | Show current avatar with Fernet-encrypted path |
+| `pfp current` | Show avatar + detect desktop wallpaper, ask to use as pfp |
+| `pfp info` | Show full profile picture info (encrypted path, size, dims, type, date) |
 | `pfp save` | Save current avatar to `~/Pictures/<timestamp>-<random>.png` |
 | `pfp remove` / `pfp reset` | Reset to default avatar |
 | `pfp --help` / `-h` | Show help |
 
 Key design decisions:
-- **Fernet encryption** for file paths shown in display output: key stored at `~/.config/pfp.key`, auto-generated on first use. Encrypted paths shown in `pfp current` and `pfp save` — not reversible (no decrypt command).
+- **Fernet encryption** for file paths shown in display output: key stored at `~/.config/pfp.key`, auto-generated on first use. Encrypted paths shown in `pfp current`, `pfp info`, and `pfp save` — not reversible (no decrypt command).
+- **`pfp current`** detects GNOME desktop wallpaper via `gsettings get org.gnome.desktop.background picture-uri`, URL-decodes it, shows the info, and prompts to use it as profile picture.
 - **Full path privacy**: The actual `/var/lib/AccountsService/icons/$USER` path is never shown in plaintext.
 - **Fallback to base64** if `cryptography` python package is unavailable.
 - **Unknown subcommands** fall through to the default `pfp <image>` handler (tries to use the word as a file path).
-- **Kitty icat preview** in `pfp current` when running in Kitty terminal.
+- **Kitty icat preview** in `pfp info` when running in Kitty terminal.
 
 ## 7. KEY DESIGN DECISIONS
 
@@ -405,7 +406,7 @@ Fedora Mactahoe Eprahemi GTK theme + Icon + Sf Pro Font/
 │   │       ├── myip.fish
 │   │       ├── n.fish
 │   │       ├── passgen.fish
-│   │       ├── pfp.fish       # Profile picture manager (~392 lines)
+│   │       ├── pfp.fish       # Profile picture manager (~530 lines)
 │   │       ├── p.fish
 │   │       ├── qr.fish
 │   │       ├── refresh.fish

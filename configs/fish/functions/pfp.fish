@@ -36,12 +36,14 @@ function pfp --description 'Manage your GNOME profile picture (avatar) — githu
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                 set -l l1 "  pfp <image>        Set profile picture from image file"
                 echo -e "  $CY║$C  $GR$l1$C$(printf '%*s' (math "60 - "(string length "$l1")) '')$CY║$C"
-                set -l l2 "  pfp current        Show current profile picture (encrypted)"
+                set -l l2 "  pfp current        Show avatar + suggest desktop wallpaper"
                 echo -e "  $CY║$C  $GR$l2$C$(printf '%*s' (math "60 - "(string length "$l2")) '')$CY║$C"
-                set -l l3 "  pfp save           Save current avatar to ~/Pictures/"
+                set -l l3 "  pfp info           Show full profile picture details"
                 echo -e "  $CY║$C  $GR$l3$C$(printf '%*s' (math "60 - "(string length "$l3")) '')$CY║$C"
-                set -l l4 "  pfp remove         Reset to default avatar"
+                set -l l4 "  pfp save           Save current avatar to ~/Pictures/"
                 echo -e "  $CY║$C  $GR$l4$C$(printf '%*s' (math "60 - "(string length "$l4")) '')$CY║$C"
+                set -l l5 "  pfp remove         Reset to default avatar"
+                echo -e "  $CY║$C  $GR$l5$C$(printf '%*s' (math "60 - "(string length "$l5")) '')$CY║$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                 set -l l7 "  pfp --help, -h     Show this help"
                 echo -e "  $CY║$C  $D$l7$C$(printf '%*s' (math "60 - "(string length "$l7")) '')$CY║$C"
@@ -53,7 +55,131 @@ function pfp --description 'Manage your GNOME profile picture (avatar) — githu
                 return 0
 
             case current
-                # ── Show current profile picture ──
+                # ── Show current avatar ──
+                if test -f "$icon_file"
+                    if test -n "$KITTY_PID"
+                        kitty +kitten icat --align left "$icon_file" 2>/dev/null
+                        echo ""
+                    end
+                    set -l cur_size (du -h "$icon_file" 2>/dev/null | awk '{print $1}')
+                    set -l cur_dims (identify -format "%wx%h" "$icon_file" 2>/dev/null; or echo "?x?")
+                    set -l cur_fmt (identify -format "%m" "$icon_file" 2>/dev/null; or echo "?")
+                    set -l cur_mtime (date -r "$icon_file" "+%d %b %Y  %H:%M" 2>/dev/null; or echo "?")
+                    set -l cur_enc (__pfp_encrypt "$icon_file")
+                    set -l cur_disp "$cur_enc"
+                    if test (string length "$cur_enc") -gt 48
+                        set cur_disp (string sub -l 45 "$cur_enc")"..."
+                    end
+                    echo -e ""
+                    echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
+                    echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                    set -l t "  👤  CURRENT PROFILE PICTURE"
+                    echo -e "  $CY║$C  $WH$t$C$(printf '%*s' (math "60 - "(string length "$t")) '')$CY║$C"
+                    echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                    echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+                    echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                    set -l i1 "  User:  $user"
+                    echo -e "  $CY║$C  $GY$i1$C$(printf '%*s' (math "60 - "(string length "$i1")) '')$CY║$C"
+                    set -l i2 "  File:  $cur_disp"
+                    echo -e "  $CY║$C  $GY$i2$C$(printf '%*s' (math "60 - "(string length "$i2")) '')$CY║$C"
+                    set -l i3 "  Size:  $cur_size"
+                    echo -e "  $CY║$C  $GY$i3$C$(printf '%*s' (math "60 - "(string length "$i3")) '')$CY║$C"
+                    set -l i4 "  Dims:  $cur_dims"
+                    echo -e "  $CY║$C  $GY$i4$C$(printf '%*s' (math "60 - "(string length "$i4")) '')$CY║$C"
+                    set -l i5 "  Type:  $cur_fmt"
+                    echo -e "  $CY║$C  $GY$i5$C$(printf '%*s' (math "60 - "(string length "$i5")) '')$CY║$C"
+                    set -l i6 "  Date:  $cur_mtime"
+                    echo -e "  $CY║$C  $GY$i6$C$(printf '%*s' (math "60 - "(string length "$i6")) '')$CY║$C"
+                    echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                    set -l br "  eprahemi  •  github.com/eprahemi"
+                    echo -e "  $CY║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
+                    echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
+                    echo -e ""
+                else
+                    echo -e ""
+                    echo -e "  $YE╔══════════════════════════════════════════════════════════════╗$C"
+                    echo -e "  $YE║$C$(printf '%*s' 62 '')$YE║$C"
+                    set -l e "  ⚠️  No profile picture set  ⚠️"
+                    echo -e "  $YE║$C  $WH$e$C$(printf '%*s' (math "60 - "(string length "$e")) '')$YE║$C"
+                    echo -e "  $YE║$C$(printf '%*s' 62 '')$YE║$C"
+                    set -l br "  eprahemi  •  github.com/eprahemi"
+                    echo -e "  $YE║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$YE║$C"
+                    echo -e "  $YE╚══════════════════════════════════════════════════════════════╝$C"
+                    echo -e ""
+                end
+
+                # ── Detect desktop wallpaper ──
+                set -l wp_path ""
+                set -l wp_uri (gsettings get org.gnome.desktop.background picture-uri 2>/dev/null; or echo "")
+                if test -n "$wp_uri"
+                    # Strip leading 'file:// and trailing '
+                    set wp_path (string replace -r "^'?file://" "" "$wp_uri")
+                    set wp_path (string trim --right --chars "'" "$wp_path")
+                    # URL-decode (e.g. %20 → space)
+                    set wp_path (python3 -c "import urllib.parse; print(urllib.parse.unquote('$wp_path'))" 2>/dev/null)
+                    if not test -f "$wp_path"
+                        # Try picture-uri-dark
+                        set wp_uri (gsettings get org.gnome.desktop.background picture-uri-dark 2>/dev/null; or echo "")
+                        if test -n "$wp_uri"
+                            set wp_path (string replace -r "^'?file://" "" "$wp_uri")
+                            set wp_path (string trim --right --chars "'" "$wp_path")
+                            set wp_path (python3 -c "import urllib.parse; print(urllib.parse.unquote('$wp_path'))" 2>/dev/null)
+                        end
+                    end
+                end
+
+                if test -n "$wp_path" -a -f "$wp_path"
+                    set -l wp_name (basename "$wp_path")
+                    set -l wp_size (du -h "$wp_path" 2>/dev/null | awk '{print $1}')
+                    set -l wp_dims (identify -format "%wx%h" "$wp_path" 2>/dev/null; or echo "?x?")
+                    set -l wp_enc (__pfp_encrypt "$wp_path")
+                    set -l wp_disp "$wp_enc"
+                    if test (string length "$wp_enc") -gt 48
+                        set wp_disp (string sub -l 45 "$wp_enc")"..."
+                    end
+
+                    echo -e ""
+                    echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
+                    echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                    set -l t "  🖼️  DESKTOP WALLPAPER DETECTED"
+                    echo -e "  $CY║$C  $WH$t$C$(printf '%*s' (math "60 - "(string length "$t")) '')$CY║$C"
+                    echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                    echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+                    echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                    set -l w1 "  File:  $wp_disp"
+                    echo -e "  $CY║$C  $GY$w1$C$(printf '%*s' (math "60 - "(string length "$w1")) '')$CY║$C"
+                    set -l w2 "  Size:  $wp_size"
+                    echo -e "  $CY║$C  $GY$w2$C$(printf '%*s' (math "60 - "(string length "$w2")) '')$CY║$C"
+                    set -l w3 "  Dims:  $wp_dims"
+                    echo -e "  $CY║$C  $GY$w3$C$(printf '%*s' (math "60 - "(string length "$w3")) '')$CY║$C"
+                    echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                    echo -e "  $CY║$C  $D  Use wallpaper as profile picture?$C                 $CY║$C"
+                    echo -e "  $CY║$C  $D  [y/N]: $C$(printf '%*s' 45 '')$CY║$C"
+                    echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                    set -l br "  eprahemi  •  github.com/eprahemi"
+                    echo -e "  $CY║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
+                    echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
+                    echo -e ""
+
+                    # ── Read answer ──
+                    echo -n "  → "
+                    read -l wp_choice
+                    if test $status -ne 0
+                        echo -e "  $GY  ✧  Cancelled.$C"
+                        return 0
+                    end
+                    if string match -qir '^y' "$wp_choice"
+                        __pfp_apply "$wp_path"
+                    else
+                        echo -e "  $GY  ✧  No change.$C"
+                    end
+                else
+                    echo -e "  $GY  ✧  No desktop wallpaper detected to suggest.$C"
+                end
+                return 0
+
+            case info
+                # ── Show profile picture info (old pfp current) ──
                 if not test -f "$icon_file"
                     echo -e ""
                     echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
@@ -75,36 +201,36 @@ function pfp --description 'Manage your GNOME profile picture (avatar) — githu
                 end
 
                 # ── Show info box with encrypted path ──
-                set -l size (du -h "$icon_file" 2>/dev/null | awk '{print $1}')
-                set -l dims (identify -format "%wx%h" "$icon_file" 2>/dev/null; or echo "?x?")
-                set -l fmt (identify -format "%m" "$icon_file" 2>/dev/null; or echo "?")
-                set -l mtime (date -r "$icon_file" "+%d %b %Y  %H:%M" 2>/dev/null; or echo "?")
-                set -l enc_path (__pfp_encrypt "$icon_file")
+                set -l info_size (du -h "$icon_file" 2>/dev/null | awk '{print $1}')
+                set -l info_dims (identify -format "%wx%h" "$icon_file" 2>/dev/null; or echo "?x?")
+                set -l info_fmt (identify -format "%m" "$icon_file" 2>/dev/null; or echo "?")
+                set -l info_mtime (date -r "$icon_file" "+%d %b %Y  %H:%M" 2>/dev/null; or echo "?")
+                set -l info_enc (__pfp_encrypt "$icon_file")
                 # Show truncated encrypted path for display
-                set -l enc_display "$enc_path"
-                if test (string length "$enc_path") -gt 48
-                    set enc_display (string sub -l 45 "$enc_path")"..."
+                set -l info_disp "$info_enc"
+                if test (string length "$info_enc") -gt 48
+                    set info_disp (string sub -l 45 "$info_enc")"..."
                 end
 
                 echo -e ""
                 echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                set -l t "  👤  CURRENT PROFILE PICTURE"
+                set -l t "  👤  PROFILE PICTURE INFO"
                 echo -e "  $CY║$C  $WH$t$C$(printf '%*s' (math "60 - "(string length "$t")) '')$CY║$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                 echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                 set -l i1 "  User:  $user"
                 echo -e "  $CY║$C  $GY$i1$C$(printf '%*s' (math "60 - "(string length "$i1")) '')$CY║$C"
-                set -l i2 "  File:  $enc_display"
+                set -l i2 "  File:  $info_disp"
                 echo -e "  $CY║$C  $GY$i2$C$(printf '%*s' (math "60 - "(string length "$i2")) '')$CY║$C"
-                set -l i3 "  Size:  $size"
+                set -l i3 "  Size:  $info_size"
                 echo -e "  $CY║$C  $GY$i3$C$(printf '%*s' (math "60 - "(string length "$i3")) '')$CY║$C"
-                set -l i4 "  Dims:  $dims"
+                set -l i4 "  Dims:  $info_dims"
                 echo -e "  $CY║$C  $GY$i4$C$(printf '%*s' (math "60 - "(string length "$i4")) '')$CY║$C"
-                set -l i5 "  Type:  $fmt"
+                set -l i5 "  Type:  $info_fmt"
                 echo -e "  $CY║$C  $GY$i5$C$(printf '%*s' (math "60 - "(string length "$i5")) '')$CY║$C"
-                set -l i6 "  Date:  $mtime"
+                set -l i6 "  Date:  $info_mtime"
                 echo -e "  $CY║$C  $GY$i6$C$(printf '%*s' (math "60 - "(string length "$i6")) '')$CY║$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                 set -l br "  eprahemi  •  github.com/eprahemi"
