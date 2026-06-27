@@ -58,68 +58,14 @@ function pfp --description 'Manage your GNOME profile picture (avatar) — githu
                 return 0
 
             case current
-                # ── Show current avatar ──
-                if test -f "$icon_file"
-                    if test -n "$KITTY_PID"
-                        kitty +kitten icat --align left "$icon_file" 2>/dev/null
-                        echo ""
-                    end
-                    set -l cur_size (du -h "$icon_file" 2>/dev/null | awk '{print $1}')
-                    set -l cur_dims (identify -format "%wx%h" "$icon_file" 2>/dev/null; or echo "?x?")
-                    set -l cur_fmt (identify -format "%m" "$icon_file" 2>/dev/null; or echo "?")
-                    set -l cur_mtime (date -r "$icon_file" "+%d %b %Y  %H:%M" 2>/dev/null; or echo "?")
-                    set -l cur_disp (__pfp_display_path "$icon_file")
-                    set -l cur_len (string length "$cur_disp")
-                    if test $cur_len -gt 48
-                        set cur_disp (string sub -l 45 "$cur_disp")"..."
-                    end
-                    echo -e ""
-                    echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
-                    echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                    set -l t "  👤  CURRENT PROFILE PICTURE"
-                    echo -e "  $CY║$C  $WH$t$C$(printf '%*s' (math "60 - "(string length "$t")) '')$CY║$C"
-                    echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                    echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
-                    echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                    set -l i1 "  User:  $user"
-                    echo -e "  $CY║$C  $GY$i1$C$(printf '%*s' (math "60 - "(string length "$i1")) '')$CY║$C"
-                    set -l i2 "  File:  $cur_disp"
-                    echo -e "  $CY║$C  $GY$i2$C$(printf '%*s' (math "60 - "(string length "$i2")) '')$CY║$C"
-                    set -l i3 "  Size:  $cur_size"
-                    echo -e "  $CY║$C  $GY$i3$C$(printf '%*s' (math "60 - "(string length "$i3")) '')$CY║$C"
-                    set -l i4 "  Dims:  $cur_dims"
-                    echo -e "  $CY║$C  $GY$i4$C$(printf '%*s' (math "60 - "(string length "$i4")) '')$CY║$C"
-                    set -l i5 "  Type:  $cur_fmt"
-                    echo -e "  $CY║$C  $GY$i5$C$(printf '%*s' (math "60 - "(string length "$i5")) '')$CY║$C"
-                    set -l i6 "  Date:  $cur_mtime"
-                    echo -e "  $CY║$C  $GY$i6$C$(printf '%*s' (math "60 - "(string length "$i6")) '')$CY║$C"
-                    echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                    echo -e "  $CY║$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
-                    echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
-                    echo -e ""
-                else
-                    echo -e ""
-                    echo -e "  $YE╔══════════════════════════════════════════════════════════════╗$C"
-                    echo -e "  $YE║$C$(printf '%*s' 62 '')$YE║$C"
-                    set -l e "  ⚠️  No profile picture set  ⚠️"
-                    echo -e "  $YE║$C  $WH$e$C$(printf '%*s' (math "60 - "(string length "$e")) '')$YE║$C"
-                    echo -e "  $YE║$C$(printf '%*s' 62 '')$YE║$C"
-                    echo -e "  $YE║$C$(printf '%*s' (math "60 - "(string length "$br")) '')$YE║$C"
-                    echo -e "  $YE╚══════════════════════════════════════════════════════════════╝$C"
-                    echo -e ""
-                end
-
-                # ── Detect desktop wallpaper ──
+                # ── Get current desktop wallpaper ──
                 set -l wp_path ""
                 set -l wp_uri (gsettings get org.gnome.desktop.background picture-uri 2>/dev/null; or echo "")
                 if test -n "$wp_uri"
-                    # Strip leading 'file:// and trailing '
                     set wp_path (string replace -r "^'?file://" "" "$wp_uri")
                     set wp_path (string trim --right --chars "'" "$wp_path")
-                    # URL-decode (e.g. %20 → space)
                     set wp_path (python3 -c "import urllib.parse; print(urllib.parse.unquote('$wp_path'))" 2>/dev/null)
                     if not test -f "$wp_path"
-                        # Try picture-uri-dark
                         set wp_uri (gsettings get org.gnome.desktop.background picture-uri-dark 2>/dev/null; or echo "")
                         if test -n "$wp_uri"
                             set wp_path (string replace -r "^'?file://" "" "$wp_uri")
@@ -129,52 +75,92 @@ function pfp --description 'Manage your GNOME profile picture (avatar) — githu
                     end
                 end
 
-                if test -n "$wp_path" -a -f "$wp_path"
-                    set -l wp_name (basename "$wp_path")
-                    set -l wp_size (du -h "$wp_path" 2>/dev/null | awk '{print $1}')
-                    set -l wp_dims (identify -format "%wx%h" "$wp_path" 2>/dev/null; or echo "?x?")
-                    set -l wp_disp (__pfp_display_path "$wp_path")
-                    set -l wp_len (string length "$wp_disp")
-                    if test $wp_len -gt 48
-                        set wp_disp (string sub -l 45 "$wp_disp")"..."
-                    end
-
+                if test -z "$wp_path"; or not test -f "$wp_path"
                     echo -e ""
-                    echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
-                    echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                    set -l t "  🖼️  DESKTOP WALLPAPER DETECTED"
-                    echo -e "  $CY║$C  $WH$t$C$(printf '%*s' (math "60 - "(string length "$t")) '')$CY║$C"
-                    echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                    echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
-                    echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                    set -l w1 "  File:  $wp_disp"
-                    echo -e "  $CY║$C  $GY$w1$C$(printf '%*s' (math "60 - "(string length "$w1")) '')$CY║$C"
-                    set -l w2 "  Size:  $wp_size"
-                    echo -e "  $CY║$C  $GY$w2$C$(printf '%*s' (math "60 - "(string length "$w2")) '')$CY║$C"
-                    set -l w3 "  Dims:  $wp_dims"
-                    echo -e "  $CY║$C  $GY$w3$C$(printf '%*s' (math "60 - "(string length "$w3")) '')$CY║$C"
-                    echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                    echo -e "  $CY║$C  $D  Use wallpaper as profile picture?$C                 $CY║$C"
-                    echo -e "  $CY║$C  $D  [y/N]: $C$(printf '%*s' 45 '')$CY║$C"
-                    echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                    echo -e "  $CY║$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
-                    echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
+                    echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
+                    echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                    set -l e "  ✘  NO DESKTOP WALLPAPER DETECTED  ✘"
+                    echo -e "  $RE║$C  $WH$e$C$(printf '%*s' (math "60 - "(string length "$e")) '')$RE║$C"
+                    echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                    echo -e "  $RE║$C  $D  Could not find your current wallpaper.$C$(printf '%*s' 17 '')$RE║$C"
+                    echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                    echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
                     echo -e ""
+                    return 1
+                end
 
-                    # ── Read answer ──
-                    echo -n "  → "
-                    read -l wp_choice
-                    if test $status -ne 0
-                        echo -e "  $GY  ✧  Cancelled.$C"
-                        return 0
+                # ── Crop to 512×512 ──
+                set -l tmp_file "/tmp/pfp-current-crop-$user.jpg"
+                if not magick "$wp_path" -resize 512x512^ -gravity center -extent 512x512 "$tmp_file" 2>/dev/null
+                    echo -e ""
+                    echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
+                    echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                    set -l e "  ✘  CROP FAILED  ✘"
+                    echo -e "  $RE║$C  $WH$e$C$(printf '%*s' (math "60 - "(string length "$e")) '')$RE║$C"
+                    echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                    echo -e "  $RE║$C  $D  ImageMagick could not process the wallpaper.$C$(printf '%*s' 8 '')$RE║$C"
+                    echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                    echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
+                    echo -e ""
+                    return 1
+                end
+
+                set -l wp_disp (string replace -- "$HOME" '~' "$wp_path")
+
+                # ── Preview ──
+                echo -e ""
+                echo -e "  $D  Cropped from your wallpaper ($wp_disp) → 512×512$C"
+                set -l previewed 0
+                if test -n "$KITTY_PID"; and command -q kitty
+                    kitty +kitten icat --align left "$tmp_file" 2>/dev/null
+                    and set previewed 1
+                end
+                if test $previewed -eq 0; and command -q chafa
+                    chafa --symbols solid "$tmp_file" 2>/dev/null
+                    and set previewed 1
+                end
+                if test $previewed -eq 0
+                    echo -e "  $GY  Preview not available (install kitty or chafa)$C"
+                end
+
+                # ── Ask ──
+                echo -e ""
+                echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
+                echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                set -l a1 "  🖼️  USE AS PROFILE PICTURE?"
+                echo -e "  $CY║$C  $WH$a1$C$(printf '%*s' (math "60 - "(string length "$a1")) '')$CY║$C"
+                echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+                echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                echo -e "  $CY║$C  $GR  [Y] Yes  → Set as profile picture$C$(printf '%*s' 15 '')$CY║$C"
+                echo -e "  $CY║$C  $RE  [N] No   → Delete temp file$C$(printf '%*s' 18 '')$CY║$C"
+                echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
+                echo -e ""
+
+                set -l __cc 0
+                while true
+                    read -P "  [Y/n]: " pfp_choice
+                    set -l __rs $status
+                    if test $__rs -ne 0
+                        set __cc (math $__cc + 1)
+                        if test $__cc -ge 2
+                            rm -f "$tmp_file" 2>/dev/null
+                            echo -e "  $D  → Cancelled.  $C"
+                            return 1
+                        end
+                        echo -e "  $D  (Ctrl+C again to cancel)  $C"
+                        continue
                     end
-                    if string match -qir '^y' "$wp_choice"
-                        __pfp_apply "$wp_path"
-                    else
-                        echo -e "  $GY  ✧  No change.$C"
-                    end
+                    break
+                end
+
+                if test -z "$pfp_choice"; or string match -qir '^y' "$pfp_choice"
+                    __pfp_apply "$tmp_file"
+                    rm -f "$tmp_file" 2>/dev/null
                 else
-                    echo -e "  $GY  ✧  No desktop wallpaper detected to suggest.$C"
+                    rm -f "$tmp_file" 2>/dev/null
+                    echo -e "  $GY  ✧  Temp file deleted. No change.$C"
                 end
                 return 0
 
