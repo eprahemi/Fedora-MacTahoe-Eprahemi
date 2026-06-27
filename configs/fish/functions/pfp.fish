@@ -286,10 +286,11 @@ print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in rang
                     if test (string length "$enc_orig") -gt 48
                         set orig_disp (string sub -l 45 "$enc_orig")"..."
                     end
-                    # Truncate path for box display if needed (max 50 chars inside "  Path:  ")
-                    set -l path_disp "$save_path"
-                    if test (string length "$save_path") -gt 50
-                        set path_disp (string sub -l 47 "$save_path")"..."
+                    # Strip /home/user → ~ for display
+                    set -l path_disp (string replace -- "$HOME" '~' "$save_path")
+                    # Truncate if needed (max 50 chars inside "  Path:  ")
+                    if test (string length "$path_disp") -gt 50
+                        set path_disp (string sub -l 47 "$path_disp")"..."
                     end
                     set -l applied_date (date -r "$icon_file" "+%d %b %Y  %H:%M")
                     set -l save_date (date "+%d %b %Y  %H:%M")
@@ -313,7 +314,7 @@ print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in rang
                     echo -e "  $GR╚══════════════════════════════════════════════════════════════╝$C"
                     echo -e ""
                 else
-                    echo -e "  $RE  ✘  Failed to save to $save_path$C"
+                    echo -e "  $RE  ✘  Failed to save to "(string replace -- "$HOME" '~' "$save_path")"$C"
                     return 1
                 end
                 return 0
@@ -665,7 +666,9 @@ function __pfp_apply --description 'Internal: apply image as profile picture'
 
                 set -l idx 1
                 for r in $search_results
-                    set -l display (string sub -l 55 "$r")
+                    # Strip /home/user → ~ for display
+                    set -l disp_path (string replace -- "$HOME" '~' "$r")
+                    set -l display (string sub -l 55 "$disp_path")
                     # Use separate label variable to avoid Fish $var[ array-index parsing
                     set -l label (printf "[%2d]" $idx)
                     echo -e "  $CY║$C  $GR$label$C  $D$display$C$(printf '%*s' (math "57 - "(string length "$display")) '')$CY║$C"

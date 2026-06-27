@@ -295,7 +295,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         end
 
         if not test -f "$bg_path"
-            echo -e "  $RE✘  Wallpaper file not found: $YE$bg_path$C"
+            echo -e "  $RE✘  Wallpaper file not found: $YE"(string replace -- "$HOME" '~' "$bg_path")"$C"
             echo -e "  $GY  The file may have been moved or deleted.$C"
             echo -e "  $GY  github.com/eprahemi$C"
             return 1
@@ -311,10 +311,10 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
 
-        set -l cc2_len (string length "$bg_path")
-        set -l cc2_disp "$bg_path"
+        set -l cc2_disp (string replace -- "$HOME" '~' "$bg_path")
+        set -l cc2_len (string length "$cc2_disp")
         if test $cc2_len -gt 56
-            set cc2_disp (string sub -l 53 "$bg_path")"..."
+            set cc2_disp (string sub -l 53 "$cc2_disp")"..."
             set cc2_len 56
         end
         echo -e "  $CY║$C    $YE$cc2_disp$C$(printf '%*s' (math "58 - $cc2_len") '')$CY║$C"
@@ -358,7 +358,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         end
 
         # Set up for blur/apply — skip redundant DO YOU MEAN THIS? but keep blur
-        echo -e "  $D  Using current desktop wallpaper: $bg_path$C"
+        echo -e "  $D  Using current desktop wallpaper: "(string replace -- "$HOME" '~' "$bg_path")"$C"
         set skip_double_confirm 1
         set argv[1] "$bg_path"
         # Fall through → default check (won't match) → search → blur → apply
@@ -1065,10 +1065,10 @@ except:
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                 echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                set -l c2_len (string length "$image")
-                set -l image_display "$image"
+                set -l image_display (string replace -- "$HOME" '~' "$image")
+                set -l c2_len (string length "$image_display")
                 if test $c2_len -gt 56
-                    set image_display (string sub -l 53 "$image")"..."
+                    set image_display (string sub -l 53 "$image_display")"..."
                     set c2_len 56
                 end
                 echo -e "  $CY║$C    $YE$image_display$C$(printf '%*s' (math "58 - $c2_len") '')$CY║$C"
@@ -1139,12 +1139,13 @@ except:
 
             for i in (seq $result_count)
                 set -l fullpath $results[$i]
-                set -l dir_part (dirname "$fullpath")/
-                set -l file_part (basename "$fullpath")
+                set -l disp_path (string replace -- "$HOME" '~' "$fullpath")
+                set -l dir_part (dirname "$disp_path")/
+                set -l file_part (basename "$disp_path")
                 set -l num_str (printf "%2d" $i)
                 set -l prefix "  [$num_str]  "
                 set -l cont_indent "        "
-                set -l remaining "$fullpath"
+                set -l remaining "$disp_path"
                 set -l line_num 1
                 while test -n "$remaining"
                     set -l trimmed (string sub -l 52 "$remaining")
