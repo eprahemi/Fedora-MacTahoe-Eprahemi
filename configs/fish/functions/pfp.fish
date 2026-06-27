@@ -105,7 +105,7 @@ function pfp --description 'Manage your GNOME profile picture (avatar) — githu
                     return 1
                 end
 
-                set -l wp_disp (string replace -- "$HOME" '~' "$wp_path")
+                set -l wp_disp (__pfp_display_path "$wp_path")
 
                 # ── Preview ──
                 echo -e ""
