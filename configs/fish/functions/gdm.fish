@@ -898,21 +898,6 @@ except Exception:
         end
     end
 
-    # ── Guard: "help" → suggest --help ──
-    if set -q argv[1]; and string match -q -- "help" "$argv[1]"
-        echo ""
-        echo -e "  $RE┌────────────────────────────────────────────────────────────┐$C"
-        echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
-        set -l help_suggest "gdm -h  or  gdm --help"
-        echo -e "  $RE│$C     $D  Did you mean:  $WH$help_suggest$C$(printf '%*s' (math "55 - "(string length "$help_suggest")) '')$RE│$C"
-        echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
-        echo -e "  $RE│$C  $D  Use $C$GY--help$C$D to see all features.$C$RE                   │$C"
-        echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
-        echo -e "  $RE└────────────────────────────────────────────────────────────┘$C"
-        echo -e "  $GY  eprahemi  •  github.com/eprahemi$C"
-        return 1
-    end
-
     # ── Join all args so unquoted filenames with spaces work ──
     #     e.g. `gdm HOT PUSSASS.jpg` from inside the folder
     if not set -q argv[1]
@@ -1090,6 +1075,11 @@ except Exception:
             echo -e "  $RE✘$C File not found: $YE$filename$C"
             echo -e "  $GY  Searched everywhere in your home folders.$C"
             echo -e "  $GY  Tip: use the full path like $CY$B gdm /path/to/your/image.jpg$C"
+            if string match -q -- "help" "$filename"
+                echo -e "  $GY  If you meant a .jpg — it is not there.$C"
+                echo -e "  $GY  If you meant $CY$B--help$C$GY to see available commands —$C"
+                echo -e "  $GY  you need to type: $CY$B gdm --help$C"
+            end
             echo -e "  $GY  github.com/eprahemi$C"
             return 1
 
