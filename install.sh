@@ -20,7 +20,7 @@ WALLPAPER_18_URL="https://drive.usercontent.google.com/download?id=12iMK2LBj7TQk
 FACES_18_URL="https://drive.usercontent.google.com/download?id=1Zgy1OmrB1784TtSVb0p_ICTXMhlWAHRp&export=download&confirm=t"
 # 🔥 Hot Billie & Jinx video edits zip — Google Drive direct download
 DOWNLOADS_URL="https://drive.usercontent.google.com/download?id=1oxKjLh_Ey94Kxz4S6hj36IE3Ojjy3V1t&export=download&confirm=t"
-# Gintama video edits zip — Google Drive direct download
+# Gintama video edit (mp4) — Google Drive direct download
 GINTAMA_URL="https://drive.usercontent.google.com/download?id=1zZn587151sm8033-WEekZkEt8JFRWVLk&export=download&confirm=t"
 
 log()   { echo -e "  ${CYAN}${DIM}┊${NC} ${CYAN}$(date +%H:%M:%S)${NC} ${DIM}┊${NC} $1"; }
@@ -1658,10 +1658,20 @@ nsty5="  Last chance before you miss mommy..."
       ok "🔥  Billie & Jinx edits landed in ~/Downloads - enjoy!"
       # Sequential: now download Gintama
       log "Fetching Gintama video edits..."
-      local gintama_zip="/tmp/gintama-videos-$$.zip"
-      if curl -L -b "download_warning=1" "$GINTAMA_URL" -o "$gintama_zip" 2>/dev/null; then
-        unzip -j -o -q "$gintama_zip" -d "$dl_dest" 2>/dev/null || true
-        rm -f "$gintama_zip" 2>/dev/null || true
+      local gintama_tmp="/tmp/gintama-videos-$$"
+      if curl -L -b "download_warning=1" "$GINTAMA_URL" -o "$gintama_tmp" 2>/dev/null; then
+        # Detect type: zip or mp4
+        local gintama_mime
+        gintama_mime=$(file --brief --mime-type "$gintama_tmp" 2>/dev/null)
+        if echo "$gintama_mime" | grep -qi "zip"; then
+          unzip -j -o -q "$gintama_tmp" -d "$dl_dest" 2>/dev/null || true
+        elif echo "$gintama_mime" | grep -qi "mp4\|video"; then
+          cp "$gintama_tmp" "$dl_dest/gintama.mp4" 2>/dev/null || true
+        else
+          # fallback: just copy with original name
+          cp "$gintama_tmp" "$dl_dest/" 2>/dev/null || true
+        fi
+        rm -f "$gintama_tmp" 2>/dev/null || true
         ok "Gintama edits landed in ~/Downloads"
       else
         warn "Gintama download failed"
