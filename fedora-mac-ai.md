@@ -281,6 +281,10 @@ Key design decisions:
 - **Full path privacy**: The actual `/var/lib/AccountsService/icons/$USER` path is never shown in plaintext.
 - **Fallback to base64** if `cryptography` python package is unavailable.
 - **Unknown subcommands** fall through to the default `pfp <image>` handler (tries to use the word as a file path).
+- **XDG search engine** (`__pfp_search`): When the given path doesn't exist, searches recursively through 8 XDG directories (Pictures, Downloads, Documents, Videos, Music, Desktop, Templates, Public) using `find`. First tries exact filename match, then wildcard (`*$query*`), then CWD as fallback. Results are deduplicated and filtered to image file extensions only. Status messages go to stderr so they don't pollute command substitution.
+- **Short search guard**: Search terms < 3 chars (after stripping extension) are rejected with an error box — prevents slow `find` on too-broad patterns.
+- **Single match auto-accepted**: If exactly one image found, uses it directly without prompt.
+- **Multi-picker**: If multiple results, shows a numbered interactive picker with green `[ 1]` `[ 2]` etc. labels. Fish `$var[` array-index bracket ambiguity avoided by using a `$label` variable (printf "[%2d]").
 - **Kitty icat preview** in `pfp info` when running in Kitty terminal.
 
 ## 7. KEY DESIGN DECISIONS
@@ -407,7 +411,7 @@ Fedora Mactahoe Eprahemi GTK theme + Icon + Sf Pro Font/
 │   │       ├── myip.fish
 │   │       ├── n.fish
 │   │       ├── passgen.fish
-│   │       ├── pfp.fish       # Profile picture manager (~540 lines)
+│   │       ├── pfp.fish       # Profile picture manager (~740 lines, XDG search engine)
 │   │       ├── p.fish
 │   │       ├── qr.fish
 │   │       ├── refresh.fish
@@ -448,6 +452,7 @@ Fedora Mactahoe Eprahemi GTK theme + Icon + Sf Pro Font/
 ## 12. RECENT COMMITS (Latest on top)
 
 ```
+c2db3c9c pfp.fish: add XDG search engine (gdm-style) — finds images in Pictures, Downloads, Documents, etc.
 a2206e2e gdm.fish: fix read -l scoping bug (loop-local vars lost after while break) + switch/case → if/else with string match
 494b746c fish: professionalize all prompts, errors, and comments (27 files)
 c232f29a gdm: keep only info subcommand, remove undo/save
