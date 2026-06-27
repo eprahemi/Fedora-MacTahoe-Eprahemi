@@ -1076,7 +1076,7 @@ except Exception:
             echo -e "  $GY  Searched everywhere in your home folders.$C"
             echo -e "  $GY  Tip: use the full path like $CY$B gdm /path/to/your/image.jpg$C"
             if string match -q -- "help" "$filename"
-                echo -e "  $GY  If you meant a .jpg — it is not there.$C"
+                echo -e "  $GY  If you meant an image — the filename is incorrect, the file is missing, or it was mistyped.$C"
                 echo -e "  $GY  If you meant $CY$B--help$C$GY to see available commands —$C"
                 echo -e "  $GY  you need to type: $CY$B gdm --help$C"
             end
