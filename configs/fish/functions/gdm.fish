@@ -322,8 +322,6 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
                 echo -e "  $CY║$C  $GR$cc3$C$(printf '%*s' (math "60 - "(string length "$cc3")) '')$CY║$C"
                 set -l cc4 "  [N] No   → Cancel"
                 echo -e "  $CY║$C  $RE$cc4$C$(printf '%*s' (math "60 - "(string length "$cc4")) '')$CY║$C"
-                set -l cc5 "  [0] Cancel → Exit"
-                echo -e "  $CY║$C  $RE$cc5$C$(printf '%*s' (math "60 - "(string length "$cc5")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
         echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
@@ -337,7 +335,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
 
         set -l __cc 0
         while true
-            read -P "  [Y/n/0]: " current_confirm
+            read -P "  [Y/n]: " current_confirm
             set -l __rs $status
             if test $__rs -ne 0
                 set __cc (math $__cc + 1)
@@ -349,10 +347,6 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
                 continue
             end
             break
-        end
-        if string match -qir '^0$' "$current_confirm"
-            echo -e "  $D  → Cancelled.  $C"
-            return 1
         end
         if not test -z "$current_confirm"; and not string match -qir '^y' "$current_confirm"
             echo -e "  $RE✘  Cancelled. Run $CY$B gdm$C $RE again $C"
@@ -1175,15 +1169,13 @@ except Exception:
                 echo -e "  $CY║$C  $GR$c3$C$(printf '%*s' (math "60 - "(string length "$c3")) '')$CY║$C"
                 set -l c4 "  [N] No   → Cancel"
                 echo -e "  $CY║$C  $RE$c4$C$(printf '%*s' (math "60 - "(string length "$c4")) '')$CY║$C"
-                set -l c5 "  [0] Cancel → Exit"
-                echo -e "  $CY║$C  $RE$c5$C$(printf '%*s' (math "60 - "(string length "$c5")) '')$CY║$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                 echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
                 echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
                 echo ""
                 set -l __cc 0
                 while true
-                    read -P "  [Y/n/0]: " confirm
+                    read -P "  [Y/n]: " confirm
                     set -l __rs $status
                     if test $__rs -ne 0
                         set __cc (math $__cc + 1)
@@ -1195,10 +1187,6 @@ except Exception:
                         continue
                     end
                     break
-                end
-                if string match -qir '^0$' "$confirm"
-                    echo -e "  $D  → Cancelled.  $C"
-                    return 1
                 end
                 if not test -z "$confirm"; and not string match -qir '^y' "$confirm"
                     echo -e "  $RE✘  Cancelled. Run $CY$B gdm$C $RE again $C"
