@@ -15,7 +15,7 @@ Fedora MacTahoe is a Fedora Linux → macOS transformation project. It turns a s
 - **Repository (GDM companion):** `https://github.com/eprahemi/FedoraTahoe-GDM.git`
 - **Branch:** `main`
 - **Local repo path:** `/home/eprahemi/Documents/Codes University [Mine]/Eprahemi Websites/Fedora Mactahoe Eprahemi GTK theme + Icon + Sf Pro Font/`
-- **Latest commit:** `6ed1bf65` — `gdm.fish save: dual-timestamp base36 naming (applied + saved) matching pfp.fish style`
+- **Latest commit:** `6fa45836` — `gdm.fish save: base62 naming (mixed-case) instead of base36 — distinct from pfp's all-lowercase style`
 
 ### ⚠️ CRITICAL — Repo Path Mistake
 Do NOT search with glob patterns like `*Eprahemi*` — the directory has "Mactahoe" (not "MacTahoe"), and glob won't match. Use the **exact literal path** from this file:
