@@ -255,11 +255,26 @@ function pfp --description 'Manage your GNOME profile picture (avatar) — githu
                     return 1
                 end
 
-                # Generate filename: timestamp + random
-                set -l ts (date +%s)
-                set -l rand (python3 -c "import secrets; print(secrets.token_hex(5))" 2>/dev/null; or echo "xxxxx")
-                set -l save_name (printf "%x" $ts)"-$rand.png"
-                set -l save_path "$HOME/Pictures/$save_name"
+                # Generate encrypted-style 16-char name encoding set-date + save-date + random
+                # Base36 looks random but decodes to date — fixed 6 chars per timestamp
+                set -l applied_ts (stat -c "%Y" "$icon_file" 2>/dev/null; or date +%s)
+                set -l save_ts (date +%s)
+                set -l applied_b36 (__pfp_b36 "$applied_ts")
+                set -l save_b36 (__pfp_b36 "$save_ts")
+                # Pad each to exactly 6 chars (left-pad with zeros)
+                while test (string length "$applied_b36") -lt 6
+                    set applied_b36 "0$applied_b36"
+                end
+                while test (string length "$save_b36") -lt 6
+                    set save_b36 "0$save_b36"
+                end
+                # Random suffix for uniqueness (4 chars)
+                set -l rand_sfx (python3 -c "
+import secrets, string
+print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(4)))
+" 2>/dev/null; or echo "x0x0")
+                set -l save_name "$applied_b36$save_b36$rand_sfx"
+                set save_path "$HOME/Pictures/$save_name.png"
 
                 mkdir -p "$HOME/Pictures"
                 cp "$icon_file" "$save_path"
@@ -370,6 +385,28 @@ function pfp --description 'Manage your GNOME profile picture (avatar) — githu
 
     # ── Default: pfp <image> — set profile picture ──
     __pfp_apply $argv
+end
+
+
+# ──────────────────────────────────────────────────────────────
+# Internal: Convert a Unix timestamp to base36
+# (looks like random gibberish, decodes to date)
+# ──────────────────────────────────────────────────────────────
+function __pfp_b36 --description 'Convert Unix timestamp to base36'
+    set -l n $argv[1]
+    if test -z "$n"; or not string match -qr '^[0-9]+$' "$n"
+        echo ""
+        return 1
+    end
+    python3 -c "
+n = $n
+alpha = '0123456789abcdefghijklmnopqrstuvwxyz'
+res = ''
+while n > 0:
+    res = alpha[n % 36] + res
+    n //= 36
+print(res or '0')
+" 2>/dev/null
 end
 
 
