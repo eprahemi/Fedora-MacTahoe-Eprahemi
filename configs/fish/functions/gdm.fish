@@ -347,7 +347,28 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         end
 
         # Set up for blur/apply — skip redundant DO YOU MEAN THIS? but keep blur
-        echo -e "  $D  Using current desktop wallpaper: "(string replace -- "$HOME" '~' "$bg_path")"$C"
+        set -l __bg_disp (string replace -- "$HOME" '~' "$bg_path")
+        # Encrypt system paths in the message
+        if not string match -q '~*' "$__bg_disp"
+            set -l key_file "$HOME/.config/pfp.key"
+            if test -f "$key_file"
+                set -l __enc (python3 -c "
+import sys
+from cryptography.fernet import Fernet
+try:
+    with open('$key_file', 'rb') as f: key = f.read()
+    f = Fernet(key)
+    print(f.encrypt(sys.argv[1].encode()).decode())
+except: sys.exit(1)
+" "$__bg_disp" 2>/dev/null)
+                if test -n "$__enc"; set __bg_disp "$__enc"
+                else; set __bg_disp (echo -n "$__bg_disp" | python3 -c "import sys,base64; print(base64.urlsafe_b64encode(sys.stdin.read().encode()).decode())" 2>/dev/null)
+                end
+            else
+                set __bg_disp (echo -n "$__bg_disp" | python3 -c "import sys,base64; print(base64.urlsafe_b64encode(sys.stdin.read().encode()).decode())" 2>/dev/null)
+            end
+        end
+        echo -e "  $D  Using current desktop wallpaper: $__bg_disp$C"
         set skip_double_confirm 1
         set argv[1] "$bg_path"
         # Fall through → default check (won't match) → search → blur → apply
