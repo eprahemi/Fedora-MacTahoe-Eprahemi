@@ -28,6 +28,20 @@ ok()    { echo -e "  ${GREEN}  ┊ ✓ ${NC}  $1"; }
 warn()  { echo -e "  ${YELLOW}  ┊ ⚠ ${NC}  $1"; }
 fail()  { echo -e "  ${RED}  ┊ ✗ ${NC}  $1"; exit 1; }
 
+confirm() {
+  local prompt="$1" default="${2:-}"
+  local reply
+  while true; do
+    read -rp "  ${DIM}${prompt}${NC} " reply
+    case "${reply,,}" in
+      y|yes) return 0 ;;
+      n|no)  return 1 ;;
+      '')    [ "$default" = "Y" ] && return 0 || return 1 ;;
+      *)     warn "Type y/yes or n/no" ;;
+    esac
+  done
+}
+
 TOTAL_STEPS=23
 STEP=0
 
@@ -178,6 +192,7 @@ pt13="  needs to be the main ride for this to work."
       echo -e "${GREEN}let's roll${NC}"
       break
     done
+  fi
 
   # ── OS check ──
   local detected_os="Unknown Linux"
@@ -463,13 +478,8 @@ n17="  Press any key to continue, or Ctrl+C to update first"
     echo -e "  ${YELLOW}╚══════════════════════════════════════════════════════════════╝${NC}"
     echo ""
     echo -en "  ${DIM}Press any key to continue...${NC} "
-    while true; do
-      read -r -n 1 key </dev/tty || true
-      if [ -n "$key" ]; then
-        echo -e "${GREEN}proceeding${NC}"
-        break
-      fi
-    done
+    read -r -s -n 1 key < /dev/tty || true
+    echo -e "${GREEN}proceeding${NC}"
     sudo dnf install -y akmod-nvidia xorg-x11-drv-nvidia-cuda nvidia-settings vdpauinfo libva-utils
     ok "NVIDIA drivers installed — fingers crossed"
   else
@@ -505,11 +515,8 @@ disc5="  Press Enter for default (No)"
 disc6="  Tip: set INSTALL_DISCORD=false to skip silently"
     echo -e "  ${CYAN}║${NC}${DIM}${disc6}$(printf '%*s' $((62 - ${#disc6})) '')${NC}${CYAN}║${NC}"
     echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
-    echo -en "  ${DIM}Discord? [y/N]:${NC} "
-    read -r -n 1 key </dev/tty || true
     echo ""
-    # Default No — only explicit Y/y says yes
-    if [ "$key" = "y" ] || [ "$key" = "Y" ]; then
+    if confirm "Discord? [y/N]: " N; then
       INSTALL_DISCORD="true"
       echo -e "  ${GREEN}→ Discord will be installed${NC}"
     else
@@ -1237,15 +1244,13 @@ desk4="  (Login screen wallpaper is always applied)"
 desk5="  Press Enter for default (Yes)"
     echo -e "  ${CYAN}║${NC}${DIM}${desk5}$(printf '%*s' $((62 - ${#desk5})) '')${NC}${CYAN}║${NC}"
     echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
-    echo -en "  ${DIM}Desktop wallpaper? [Y/n]:${NC} "
-    read -r -n 1 key </dev/tty || true
     echo ""
-    if [ "$key" = "y" ] || [ "$key" = "Y" ]; then
-      INSTALL_DESKTOP_WALLPAPER="false"
-      echo -e "  ${DIM}→ Skipping desktop wallpaper${NC}"
-    else
+    if confirm "Desktop wallpaper? [Y/n]: " Y; then
       INSTALL_DESKTOP_WALLPAPER="true"
       echo -e "  ${GREEN}→ Desktop wallpaper will be installed${NC}"
+    else
+      INSTALL_DESKTOP_WALLPAPER="false"
+      echo -e "  ${DIM}→ Skipping desktop wallpaper${NC}"
     fi
   fi
 
@@ -1270,10 +1275,8 @@ wp18_4="  To update: replace the zip — same URL works"
 wp18_5="  Press Enter for default (No)"
     echo -e "  ${CYAN}║${NC}${DIM}${wp18_5}$(printf '%*s' $((62 - ${#wp18_5})) '')${NC}${CYAN}║${NC}"
     echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
-    echo -en "  ${DIM}18+ wallpapers? [y/N]:${NC} "
-    read -r -n 1 key </dev/tty || true
     echo ""
-    if [ "$key" = "y" ] || [ "$key" = "Y" ]; then
+    if confirm "18+ wallpapers? [y/N]: " N; then
       INSTALL_WALLPAPER_18="true"
       echo -e "  ${GREEN}→ 18+ wallpapers will be downloaded${NC}"
     else
@@ -1306,10 +1309,8 @@ bv4="  You'll get Billie Eilish , Jinx Edit Hot, and more"
 bv5="  Press Enter for default (No)"
     echo -e "  ${CYAN}║${NC}${bv5}$(printf '%*s' $((62 - ${#bv5})) '')${CYAN}║${NC}"
     echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
-    echo -en "  ${DIM}🔥  Hot Billie & Jinx edits? [y/N]:${NC} "
-    read -r -n 1 key < /dev/tty || true
     echo ""
-    if [ "$key" = "y" ] || [ "$key" = "Y" ]; then
+    if confirm "🔥  Hot Billie & Jinx edits? [y/N]: " N; then
       INSTALL_BILLIE_VIDEOS="true"
       echo -e "  ${GREEN}→  🔥  Alright! Dropping hot edits in ~/Downloads${NC}"
     else
@@ -1325,18 +1326,16 @@ nsty1="  You really gonna miss out on mommy Billie's sweet"
 nsty2="  body and Jinx's hot slim curves?  🔥  💦"
       echo -e "  ${PINK}║${NC}${nsty2}$(printf '%*s' $((62 - ${#nsty2})) '')${PINK}║${NC}"
       echo -e "  ${PINK}║${NC}                                                              ${PINK}║${NC}"
-nsty3="    y  — OK OK YOU CONVINCED ME!  😩🔥"
-      echo -e "  ${PINK}║${NC}${nsty3}$(printf '%*s' $((62 - ${#nsty3})) '')${PINK}║${NC}"
-nsty4="    N  — Nah I'm good (for real this time)"
-      echo -e "  ${PINK}║${NC}${nsty4}$(printf '%*s' $((62 - ${#nsty4})) '')${PINK}║${NC}"
+nsty3="    Yes  — OK OK YOU CONVINCED ME!  😩🔥"
+      echo -e "  ${PINK}║${NC}    ${BOLD}${GREEN}Y${NC}${BOLD}es${NC}  — OK OK YOU CONVINCED ME!  😩🔥$(printf '%*s' $((62 - ${#nsty3})) '')${PINK}║${NC}"
+nsty4="    No   — Nah I'm good (for real this time)"
+      echo -e "  ${PINK}║${NC}    ${BOLD}${YELLOW}n${NC}${BOLD}o${NC}   — Nah I'\''m good (for real this time)$(printf '%*s' $((62 - ${#nsty4})) '')${PINK}║${NC}"
       echo -e "  ${PINK}║${NC}                                                              ${PINK}║${NC}"
 nsty5="  Last chance before you miss mommy..."
       echo -e "  ${PINK}║${NC}${nsty5}$(printf '%*s' $((62 - ${#nsty5})) '')${PINK}║${NC}"
       echo -e "  ${PINK}╚══════════════════════════════════════════════════════════════╝${NC}"
-      echo -en "  ${PINK}👀  For real though? [y/N]:${NC} "
-      read -r -n 1 key2 < /dev/tty || true
       echo ""
-      if [ "$key2" = "y" ] || [ "$key2" = "Y" ]; then
+      if confirm "👀  For real though? [y/N]: " N; then
         INSTALL_BILLIE_VIDEOS="true"
         echo -e "  ${GREEN}→  😩  Alright alright — dropping hot edits in ~/Downloads${NC}"
       else
@@ -2114,8 +2113,8 @@ reboot_txt="  ⚡  Reboot now — changes kick in after restart"
   echo -e "  ${YELLOW}║${NC}  ${BOLD}${WHITE}${reboot_txt}${NC}$(printf '%*s' $((60 - ${#reboot_txt})) '')${YELLOW}║${NC}"
   echo -e "  ${YELLOW}╚══════════════════════════════════════════════════════════════╝${NC}"
   echo ""
-  read -rp "  Reboot now? [y/N] " reply || true
-  if [[ "$reply" =~ ^[Yy]$ ]]; then
+  echo ""
+  if confirm "Reboot now? [y/N]: " N; then
     echo -e "  ${GREEN}See you on the other side! Rebooting...${NC}"
     sudo reboot
   else

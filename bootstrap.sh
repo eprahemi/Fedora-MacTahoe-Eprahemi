@@ -5,7 +5,21 @@ REPO="https://github.com/eprahemi/Fedora-MacTahoe-Eprahemi.git"
 TMP="/tmp/fedora-mactahoe"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
-BOLD='\033[1m'; WHITE='\033[1;37m'; DIM='\033[2m'
+BOLD='\033[1m'; WHITE='\033[1;37m'; DIM='\033[2m'; PINK='\033[1;35m'
+
+confirm() {
+  local prompt="$1" default="${2:-}"
+  local reply
+  while true; do
+    read -rp "  ${DIM}${prompt}${NC} " reply
+    case "${reply,,}" in
+      y|yes) return 0 ;;
+      n|no)  return 1 ;;
+      '')    [ "$default" = "Y" ] && return 0 || return 1 ;;
+      *)     echo -e "  ${YELLOW}║${NC}  Type y/yes or n/no" ;;
+    esac
+  done
+}
 
 # ── Terminal check: block Ptyxis immediately ──
 if [ -z "${KITTY_PID:-}" ]; then
@@ -169,11 +183,8 @@ echo -e "  ${CYAN}║${NC}${d6}$(printf '%*s' $((62 - ${#d6})) '')${CYAN}║${NC
 d7="  Tip: set INSTALL_DISCORD=false to skip silently"
 echo -e "  ${CYAN}║${NC}${d7}$(printf '%*s' $((62 - ${#d7})) '')${CYAN}║${NC}"
 echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
-echo -en "  ${DIM}Discord? [y/N]:${NC} "
-read -r -n 1 key </dev/tty || true
 echo ""
-# Default No — only explicit Y/y says yes
-if [ "$key" = "y" ] || [ "$key" = "Y" ]; then
+if confirm "Discord? [y/N]: " N; then
   export INSTALL_DISCORD="true"
   echo -e "  ${GREEN}→ Discord will be installed${NC}"
 else
@@ -201,15 +212,13 @@ echo -e "  ${CYAN}║${NC}${dw5}$(printf '%*s' $((62 - ${#dw5})) '')${CYAN}║${
 dw6="  Press Enter for default (Yes)"
 echo -e "  ${CYAN}║${NC}${dw6}$(printf '%*s' $((62 - ${#dw6})) '')${CYAN}║${NC}"
 echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
-echo -en "  ${DIM}Desktop wallpaper? [Y/n]:${NC} "
-read -r -n 1 key </dev/tty || true
 echo ""
-if [ "$key" = "n" ] || [ "$key" = "N" ]; then
-  export INSTALL_DESKTOP_WALLPAPER="false"
-  echo -e "  ${DIM}→ Skipping desktop wallpaper${NC}"
-else
+if confirm "Desktop wallpaper? [Y/n]: " Y; then
   export INSTALL_DESKTOP_WALLPAPER="true"
   echo -e "  ${GREEN}→ Desktop wallpaper will be installed${NC}"
+else
+  export INSTALL_DESKTOP_WALLPAPER="false"
+  echo -e "  ${DIM}→ Skipping desktop wallpaper${NC}"
 fi
 
 # ── 18+ wallpapers prompt ──
@@ -232,15 +241,68 @@ echo -e "  ${CYAN}║${NC}${p5}$(printf '%*s' $((62 - ${#p5})) '')${CYAN}║${NC
 p6="  Press Enter for default (No)"
 echo -e "  ${CYAN}║${NC}${p6}$(printf '%*s' $((62 - ${#p6})) '')${CYAN}║${NC}"
 echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
-echo -en "  ${DIM}18+ wallpapers? [y/N]:${NC} "
-read -r -n 1 key </dev/tty || true
 echo ""
-if [ "$key" = "y" ] || [ "$key" = "Y" ]; then
+if confirm "18+ wallpapers? [y/N]: " N; then
   export INSTALL_WALLPAPER_18="true"
   echo -e "  ${GREEN}→ 18+ wallpapers will be downloaded${NC}"
 else
   export INSTALL_WALLPAPER_18="false"
   echo -e "  ${DIM}→ Skipping 18+ wallpapers${NC}"
+fi
+
+# ── 🔥 Billie & Jinx video edits prompt ──
+echo ""
+echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+bv_t="        ◆  🔥  HOT BILLIE & JINX VIDEO EDITS?  ◆"
+echo -e "  ${CYAN}║${NC}${bv_t}$(printf '%*s' $((62 - ${#bv_t})) '')${CYAN}║${NC}"
+echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+bv1="  🔥  Sick edits — Billie, Jinx, and cool stuff (~500 MB)"
+echo -e "  ${CYAN}║${NC}${bv1}$(printf '%*s' $((62 - ${#bv1})) '')${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+bv2="    Yes  — Heck yeah! Drop 'em in ~/Downloads"
+echo -e "  ${CYAN}║${NC}    ${BOLD}${GREEN}Y${NC}${BOLD}es${NC}  — Heck yeah! Drop '\''em in ~/Downloads$(printf '%*s' $((62 - ${#bv2})) '')${CYAN}║${NC}"
+bv3="    No   — Nah, not today (default)"
+echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}n${NC}${BOLD}o${NC}   — Nah, not today (default)$(printf '%*s' $((62 - ${#bv3})) '')${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+bv4="  You'll get Billie Eilish , Jinx Edit Hot, and more"
+echo -e "  ${CYAN}║${NC}${bv4}$(printf '%*s' $((62 - ${#bv4})) '')${CYAN}║${NC}"
+bv5="  Press Enter for default (No)"
+echo -e "  ${CYAN}║${NC}${bv5}$(printf '%*s' $((62 - ${#bv5})) '')${CYAN}║${NC}"
+echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+echo ""
+if confirm "Billie & Jinx video edits? [y/N]: " N; then
+  export INSTALL_BILLIE_VIDEOS="true"
+  echo -e "  ${GREEN}→  🔥  Alright! Dropping hot edits in ~/Downloads${NC}"
+else
+  # ── Naughty second prompt — are you REALLY sure? ──
+  echo ""
+  echo -e "  ${PINK}╔══════════════════════════════════════════════════════════════╗${NC}"
+nsty_t="     ◆  👀  U SURE BUDDY?  👀  ◆"
+  echo -e "  ${PINK}║${NC}${nsty_t}$(printf '%*s' $((62 - ${#nsty_t})) '')${PINK}║${NC}"
+  echo -e "  ${PINK}╠══════════════════════════════════════════════════════════════╣${NC}"
+  echo -e "  ${PINK}║${NC}                                                              ${PINK}║${NC}"
+nsty1="  You really gonna miss out on mommy Billie's sweet"
+  echo -e "  ${PINK}║${NC}${nsty1}$(printf '%*s' $((62 - ${#nsty1})) '')${PINK}║${NC}"
+nsty2="  body and Jinx's hot slim curves?  🔥  💦"
+  echo -e "  ${PINK}║${NC}${nsty2}$(printf '%*s' $((62 - ${#nsty2})) '')${PINK}║${NC}"
+  echo -e "  ${PINK}║${NC}                                                              ${PINK}║${NC}"
+nsty3="    Yes  — OK OK YOU CONVINCED ME!  😩🔥"
+  echo -e "  ${PINK}║${NC}    ${BOLD}${GREEN}Y${NC}${BOLD}es${NC}  — OK OK YOU CONVINCED ME!  😩🔥$(printf '%*s' $((62 - ${#nsty3})) '')${PINK}║${NC}"
+nsty4="    No   — Nah I'm good (for real this time)"
+  echo -e "  ${PINK}║${NC}    ${BOLD}${YELLOW}n${NC}${BOLD}o${NC}   — Nah I'\''m good (for real this time)$(printf '%*s' $((62 - ${#nsty4})) '')${PINK}║${NC}"
+  echo -e "  ${PINK}║${NC}                                                              ${PINK}║${NC}"
+nsty5="  Last chance before you miss mommy..."
+  echo -e "  ${PINK}║${NC}${nsty5}$(printf '%*s' $((62 - ${#nsty5})) '')${PINK}║${NC}"
+  echo -e "  ${PINK}╚══════════════════════════════════════════════════════════════╝${NC}"
+  echo ""
+  if confirm "👀  For real though? [y/N]: " N; then
+    export INSTALL_BILLIE_VIDEOS="true"
+    echo -e "  ${GREEN}→  😩  Alright alright — dropping hot edits in ~/Downloads${NC}"
+  else
+    export INSTALL_BILLIE_VIDEOS="false"
+    echo -e "  ${DIM}→  Aight your loss, more for the rest of us 🔥${NC}"
+  fi
 fi
 
 # ── Ensure git is available ──
