@@ -756,14 +756,21 @@ function __pfp_apply --description 'Internal: apply image as profile picture'
                 echo ""
 
                 set -l chosen 0
-                set -l first_try 1
+                set -l __cc 0
                 while test $chosen -eq 0
-                    if test $first_try -eq 0
-                        echo -e "  $D  Enter number [1-$result_count] or [0] to cancel.$C"
-                    else
-                        set first_try 0
-                    end
+                    echo -e "  $D  Enter number [1-$result_count], or 0 to cancel.$C"
                     read -P "  > " choice
+                    set -l __rs $status
+                    if test $__rs -ne 0
+                        set __cc (math $__cc + 1)
+                        if test $__cc -ge 2
+                            echo -e "  $D  → Cancelled.  $C"
+                            return 1
+                        end
+                        echo -e "  $D  (Ctrl+C again to cancel)  $C"
+                        continue
+                    end
+                    set __cc 0
                     if test "$choice" = "0"
                         echo -e "  $D  Cancelled.$C"
                         return 1
@@ -793,8 +800,24 @@ function __pfp_apply --description 'Internal: apply image as profile picture'
                         # ── Confirm ──
                         echo -e ""
                         set -l confirmed 0
+                        set -l __cc2 0
                         while test $confirmed -eq 0
-                            read -P "  Use this image? [Y/n] " confirm
+                            read -P "  Use this image? [Y/n/0] " confirm
+                            set -l __rs2 $status
+                            if test $__rs2 -ne 0
+                                set __cc2 (math $__cc2 + 1)
+                                if test $__cc2 -ge 2
+                                    echo -e "  $D  → Cancelled.  $C"
+                                    return 1
+                                end
+                                echo -e "  $D  (Ctrl+C again to cancel)  $C"
+                                continue
+                            end
+                            set __cc2 0
+                            if string match -qir '^0$' "$confirm"
+                                echo -e "  $D  → Cancelled.  $C"
+                                return 1
+                            end
                             if test -z "$confirm"; or string match -q -- "y" "$confirm"; or string match -q -- "Y" "$confirm"; or string match -iq -- "yes" "$confirm"
                                 set chosen 1
                                 set confirmed 1
@@ -803,7 +826,7 @@ function __pfp_apply --description 'Internal: apply image as profile picture'
                                 echo -e ""
                                 echo -e "  $D  Choose another...$C"
                             else
-                                echo -e "  $RE  Enter y or n.$C"
+                                echo -e "  $RE  Enter y, n, or 0 to cancel.$C"
                             end
                         end
                     else
