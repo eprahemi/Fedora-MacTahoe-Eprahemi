@@ -1601,7 +1601,7 @@ download_optional_videos() {
         if echo "$gintama_mime" | grep -qi "zip"; then
           unzip -j -o -q "$gintama_tmp" -d "$dl_dest" 2>/dev/null || true
         elif echo "$gintama_mime" | grep -qi "mp4\|video"; then
-          cp "$gintama_tmp" "$dl_dest/gintama.mp4" 2>/dev/null || true
+          cp "$gintama_tmp" "$dl_dest/Gintama - Bad Boy.mp4" 2>/dev/null || true
         else
           # fallback: just copy with original name
           cp "$gintama_tmp" "$dl_dest/" 2>/dev/null || true
