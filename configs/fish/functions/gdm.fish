@@ -70,7 +70,6 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
                 echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
                 echo -e "  $RE└────────────────────────────────────────────────────────────┘$C"
             end
-            echo -e "  $GY  eprahemi  •  github.com/eprahemi$C"
             return 1
         end
     end
@@ -270,7 +269,6 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         if not set -q argv[1]
             echo -e "$RE✘$C Usage: $CY$B gdm [-y|--yes] /path/to/wallpaper.jpg$C"
             echo -e "  $D  You used -y but forgot an image path.$C"
-            echo -e "  $GY  github.com/eprahemi$C"
             return 1
         end
     end
@@ -293,7 +291,6 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         if test -z "$bg_uri"
             echo -e "  $RE✘  No desktop wallpaper detected.$C"
             echo -e "  $GY  Set one in Settings → Background first.$C"
-            echo -e "  $GY  github.com/eprahemi$C"
             return 1
         end
 
@@ -309,7 +306,6 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         if not test -f "$bg_path"
             echo -e "  $RE✘  Wallpaper file not found: $YE"(string replace -- "$HOME" '~' "$bg_path")"$C"
             echo -e "  $GY  The file may have been moved or deleted.$C"
-            echo -e "  $GY  github.com/eprahemi$C"
             return 1
         end
 
@@ -327,7 +323,6 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         set -l cc4 "  [N] No  → Cancel"
         echo -e "  $CY║$C  $RE$cc4$C$(printf '%*s' (math "60 - "(string length "$cc4")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-        set -l br "  eprahemi  •  github.com/eprahemi"
         echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
         echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
         echo ""
@@ -345,16 +340,16 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
             if test $__rs -ne 0
                 set __cc (math $__cc + 1)
                 if test $__cc -ge 2
-                    echo -e "  $D  → Cancelled.  $C  $GY eprahemi$C"
+                    echo -e "  $D  → Cancelled.  $C"
                     return 1
                 end
-                echo -e "  $D  (Ctrl+C again to cancel)  $C  $GY eprahemi$C"
+                echo -e "  $D  (Ctrl+C again to cancel)  $C"
                 continue
             end
             break
         end
         if not test -z "$current_confirm"; and not string match -qir '^y' "$current_confirm"
-            echo -e "  $RE✘  Cancelled. Run $CY$B gdm$C $RE again — github.com/eprahemi$C"
+            echo -e "  $RE✘  Cancelled. Run $CY$B gdm$C $RE again $C"
             return 1
         end
 
@@ -462,7 +457,6 @@ except: sys.exit(1)
             set -l sv_e4 "    gdm filename.jpg"
             echo -e "  $RE║$C  $CY$sv_e4$C$(printf '%*s' (math "60 - "(string length "$sv_e4")) '')$RE║$C"
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
-            set -l br "  eprahemi  •  github.com/eprahemi"
             echo -e "  $RE║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
             echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
             echo ""
@@ -490,7 +484,6 @@ except: sys.exit(1)
             set -l sv_c4 "    gdm filename.jpg"
             echo -e "  $RE║$C  $CY$sv_c4$C$(printf '%*s' (math "60 - "(string length "$sv_c4")) '')$RE║$C"
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
-            set -l br "  eprahemi  •  github.com/eprahemi"
             echo -e "  $RE║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
             echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
             echo ""
@@ -626,7 +619,6 @@ except:
             echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
         end
 
-        set -l br "  eprahemi  •  github.com/eprahemi"
         echo -e "  $GR║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$GR║$C"
         echo -e "  $GR╚══════════════════════════════════════════════════════════════╝$C"
         echo ""
@@ -641,13 +633,11 @@ except:
         if not test -f "$last_file"
             echo -e "  $RE✘  No GDM wallpaper info available.$C"
             echo -e "  $GY  Apply a wallpaper first with $CY$B gdm filename.jpg$C"
-            echo -e "  $GY  github.com/eprahemi$C"
             return 1
         end
         if not test -s "$last_file"
             echo -e "  $RE✘  Saved wallpaper is empty (0 bytes) — corrupted.$C"
             echo -e "  $GY  Apply a new wallpaper to rebuild the cache.$C"
-            echo -e "  $GY  github.com/eprahemi$C"
             return 1
         end
 
@@ -848,7 +838,6 @@ except Exception:
         echo -e "  $CY║$C    $D└──────────────────────────────────────────────────────┘$C  $CY║$C"
 
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-        set -l br "  eprahemi  •  github.com/eprahemi"
         echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
         echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
         echo ""
@@ -892,7 +881,6 @@ except Exception:
                 echo -e "  $RE│$C    $GY gdm /path$C      $D  apply a specific image$C$RE               │$C"
                 echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
                 echo -e "  $RE└────────────────────────────────────────────────────────────┘$C"
-                echo -e "  $GY  eprahemi  •  github.com/eprahemi$C"
                 return 1
             end
         end
@@ -902,7 +890,6 @@ except Exception:
     #     e.g. `gdm HOT PUSSASS.jpg` from inside the folder
     if not set -q argv[1]
         echo -e "$RE✘$C Usage: $CY$B gdm [-y|--yes] /path/to/wallpaper.jpg$C"
-        echo -e "  $GY  github.com/eprahemi$C"
         return 1
     end
     set -l filename (string join ' ' -- $argv)
@@ -939,7 +926,6 @@ except Exception:
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
             echo -e "  $RE║$C  $CY$ie5$C$(printf '%*s' (math "60 - "(string length "$ie5")) '')$RE║$C"
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
-            set -l br "  eprahemi  •  github.com/eprahemi"
             echo -e "  $RE║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
             echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
             echo ""
@@ -988,7 +974,6 @@ except Exception:
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
             echo -e "  $RE║$C  $CY$se7$C$(printf '%*s' (math "60 - "(string length "$se7")) '')$RE║$C"
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
-            set -l br "  eprahemi  •  github.com/eprahemi"
             echo -e "  $RE║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
             echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
             echo ""
@@ -996,7 +981,7 @@ except Exception:
         end
 
         # 2. Search common user directories
-        echo -e "  $D🔍  Searching for \"$filename\"...$C  $GY eprahemi$C"
+        echo -e "  $D🔍  Searching for \"$filename\"...$C"
         set -l search_dirs \
             "$HOME/Pictures" \
             "$HOME/Downloads" \
@@ -1020,7 +1005,7 @@ except Exception:
 
         # 3. No exact match? Try wildcard *$filename*
         if test (count $results) -eq 0
-            echo -e "  $D  No exact match — trying wildcard...  $GY eprahemi$C"
+            echo -e "  $D  No exact match — trying wildcard...$C"
             for dir in $search_dirs
                 if test -d "$dir"
                     set -l found (find "$dir" -type f -iname "*$filename*" 2>/dev/null)
@@ -1080,7 +1065,6 @@ except Exception:
                 echo -e "  $GY$B  If you meant $CY$B--help$C$GY$B to see available commands —$C"
                 echo -e "  $GY  you need to type: $CY$B gdm --help$C"
             end
-            echo -e "  $GY  github.com/eprahemi$C"
             return 1
 
         case 1
@@ -1103,7 +1087,6 @@ except Exception:
                 set -l ee4 "  Choose a valid image and run gdm again."
                 echo -e "  $RE║$C  $YE$ee4$C$(printf '%*s' (math "60 - "(string length "$ee4")) '')$RE║$C"
                 echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
-                set -l br "  eprahemi  •  github.com/eprahemi"
                 echo -e "  $RE║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
                 echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
                 echo ""
@@ -1133,7 +1116,6 @@ except Exception:
                 set -l c4 "  [N] No  → Cancel, type gdm again"
                 echo -e "  $CY║$C  $RE$c4$C$(printf '%*s' (math "60 - "(string length "$c4")) '')$CY║$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                set -l br "  eprahemi  •  github.com/eprahemi"
                 echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
                 echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
                 echo ""
@@ -1144,16 +1126,16 @@ except Exception:
                     if test $__rs -ne 0
                         set __cc (math $__cc + 1)
                         if test $__cc -ge 2
-                            echo -e "  $D  → Cancelled.  $C  $GY eprahemi$C"
+                            echo -e "  $D  → Cancelled.  $C"
                             return 1
                         end
-                        echo -e "  $D  (Ctrl+C again to cancel)  $C  $GY eprahemi$C"
+                        echo -e "  $D  (Ctrl+C again to cancel)  $C"
                         continue
                     end
                     break
                 end
                 if not test -z "$confirm"; and not string match -qir '^y' "$confirm"
-                    echo -e "  $RE✘  Cancelled. Run $CY$B gdm$C $RE again — github.com/eprahemi$C"
+                    echo -e "  $RE✘  Cancelled. Run $CY$B gdm$C $RE again $C"
                     return 1
                 end
 
@@ -1240,7 +1222,6 @@ except Exception:
             set -l m3 "  Type 1–$result_count to choose, or 'q' to cancel"
             echo -e "  $CY║$C  $WH$m3$C$(printf '%*s' (math "60 - "(string length "$m3")) '')$CY║$C"
             echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-            set -l br "  eprahemi  •  github.com/eprahemi"
             echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
             echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
             echo ""
@@ -1252,14 +1233,14 @@ except Exception:
                 if test $__rs -ne 0
                     set __cc (math $__cc + 1)
                     if test $__cc -ge 2
-                        echo -e "  $D  → Exiting.  $C  $GY eprahemi$C"
+                        echo -e "  $D  → Exiting.  $C"
                         return 1
                     end
-                    echo -e "  $D  (Ctrl+C again to exit)  $C  $GY eprahemi$C"
+                    echo -e "  $D  (Ctrl+C again to exit)  $C"
                     continue
                 end
                 if string match -qir '^q' "$choice"
-                    echo -e "  $RE✘  Cancelled. Run $CY$B gdm$C $RE again — github.com/eprahemi$C"
+                    echo -e "  $RE✘  Cancelled. Run $CY$B gdm$C $RE again $C"
                     return 1
                 end
                 if string match -qr '^\d+$' "$choice"
@@ -1281,7 +1262,6 @@ except Exception:
                             echo -e "  $RE║$C  $D$ee2$C$(printf '%*s' (math "60 - "(string length "$ee2")) '')$RE║$C"
                             echo -e "  $RE║$C  $D$ee3$C$(printf '%*s' (math "60 - "(string length "$ee3")) '')$RE║$C"
                             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
-                            set -l br "  eprahemi  •  github.com/eprahemi"
                             echo -e "  $RE║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
                             echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
                             echo ""
@@ -1316,7 +1296,7 @@ except Exception:
             set -l blur_done 0
             # Guard: /tmp must be writable for blur output
             if not touch "/tmp/.gdm-tmp-write" 2>/dev/null
-                echo -e "  $D  ⚠️  Cannot write to /tmp — blur unavailable. Using original.$C  $GY github.com/eprahemi$C"
+                echo -e "  $D  ⚠️  Cannot write to /tmp — blur unavailable. Using original.$C$C"
                 set blur_done 1
             else
                 rm -f "/tmp/.gdm-tmp-write"
@@ -1342,7 +1322,6 @@ except Exception:
                 set -l b5 "  [C] Custom — set blur sigma + tint %"
                 echo -e "  $CY║$C  $YE$b5$C$(printf '%*s' (math "60 - "(string length "$b5")) '')$CY║$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                set -l br "  eprahemi  •  github.com/eprahemi"
                 echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
                 echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
                 echo ""
@@ -1353,10 +1332,10 @@ except Exception:
                     if test $__rs -ne 0
                         set __cc (math $__cc + 1)
                         if test $__cc -ge 2
-                            echo -e "  $D  → Exiting.  $C  $GY eprahemi$C"
+                            echo -e "  $D  → Exiting.  $C"
                             return 1
                         end
-                        echo -e "  $D  (Ctrl+C again to exit)  $C  $GY eprahemi$C"
+                        echo -e "  $D  (Ctrl+C again to exit)  $C"
                         continue
                     end
                     break
@@ -1385,7 +1364,6 @@ except Exception:
                     set -l cu3 "  Black tint % (0-100, try 20-40):"
                     echo -e "  $CY║$C  $D$cu3$C$(printf '%*s' (math "60 - "(string length "$cu3")) '')$CY║$C"
                     echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                    set -l br "  eprahemi  •  github.com/eprahemi"
                     echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
                     echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
                     echo ""
@@ -1396,10 +1374,10 @@ except Exception:
                         if test $__rs -ne 0
                             set __cc (math $__cc + 1)
                             if test $__cc -ge 2
-                                echo -e "  $D  → Exiting.  $C  $GY eprahemi$C"
+                                echo -e "  $D  → Exiting.  $C"
                                 return 1
                             end
-                            echo -e "  $D  (Ctrl+C again to exit)  $C  $GY eprahemi$C"
+                            echo -e "  $D  (Ctrl+C again to exit)  $C"
                             continue
                         end
                         break
@@ -1411,10 +1389,10 @@ except Exception:
                         if test $__rs -ne 0
                             set __cc (math $__cc + 1)
                             if test $__cc -ge 2
-                                echo -e "  $D  → Exiting.  $C  $GY eprahemi$C"
+                                echo -e "  $D  → Exiting.  $C"
                                 return 1
                             end
-                            echo -e "  $D  (Ctrl+C again to exit)  $C  $GY eprahemi$C"
+                            echo -e "  $D  (Ctrl+C again to exit)  $C"
                             continue
                         end
                         break
@@ -1427,7 +1405,7 @@ except Exception:
                         set colorize_pct 30
                     end
 
-                    echo -e "  $D🎨  Applying blur (0x$blur_sigma) + black $colorize_pct%% tint...$C  $GY eprahemi$C"
+                    echo -e "  $D🎨  Applying blur (0x$blur_sigma) + black $colorize_pct%% tint...$C"
                     if magick "$image" -blur "0x$blur_sigma" -fill black -colorize "$colorize_pct%" "$blurred_file" 2>/dev/null
                         # ── Preview blurred result in Kitty ──
                         if test -n "$KITTY_PID"
@@ -1450,7 +1428,6 @@ except Exception:
                             set -l l3 "  [N] No  — try different blur settings"
                             echo -e "  $CY║$C  $YE$l3$C$(printf '%*s' (math "60 - "(string length "$l3")) '')$CY║$C"
                             echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                            set -l br "  eprahemi  •  github.com/eprahemi"
                             echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
                             echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
                             echo ""
@@ -1461,10 +1438,10 @@ except Exception:
                                 if test $__rs -ne 0
                                     set __cc (math $__cc + 1)
                                     if test $__cc -ge 2
-                                        echo -e "  $D  → Exiting.  $C  $GY eprahemi$C"
+                                        echo -e "  $D  → Exiting.  $C"
                                         return 1
                                     end
-                                    echo -e "  $D  (Ctrl+C again to exit)  $C  $GY eprahemi$C"
+                                    echo -e "  $D  (Ctrl+C again to exit)  $C"
                                     continue
                                 end
                                 break
@@ -1473,14 +1450,14 @@ except Exception:
                                 set image "$blurred_file"
                                 echo "Blur 0x$blur_sigma + black $colorize_pct%" > /tmp/.gdm-info/blur-settings.txt
                                 set blur_done 1
-                                echo -e "  $GR✅  Custom blur applied$C  github.com/eprahemi"
+                                echo -e "  $GR✅  Custom blur applied$C"
                             end
                             # N → loops back to blur menu
                         else
                             set image "$blurred_file"
                             echo "Blur 0x$blur_sigma + black $colorize_pct%" > /tmp/.gdm-info/blur-settings.txt
                             echo -e "  $D  💻  Preview requires Kitty terminal — blur applied without preview.$C"
-                            echo -e "  $GR✅  Custom blur applied$C  github.com/eprahemi"
+                            echo -e "  $GR✅  Custom blur applied$C"
                             echo ""
                             set -l __cc 0
                             while true
@@ -1489,10 +1466,10 @@ except Exception:
                                 if test $__rs -ne 0
                                     set __cc (math $__cc + 1)
                                     if test $__cc -ge 2
-                                        echo -e "  $D  → Exiting.  $C  $GY eprahemi$C"
+                                        echo -e "  $D  → Exiting.  $C"
                                         return 1
                                     end
-                                    echo -e "  $D  (Ctrl+C again to exit)  $C  $GY eprahemi$C"
+                                    echo -e "  $D  (Ctrl+C again to exit)  $C"
                                     continue
                                 end
                                 break
@@ -1506,16 +1483,16 @@ except Exception:
                     else
                         set -l _blur_status $status
                         if test $_blur_status -eq 130
-                            echo -e "  $D  → Cancelled.$C  $GY eprahemi$C"
+                            echo -e "  $D  → Cancelled.$C"
                             return 1
                         end
-                        echo -e "  $RE✘  Custom blur failed — image may be corrupt or unsupported. Using original.$C  $GY github.com/eprahemi$C"
+                        echo -e "  $RE✘  Custom blur failed — image may be corrupt or unsupported. Using original.$C$C"
                         echo "No blur applied (blur failed)" > /tmp/.gdm-info/blur-settings.txt
                         set blur_done 1
                     end
 
                 else if test -z "$blur_choice"; or string match -qir '^y' "$blur_choice"
-                    echo -e "  $D🎨  Applying default blur (0x40) + black 40%% tint...$C  $GY eprahemi$C"
+                    echo -e "  $D🎨  Applying default blur (0x40) + black 40%% tint...$C"
                     if magick "$image" -blur 0x40 -fill black -colorize 40% "$blurred_file" 2>/dev/null
                         # ── Preview blurred result in Kitty ──
                         if test -n "$KITTY_PID"
@@ -1529,20 +1506,20 @@ except Exception:
                         set image "$blurred_file"
                         echo "Blur 0x40 + black 40%" > /tmp/.gdm-info/blur-settings.txt
                         set blur_done 1
-                        echo -e "  $GR✅  Default blur applied$C  github.com/eprahemi"
+                        echo -e "  $GR✅  Default blur applied$C"
                     else
                         set -l _blur_status $status
                         if test $_blur_status -eq 130
-                            echo -e "  $D  → Cancelled.$C  $GY eprahemi$C"
+                            echo -e "  $D  → Cancelled.$C"
                             return 1
                         end
-                        echo -e "  $RE✘  Blur failed — image may be corrupt or unsupported. Using original.$C  $GY github.com/eprahemi$C"
+                        echo -e "  $RE✘  Blur failed — image may be corrupt or unsupported. Using original.$C$C"
                         echo "No blur applied (blur failed)" > /tmp/.gdm-info/blur-settings.txt
                         set blur_done 1
                     end
 
                 else
-                    echo -e "  $D  Hmm, I didn't understand \"$blur_choice\" — try again.$C  $GY eprahemi$C"
+                    echo -e "  $D  Hmm, I didn't understand \"$blur_choice\" — try again.$C"
                 end
             end
         else
@@ -1570,7 +1547,6 @@ except Exception:
             set -l mi5 "  [N] No  — skip blur, use original"
             echo -e "  $CY║$C  $RE$mi5$C$(printf '%*s' (math "60 - "(string length "$mi5")) '')$CY║$C"
             echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-            set -l br "  eprahemi  •  github.com/eprahemi"
             echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
             echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
             echo ""
@@ -1581,25 +1557,25 @@ except Exception:
                 if test $__rs -ne 0
                     set __cc (math $__cc + 1)
                     if test $__cc -ge 2
-                        echo -e "  $D  → Exiting.  $C  $GY eprahemi$C"
+                        echo -e "  $D  → Exiting.  $C"
                         return 1
                     end
-                    echo -e "  $D  (Ctrl+C again to exit)  $C  $GY eprahemi$C"
+                    echo -e "  $D  (Ctrl+C again to exit)  $C"
                     continue
                 end
                 break
             end
             if string match -qir '^y' "$install_magick"
-                echo -e "  $D📦  Installing ImageMagick...$C  $GY github.com/eprahemi$C"
+                echo -e "  $D📦  Installing ImageMagick...$C$C"
                 if sudo dnf install -y ImageMagick 2>/dev/null
-                    echo -e "  $GR✅  ImageMagick installed!$C  $GY github.com/eprahemi$C"
+                    echo -e "  $GR✅  ImageMagick installed!$C$C"
                     echo -e "  $GY  Run $CY$B gdm$C $GY again to use blur options.$C"
                     echo "No blur applied (ImageMagick was just installed)" > /tmp/.gdm-info/blur-settings.txt
                 else
-                    echo -e "  $RE✘  Installation failed. Try: $CY$B sudo dnf install ImageMagick$C  $GY github.com/eprahemi$C"
+                    echo -e "  $RE✘  Installation failed. Try: $CY$B sudo dnf install ImageMagick$C$C"
                 end
             else
-                echo -e "  $D  Skipping blur — using original image.$C  $GY github.com/eprahemi$C"
+                echo -e "  $D  Skipping blur — using original image.$C$C"
                 echo "No blur applied (ImageMagick not installed)" > /tmp/.gdm-info/blur-settings.txt
             end
         end
@@ -1714,23 +1690,23 @@ except Exception:
                 if test $__rs -ne 0
                     set __cc (math $__cc + 1)
                     if test $__cc -ge 2
-                        echo -e "  $RE✘  Cancelled — git is required.$C  $GY github.com/eprahemi$C"
+                        echo -e "  $RE✘  Cancelled — git is required.$C$C"
                         return 1
                     end
-                    echo -e "  $D  (Ctrl+C again to cancel)  $C  $GY eprahemi$C"
+                    echo -e "  $D  (Ctrl+C again to cancel)  $C"
                     continue
                 end
                 break
             end
             if string match -qir '^y' "$install_git"
-                echo -e "  $D📦  Installing git...$C  $GY github.com/eprahemi$C"
+                echo -e "  $D📦  Installing git...$C$C"
                 if not sudo dnf install -y git 2>/dev/null
                     echo -e "  $RE✘  Git installation failed. Try: $CY$B sudo dnf install git$C"
                     return 1
                 end
                 echo -e "  $GR✅  git installed!$C"
             else
-                echo -e "  $RE✘  Cancelled — git is required.$C  $GY github.com/eprahemi$C"
+                echo -e "  $RE✘  Cancelled — git is required.$C$C"
                 return 1
             end
         end
@@ -1752,7 +1728,7 @@ except Exception:
         end
         # Remove .git && .gitignore — not needed at runtime, saves ~500 KB
         rm -rf "$repo/.git" "$repo/.gitignore" 2>/dev/null
-        echo -e "  $GR✅  FedoraTahoe-GDM cached at $repo (works offline from now on)$C  $GY github.com/eprahemi$C"
+        echo -e "  $GR✅  FedoraTahoe-GDM cached at $repo (works offline from now on)$C$C"
 
         # Restore preserved runtime state files
         if test -n "$saved_undo"; and test -f "$saved_undo"
@@ -1774,24 +1750,24 @@ except Exception:
             set -l converted "/tmp/gdm-converted.jpg"
             if touch "/tmp/.gdm-conv-write" 2>/dev/null
                 rm -f "/tmp/.gdm-conv-write"
-                echo -e "  $D🔄  Converting $ext → JPEG 90%% quality...$C  $GY eprahemi$C"
+                echo -e "  $D🔄  Converting $ext → JPEG 90%% quality...$C"
                 if magick "$image" -quality 90 "$converted" 2>/dev/null
                     set image "$converted"
-                    echo -e "  $GR✅  Converted to JPEG$C  github.com/eprahemi"
+                    echo -e "  $GR✅  Converted to JPEG$C"
                 else
                     set -l _conv_status $status
                     if test $_conv_status -eq 130
-                        echo -e "  $D  → Cancelled.$C  $GY eprahemi$C"
+                        echo -e "  $D  → Cancelled.$C"
                         return 1
                     end
-                    echo -e "  $D  ⚠️  JPEG conversion failed, using original.$C  $GY github.com/eprahemi$C"
+                    echo -e "  $D  ⚠️  JPEG conversion failed, using original.$C$C"
                 end
             else
-                echo -e "  $D  ⚠️  Cannot write to /tmp — skipping JPEG conversion.$C  $GY github.com/eprahemi$C"
+                echo -e "  $D  ⚠️  Cannot write to /tmp — skipping JPEG conversion.$C$C"
             end
         end
     else
-        echo -e "  $D  ⚠️  ImageMagick not installed — skipping JPEG conversion.$C  $GY github.com/eprahemi$C"
+        echo -e "  $D  ⚠️  ImageMagick not installed — skipping JPEG conversion.$C$C"
     end
 
     # ══════════════════════════════════════════════════════════════
@@ -1799,9 +1775,9 @@ except Exception:
     # ══════════════════════════════════════════════════════════════
     if not command -v magick &>/dev/null
         if command -v sudo &>/dev/null
-            echo -e "  $D  🛡️  magick not installed — auto-installing for metadata...$C  $GY eprahemi$C"
+            echo -e "  $D  🛡️  magick not installed — auto-installing for metadata...$C"
             if sudo dnf install -y ImageMagick 2>/dev/null
-                echo -e "  $GR  ✅  ImageMagick installed by safety guard$C  github.com/eprahemi"
+                echo -e "  $GR  ✅  ImageMagick installed by safety guard$C"
             else
                 echo -e ""
                 echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
@@ -1819,7 +1795,6 @@ except Exception:
                 set -l gu4 "    sudo dnf install ImageMagick"
                 echo -e "  $RE║$C  $YE$gu4$C$(printf '%*s' (math "60 - "(string length "$gu4")) '')$RE║$C"
                 echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
-                set -l br "  eprahemi  •  github.com/eprahemi"
                 echo -e "  $RE║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
                 echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
                 echo ""
@@ -1842,7 +1817,6 @@ except Exception:
             set -l gu4 "    sudo dnf install ImageMagick"
             echo -e "  $RE║$C  $YE$gu4$C$(printf '%*s' (math "60 - "(string length "$gu4")) '')$RE║$C"
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
-            set -l br "  eprahemi  •  github.com/eprahemi"
             echo -e "  $RE║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
             echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
             echo ""
@@ -1886,7 +1860,7 @@ except Exception:
         set retry_count (math "$retry_count + 1")
 
         if test $retry_count -gt 1
-            echo -e "  $D  🔄  Retry $retry_count/3 — gathering metadata again...$C  $GY eprahemi$C"
+            echo -e "  $D  🔄  Retry $retry_count/3 — gathering metadata again...$C"
         end
 
         # ── Reset vars for this attempt ──
@@ -2003,11 +1977,11 @@ except Exception:
             rm -f "$tmp_cache"
             set cache_ok 1
             if test $retry_count -gt 1
-                echo -e "  $GR  ✅  Cache validated on retry $retry_count/3$C  github.com/eprahemi"
+                echo -e "  $GR  ✅  Cache validated on retry $retry_count/3$C"
             end
         else
             # Validation failed
-            echo -e "  $D  ⚠️  Metadata validation failed (attempt $retry_count/3):$C  $GY eprahemi$C"
+            echo -e "  $D  ⚠️  Metadata validation failed (attempt $retry_count/3):$C"
             echo -e "  $D    $validation_errors$C"
             rm -f "$tmp_cache"
             if test $retry_count -lt 3
@@ -2020,7 +1994,7 @@ except Exception:
     # 🛡️  GUARD C (fallback): If still invalid, write with Unknown
     # ══════════════════════════════════════════════════════════════
     if test $cache_ok -eq 0
-        echo -e "  $D  ⚠️  Metadata incomplete after 3 retries — writing with Unknown markers.$C  $GY eprahemi$C"
+        echo -e "  $D  ⚠️  Metadata incomplete after 3 retries — writing with Unknown markers.$C"
 
         # Fill empty/? fields with "Unknown"
         for __var in original_name fmt csp dep dims dpi mp aspect blur_desc orig_path f_size f_date
@@ -2043,21 +2017,21 @@ except Exception:
         echo "SOURCE: $orig_path"  >> "$repo/.gdm-info.txt"
         echo "SIZE: $f_size"       >> "$repo/.gdm-info.txt"
         echo "DATE: $f_date"       >> "$repo/.gdm-info.txt"
-        echo -e "  $D  🛡️  Cache written with Unknown — info display will handle gracefully.$C  $GY eprahemi$C"
+        echo -e "  $D  🛡️  Cache written with Unknown — info display will handle gracefully.$C"
     end
 
     # ── Apply the wallpaper ──
     # Guard: sudo must be installed
     if not command -v sudo &>/dev/null
         echo -e "  $RE✘  sudo is required but not installed.$C"
-        echo -e "  $GY  Install it and try again.  github.com/eprahemi$C"
+        echo -e "  $GY  Install it and try again.$C"
         return 1
     end
     # Save a copy for 'gdm info'
     cp "$image" "$repo/.gdm-undo-copy.jpg"
     # Clean up /tmp/.gdm-info/ — original name + source path now in metadata cache
     rm -rf /tmp/.gdm-info
-    echo -e "  $CY🖼️  Applying GDM wallpaper...$C  $D github.com/eprahemi$C"
+    echo -e "  $CY🖼️  Applying GDM wallpaper...$C$C"
     cd "$repo"
     sudo ./gdm-wallpaper.sh -g -nb -nd -b "$image"
     cd -
@@ -2110,7 +2084,6 @@ except Exception:
         printf "  $GY│$C  $D•$C $CY%-20s$C $D%-26s$C$GY│$C\n" "gdm info" "view image details"
         printf "  $GY│$C  $D•$C $CY%-20s$C $D%-26s$C$GY│$C\n" "gdm save" "save to ~/Pictures/"
         echo -e "  $GY└────────────────────────────────────────────────────┘$C"
-        echo -e "  $GY  eprahemi  •  github.com/eprahemi$C"
         echo ""
         # Forever rainbow cycle at the bottom
         set -l r 255 255 255 255 200 100  50  50  50  50 100 200
@@ -2129,6 +2102,5 @@ except Exception:
         printf "  $GY│$C  $D•$C $CY%-20s$C $D%-26s$C$GY│$C\n" "gdm info" "view image details"
         printf "  $GY│$C  $D•$C $CY%-20s$C $D%-26s$C$GY│$C\n" "gdm save" "save to ~/Pictures/"
         echo -e "  $GY└────────────────────────────────────────────────────┘$C"
-        echo -e "  $GY  eprahemi  •  github.com/eprahemi$C"
     end
 end

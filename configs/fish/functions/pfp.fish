@@ -91,7 +91,6 @@ function pfp --description 'Manage your GNOME profile picture (avatar) — githu
                     set -l i6 "  Date:  $cur_mtime"
                     echo -e "  $CY║$C  $GY$i6$C$(printf '%*s' (math "60 - "(string length "$i6")) '')$CY║$C"
                     echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                    set -l br "  eprahemi  •  github.com/eprahemi"
                     echo -e "  $CY║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
                     echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
                     echo -e ""
@@ -102,7 +101,6 @@ function pfp --description 'Manage your GNOME profile picture (avatar) — githu
                     set -l e "  ⚠️  No profile picture set  ⚠️"
                     echo -e "  $YE║$C  $WH$e$C$(printf '%*s' (math "60 - "(string length "$e")) '')$YE║$C"
                     echo -e "  $YE║$C$(printf '%*s' 62 '')$YE║$C"
-                    set -l br "  eprahemi  •  github.com/eprahemi"
                     echo -e "  $YE║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$YE║$C"
                     echo -e "  $YE╚══════════════════════════════════════════════════════════════╝$C"
                     echo -e ""
@@ -156,7 +154,6 @@ function pfp --description 'Manage your GNOME profile picture (avatar) — githu
                     echo -e "  $CY║$C  $D  Use wallpaper as profile picture?$C                 $CY║$C"
                     echo -e "  $CY║$C  $D  [y/N]: $C$(printf '%*s' 45 '')$CY║$C"
                     echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                    set -l br "  eprahemi  •  github.com/eprahemi"
                     echo -e "  $CY║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
                     echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
                     echo -e ""
@@ -187,7 +184,6 @@ function pfp --description 'Manage your GNOME profile picture (avatar) — githu
                     set -l e "  ✘  No profile picture set  ✘"
                     echo -e "  $RE║$C  $WH$e$C$(printf '%*s' (math "60 - "(string length "$e")) '')$RE║$C"
                     echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
-                    set -l br "  eprahemi  •  github.com/eprahemi"
                     echo -e "  $RE║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
                     echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
                     echo -e ""
@@ -232,7 +228,6 @@ function pfp --description 'Manage your GNOME profile picture (avatar) — githu
                 set -l i6 "  Date:  $info_mtime"
                 echo -e "  $CY║$C  $GY$i6$C$(printf '%*s' (math "60 - "(string length "$i6")) '')$CY║$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                set -l br "  eprahemi  •  github.com/eprahemi"
                 echo -e "  $CY║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
                 echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
                 echo -e ""
@@ -247,7 +242,6 @@ function pfp --description 'Manage your GNOME profile picture (avatar) — githu
                     set -l e "  ✘  No profile picture to save  ✘"
                     echo -e "  $RE║$C  $WH$e$C$(printf '%*s' (math "60 - "(string length "$e")) '')$RE║$C"
                     echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
-                    set -l br "  eprahemi  •  github.com/eprahemi"
                     echo -e "  $RE║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
                     echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
                     echo -e ""
@@ -306,7 +300,6 @@ print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in rang
                     set -l i3 "  Saved:  $save_date"
                     echo -e "  $GR║$C  $D$i3$C$(printf '%*s' (math "60 - "(string length "$i3")) '')$GR║$C"
                     echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
-                    set -l br "  eprahemi  •  github.com/eprahemi"
                     echo -e "  $GR║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$GR║$C"
                     echo -e "  $GR╚══════════════════════════════════════════════════════════════╝$C"
                     echo -e ""
@@ -325,7 +318,6 @@ print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in rang
                     set -l e "  ⚠️  No profile picture to remove  ⚠️"
                     echo -e "  $YE║$C  $WH$e$C$(printf '%*s' (math "60 - "(string length "$e")) '')$YE║$C"
                     echo -e "  $YE║$C$(printf '%*s' 62 '')$YE║$C"
-                    set -l br "  eprahemi  •  github.com/eprahemi"
                     echo -e "  $YE║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$YE║$C"
                     echo -e "  $YE╚══════════════════════════════════════════════════════════════╝$C"
                     echo -e ""
@@ -339,7 +331,6 @@ print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in rang
                 set -l e "  ⚠️  Reset to default avatar?  ⚠️"
                 echo -e "  $YE║$C  $WH$e$C$(printf '%*s' (math "60 - "(string length "$e")) '')$YE║$C"
                 echo -e "  $YE║$C$(printf '%*s' 62 '')$YE║$C"
-                set -l br "  eprahemi  •  github.com/eprahemi"
                 echo -e "  $YE║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$YE║$C"
                 echo -e "  $YE╚══════════════════════════════════════════════════════════════╝$C"
                 echo -e ""
@@ -364,7 +355,6 @@ print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in rang
                     echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
                     echo -e "  $GR║$C  $D  Log out or reboot to see the change.$C$(printf '%*s' 19 '')$GR║$C"
                     echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
-                    set -l br "  eprahemi  •  github.com/eprahemi"
                     echo -e "  $GR║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$GR║$C"
                     echo -e "  $GR╚══════════════════════════════════════════════════════════════╝$C"
                     echo -e ""
@@ -380,7 +370,6 @@ print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in rang
                 set -l e "  ✘  Unknown flag: $argv[1]  ✘"
                 echo -e "  $RE║$C  $WH$e$C$(printf '%*s' (math "60 - "(string length "$e")) '')$RE║$C"
                 echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
-                set -l br "  eprahemi  •  github.com/eprahemi"
                 echo -e "  $RE║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
                 echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
                 echo -e "  $D  Try: pfp --help$C"
@@ -516,7 +505,7 @@ function __pfp_search --description 'Search for image across XDG dirs'
     set -l results
 
     # 1. Try exact filename match first
-    echo -e "  $D🔍  Searching for \"$query\"...$C  $GY eprahemi$C" >&2
+    echo -e "  $D🔍  Searching for \"$query\"...$C" >&2
     for dir in $search_dirs
         if test -d "$dir"
             set -l found (find "$dir" -type f -iname "$query" 2>/dev/null)
@@ -530,7 +519,7 @@ function __pfp_search --description 'Search for image across XDG dirs'
 
     # 2. Try wildcard match
     if test (count $results) -eq 0
-        echo -e "  $D  No exact match — trying wildcard...  $GY eprahemi$C" >&2
+        echo -e "  $D  No exact match — trying wildcard...$C" >&2
         for dir in $search_dirs
             if test -d "$dir"
                 set -l found (find "$dir" -type f -iname "*$query*" 2>/dev/null)
@@ -637,7 +626,6 @@ function __pfp_apply --description 'Internal: apply image as profile picture'
             set -l se4 "  pfp /path/to/your/image.jpg"
             echo -e "  $RE║$C  $CY$se4$C$(printf '%*s' (math "60 - "(string length "$se4")) '')$RE║$C"
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
-            set -l br "  eprahemi  •  github.com/eprahemi"
             echo -e "  $RE║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
             echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
             echo -e ""
@@ -662,7 +650,6 @@ function __pfp_apply --description 'Internal: apply image as profile picture'
                 set -l se3 "  Use the full path: pfp /path/to/your/image.jpg"
                 echo -e "  $RE║$C  $YE$se3$C$(printf '%*s' (math "60 - "(string length "$se3")) '')$RE║$C"
                 echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
-                set -l br "  eprahemi  •  github.com/eprahemi"
                 echo -e "  $RE║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
                 echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
                 echo -e ""
@@ -699,7 +686,6 @@ function __pfp_apply --description 'Internal: apply image as profile picture'
                 set -l prompt "  Enter number [1-$result_count] or [0] to cancel:"
                 echo -e "  $CY║$C  $YE$prompt$C$(printf '%*s' (math "60 - "(string length "$prompt")) '')$CY║$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                set -l br "  eprahemi  •  github.com/eprahemi"
                 echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
                 echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
                 echo ""
@@ -729,7 +715,6 @@ function __pfp_apply --description 'Internal: apply image as profile picture'
         echo -e "  $RE║$C$(printf '%s' '                                                            ')$RE║$C"
         echo -e "  $RE║$C  $D  Install: sudo dnf install ImageMagick$C$(printf '%*s' 10 '')$RE║$C"
         echo -e "  $RE║$C$(printf '%s' '                                                            ')$RE║$C"
-        set -l br "  eprahemi  •  github.com/eprahemi"
         echo -e "  $RE║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
         echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
         echo -e ""
@@ -768,7 +753,6 @@ function __pfp_apply --description 'Internal: apply image as profile picture'
     echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
     echo -e "  $GR║$C  $D  Log out or reboot to see the change.$C$(printf '%*s' 19 '')$GR║$C"
     echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
-    set -l br "  eprahemi  •  github.com/eprahemi"
     echo -e "  $GR║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$GR║$C"
     echo -e "  $GR╚══════════════════════════════════════════════════════════════╝$C"
     echo -e ""
