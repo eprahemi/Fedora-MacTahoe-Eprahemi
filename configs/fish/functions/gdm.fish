@@ -561,7 +561,7 @@ print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in rang
 
         set -l sv2 "  📁  Saved to:"
         echo -e "  $GR║$C  $D$sv2$C$(printf '%*s' (math "60 - "(string length "$sv2")) '')$GR║$C"
-        set -l sv3 "  $dest_file"
+        set -l sv3 "  "(string replace -- "$HOME" '~' "$dest_file")
         set -l sv3_len (string length -- "$sv3")
         if test $sv3_len -gt 54
             set sv3 (string sub -l 51 "$sv3")"..."
