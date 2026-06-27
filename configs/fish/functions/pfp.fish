@@ -16,6 +16,9 @@ function pfp --description 'Manage your GNOME profile picture (avatar) — githu
     set -l D  "\033[2m"
     set -l B  "\033[1m"
 
+    # ── Branding footer (default empty, overridden in help box) ──
+    set -l br ""
+
     # ── Constants ──
     set -l user (whoami)
     set -l icon_file "/var/lib/AccountsService/icons/$user"
@@ -25,7 +28,7 @@ function pfp --description 'Manage your GNOME profile picture (avatar) — githu
     # ── Help ──
     if set -q argv[1]
         switch $argv[1]
-            case --help -h help
+            case --help -h
                 echo -e ""
                 echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
@@ -91,7 +94,7 @@ function pfp --description 'Manage your GNOME profile picture (avatar) — githu
                     set -l i6 "  Date:  $cur_mtime"
                     echo -e "  $CY║$C  $GY$i6$C$(printf '%*s' (math "60 - "(string length "$i6")) '')$CY║$C"
                     echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                    echo -e "  $CY║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
+                    echo -e "  $CY║$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
                     echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
                     echo -e ""
                 else
@@ -101,7 +104,7 @@ function pfp --description 'Manage your GNOME profile picture (avatar) — githu
                     set -l e "  ⚠️  No profile picture set  ⚠️"
                     echo -e "  $YE║$C  $WH$e$C$(printf '%*s' (math "60 - "(string length "$e")) '')$YE║$C"
                     echo -e "  $YE║$C$(printf '%*s' 62 '')$YE║$C"
-                    echo -e "  $YE║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$YE║$C"
+                    echo -e "  $YE║$C$(printf '%*s' (math "60 - "(string length "$br")) '')$YE║$C"
                     echo -e "  $YE╚══════════════════════════════════════════════════════════════╝$C"
                     echo -e ""
                 end
@@ -154,7 +157,7 @@ function pfp --description 'Manage your GNOME profile picture (avatar) — githu
                     echo -e "  $CY║$C  $D  Use wallpaper as profile picture?$C                 $CY║$C"
                     echo -e "  $CY║$C  $D  [y/N]: $C$(printf '%*s' 45 '')$CY║$C"
                     echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                    echo -e "  $CY║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
+                    echo -e "  $CY║$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
                     echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
                     echo -e ""
 
@@ -184,7 +187,7 @@ function pfp --description 'Manage your GNOME profile picture (avatar) — githu
                     set -l e "  ✘  No profile picture set  ✘"
                     echo -e "  $RE║$C  $WH$e$C$(printf '%*s' (math "60 - "(string length "$e")) '')$RE║$C"
                     echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
-                    echo -e "  $RE║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
+                    echo -e "  $RE║$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
                     echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
                     echo -e ""
                     return 1
@@ -228,7 +231,7 @@ function pfp --description 'Manage your GNOME profile picture (avatar) — githu
                 set -l i6 "  Date:  $info_mtime"
                 echo -e "  $CY║$C  $GY$i6$C$(printf '%*s' (math "60 - "(string length "$i6")) '')$CY║$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                echo -e "  $CY║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
+                echo -e "  $CY║$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
                 echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
                 echo -e ""
                 return 0
@@ -242,7 +245,7 @@ function pfp --description 'Manage your GNOME profile picture (avatar) — githu
                     set -l e "  ✘  No profile picture to save  ✘"
                     echo -e "  $RE║$C  $WH$e$C$(printf '%*s' (math "60 - "(string length "$e")) '')$RE║$C"
                     echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
-                    echo -e "  $RE║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
+                    echo -e "  $RE║$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
                     echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
                     echo -e ""
                     return 1
@@ -300,7 +303,7 @@ print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in rang
                     set -l i3 "  Saved:  $save_date"
                     echo -e "  $GR║$C  $D$i3$C$(printf '%*s' (math "60 - "(string length "$i3")) '')$GR║$C"
                     echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
-                    echo -e "  $GR║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$GR║$C"
+                    echo -e "  $GR║$C$(printf '%*s' (math "60 - "(string length "$br")) '')$GR║$C"
                     echo -e "  $GR╚══════════════════════════════════════════════════════════════╝$C"
                     echo -e ""
                 else
@@ -318,7 +321,7 @@ print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in rang
                     set -l e "  ⚠️  No profile picture to remove  ⚠️"
                     echo -e "  $YE║$C  $WH$e$C$(printf '%*s' (math "60 - "(string length "$e")) '')$YE║$C"
                     echo -e "  $YE║$C$(printf '%*s' 62 '')$YE║$C"
-                    echo -e "  $YE║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$YE║$C"
+                    echo -e "  $YE║$C$(printf '%*s' (math "60 - "(string length "$br")) '')$YE║$C"
                     echo -e "  $YE╚══════════════════════════════════════════════════════════════╝$C"
                     echo -e ""
                     return 0
@@ -331,7 +334,7 @@ print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in rang
                 set -l e "  ⚠️  Reset to default avatar?  ⚠️"
                 echo -e "  $YE║$C  $WH$e$C$(printf '%*s' (math "60 - "(string length "$e")) '')$YE║$C"
                 echo -e "  $YE║$C$(printf '%*s' 62 '')$YE║$C"
-                echo -e "  $YE║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$YE║$C"
+                echo -e "  $YE║$C$(printf '%*s' (math "60 - "(string length "$br")) '')$YE║$C"
                 echo -e "  $YE╚══════════════════════════════════════════════════════════════╝$C"
                 echo -e ""
                 echo -n "  [y/N]: "
@@ -355,7 +358,7 @@ print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in rang
                     echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
                     echo -e "  $GR║$C  $D  Log out or reboot to see the change.$C$(printf '%*s' 19 '')$GR║$C"
                     echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
-                    echo -e "  $GR║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$GR║$C"
+                    echo -e "  $GR║$C$(printf '%*s' (math "60 - "(string length "$br")) '')$GR║$C"
                     echo -e "  $GR╚══════════════════════════════════════════════════════════════╝$C"
                     echo -e ""
                 else
@@ -370,7 +373,7 @@ print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in rang
                 set -l e "  ✘  Unknown flag: $argv[1]  ✘"
                 echo -e "  $RE║$C  $WH$e$C$(printf '%*s' (math "60 - "(string length "$e")) '')$RE║$C"
                 echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
-                echo -e "  $RE║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
+                echo -e "  $RE║$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
                 echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
                 echo -e "  $D  Try: pfp --help$C"
                 return 1
@@ -503,65 +506,77 @@ function __pfp_search --description 'Search for image across XDG dirs'
         "$HOME/Public"
 
     set -l results
+    set -l img_regex '\.(jpg|jpeg|png|gif|bmp|webp|tiff?|svg|svgz|ico|heic|heif|avif|jp2|jfif|jfi|pjpeg|pjp|psd|jxl)$'
 
-    # 1. Try exact filename match first
+    # 1. Try exact match as given
     echo -e "  $D🔍  Searching for \"$query\"...$C" >&2
     for dir in $search_dirs
         if test -d "$dir"
-            set -l found (find "$dir" -type f -iname "$query" 2>/dev/null)
-            if test -n "$found"
-                for f in $found
-                    set -a results (realpath "$f" 2>/dev/null)
-                end
-            end
-        end
-    end
-
-    # 2. Try wildcard match
-    if test (count $results) -eq 0
-        echo -e "  $D  No exact match — trying wildcard...$C" >&2
-        for dir in $search_dirs
-            if test -d "$dir"
-                set -l found (find "$dir" -type f -iname "*$query*" 2>/dev/null)
-                if test -n "$found"
-                    for f in $found
-                        set -a results (realpath "$f" 2>/dev/null)
+            for f in (find "$dir" -type f -iname "$query" 2>/dev/null)
+                set -l rp (realpath "$f" 2>/dev/null)
+                if test -n "$rp"
+                    if string match -riq -- $img_regex "$rp"
+                        if not contains -- "$rp" $results
+                            set -a results "$rp"
+                        end
                     end
                 end
             end
         end
     end
 
-    # 3. Try current working directory
+    # 2. Try query + extension pattern (e.g. "help" → "help.*")
     if test (count $results) -eq 0
-        set -l cwd_find (find (pwd) -maxdepth 1 -type f -iname "*$query*" 2>/dev/null)
-        if test -n "$cwd_find"
-            for f in $cwd_find
-                set -a results (realpath "$f" 2>/dev/null)
+        echo -e "  $D  No exact match — trying \"$query.*\"...$C" >&2
+        for dir in $search_dirs
+            if test -d "$dir"
+                for f in (find "$dir" -type f -iname "$query.*" 2>/dev/null)
+                    set -l rp (realpath "$f" 2>/dev/null)
+                    if test -n "$rp"
+                        if string match -riq -- $img_regex "$rp"
+                            if not contains -- "$rp" $results
+                                set -a results "$rp"
+                            end
+                        end
+                    end
+                end
             end
         end
     end
 
-    # Deduplicate
-    if test (count $results) -gt 1
-        set -l deduped
-        for r in $results
-            if not contains -- "$r" $deduped
-                set -a deduped "$r"
+    # 3. Try wildcard match
+    if test (count $results) -eq 0
+        echo -e "  $D  No match — trying wildcard \"*$query*\"...$C" >&2
+        for dir in $search_dirs
+            if test -d "$dir"
+                for f in (find "$dir" -type f -iname "*$query*" 2>/dev/null)
+                    set -l rp (realpath "$f" 2>/dev/null)
+                    if test -n "$rp"
+                        if string match -riq -- $img_regex "$rp"
+                            if not contains -- "$rp" $results
+                                set -a results "$rp"
+                            end
+                        end
+                    end
+                end
             end
         end
-        set results $deduped
     end
 
-    # Filter to image files only
-    set -l img_results
-    set -l img_regex '\.(jpg|jpeg|png|gif|bmp|webp|tiff?|svg|svgz|ico|heic|heif|avif|jp2|jfif|jfi|pjpeg|pjp|psd|jxl)$'
-    for r in $results
-        if string match -riq -- "$img_regex" "$r"
-            set -a img_results "$r"
+    # 4. Try current working directory
+    if test (count $results) -eq 0
+        echo -e "  $D  Also checking current directory...$C" >&2
+        for f in (find (pwd) -maxdepth 1 -type f -iname "*$query*" 2>/dev/null)
+            set -l rp (realpath "$f" 2>/dev/null)
+            if test -n "$rp"
+                if string match -riq -- $img_regex "$rp"
+                    if not contains -- "$rp" $results
+                        set -a results "$rp"
+                    end
+                end
+            end
         end
     end
-    set results $img_results
 
     # Output results (caller checks count)
     for r in $results
@@ -607,7 +622,18 @@ function __pfp_apply --description 'Internal: apply image as profile picture'
         # 🛡️  GUARD: Minimum search term length
         set -l is_path (string match -r -- '/' "$source_img")
         set -l stem (string replace -r -- '\..*$' '' "$search_query")
-        if test -z "$is_path"; and test (string length -- "$stem") -lt 3
+        # Allow short stem if the filename has a recognized image extension —
+        # "t.jpg" clearly specifies an image file
+        set -l img_exts jpg jpeg png gif bmp webp tiff tif svg svgz ico heic heif avif jp2 jfif jfi pjpeg pjp psd jxl
+        set -l has_img_ext 0
+        set -l this_ext (string match -r '\.([^./]+)$' "$search_query" 2>/dev/null)
+        if test -n "$this_ext"
+            set -l ext_lower (string lower -- "$this_ext[2]" 2>/dev/null)
+            if contains -- "$ext_lower" $img_exts
+                set has_img_ext 1
+            end
+        end
+        if test -z "$is_path"; and test $has_img_ext -eq 0; and test (string length -- "$stem") -lt 3
             echo -e ""
             echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
@@ -625,9 +651,8 @@ function __pfp_apply --description 'Internal: apply image as profile picture'
             echo -e "  $RE║$C  $YE$se3$C$(printf '%*s' (math "60 - "(string length "$se3")) '')$RE║$C"
             set -l se4 "  pfp /path/to/your/image.jpg"
             echo -e "  $RE║$C  $CY$se4$C$(printf '%*s' (math "60 - "(string length "$se4")) '')$RE║$C"
-            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
-            echo -e "  $RE║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
-            echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
+                echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
             echo -e ""
             return 1
         end
@@ -649,8 +674,16 @@ function __pfp_apply --description 'Internal: apply image as profile picture'
                 echo -e "  $RE║$C  $D$se2$C$(printf '%*s' (math "60 - "(string length "$se2")) '')$RE║$C"
                 set -l se3 "  Use the full path: pfp /path/to/your/image.jpg"
                 echo -e "  $RE║$C  $YE$se3$C$(printf '%*s' (math "60 - "(string length "$se3")) '')$RE║$C"
+                if string match -q -- "help" "$search_query"
+                    set -l h1 "  If you meant an image — name wrong, missing, or mistyped."
+                    set -l h2 "  If you meant --help to see available commands —"
+                    set -l h3 "  you need to type:  pfp --help"
+                    echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                    echo -e "  $RE║$C  $GY$B$h1$C$(printf '%*s' (math "60 - "(string length "$h1")) '')$RE║$C"
+                    echo -e "  $RE║$C  $GY$B$h2$C$(printf '%*s' (math "60 - "(string length "$h2")) '')$RE║$C"
+                    echo -e "  $RE║$C  $GY$h3$C$(printf '%*s' (math "60 - "(string length "$h3")) '')$RE║$C"
+                end
                 echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
-                echo -e "  $RE║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
                 echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
                 echo -e ""
                 return 1
@@ -669,15 +702,48 @@ function __pfp_apply --description 'Internal: apply image as profile picture'
                 echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
 
-                set -l idx 1
-                for r in $search_results
-                    # Strip /home/user → ~ for display
-                    set -l disp_path (string replace -- "$HOME" '~' "$r")
-                    set -l display (string sub -l 55 "$disp_path")
-                    # Use separate label variable to avoid Fish $var[ array-index parsing
-                    set -l label (printf "[%2d]" $idx)
-                    echo -e "  $CY║$C  $GR$label$C  $D$display$C$(printf '%*s' (math "57 - "(string length "$display")) '')$CY║$C"
-                    set idx (math $idx + 1)
+                for i in (seq $result_count)
+                    set -l fullpath $search_results[$i]
+                    set -l disp_path (string replace -- "$HOME" '~' "$fullpath")
+                    set -l dir_part (dirname "$disp_path")/
+                    set -l file_part (basename "$disp_path")
+                    set -l num_str (printf "%2d" $i)
+                    set -l prefix "  [$num_str]  "
+                    set -l cont_indent "        "
+                    set -l remaining "$disp_path"
+                    set -l line_num 1
+                    while test -n "$remaining"
+                        set -l trimmed (string sub -l 52 "$remaining")
+                        set -l match_end (string match -r ".* " "$trimmed")
+                        set -l split_pos (string length -- "$match_end")
+                        set -l part; set -l rest
+                        if test -n "$match_end"; and test "$split_pos" -gt 10
+                            set -l split (math "$split_pos - 1")
+                            set part (string sub -l $split "$remaining")
+                            set rest (string sub -s (math "$split_pos + 1") "$remaining")
+                        else
+                            set part "$trimmed"
+                            set rest (string sub -s 53 "$remaining")
+                        end
+                        # Bold the filename within the displayed text
+                        set -l file_regex (string escape --style=regex "$file_part")
+                        set -l display (string replace -r -- "^(.*)($file_regex)" '$1'"$WH$B"'$2' "$part")
+                        if test $line_num -eq 1
+                            set -l raw_line "$prefix$part"
+                            set -l col_line "$prefix$display"
+                            echo -e "  $CY║$C  $col_line$C$(printf '%*s' (math "60 - "(string length "$raw_line")) '')$CY║$C"
+                        else
+                            set -l raw_line "$cont_indent$part"
+                            set -l col_line "$cont_indent$display"
+                            echo -e "  $CY║$C  $col_line$C$(printf '%*s' (math "60 - "(string length "$raw_line")) '')$CY║$C"
+                        end
+                        set remaining "$rest"
+                        set line_num (math "$line_num + 1")
+                    end
+                    # Blank line between entries
+                    if test $i -lt $result_count
+                        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                    end
                 end
 
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
@@ -686,21 +752,63 @@ function __pfp_apply --description 'Internal: apply image as profile picture'
                 set -l prompt "  Enter number [1-$result_count] or [0] to cancel:"
                 echo -e "  $CY║$C  $YE$prompt$C$(printf '%*s' (math "60 - "(string length "$prompt")) '')$CY║$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
                 echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
                 echo ""
 
-                while true
-                    read -p 'echo "  > "' choice
+                set -l chosen 0
+                set -l first_try 1
+                while test $chosen -eq 0
+                    if test $first_try -eq 0
+                        echo -e "  $D  Enter number [1-$result_count] or [0] to cancel.$C"
+                    else
+                        set first_try 0
+                    end
+                    read -P "  > " choice
                     if test "$choice" = "0"
                         echo -e "  $D  Cancelled.$C"
                         return 1
                     end
                     if string match -rq '^[0-9]+$' -- "$choice"; and test "$choice" -ge 1; and test "$choice" -le $result_count
                         set source_img "$search_results[$choice]"
-                        break
+                        # ── Preview the selected image ──
+                        echo -e ""
+                        echo -e "  $D  Preview: "(string replace -- $HOME '~' "$source_img")"$C"
+                        set -l previewed 0
+                        # Try kitty's icat (terminal preview)
+                        if test -n "$KITTY_PID"; and command -q kitty
+                            kitty +kitten icat --align left "$source_img" 2>/dev/null
+                            and set previewed 1
+                        end
+                        # Try chafa (terminal preview)
+                        if test $previewed -eq 0
+                            if command -q chafa
+                                chafa --symbols solid "$source_img" 2>/dev/null
+                                and set previewed 1
+                            end
+                        end
+                        # Fallback: just show the path
+                        if test $previewed -eq 0
+                            echo -e "  $GY  (no terminal image previewer found)$C"
+                        end
+                        # ── Confirm ──
+                        echo -e ""
+                        set -l confirmed 0
+                        while test $confirmed -eq 0
+                            read -P "  Use this image? [Y/n] " confirm
+                            if test -z "$confirm"; or string match -q -- "y" "$confirm"; or string match -q -- "Y" "$confirm"; or string match -iq -- "yes" "$confirm"
+                                set chosen 1
+                                set confirmed 1
+                            else if string match -q -- "n" "$confirm"; or string match -q -- "N" "$confirm"; or string match -iq -- "no" "$confirm"
+                                set confirmed 1
+                                echo -e ""
+                                echo -e "  $D  Choose another...$C"
+                            else
+                                echo -e "  $RE  Enter y or n.$C"
+                            end
+                        end
+                    else
+                        echo -e "  $RE  Invalid choice. Enter 1-$result_count or 0 to cancel.$C"
                     end
-                    echo -e "  $RE  Invalid choice. Enter 1-$result_count or 0 to cancel.$C"
                 end
         end
     end
@@ -715,7 +823,7 @@ function __pfp_apply --description 'Internal: apply image as profile picture'
         echo -e "  $RE║$C$(printf '%s' '                                                            ')$RE║$C"
         echo -e "  $RE║$C  $D  Install: sudo dnf install ImageMagick$C$(printf '%*s' 10 '')$RE║$C"
         echo -e "  $RE║$C$(printf '%s' '                                                            ')$RE║$C"
-        echo -e "  $RE║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
+        echo -e "  $RE║$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
         echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
         echo -e ""
         return 1
@@ -753,7 +861,7 @@ function __pfp_apply --description 'Internal: apply image as profile picture'
     echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
     echo -e "  $GR║$C  $D  Log out or reboot to see the change.$C$(printf '%*s' 19 '')$GR║$C"
     echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
-    echo -e "  $GR║$C  $GY$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$GR║$C"
+    echo -e "  $GR║$C$(printf '%*s' (math "60 - "(string length "$br")) '')$GR║$C"
     echo -e "  $GR╚══════════════════════════════════════════════════════════════╝$C"
     echo -e ""
 end

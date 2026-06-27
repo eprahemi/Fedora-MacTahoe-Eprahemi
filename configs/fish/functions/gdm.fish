@@ -949,8 +949,18 @@ except Exception:
         set -l is_path (string match -r -- '/' "$filename")
         # Check the stem (before any extension) — "b.jpg" has a 5-char
         # filename but the meaningful search term "b" is still too short
+        # BUT: if the filename has a recognized image extension, allow it —
+        # "t.jpg" clearly specifies an image file
         set -l stem (string replace -r -- '\..*$' '' "$filename")
-        if test -z "$is_path"; and test (string length -- "$stem") -lt 3
+        set -l has_img_ext 0
+        set -l this_ext (string match -r '\.([^./]+)$' "$filename" 2>/dev/null)
+        if test -n "$this_ext"
+            set -l ext_lower (string lower -- "$this_ext[2]" 2>/dev/null)
+            if contains -- "$ext_lower" $img_exts
+                set has_img_ext 1
+            end
+        end
+        if test -z "$is_path"; and test $has_img_ext -eq 0; and test (string length -- "$stem") -lt 3
             echo ""
             echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
@@ -992,62 +1002,75 @@ except Exception:
             "$HOME/Templates" \
             "$HOME/Public"
 
+        set -l img_regex '\.(jpg|jpeg|png|gif|bmp|webp|tiff?|svg|svgz|ico|heic|heif|avif|jp2|jfif|jfi|pjpeg|pjp|psd|jxl)$'
+
         for dir in $search_dirs
             if test -d "$dir"
-                set -l found (find "$dir" -type f -iname "$filename" 2>/dev/null)
-                if test -n "$found"
-                    for f in $found
-                        set -a results (realpath "$f" 2>/dev/null)
-                    end
-                end
-            end
-        end
-
-        # 3. No exact match? Try wildcard *$filename*
-        if test (count $results) -eq 0
-            echo -e "  $D  No exact match — trying wildcard...$C"
-            for dir in $search_dirs
-                if test -d "$dir"
-                    set -l found (find "$dir" -type f -iname "*$filename*" 2>/dev/null)
-                    if test -n "$found"
-                        for f in $found
-                            set -a results (realpath "$f" 2>/dev/null)
+                for f in (find "$dir" -type f -iname "$filename" 2>/dev/null)
+                    set -l rp (realpath "$f" 2>/dev/null)
+                    if test -n "$rp"
+                        if string match -riq -- $img_regex "$rp"
+                            if not contains -- "$rp" $results
+                                set -a results "$rp"
+                            end
                         end
                     end
                 end
             end
         end
 
-        # 4. Still nothing? Try in CWD as last resort
+        # 3. No exact match? Try $filename.* pattern first
         if test (count $results) -eq 0
-            set -l cwd_find (find (pwd) -maxdepth 1 -type f -iname "*$filename*" 2>/dev/null)
-            if test -n "$cwd_find"
-                for f in $cwd_find
-                    set -a results (realpath "$f" 2>/dev/null)
+            echo -e "  $D  No exact match — trying \"$filename.*\"...$C"
+            for dir in $search_dirs
+                if test -d "$dir"
+                    for f in (find "$dir" -type f -iname "$filename.*" 2>/dev/null)
+                        set -l rp (realpath "$f" 2>/dev/null)
+                        if test -n "$rp"
+                            if string match -riq -- $img_regex "$rp"
+                                if not contains -- "$rp" $results
+                                    set -a results "$rp"
+                                end
+                            end
+                        end
+                    end
                 end
             end
         end
 
-        # Deduplicate search results (paths with spaces: always quote $r)
-        if test (count $results) -gt 1
-            set -l deduped
-            for r in $results
-                if not contains -- "$r" $deduped
-                    set -a deduped "$r"
+        # 4. Still nothing? Try wildcard *$filename*
+        if test (count $results) -eq 0
+            echo -e "  $D  No match — trying wildcard \"*$filename*\"...$C"
+            for dir in $search_dirs
+                if test -d "$dir"
+                    for f in (find "$dir" -type f -iname "*$filename*" 2>/dev/null)
+                        set -l rp (realpath "$f" 2>/dev/null)
+                        if test -n "$rp"
+                            if string match -riq -- $img_regex "$rp"
+                                if not contains -- "$rp" $results
+                                    set -a results "$rp"
+                                end
+                            end
+                        end
+                    end
                 end
             end
-            set results $deduped
         end
 
-        # Filter search results to image files only — weed out .py, .mjs, .js
-        set -l img_results
-        set -l img_regex '\.(jpg|jpeg|png|gif|bmp|webp|tiff?|svg|svgz|ico|heic|heif|avif|jp2|jfif|jfi|pjpeg|pjp|psd|jxl)$'
-        for r in $results
-            if string match -riq -- "$img_regex" "$r"
-                set -a img_results "$r"
+        # 5. Still nothing? Try in CWD as last resort
+        if test (count $results) -eq 0
+            echo -e "  $D  Also checking current directory...$C"
+            for f in (find (pwd) -maxdepth 1 -type f -iname "*$filename*" 2>/dev/null)
+                set -l rp (realpath "$f" 2>/dev/null)
+                if test -n "$rp"
+                    if string match -riq -- $img_regex "$rp"
+                        if not contains -- "$rp" $results
+                            set -a results "$rp"
+                        end
+                    end
+                end
             end
         end
-        set results $img_results
     end
 
     set -l result_count (count $results)
@@ -1057,14 +1080,30 @@ except Exception:
     # ══════════════════════════════════════════════════════════════
     switch $result_count
         case 0
-            echo -e "  $RE✘$C File not found: $YE$filename$C"
-            echo -e "  $GY  Searched everywhere in your home folders.$C"
-            echo -e "  $GY  Tip: use the full path like $CY$B gdm /path/to/your/image.jpg$C"
+            echo -e ""
+            echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            set -l e "  ✘  File not found: "$filename"  ✘"
+            echo -e "  $RE║$C  $WH$e$C$(printf '%*s' (math "60 - "(string length "$e")) '')$RE║$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            echo -e "  $RE╠══════════════════════════════════════════════════════════════╣$C"
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            set -l se2 "  Searched all your home folders — nothing found."
+            echo -e "  $RE║$C  $D$se2$C$(printf '%*s' (math "60 - "(string length "$se2")) '')$RE║$C"
+            set -l se3 "  Use the full path: gdm /path/to/your/image.jpg"
+            echo -e "  $RE║$C  $YE$se3$C$(printf '%*s' (math "60 - "(string length "$se3")) '')$RE║$C"
             if string match -q -- "help" "$filename"
-                echo -e "  $GY$B  If you meant an image — the filename is incorrect, the file is missing, or it was mistyped.$C"
-                echo -e "  $GY$B  If you meant $CY$B--help$C$GY$B to see available commands —$C"
-                echo -e "  $GY  you need to type: $CY$B gdm --help$C"
+                set -l h1 "  If you meant an image — name wrong, missing, or mistyped."
+                set -l h2 "  If you meant --help to see available commands —"
+                set -l h3 "  you need to type:  gdm --help"
+                echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+                echo -e "  $RE║$C  $GY$B$h1$C$(printf '%*s' (math "60 - "(string length "$h1")) '')$RE║$C"
+                echo -e "  $RE║$C  $GY$B$h2$C$(printf '%*s' (math "60 - "(string length "$h2")) '')$RE║$C"
+                echo -e "  $RE║$C  $GY$h3$C$(printf '%*s' (math "60 - "(string length "$h3")) '')$RE║$C"
             end
+            echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
+            echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
+            echo -e ""
             return 1
 
         case 1
@@ -1093,6 +1132,21 @@ except Exception:
                 return 1
             end
             if test $skip_confirm -eq 0; and test $skip_double_confirm -eq 0
+                # ── Preview image ──
+                echo -e ""
+                echo -e "  $D  Preview: "(string replace -- $HOME '~' "$image")"$C"
+                set -l previewed 0
+                if test -n "$KITTY_PID"; and command -q kitty
+                    kitty +kitten icat --align left "$image" 2>/dev/null
+                    and set previewed 1
+                end
+                if test $previewed -eq 0; and command -q chafa
+                    chafa --symbols solid "$image" 2>/dev/null
+                    and set previewed 1
+                end
+                if test $previewed -eq 0
+                    echo -e "  $GY  (no terminal image previewer found)$C"
+                end
                 echo ""
                 echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
@@ -1268,11 +1322,43 @@ except Exception:
                             return 1
                         end
 
-                        # ── Preview image in Kitty terminal ──
-                        if test -n "$KITTY_PID"
-                            echo ""
+                        # ── Preview the selected image ──
+                        echo -e ""
+                        echo -e "  $D  Preview: "(string replace -- $HOME '~' "$image")"$C"
+                        set -l previewed 0
+                        # Try kitty icat
+                        if test -n "$KITTY_PID"; and command -q kitty
                             kitty +kitten icat --align left "$image" 2>/dev/null
-                            echo ""
+                            and set previewed 1
+                        end
+                        # Try chafa
+                        if test $previewed -eq 0
+                            if command -q chafa
+                                chafa --symbols solid "$image" 2>/dev/null
+                                and set previewed 1
+                            end
+                        end
+                        if test $previewed -eq 0
+                            echo -e "  $GY  (no terminal image previewer found)$C"
+                        end
+                        # ── Confirm ──
+                        echo -e ""
+                        set -l confirmed 0
+                        while test $confirmed -eq 0
+                            read -P "  Use this image? [Y/n] " confirm
+                            if test -z "$confirm"; or string match -q -- "y" "$confirm"; or string match -q -- "Y" "$confirm"; or string match -iq -- "yes" "$confirm"
+                                set confirmed 1
+                            else if string match -q -- "n" "$confirm"; or string match -q -- "N" "$confirm"; or string match -iq -- "no" "$confirm"
+                                set confirmed 1
+                                set image ""
+                                echo -e ""
+                                echo -e "  $D  Choose another...$C"
+                            else
+                                echo -e "  $RE  Enter y or n.$C"
+                            end
+                        end
+                        if test -z "$image"
+                            continue  # back to picker
                         end
                         break
                     end
