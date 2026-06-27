@@ -475,12 +475,17 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
             return 1
         end
 
-        # Generate 16-char encrypted-like name with timestamp meaning
-        # First ~6 chars = current Unix timestamp in base36 (looks random, decodes to date)
-        # Remaining ~10 chars = pure random
-        set -l ts_b36 (python3 -c "
-import sys
-n = int(__import__('time').time())
+        # Generate 16-char encrypted-style name encoding set-date + save-date + random
+        # Base36 looks random but decodes to a timestamp — fixed 6 chars per timestamp
+        set -l applied_ts (stat -c "%Y" "$last_file" 2>/dev/null; or date +%s)
+        set -l save_ts (date +%s)
+        set -l applied_b36 ""
+        set -l save_b36 ""
+        for pair in "$applied_ts applied_b36" "$save_ts save_b36"
+            set -l ts (string split " " -- $pair)[1]
+            set -l varname (string split " " -- $pair)[2]
+            set -l encoded (python3 -c "
+n = $ts
 alpha = '0123456789abcdefghijklmnopqrstuvwxyz'
 res = ''
 while n > 0:
@@ -488,28 +493,33 @@ while n > 0:
     n //= 36
 print(res or '0')
 " 2>/dev/null)
-        if test -z "$ts_b36"; or test "$ts_b36" = "0"
-            set ts_b36 "000000"
+            if test -z "$encoded"; or test "$encoded" = "0"
+                set encoded "000000"
+            end
+            # Pad to exactly 6 chars
+            while test (string length "$encoded") -lt 6
+                set encoded "0$encoded"
+            end
+            if test (string length "$encoded") -gt 6
+                set encoded (string sub -l 6 "$encoded")
+            end
+            if test "$varname" = "applied_b36"
+                set applied_b36 "$encoded"
+            else
+                set save_b36 "$encoded"
+            end
         end
-        set -l ts_len (string length -- "$ts_b36")
-        set -l rand_needed (math "16 - $ts_len")
-        if test $rand_needed -lt 0
-            set ts_b36 (string sub -l 16 "$ts_b36")
-            set rand_needed 0
-        end
-        set -l rand_part ""
-        if test $rand_needed -gt 0
-            set rand_part (python3 -c "
+        # Random suffix for uniqueness (4 chars)
+        set -l rand_sfx (python3 -c "
 import secrets, string
-print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range($rand_needed)))
-" 2>/dev/null)
-        end
-        set -l rand_name "$ts_b36$rand_part"
+print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(4)))
+" 2>/dev/null; or echo "x0x0")
+        set -l rand_name "$applied_b36$save_b36$rand_sfx"
         if test -z "$rand_name"; or test (string length -- "$rand_name") -lt 16
-            # Fallback: generate fully random 16-char
+            # Fallback: fully random 16-char
             set rand_name (tr -dc 'A-Za-z0-9' < /dev/urandom 2>/dev/null | head -c 16)
             if test -z "$rand_name"
-                set rand_name "GDM_Save_Unknown"
+                set rand_name "GDMSaveUnknown"
             end
         end
 
@@ -555,23 +565,41 @@ print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in rang
         echo -e "  $GR║$C  $D$sv4$C$(printf '%*s' (math "60 - $sv4_len - 1") '')$GR║$C"
         echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
 
-        # Show decoded date as a nice detail
-        set -l decoded_date (python3 -c "
+        # Decode both dates from the filename
+        set -l decoded_applied (python3 -c "
 import sys, time
 alpha = '0123456789abcdefghijklmnopqrstuvwxyz'
 try:
     n = 0
-    for c in '$ts_b36':
+    for c in '$applied_b36':
         n = n * 36 + alpha.index(c)
     print(time.strftime('%d %b %Y  %H:%M', time.localtime(n)))
 except:
     print('')
 " 2>/dev/null)
-        if test -n "$decoded_date"
-            set -l sv5 "  🕒  Applied:  $D$decoded_date$C"
-            set -l sv5_plain "  🕒  Applied:  $decoded_date"
+        set -l decoded_saved (python3 -c "
+import sys, time
+alpha = '0123456789abcdefghijklmnopqrstuvwxyz'
+try:
+    n = 0
+    for c in '$save_b36':
+        n = n * 36 + alpha.index(c)
+    print(time.strftime('%d %b %Y  %H:%M', time.localtime(n)))
+except:
+    print('')
+" 2>/dev/null)
+        if test -n "$decoded_applied"
+            set -l sv5 "  🕒  Applied:  $D$decoded_applied$C"
+            set -l sv5_plain "  🕒  Applied:  $decoded_applied"
             set -l sv5_len (string length -- "$sv5_plain")
             echo -e "  $GR║$C  $sv5$(printf '%*s' (math "60 - $sv5_len - 1") '')$GR║$C"
+            echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
+        end
+        if test -n "$decoded_saved"
+            set -l sv6 "  💾  Saved:     $D$decoded_saved$C"
+            set -l sv6_plain "  💾  Saved:     $decoded_saved"
+            set -l sv6_len (string length -- "$sv6_plain")
+            echo -e "  $GR║$C  $sv6$(printf '%*s' (math "60 - $sv6_len - 1") '')$GR║$C"
             echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
         end
 

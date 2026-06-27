@@ -15,7 +15,7 @@ Fedora MacTahoe is a Fedora Linux → macOS transformation project. It turns a s
 - **Repository (GDM companion):** `https://github.com/eprahemi/FedoraTahoe-GDM.git`
 - **Branch:** `main`
 - **Local repo path:** `/home/eprahemi/Documents/Codes University [Mine]/Eprahemi Websites/Fedora Mactahoe Eprahemi GTK theme + Icon + Sf Pro Font/`
-- **Latest commit:** `80b52b66` — `pfp.fish: add info subcommand + pfp current detects desktop wallpaper and prompts to use it`
+- **Latest commit:** `1406a6c8` — `pfp.fish save: base36 encrypted-style naming (set-date + save-date encoded) matching gdm.fish style`
 
 ### ⚠️ CRITICAL — Repo Path Mistake
 Do NOT search with glob patterns like `*Eprahemi*` — the directory has "Mactahoe" (not "MacTahoe"), and glob won't match. Use the **exact literal path** from this file:
@@ -190,11 +190,11 @@ A persistent GDM wallpaper switching function that works entirely offline after 
 
 ### `gdm save` Flow (re-added per user request)
 1. Reads `~/.local/share/mactahoe-gdm/.gdm-undo-copy.jpg`
-2. Generates **16-char encrypted-looking name** — first ~6 chars = Unix timestamp in base36 (decodes to date), remaining ~10 chars = pure random via python3 `secrets`
+2. Generates **16-char encrypted-looking name** — `applied-b36(6) + saved-b36(6) + random(4).jpg` (same dual-timestamp base36 style as `pfp save`)
 3. Each save = unique name — collision protection with `_1`, `_2`, … suffix
-4. Shows **decoded applied date** (`🕒  Applied:  26 Jun 2026  16:56`) alongside the encrypted name
+4. Shows **decoded applied date** (`🕒  Applied:`) + **decoded saved date** (`💾  Saved:`) alongside the encrypted name
 5. **Error prompt**: beautiful red branded box if no wallpaper applied yet
-6. Shows beautiful green branded box with path + encrypted filename + decoded date
+6. Shows beautiful green branded box with path + encrypted filename + decoded dates
 
 ### Undo (REMOVED PERMANENTLY)
 - `gdm undo` subcommand was removed per user request — will not be re-added
@@ -277,7 +277,7 @@ New function for managing the GNOME AccountsService avatar with subcommands:
 Key design decisions:
 - **Fernet encryption** for file paths shown in display output: key stored at `~/.config/pfp.key`, auto-generated on first use. Encrypted paths shown in `pfp current`, `pfp info`, and `pfp save` — not reversible (no decrypt command).
 - **`pfp current`** detects GNOME desktop wallpaper via `gsettings get org.gnome.desktop.background picture-uri`, URL-decodes it, shows the info, and prompts to use it as profile picture.
-- **`pfp save` naming**: 16-char filename encoding `applied-b36(6) + saved-b36(6) + random(4).png`. Base36 looks like random gibberish but first 6 chars decode to when avatar was set, next 6 to when saved. Same style as `gdm.fish` save naming.
+- **`pfp save` naming**: 16-char filename encoding `applied-b36(6) + saved-b36(6) + random(4).png`. Base36 looks like random gibberish but first 6 chars decode to when avatar was set, next 6 to when saved. `gdm.fish` save uses identical scheme.
 - **Full path privacy**: The actual `/var/lib/AccountsService/icons/$USER` path is never shown in plaintext.
 - **Fallback to base64** if `cryptography` python package is unavailable.
 - **Unknown subcommands** fall through to the default `pfp <image>` handler (tries to use the word as a file path).
