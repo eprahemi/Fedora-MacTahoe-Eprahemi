@@ -500,21 +500,21 @@ disc3="    Yes  — Install Discord"
 disc4="    no   — Skip it"
     echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}n${NC}${BOLD}o${NC}   — Skip it$(printf '%*s' $((62 - ${#disc4})) '')${CYAN}║${NC}"
     echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-disc5="  Press Enter for default (Yes)"
+disc5="  Press Enter for default (No)"
     echo -e "  ${CYAN}║${NC}${DIM}${disc5}$(printf '%*s' $((62 - ${#disc5})) '')${NC}${CYAN}║${NC}"
 disc6="  Tip: set INSTALL_DISCORD=false to skip silently"
     echo -e "  ${CYAN}║${NC}${DIM}${disc6}$(printf '%*s' $((62 - ${#disc6})) '')${NC}${CYAN}║${NC}"
     echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
-    echo -en "  ${DIM}Discord? [Y/n]:${NC} "
+    echo -en "  ${DIM}Discord? [y/N]:${NC} "
     read -r -n 1 key </dev/tty || true
     echo ""
-    # Default Yes — only explicit n/N says no
-    if [ "$key" = "n" ] || [ "$key" = "N" ]; then
-      INSTALL_DISCORD="false"
-      echo -e "  ${DIM}→ Skipping Discord${NC}"
-    else
+    # Default No — only explicit Y/y says yes
+    if [ "$key" = "y" ] || [ "$key" = "Y" ]; then
       INSTALL_DISCORD="true"
       echo -e "  ${GREEN}→ Discord will be installed${NC}"
+    else
+      INSTALL_DISCORD="false"
+      echo -e "  ${DIM}→ Skipping Discord${NC}"
     fi
   fi
 
@@ -1240,7 +1240,7 @@ desk5="  Press Enter for default (Yes)"
     echo -en "  ${DIM}Desktop wallpaper? [Y/n]:${NC} "
     read -r -n 1 key </dev/tty || true
     echo ""
-    if [ "$key" = "n" ] || [ "$key" = "N" ]; then
+    if [ "$key" = "y" ] || [ "$key" = "Y" ]; then
       INSTALL_DESKTOP_WALLPAPER="false"
       echo -e "  ${DIM}→ Skipping desktop wallpaper${NC}"
     else
