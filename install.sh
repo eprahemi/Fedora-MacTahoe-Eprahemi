@@ -1765,7 +1765,46 @@ setup_firefox_theme() {
     }
   fi
 
-  killall firefox firefox-bin 2>/dev/null || true
+  # ── Ensure Firefox is closed before theming ──
+  if pgrep -x firefox &>/dev/null || pgrep -x firefox-bin &>/dev/null; then
+    echo ""
+    echo -e "  ${YELLOW}╔══════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "  ${YELLOW}║${NC}        ${BOLD}Close Firefox for macOS theming${NC}                    ${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}╠══════════════════════════════════════════════════════════════╣${NC}"
+    echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}║${NC}  Firefox is open — theme can't apply while it's running.      ${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}║${NC}  The installer will try to close it now.                       ${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}║${NC}  Save your work if needed.                                     ${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}╚══════════════════════════════════════════════════════════════╝${NC}"
+
+    killall firefox firefox-bin 2>/dev/null || true
+
+    # Wait up to 10 seconds for Firefox to fully exit
+    local _ff_wait=0
+    while pgrep -x firefox &>/dev/null || pgrep -x firefox-bin &>/dev/null; do
+      if [ "$_ff_wait" -ge 10 ]; then
+        echo ""
+        echo -e "  ${YELLOW}╔══════════════════════════════════════════════════════════════╗${NC}"
+        echo -e "  ${YELLOW}║${NC}  Firefox is still running — close it manually then press        ${YELLOW}║${NC}"
+        echo -e "  ${YELLOW}║${NC}  Enter to retry, or type ${BOLD}s${NC} to skip Firefox theming                ${YELLOW}║${NC}"
+        echo -e "  ${YELLOW}╚══════════════════════════════════════════════════════════════╝${NC}"
+        echo -en "  ${DIM}Close Firefox, then press Enter (s = skip):${NC} "
+        read -r reply </dev/tty || true
+        if [ "$reply" = "s" ] || [ "$reply" = "S" ]; then
+          warn "Firefox theming skipped by user"
+          FIREFOX_THEME_FAILED=1
+          return
+        fi
+        # Try killing again after user pressed Enter
+        killall firefox firefox-bin 2>/dev/null || true
+        _ff_wait=0
+      fi
+      sleep 1
+      _ff_wait=$((_ff_wait + 1))
+    done
+    echo -e "  ${GREEN}  ┊ ✓ ${NC}  Firefox closed — proceeding with theming"
+  fi
 
   if ! "$repo/tweaks.sh" -f 2>&1; then
     warn "Firefox theming skipped — not yet initialized"
