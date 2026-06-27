@@ -286,18 +286,26 @@ print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in rang
                     if test (string length "$enc_orig") -gt 48
                         set orig_disp (string sub -l 45 "$enc_orig")"..."
                     end
+                    # Truncate path for box display if needed (max 50 chars inside "  Path:  ")
+                    set -l path_disp "$save_path"
+                    if test (string length "$save_path") -gt 50
+                        set path_disp (string sub -l 47 "$save_path")"..."
+                    end
                     set -l applied_date (date -r "$icon_file" "+%d %b %Y  %H:%M")
+                    set -l save_date (date "+%d %b %Y  %H:%M")
                     echo -e ""
                     echo -e "  $GR╔══════════════════════════════════════════════════════════════╗$C"
                     echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
-                    set -l s "  ✅  Profile picture saved!"
+                    set -l s "  ✅  PROFILE PICTURE SAVED"
                     echo -e "  $GR║$C  $WH$s$C$(printf '%*s' (math "60 - "(string length "$s")) '')$GR║$C"
                     echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
-                    set -l i1 "  Path:  $save_path"
+                    echo -e "  $GR╠══════════════════════════════════════════════════════════════╣$C"
+                    echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
+                    set -l i1 "  Path:  $path_disp"
                     echo -e "  $GR║$C  $D$i1$C$(printf '%*s' (math "60 - "(string length "$i1")) '')$GR║$C"
                     set -l i2 "  Orig:  $orig_disp"
                     echo -e "  $GR║$C  $D$i2$C$(printf '%*s' (math "60 - "(string length "$i2")) '')$GR║$C"
-                    set -l i3 "  🕒  Saved:  "(date "+%d %b %Y  %H:%M")""
+                    set -l i3 "  Saved:  $save_date"
                     echo -e "  $GR║$C  $D$i3$C$(printf '%*s' (math "60 - "(string length "$i3")) '')$GR║$C"
                     echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
                     set -l br "  eprahemi  •  github.com/eprahemi"
