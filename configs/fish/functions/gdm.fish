@@ -479,34 +479,35 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         # Base36 looks random but decodes to a timestamp — fixed 6 chars per timestamp
         set -l applied_ts (stat -c "%Y" "$last_file" 2>/dev/null; or date +%s)
         set -l save_ts (date +%s)
-        set -l applied_b36 ""
-        set -l save_b36 ""
-        for pair in "$applied_ts applied_b36" "$save_ts save_b36"
+        set -l applied_enc ""
+        set -l save_enc ""
+        # Base62 (0-9a-zA-Z) — different from pfp's base36, produces mixed-case strings
+        set -l applied_enc ""; set -l save_enc ""
+        for pair in "$applied_ts applied_enc" "$save_ts save_enc"
             set -l ts (string split " " -- $pair)[1]
             set -l varname (string split " " -- $pair)[2]
             set -l encoded (python3 -c "
 n = $ts
-alpha = '0123456789abcdefghijklmnopqrstuvwxyz'
+alpha = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 res = ''
 while n > 0:
-    res = alpha[n % 36] + res
-    n //= 36
+    res = alpha[n % 62] + res
+    n //= 62
 print(res or '0')
 " 2>/dev/null)
             if test -z "$encoded"; or test "$encoded" = "0"
                 set encoded "000000"
             end
-            # Pad to exactly 6 chars
             while test (string length "$encoded") -lt 6
                 set encoded "0$encoded"
             end
             if test (string length "$encoded") -gt 6
                 set encoded (string sub -l 6 "$encoded")
             end
-            if test "$varname" = "applied_b36"
-                set applied_b36 "$encoded"
+            if test "$varname" = "applied_enc"
+                set applied_enc "$encoded"
             else
-                set save_b36 "$encoded"
+                set save_enc "$encoded"
             end
         end
         # Random suffix for uniqueness (4 chars)
@@ -514,7 +515,7 @@ print(res or '0')
 import secrets, string
 print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(4)))
 " 2>/dev/null; or echo "x0x0")
-        set -l rand_name "$applied_b36$save_b36$rand_sfx"
+        set -l rand_name "$applied_enc$save_enc$rand_sfx"
         if test -z "$rand_name"; or test (string length -- "$rand_name") -lt 16
             # Fallback: fully random 16-char
             set rand_name (tr -dc 'A-Za-z0-9' < /dev/urandom 2>/dev/null | head -c 16)
@@ -568,22 +569,22 @@ print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in rang
         # Decode both dates from the filename
         set -l decoded_applied (python3 -c "
 import sys, time
-alpha = '0123456789abcdefghijklmnopqrstuvwxyz'
+alpha = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 try:
     n = 0
-    for c in '$applied_b36':
-        n = n * 36 + alpha.index(c)
+    for c in '$applied_enc':
+        n = n * 62 + alpha.index(c)
     print(time.strftime('%d %b %Y  %H:%M', time.localtime(n)))
 except:
     print('')
 " 2>/dev/null)
         set -l decoded_saved (python3 -c "
 import sys, time
-alpha = '0123456789abcdefghijklmnopqrstuvwxyz'
+alpha = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
 try:
     n = 0
-    for c in '$save_b36':
-        n = n * 36 + alpha.index(c)
+    for c in '$save_enc':
+        n = n * 62 + alpha.index(c)
     print(time.strftime('%d %b %Y  %H:%M', time.localtime(n)))
 except:
     print('')
