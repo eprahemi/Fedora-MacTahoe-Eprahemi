@@ -281,6 +281,11 @@ print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in rang
 
                 if test -f "$save_path"
                     set -l enc_orig (__pfp_encrypt "$icon_file")
+                    # Truncate long encrypted path like pfp info does
+                    set -l orig_disp "$enc_orig"
+                    if test (string length "$enc_orig") -gt 48
+                        set orig_disp (string sub -l 45 "$enc_orig")"..."
+                    end
                     set -l applied_date (date -r "$icon_file" "+%d %b %Y  %H:%M")
                     echo -e ""
                     echo -e "  $GR╔══════════════════════════════════════════════════════════════╗$C"
@@ -290,7 +295,7 @@ print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in rang
                     echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
                     set -l i1 "  Path:  $save_path"
                     echo -e "  $GR║$C  $D$i1$C$(printf '%*s' (math "60 - "(string length "$i1")) '')$GR║$C"
-                    set -l i2 "  Orig:  $enc_orig"
+                    set -l i2 "  Orig:  $orig_disp"
                     echo -e "  $GR║$C  $D$i2$C$(printf '%*s' (math "60 - "(string length "$i2")) '')$GR║$C"
                     set -l i3 "  🕒  Saved:  "(date "+%d %b %Y  %H:%M")""
                     echo -e "  $GR║$C  $D$i3$C$(printf '%*s' (math "60 - "(string length "$i3")) '')$GR║$C"
