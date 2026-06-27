@@ -781,6 +781,32 @@ except:
         # Line: Source path (📂 emoji visual +1; keep end of path)
         set -l sr_label "📂  Source  "
         set -l sr_val "$source"
+        # Encrypt system paths (~ = user, / = system)
+        if not string match -q '~*' "$sr_val"
+            set -l key_file "$HOME/.config/pfp.key"
+            if test -f "$key_file"
+                set -l enc (python3 -c "
+import sys
+from cryptography.fernet import Fernet
+try:
+    with open('$key_file', 'rb') as f:
+        key = f.read()
+    f = Fernet(key)
+    print(f.encrypt(sys.argv[1].encode()).decode())
+except Exception:
+    sys.exit(1)
+" "$sr_val" 2>/dev/null)
+                if test -n "$enc"
+                    set sr_val "$enc"
+                else
+                    # Fallback: base64
+                    set sr_val (echo -n "$sr_val" | python3 -c "import sys,base64; print(base64.urlsafe_b64encode(sys.stdin.read().encode()).decode())" 2>/dev/null)
+                end
+            else
+                # No key file — base64 fallback
+                set sr_val (echo -n "$sr_val" | python3 -c "import sys,base64; print(base64.urlsafe_b64encode(sys.stdin.read().encode()).decode())" 2>/dev/null)
+            end
+        end
         set -l sr_plain  "$sr_label$sr_val"
         set -l sr_len    (string length -- "$sr_plain")
         set -l sr_max    (math "50 - 1")  # 50 inner width minus 1 for emoji visual

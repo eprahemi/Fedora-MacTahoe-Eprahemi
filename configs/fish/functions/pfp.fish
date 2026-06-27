@@ -65,7 +65,7 @@ function pfp --description 'Manage your GNOME profile picture (avatar) — githu
                     set -l cur_dims (identify -format "%wx%h" "$icon_file" 2>/dev/null; or echo "?x?")
                     set -l cur_fmt (identify -format "%m" "$icon_file" 2>/dev/null; or echo "?")
                     set -l cur_mtime (date -r "$icon_file" "+%d %b %Y  %H:%M" 2>/dev/null; or echo "?")
-                    set -l cur_disp (string replace -- "$HOME" '~' "$icon_file")
+                    set -l cur_disp (__pfp_display_path "$icon_file")
                     set -l cur_len (string length "$cur_disp")
                     if test $cur_len -gt 48
                         set cur_disp (string sub -l 45 "$cur_disp")"..."
@@ -132,7 +132,7 @@ function pfp --description 'Manage your GNOME profile picture (avatar) — githu
                     set -l wp_name (basename "$wp_path")
                     set -l wp_size (du -h "$wp_path" 2>/dev/null | awk '{print $1}')
                     set -l wp_dims (identify -format "%wx%h" "$wp_path" 2>/dev/null; or echo "?x?")
-                    set -l wp_disp (string replace -- "$HOME" '~' "$wp_path")
+                    set -l wp_disp (__pfp_display_path "$wp_path")
                     set -l wp_len (string length "$wp_disp")
                     if test $wp_len -gt 48
                         set wp_disp (string sub -l 45 "$wp_disp")"..."
@@ -205,7 +205,7 @@ function pfp --description 'Manage your GNOME profile picture (avatar) — githu
                 set -l info_dims (identify -format "%wx%h" "$icon_file" 2>/dev/null; or echo "?x?")
                 set -l info_fmt (identify -format "%m" "$icon_file" 2>/dev/null; or echo "?")
                 set -l info_mtime (date -r "$icon_file" "+%d %b %Y  %H:%M" 2>/dev/null; or echo "?")
-                set -l info_disp (string replace -- "$HOME" '~' "$icon_file")
+                set -l info_disp (__pfp_display_path "$icon_file")
                 set -l info_len (string length "$info_disp")
                 if test $info_len -gt 48
                     set info_disp (string sub -l 45 "$info_disp")"..."
@@ -279,8 +279,7 @@ print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in rang
                 cp "$icon_file" "$save_path"
 
                 if test -f "$save_path"
-                    # Show plain avatar path (user-editable /var/lib/AccountsService/...)
-                    set -l orig_disp (string replace -- "$HOME" '~' "$icon_file")
+                    set -l orig_disp (__pfp_display_path "$icon_file")
                     if test (string length "$orig_disp") -gt 48
                         set orig_disp (string sub -l 45 "$orig_disp")"..."
                     end
@@ -463,9 +462,30 @@ except Exception:
         # Fallback: base64 if Fernet fails
         set encrypted (echo -n "$path" | python3 -c "import sys,base64; print(base64.urlsafe_b64encode(sys.stdin.read().encode()).decode())" 2>/dev/null)
     end
-
     echo "$encrypted"
 end
+
+
+# ──────────────────────────────────────────────────────────────
+# Internal: Return display-friendly path — encrypt system paths,
+# show user paths (XDG dirs, avatar) plainly with ~ prefix
+# ──────────────────────────────────────────────────────────────
+function __pfp_display_path --description 'Return display path (encrypted for system, plain for user)'
+    set -l path $argv[1]
+    # User's own avatar — always show plainly
+    if string match -q "/var/lib/AccountsService/icons/*" "$path"
+        string replace -- "$HOME" '~' "$path"
+        return 0
+    end
+    # User's home directory — show plainly with ~
+    if string match -q "$HOME/*" "$path"
+        string replace -- "$HOME" '~' "$path"
+        return 0
+    end
+    # System/default paths — encrypt
+    __pfp_encrypt "$path"
+end
+
 
 # ──────────────────────────────────────────────────────────────
 # Internal: Search for an image across XDG user directories
