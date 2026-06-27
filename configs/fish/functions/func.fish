@@ -28,7 +28,7 @@ function func --description 'Function archive: list/search/show all fish command
 
     set -l cat_name[3] "⚙️  System"
     set -l cat_esc[3]  $R
-    set -l cat_func[3] "clean cleanreset refresh gdm logout reboot shutdown"
+    set -l cat_func[3] "clean cleanreset refresh gdm logout reboot shutdown pfp"
 
     set -l cat_name[4] "📊  Diagnostics"
     set -l cat_esc[4]  $B
@@ -50,7 +50,7 @@ function func --description 'Function archive: list/search/show all fish command
         switch $f
             case c v n weather;           echo 1
             case cat l p mkgif extract;   echo 2
-            case clean cleanreset refresh gdm logout reboot shutdown; echo 3
+            case clean cleanreset refresh gdm logout reboot shutdown pfp; echo 3
             case testdrive getdata myip stats calc qr; echo 4
             case matrix hollywood stayawake fish_greeting; echo 5
             case func passgen passwd;     echo 6
@@ -100,6 +100,7 @@ function func --description 'Function archive: list/search/show all fish command
             case p;       echo "p  —  Fzf file preview"
             case extract; echo "extract <archive> [dest]  —  Extract any archive"
             case func;    echo "func [search|show]  —  Function archive"
+            case pfp;     echo "pfp [image|current|save|remove]  —  GNOME profile picture manager"
             case passgen; echo "passgen [opts]  —  Password generator"
             case passwd;  echo "passwd [enable|disable|toggle|status]  —  Passwordless sudo"
             case '*';     echo "$u"

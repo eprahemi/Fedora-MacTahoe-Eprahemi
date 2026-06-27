@@ -16,6 +16,7 @@ Fedora MacTahoe is a Fedora Linux → macOS transformation project. It turns a s
 - **Branch:** `main`
 - **Local repo path:** `/home/eprahemi/Documents/Codes University [Mine]/Eprahemi Websites/Fedora Mactahoe Eprahemi GTK theme + Icon + Sf Pro Font/`
 - **Latest commit:** `a2206e2e` — `gdm.fish: fix read -l scoping bug (loop-local vars lost after while break) + switch/case → if/else with string match`
+- **Pending commit:** `pfp.fish` — new GNOME profile picture manager with Fernet-encrypted path display (no decrypt/list commands) + `func.fish` archive update
 
 ### ⚠️ CRITICAL — Repo Path Mistake
 Do NOT search with glob patterns like `*Eprahemi*` — the directory has "Mactahoe" (not "MacTahoe"), and glob won't match. Use the **exact literal path** from this file:
@@ -222,7 +223,7 @@ A persistent GDM wallpaper switching function that works entirely offline after 
 File: `configs/fish/functions/func.fish` (~352 lines)
 
 Archives all custom Fish functions organized by categories:
-- **System:** `gdm`, `testdrive`, `cleanreset`, `refresh`, `stats`, `stayawake`, `getdata`
+- **System:** `gdm`, `testdrive`, `cleanreset`, `refresh`, `stats`, `stayawake`, `getdata`, `pfp`
 - **Navigation:** `c`, `l`, `n`, `v`, `p`, `f` (not in func.fish, but referenced)
 - **Utilities:** `calc`, `extract`, `weather`, `myip`, `qr`, `passgen`, `cat`, `mkgif`, `matrix`, `hollywood`, `clean`
 
@@ -260,6 +261,25 @@ All 26 Fish function files were purged of unprofessional/brainrot/childish langu
 - 26 files changed, 828 insertions, 434 deletions
 - **Passgen subcommands added:** `passgen gen <N>` (bypasses length limit) and `passgen check <pw>` (analyze any password including numeric). Removed ≤128 threshold hack. Bare numeric args still work (≤99999 as length, >99999 shows helpful error with gen/check hints).
 - Commits: `494b746c` (professionalization), `c28ba81` (threshold fix), `cd4a456` (gen/check subcommands)
+
+### pfp.fish — GNOME Profile Picture Manager (Jun 2026)
+
+New function for managing the GNOME AccountsService avatar with subcommands:
+
+| Subcommand | Description |
+|------------|-------------|
+| `pfp <image>` | Set profile picture (converts to 512×512 PNG via magick) |
+| `pfp current` | Show current avatar with Fernet-encrypted path |
+| `pfp save` | Save current avatar to `~/Pictures/<timestamp>-<random>.png` |
+| `pfp remove` / `pfp reset` | Reset to default avatar |
+| `pfp --help` / `-h` | Show help |
+
+Key design decisions:
+- **Fernet encryption** for file paths shown in display output: key stored at `~/.config/pfp.key`, auto-generated on first use. Encrypted paths shown in `pfp current` and `pfp save` — not reversible (no decrypt command).
+- **Full path privacy**: The actual `/var/lib/AccountsService/icons/$USER` path is never shown in plaintext.
+- **Fallback to base64** if `cryptography` python package is unavailable.
+- **Unknown subcommands** fall through to the default `pfp <image>` handler (tries to use the word as a file path).
+- **Kitty icat preview** in `pfp current` when running in Kitty terminal.
 
 ## 7. KEY DESIGN DECISIONS
 
@@ -385,6 +405,7 @@ Fedora Mactahoe Eprahemi GTK theme + Icon + Sf Pro Font/
 │   │       ├── myip.fish
 │   │       ├── n.fish
 │   │       ├── passgen.fish
+│   │       ├── pfp.fish       # Profile picture manager (~392 lines)
 │   │       ├── p.fish
 │   │       ├── qr.fish
 │   │       ├── refresh.fish
