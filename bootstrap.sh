@@ -208,7 +208,7 @@ echo -e "  ${CYAN}║${NC}${dw3}$(printf '%*s' $((62 - ${#dw3})) '')${CYAN}║${
 dw4="    n   — Keep current wallpaper"
 echo -e "  ${CYAN}║${NC}${dw4}$(printf '%*s' $((62 - ${#dw4})) '')${CYAN}║${NC}"
 echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-dw5="  (Login screen wallpaper is always applied)"
+dw5="  (Login screen wallpaper has its own prompt below)"
 echo -e "  ${CYAN}║${NC}${dw5}$(printf '%*s' $((62 - ${#dw5})) '')${CYAN}║${NC}"
 dw6="  Press Enter for default (Yes)"
 echo -e "  ${CYAN}║${NC}${dw6}$(printf '%*s' $((62 - ${#dw6})) '')${CYAN}║${NC}"
@@ -220,6 +220,54 @@ if confirm "Desktop wallpaper? [Y/n]: " Y; then
 else
   export INSTALL_DESKTOP_WALLPAPER="false"
   echo -e "  ${DIM}→ Skipping desktop wallpaper${NC}"
+fi
+
+# ── Login screen wallpaper prompt (separate from desktop) ──
+echo ""
+echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+log_t="       ◆  LOGIN SCREEN WALLPAPER?  ◆"
+echo -e "  ${CYAN}║${NC}${log_t}$(printf '%*s' $((62 - ${#log_t})) '')${CYAN}║${NC}"
+echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+log1="  Override the GDM login screen with the Himeno theme?"
+echo -e "  ${CYAN}║${NC}${log1}$(printf '%*s' $((62 - ${#log1})) '')${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+log2="  This sets the macOS-style login screen with custom"
+echo -e "  ${CYAN}║${NC}${log2}$(printf '%*s' $((62 - ${#log2})) '')${CYAN}║${NC}"
+log3="  wallpaper, theme, and hides the Fedora logo."
+echo -e "  ${CYAN}║${NC}${log3}$(printf '%*s' $((62 - ${#log3})) '')${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+log4="  If you already have a custom GDM setup, skip this."
+echo -e "  ${CYAN}║${NC}${log4}$(printf '%*s' $((62 - ${#log4})) '')${CYAN}║${NC}"
+log5="  Press Enter for default (Yes)"
+echo -e "  ${CYAN}║${NC}${log5}$(printf '%*s' $((62 - ${#log5})) '')${CYAN}║${NC}"
+echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+echo ""
+if confirm "Override GDM login screen? [Y/n]: " Y; then
+  # ── Second confirmation — this cannot be undone ──
+  echo ""
+  echo -e "  ${YELLOW}╔══════════════════════════════════════════════════════════════╗${NC}"
+  echo -e "  ${YELLOW}║${NC}        ${BOLD}⚠  ARE YOU ABSOLUTELY SURE?  ⚠${NC}                   ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}╠══════════════════════════════════════════════════════════════╣${NC}"
+  echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}  This will overwrite your current GDM login screen.            ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}  ${BOLD}This action cannot be undone automatically.${NC}                 ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}  If you ever want to revert, you'll need to re-run                ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}  the installer or manually reset GDM.                             ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}╚══════════════════════════════════════════════════════════════╝${NC}"
+  echo ""
+  if confirm "Are you sure? This cannot be undone. [Y/n]: " Y; then
+    export INSTALL_LOGIN_WALLPAPER="true"
+    echo -e "  ${GREEN}→ GDM login screen will be themed${NC}"
+  else
+    export INSTALL_LOGIN_WALLPAPER="false"
+    echo -e "  ${DIM}→ Skipping GDM login screen${NC}"
+  fi
+else
+  export INSTALL_LOGIN_WALLPAPER="false"
+  echo -e "  ${DIM}→ Skipping GDM login screen${NC}"
 fi
 
 # ── 18+ wallpapers prompt ──
