@@ -1190,83 +1190,25 @@ apply_dconf() {
 # ── Optional passwordless sudo prompt (run before Phase 1) ──
 
 prompt_sudoers_entry() {
-  if [ -z "${INSTALL_SUDOERS_HINT:-}" ]; then
-    echo ""
-    echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-s1="       ◆  PASSWORDLESS SUDO HINT?  ◆"
-    echo -e "  ${CYAN}║${NC}${s1}$(printf '%*s' $((62 - ${#s1})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-s2="  When you use sudo, Linux asks for your password."
-    echo -e "  ${CYAN}║${NC}${s2}$(printf '%*s' $((62 - ${#s2})) '')${CYAN}║${NC}"
-s3="  This option adds a commented (inactive) line to"
-    echo -e "  ${CYAN}║${NC}${s3}$(printf '%*s' $((62 - ${#s3})) '')${CYAN}║${NC}"
-s4="  /etc/sudoers so you can enable it later with"
-    echo -e "  ${CYAN}║${NC}${s4}$(printf '%*s' $((62 - ${#s4})) '')${CYAN}║${NC}"
-s5="  one simple command. Safe, no changes made now."
-    echo -e "  ${CYAN}║${NC}${s5}$(printf '%*s' $((62 - ${#s5})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-s6="  If you say yes, we add:"
-    echo -e "  ${CYAN}║${NC}${s6}$(printf '%*s' $((62 - ${#s6})) '')${CYAN}║${NC}"
-s7="    # your_username ALL=(ALL) NOPASSWD: ALL"
-    echo -e "  ${CYAN}║${NC}${s7}$(printf '%*s' $((62 - ${#s7})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-s8="  Later enable it:"
-    echo -e "  ${CYAN}║${NC}${s8}$(printf '%*s' $((62 - ${#s8})) '')${CYAN}║${NC}"
-s9="    sudo visudo  →  scroll to bottom"
-    echo -e "  ${CYAN}║${NC}${s9}$(printf '%*s' $((62 - ${#s9})) '')${CYAN}║${NC}"
-s10="    delete the # at the start  →  save + exit"
-    echo -e "  ${CYAN}║${NC}${s10}$(printf '%*s' $((62 - ${#s10})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-s11="    y  — Yes, add the commented line for me"
-    echo -e "  ${CYAN}║${NC}${s11}$(printf '%*s' $((62 - ${#s11})) '')${CYAN}║${NC}"
-s12="    N   — No thanks, skip this (default)"
-    echo -e "  ${CYAN}║${NC}${s12}$(printf '%*s' $((62 - ${#s12})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-s13="  We never touch existing sudoers lines."
-    echo -e "  ${CYAN}║${NC}${s13}$(printf '%*s' $((62 - ${#s13})) '')${CYAN}║${NC}"
-s14="  Only one new commented line at the bottom."
-    echo -e "  ${CYAN}║${NC}${s14}$(printf '%*s' $((62 - ${#s14})) '')${CYAN}║${NC}"
-s15="  Safe to run again — it skips if already there."
-    echo -e "  ${CYAN}║${NC}${s15}$(printf '%*s' $((62 - ${#s15})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-s16="  Your data is safe. Nothing leaves your computer."
-    echo -e "  ${CYAN}║${NC}${s16}$(printf '%*s' $((62 - ${#s16})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
-    echo -en "  ${DIM}Add passwordless sudo hint? [y/N]:${NC} "
-    read -r -n 1 key </dev/tty || true
-    echo ""
-    if [ "$key" = "y" ] || [ "$key" = "Y" ]; then
-      INSTALL_SUDOERS_HINT="true"
-      echo -e "  ${GREEN}→ Adding commented NOPASSWD entry${NC}"
+  # Always add the commented NOPASSWD line (no prompt)
+  if sudo grep -q "$USER.*NOPASSWD" /etc/sudoers 2>/dev/null; then
+    ok "NOPASSWD entry for $USER already present in /etc/sudoers"
+  else
+    local _tmp_sudoers
+    _tmp_sudoers=$(mktemp)
+    sudo cat /etc/sudoers > "$_tmp_sudoers"
+    echo "" >> "$_tmp_sudoers"
+    echo "# $USER ALL=(ALL) NOPASSWD: ALL" >> "$_tmp_sudoers"
+    if sudo visudo -c -f "$_tmp_sudoers" 2>/dev/null; then
+      sudo cp "$_tmp_sudoers" /etc/sudoers
+      sudo chmod 440 /etc/sudoers
+      sudo chown root:root /etc/sudoers
+      ok "Commented NOPASSWD entry added to end of /etc/sudoers"
+      warn "Enable it: sudo visudo  →  find the line and uncomment it"
     else
-      INSTALL_SUDOERS_HINT="false"
-      echo -e "  ${DIM}→ Skipping passwordless sudo hint${NC}"
+      warn "sudoers validation failed - hint not added"
     fi
-  fi
-
-  if [ "$INSTALL_SUDOERS_HINT" = "true" ]; then
-    # Check if already present
-    if sudo grep -q "$USER.*NOPASSWD" /etc/sudoers 2>/dev/null; then
-      ok "NOPASSWD entry for $USER already present in /etc/sudoers"
-    else
-      # Safely append via temp file + visudo validation
-      local _tmp_sudoers
-      _tmp_sudoers=$(mktemp)
-      sudo cat /etc/sudoers > "$_tmp_sudoers"
-      echo "" >> "$_tmp_sudoers"
-      echo "# $USER ALL=(ALL) NOPASSWD: ALL" >> "$_tmp_sudoers"
-      if sudo visudo -c -f "$_tmp_sudoers" 2>/dev/null; then
-        sudo cp "$_tmp_sudoers" /etc/sudoers
-        sudo chmod 440 /etc/sudoers
-        sudo chown root:root /etc/sudoers
-        ok "Commented NOPASSWD entry added to end of /etc/sudoers"
-        warn "Enable it: sudo visudo  →  find the line and uncomment it"
-      else
-        warn "sudoers validation failed — hint not added"
-      fi
-      rm -f "$_tmp_sudoers"
-    fi
+    rm -f "$_tmp_sudoers"
   fi
 }
 
@@ -1342,6 +1284,68 @@ wp18_5="  Press Enter for default (No)"
 
 }
 
+prompt_billie_videos() {
+  # ── Prompt if not already set (e.g. by bootstrap.sh) ──
+  if [ -z "${INSTALL_BILLIE_VIDEOS:-}" ]; then
+    echo ""
+    echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+bv_t="        ◆  🔥  HOT BILLIE & JINX VIDEO EDITS?  ◆"
+    echo -e "  ${CYAN}║${NC}${bv_t}$(printf '%*s' $((62 - ${#bv_t})) '')${CYAN}║${NC}"
+    echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+bv1="  🔥  Sick edits — Billie, Jinx, and cool stuff (~500 MB)"
+    echo -e "  ${CYAN}║${NC}${bv1}$(printf '%*s' $((62 - ${#bv1})) '')${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+bv2="    y  — Heck yeah! Drop 'em in ~/Downloads"
+    echo -e "  ${CYAN}║${NC}${bv2}$(printf '%*s' $((62 - ${#bv2})) '')${CYAN}║${NC}"
+bv3="    N   — Nah, not today (default)"
+    echo -e "  ${CYAN}║${NC}${bv3}$(printf '%*s' $((62 - ${#bv3})) '')${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+bv4="  You'll get Billie Eilish , Jinx Edit Hot, and more"
+    echo -e "  ${CYAN}║${NC}${bv4}$(printf '%*s' $((62 - ${#bv4})) '')${CYAN}║${NC}"
+bv5="  Press Enter for default (No)"
+    echo -e "  ${CYAN}║${NC}${bv5}$(printf '%*s' $((62 - ${#bv5})) '')${CYAN}║${NC}"
+    echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+    echo -en "  ${DIM}🔥  Hot Billie & Jinx edits? [y/N]:${NC} "
+    read -r -n 1 key < /dev/tty || true
+    echo ""
+    if [ "$key" = "y" ] || [ "$key" = "Y" ]; then
+      INSTALL_BILLIE_VIDEOS="true"
+      echo -e "  ${GREEN}→  🔥  Alright! Dropping hot edits in ~/Downloads${NC}"
+    else
+      # ── Naughty second prompt — are you REALLY sure? ──
+      echo ""
+      echo -e "  ${PINK}╔══════════════════════════════════════════════════════════════╗${NC}"
+nsty_t="     ◆  👀  U SURE BUDDY?  👀  ◆"
+      echo -e "  ${PINK}║${NC}${nsty_t}$(printf '%*s' $((62 - ${#nsty_t})) '')${PINK}║${NC}"
+      echo -e "  ${PINK}╠══════════════════════════════════════════════════════════════╣${NC}"
+      echo -e "  ${PINK}║${NC}                                                              ${PINK}║${NC}"
+nsty1="  You really gonna miss out on mommy Billie's sweet"
+      echo -e "  ${PINK}║${NC}${nsty1}$(printf '%*s' $((62 - ${#nsty1})) '')${PINK}║${NC}"
+nsty2="  body and Jinx's hot slim curves?  🔥  💦"
+      echo -e "  ${PINK}║${NC}${nsty2}$(printf '%*s' $((62 - ${#nsty2})) '')${PINK}║${NC}"
+      echo -e "  ${PINK}║${NC}                                                              ${PINK}║${NC}"
+nsty3="    y  — OK OK YOU CONVINCED ME!  😩🔥"
+      echo -e "  ${PINK}║${NC}${nsty3}$(printf '%*s' $((62 - ${#nsty3})) '')${PINK}║${NC}"
+nsty4="    N  — Nah I'm good (for real this time)"
+      echo -e "  ${PINK}║${NC}${nsty4}$(printf '%*s' $((62 - ${#nsty4})) '')${PINK}║${NC}"
+      echo -e "  ${PINK}║${NC}                                                              ${PINK}║${NC}"
+nsty5="  Last chance before you miss mommy..."
+      echo -e "  ${PINK}║${NC}${nsty5}$(printf '%*s' $((62 - ${#nsty5})) '')${PINK}║${NC}"
+      echo -e "  ${PINK}╚══════════════════════════════════════════════════════════════╝${NC}"
+      echo -en "  ${PINK}👀  For real though? [y/N]:${NC} "
+      read -r -n 1 key2 < /dev/tty || true
+      echo ""
+      if [ "$key2" = "y" ] || [ "$key2" = "Y" ]; then
+        INSTALL_BILLIE_VIDEOS="true"
+        echo -e "  ${GREEN}→  😩  Alright alright — dropping hot edits in ~/Downloads${NC}"
+      else
+        INSTALL_BILLIE_VIDEOS="false"
+        echo -e "  ${DIM}→  Aight your loss, more for the rest of us 🔥${NC}"
+      fi
+    fi
+  fi
+}
 apply_wallpapers() {
   next_step "Wallpaper + Login Screen"
 
@@ -1575,68 +1579,7 @@ install_custom_avatars() {
 
 # ── 🔥 Billie & Jinx video edits (optional prompt + download, step 22) ──
 download_optional_videos() {
-  next_step "Billie & Jinx Videos"
-
-  # ── Prompt if not already set (e.g. by bootstrap.sh) ──
-  if [ -z "${INSTALL_BILLIE_VIDEOS:-}" ]; then
-    echo ""
-    echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-bv_t="        ◆  🔥  HOT BILLIE & JINX VIDEO EDITS?  ◆"
-    echo -e "  ${CYAN}║${NC}${bv_t}$(printf '%*s' $((62 - ${#bv_t})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-bv1="  🔥  Sick edits — Billie, Jinx, and cool stuff (~500 MB)"
-    echo -e "  ${CYAN}║${NC}${bv1}$(printf '%*s' $((62 - ${#bv1})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-bv2="    y  — Heck yeah! Drop 'em in ~/Downloads"
-    echo -e "  ${CYAN}║${NC}${bv2}$(printf '%*s' $((62 - ${#bv2})) '')${CYAN}║${NC}"
-bv3="    N   — Nah, not today (default)"
-    echo -e "  ${CYAN}║${NC}${bv3}$(printf '%*s' $((62 - ${#bv3})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-bv4="  You'll get Billie Eilish , Jinx Edit Hot, and more"
-    echo -e "  ${CYAN}║${NC}${bv4}$(printf '%*s' $((62 - ${#bv4})) '')${CYAN}║${NC}"
-bv5="  Press Enter for default (No)"
-    echo -e "  ${CYAN}║${NC}${bv5}$(printf '%*s' $((62 - ${#bv5})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
-    echo -en "  ${DIM}🔥  Hot Billie & Jinx edits? [y/N]:${NC} "
-    read -r -n 1 key </dev/tty || true
-    echo ""
-    if [ "$key" = "y" ] || [ "$key" = "Y" ]; then
-      INSTALL_BILLIE_VIDEOS="true"
-      echo -e "  ${GREEN}→  🔥  Alright! Dropping hot edits in ~/Downloads${NC}"
-    else
-      # ── Naughty second prompt — are you REALLY sure? ──
-      echo ""
-      echo -e "  ${PINK}╔══════════════════════════════════════════════════════════════╗${NC}"
-nsty_t="     ◆  👀  U SURE BUDDY?  👀  ◆"
-      echo -e "  ${PINK}║${NC}${nsty_t}$(printf '%*s' $((62 - ${#nsty_t})) '')${PINK}║${NC}"
-      echo -e "  ${PINK}╠══════════════════════════════════════════════════════════════╣${NC}"
-      echo -e "  ${PINK}║${NC}                                                              ${PINK}║${NC}"
-nsty1="  You really gonna miss out on mommy Billie's sweet"
-      echo -e "  ${PINK}║${NC}${nsty1}$(printf '%*s' $((62 - ${#nsty1})) '')${PINK}║${NC}"
-nsty2="  body and Jinx's hot slim curves?  🔥  💦"
-      echo -e "  ${PINK}║${NC}${nsty2}$(printf '%*s' $((62 - ${#nsty2})) '')${PINK}║${NC}"
-      echo -e "  ${PINK}║${NC}                                                              ${PINK}║${NC}"
-nsty3="    y  — OK OK YOU CONVINCED ME!  😩🔥"
-      echo -e "  ${PINK}║${NC}${nsty3}$(printf '%*s' $((62 - ${#nsty3})) '')${PINK}║${NC}"
-nsty4="    N  — Nah I'm good (for real this time)"
-      echo -e "  ${PINK}║${NC}${nsty4}$(printf '%*s' $((62 - ${#nsty4})) '')${PINK}║${NC}"
-      echo -e "  ${PINK}║${NC}                                                              ${PINK}║${NC}"
-nsty5="  Last chance before you miss mommy..."
-      echo -e "  ${PINK}║${NC}${nsty5}$(printf '%*s' $((62 - ${#nsty5})) '')${PINK}║${NC}"
-      echo -e "  ${PINK}╚══════════════════════════════════════════════════════════════╝${NC}"
-      echo -en "  ${PINK}👀  For real though? [y/N]:${NC} "
-      read -r -n 1 key2 </dev/tty || true
-      echo ""
-      if [ "$key2" = "y" ] || [ "$key2" = "Y" ]; then
-        INSTALL_BILLIE_VIDEOS="true"
-        echo -e "  ${GREEN}→  😩  Alright alright — dropping hot edits in ~/Downloads${NC}"
-      else
-        INSTALL_BILLIE_VIDEOS="false"
-        echo -e "  ${DIM}→  Aight your loss, more for the rest of us 🔥${NC}"
-      fi
-    fi
-  fi
+  next_step "Download Billie & Jinx + Gintama Videos"
 
   # ── Download if opted in ──
   if [ "${INSTALL_BILLIE_VIDEOS:-false}" = "true" ]; then
@@ -1672,7 +1615,7 @@ nsty5="  Last chance before you miss mommy..."
       warn "🔥  Download failed - check DOWNLOADS_URL"
     fi
   else
-    log "Skipped Billie & Jinx video edits"
+    log "Skipped video downloads"
   fi
 }
 
@@ -2219,6 +2162,7 @@ remove_gnome_weather
 
 prompt_optional_wallpapers
 
+prompt_billie_videos
 prompt_sudoers_entry
 
 phase_divider "PHASE 1 : SYSTEM FOUNDATIONS" 3 4
