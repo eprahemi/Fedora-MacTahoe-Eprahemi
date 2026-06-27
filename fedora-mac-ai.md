@@ -452,6 +452,7 @@ Fedora Mactahoe Eprahemi GTK theme + Icon + Sf Pro Font/
 ## 12. RECENT COMMITS (Latest on top)
 
 ```
+1222c77b pfp.fish + gdm.fish: strip /home/user prefix → ~ in all displayed paths
 c2db3c9c pfp.fish: add XDG search engine (gdm-style) — finds images in Pictures, Downloads, Documents, etc.
 a2206e2e gdm.fish: fix read -l scoping bug (loop-local vars lost after while break) + switch/case → if/else with string match
 494b746c fish: professionalize all prompts, errors, and comments (27 files)
