@@ -65,10 +65,10 @@ function pfp --description 'Manage your GNOME profile picture (avatar) — githu
                     set -l cur_dims (identify -format "%wx%h" "$icon_file" 2>/dev/null; or echo "?x?")
                     set -l cur_fmt (identify -format "%m" "$icon_file" 2>/dev/null; or echo "?")
                     set -l cur_mtime (date -r "$icon_file" "+%d %b %Y  %H:%M" 2>/dev/null; or echo "?")
-                    set -l cur_enc (__pfp_encrypt "$icon_file")
-                    set -l cur_disp "$cur_enc"
-                    if test (string length "$cur_enc") -gt 48
-                        set cur_disp (string sub -l 45 "$cur_enc")"..."
+                    set -l cur_disp (string replace -- "$HOME" '~' "$icon_file")
+                    set -l cur_len (string length "$cur_disp")
+                    if test $cur_len -gt 48
+                        set cur_disp (string sub -l 45 "$cur_disp")"..."
                     end
                     echo -e ""
                     echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
@@ -132,10 +132,10 @@ function pfp --description 'Manage your GNOME profile picture (avatar) — githu
                     set -l wp_name (basename "$wp_path")
                     set -l wp_size (du -h "$wp_path" 2>/dev/null | awk '{print $1}')
                     set -l wp_dims (identify -format "%wx%h" "$wp_path" 2>/dev/null; or echo "?x?")
-                    set -l wp_enc (__pfp_encrypt "$wp_path")
-                    set -l wp_disp "$wp_enc"
-                    if test (string length "$wp_enc") -gt 48
-                        set wp_disp (string sub -l 45 "$wp_enc")"..."
+                    set -l wp_disp (string replace -- "$HOME" '~' "$wp_path")
+                    set -l wp_len (string length "$wp_disp")
+                    if test $wp_len -gt 48
+                        set wp_disp (string sub -l 45 "$wp_disp")"..."
                     end
 
                     echo -e ""
@@ -205,11 +205,10 @@ function pfp --description 'Manage your GNOME profile picture (avatar) — githu
                 set -l info_dims (identify -format "%wx%h" "$icon_file" 2>/dev/null; or echo "?x?")
                 set -l info_fmt (identify -format "%m" "$icon_file" 2>/dev/null; or echo "?")
                 set -l info_mtime (date -r "$icon_file" "+%d %b %Y  %H:%M" 2>/dev/null; or echo "?")
-                set -l info_enc (__pfp_encrypt "$icon_file")
-                # Show truncated encrypted path for display
-                set -l info_disp "$info_enc"
-                if test (string length "$info_enc") -gt 48
-                    set info_disp (string sub -l 45 "$info_enc")"..."
+                set -l info_disp (string replace -- "$HOME" '~' "$icon_file")
+                set -l info_len (string length "$info_disp")
+                if test $info_len -gt 48
+                    set info_disp (string sub -l 45 "$info_disp")"..."
                 end
 
                 echo -e ""
@@ -280,11 +279,10 @@ print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in rang
                 cp "$icon_file" "$save_path"
 
                 if test -f "$save_path"
-                    set -l enc_orig (__pfp_encrypt "$icon_file")
-                    # Truncate long encrypted path like pfp info does
-                    set -l orig_disp "$enc_orig"
-                    if test (string length "$enc_orig") -gt 48
-                        set orig_disp (string sub -l 45 "$enc_orig")"..."
+                    # Show plain avatar path (user-editable /var/lib/AccountsService/...)
+                    set -l orig_disp (string replace -- "$HOME" '~' "$icon_file")
+                    if test (string length "$orig_disp") -gt 48
+                        set orig_disp (string sub -l 45 "$orig_disp")"..."
                     end
                     # Strip /home/user → ~ for display
                     set -l path_disp (string replace -- "$HOME" '~' "$save_path")
