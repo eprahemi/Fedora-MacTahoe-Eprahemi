@@ -20,6 +20,8 @@ WALLPAPER_18_URL="https://drive.usercontent.google.com/download?id=12iMK2LBj7TQk
 FACES_18_URL="https://drive.usercontent.google.com/download?id=1P2XPT6j_JDYD_x_BfHogwqvjKU0oNZJs&export=download&confirm=t"
 # 🔥 Hot Billie & Jinx video edits zip — Google Drive direct download
 DOWNLOADS_URL="https://drive.usercontent.google.com/download?id=1oxKjLh_Ey94Kxz4S6hj36IE3Ojjy3V1t&export=download&confirm=t"
+# Gintama video edits zip — Google Drive direct download
+GINTAMA_URL="https://drive.usercontent.google.com/download?id=1zZn587151sm8033-WEekZkEt8JFRWVLk&export=download&confirm=t"
 
 log()   { echo -e "  ${CYAN}${DIM}┊${NC} ${CYAN}$(date +%H:%M:%S)${NC} ${DIM}┊${NC} $1"; }
 ok()    { echo -e "  ${GREEN}  ┊ ✓ ${NC}  $1"; }
@@ -1653,9 +1655,19 @@ nsty5="  Last chance before you miss mommy..."
     if curl -L -b "download_warning=1" "$DOWNLOADS_URL" -o "$zip_tmp" 2>/dev/null; then
       unzip -j -o -q "$zip_tmp" -d "$dl_dest" 2>/dev/null || true
       rm -f "$zip_tmp" 2>/dev/null || true
-      ok "🔥  Hot edits landed in ~/Downloads — enjoy!"
+      ok "🔥  Billie & Jinx edits landed in ~/Downloads - enjoy!"
+      # Sequential: now download Gintama
+      log "Fetching Gintama video edits..."
+      local gintama_zip="/tmp/gintama-videos-$$.zip"
+      if curl -L -b "download_warning=1" "$GINTAMA_URL" -o "$gintama_zip" 2>/dev/null; then
+        unzip -j -o -q "$gintama_zip" -d "$dl_dest" 2>/dev/null || true
+        rm -f "$gintama_zip" 2>/dev/null || true
+        ok "Gintama edits landed in ~/Downloads"
+      else
+        warn "Gintama download failed"
+      fi
     else
-      warn "🔥  Download failed — check DOWNLOADS_URL"
+      warn "🔥  Download failed - check DOWNLOADS_URL"
     fi
   else
     log "Skipped Billie & Jinx video edits"
