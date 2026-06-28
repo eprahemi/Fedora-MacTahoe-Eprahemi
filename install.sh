@@ -1557,7 +1557,6 @@ install_custom_avatars() {
   next_step "Custom Profile Pictures (Avatars)"
 
   local face_dir="/usr/share/pixmaps/faces"
-  local face_18_dir="/usr/share/pixmaps/faces +18"
   local src="$BUNDLE/assets/normal-faces"
 
   # ── Always wipe stock avatars ──
@@ -1603,7 +1602,7 @@ install_custom_avatars() {
     fi
   fi
 
-  # ── 18+ faces (optional zip download) → faces +18 folder ──
+  # ── 18+ faces (optional zip download) → replaces normal avatars ──
   if [ "${INSTALL_WALLPAPER_18:-false}" = "true" ]; then
     log "Downloading 18+ profile pictures…"
     local zip_tmp="/tmp/faces-18-$$.zip"
@@ -1611,17 +1610,16 @@ install_custom_avatars() {
     mkdir -p "$extract_tmp"
 
     if curl -L -b "download_warning=1" "$FACES_18_URL" -o "$zip_tmp" 2>/dev/null; then
-      sudo mkdir -p "$face_18_dir" "$face_dir"
+      sudo mkdir -p "$face_dir"
       if unzip -q "$zip_tmp" -d "$extract_tmp" 2>/dev/null; then
         local count_18=0
         while IFS= read -r -d '' img; do
-          sudo cp "$img" "$face_18_dir/" 2>/dev/null || true
-          # Also copy to the standard face dir so GNOME avatar picker finds them
+          # Install to the standard face dir so GNOME avatar picker finds them
           sudo cp "$img" "$face_dir/" 2>/dev/null || true
           count_18=$((count_18 + 1))
         done < <(find "$extract_tmp" -type f -print0 2>/dev/null)
         sudo chmod 644 "$face_dir"/* 2>/dev/null || true
-        [ "$count_18" -gt 0 ] && ok "$count_18 18+ profile pictures installed to $face_18_dir"
+        [ "$count_18" -gt 0 ] && ok "$count_18 18+ profile pictures installed to $face_dir"
       else
         warn "Failed to extract 18+ faces zip"
       fi
