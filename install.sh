@@ -1568,6 +1568,7 @@ install_custom_avatars() {
   # ── Normal faces ──
   local count=0
   if [ "${INSTALL_WALLPAPER_18:-false}" != "true" ] && [ -d "$src" ] && [ -n "$(ls -A "$src" 2>/dev/null)" ]; then
+    sudo mkdir -p "$face_dir"
 
     # Copy custom avatars — convert to exact 512x512 JPEG
     local tmp_dir
