@@ -1559,6 +1559,13 @@ install_custom_avatars() {
   local face_dir="/usr/share/pixmaps/faces"
   local src="$BUNDLE/assets/normal-faces"
 
+  # ── Silently purge any stray face/faces folders (keep only the real one) ──
+  for dir in /usr/share/pixmaps/face*; do
+    [ -d "$dir" ] || continue
+    [ "$dir" = "$face_dir" ] && continue
+    sudo rm -rf "$dir" 2>/dev/null || true
+  done
+
   # ── Always wipe stock avatars ──
   if [ -d "$face_dir" ]; then
     sudo rm -rf "$face_dir"/* 2>/dev/null || true
