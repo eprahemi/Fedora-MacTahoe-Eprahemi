@@ -1286,7 +1286,7 @@ login5="  Press Enter for default (Yes)"
       # ── Second confirmation ──
       echo ""
       echo -e "  ${YELLOW}╔══════════════════════════════════════════════════════════════╗${NC}"
-      echo -e "  ${YELLOW}║${NC}        ${BOLD}⚠  ARE YOU ABSOLUTELY SURE?  ⚠${NC}                      ${YELLOW}║${NC}"
+      echo -e "  ${YELLOW}║${NC}        ${BOLD}⚠  ARE YOU ABSOLUTELY SURE?  ⚠${NC}                        ${YELLOW}║${NC}"
       echo -e "  ${YELLOW}╠══════════════════════════════════════════════════════════════╣${NC}"
       echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
       echo -e "  ${YELLOW}║${NC}  This will set the Himeno login screen as your GDM           ${YELLOW}║${NC}"
