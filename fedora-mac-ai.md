@@ -15,7 +15,7 @@ Fedora MacTahoe is a Fedora Linux → macOS transformation project. It turns a s
 - **Repository (GDM companion):** `https://github.com/eprahemi/FedoraTahoe-GDM.git`
 - **Branch:** `main`
 - **Local repo path:** `/home/eprahemi/Documents/Codes University [Mine]/Eprahemi Websites/Fedora Mactahoe Eprahemi GTK theme + Icon + Sf Pro Font/`
-- **Latest commit:** `6fa45836` — `gdm.fish save: base62 naming (mixed-case) instead of base36 — distinct from pfp's all-lowercase style`
+- **Latest commit:** `9184c59e` — `fix alignment in splash banner warning - drop 'choices' to fit 62-char box width`
 
 ### ⚠️ CRITICAL — Repo Path Mistake
 Do NOT search with glob patterns like `*Eprahemi*` — the directory has "Mactahoe" (not "MacTahoe"), and glob won't match. Use the **exact literal path** from this file:
@@ -23,8 +23,8 @@ Do NOT search with glob patterns like `*Eprahemi*` — the directory has "Mactah
 /home/eprahemi/Documents/Codes University [Mine]/Eprahemi Websites/Fedora Mactahoe Eprahemi GTK theme + Icon + Sf Pro Font/
 ```
 The `gdm.fish` source file lives at `configs/fish/functions/gdm.fish` inside this repo. When the user says "push to fedoratahoe", they mean the main `Fedora-MacTahoe-Eprahemi` repo. The `FedoraTahoe-GDM` repo is a separate companion for GDM shell theme files (no gdm.fish).
-- **Install script:** `install.sh` (2271 lines, 23 steps)
-- **Bootstrap script:** `bootstrap.sh` (299 lines)
+- **Install script:** `install.sh` (2301 lines, 23 steps)
+- **Bootstrap script:** `bootstrap.sh` (410 lines)
 - **Upstream MacTahoe repo** (for theme compilation): `https://github.com/vinceliuice/MacTahoe-gtk-theme.git` (cloned to `/tmp/mactahoe-build/`)
 
 ### Key Paths
@@ -93,25 +93,31 @@ The installer runs in 6 phases. Every step uses `next_step()` with a progress ba
 ## 3. BOOTSTRAP FLOW (`bootstrap.sh`)
 
 The bootstrap script is the internet-first entry point:
-1. **Terminal check** — Blocks Ptyxis, recommends Kitty
-2. **ASCII Banner** — MacTahoe ASCII art, GNOME version, press any key
-3. **Discord prompt** — [Y/n] (default Yes)
-4. **Desktop wallpaper prompt** — [Y/n] (default Yes)
-5. **18+ wallpapers prompt** — [y/N] (default No)
-6. **Git check** — Installs git if missing
-7. **Clone bundle** — `git clone --depth 1` to `/tmp/fedora-mactahoe`
+1. **Terminal checks** — Blocks Ptyxis, recommends Kitty (two any-key prompts if non-Kitty)
+2. **ASCII Splash Banner** — MacTahoe ASCII art, GNOME version, **bold red warning about yes/no prompts**, press any key
+3. **ALL prompts before clone** (9 total):
+   - **Discord** — `[y/N]` default **No** (changed from Yes per user request)
+   - **Desktop wallpaper** — `[Y/n]` default Yes
+   - **Login screen wallpaper** — `[Y/n]` default Yes
+     - If Yes → **second confirm** `[Y/n]` with gdm/gdm.fish info
+   - **18+ wallpapers** — `[y/N]` default No
+   - **Billie & Jinx videos** — `[y/N]` default No
+     - If No → **naughty second prompt** `👀  For real though? [y/N]`
+4. **Git check** — Installs git if missing
+5. **"Grabbing the Goods"** — Clone banner
+6. **Clone bundle** — `git clone --depth 1` to `/tmp/fedora-mactahoe`
+7. **"Got Everything"** — Success banner after clone
 8. **Hides Fedora logo** — `sudo dconf` at GDM level
 9. **Copies Eprahemi License** — To `~/Documents/`
 10. **Runs `install.sh`** — `cd /tmp/fedora-mactahoe && bash install.sh`
 
-Bootstrap does NOT ask about Billie videos (that's in install.sh step 22).
-Bootstrap passes `INSTALL_DISCORD`, `INSTALL_DESKTOP_WALLPAPER`, `INSTALL_WALLPAPER_18` as env vars to install.sh.
+Bootstrap passes all env vars (`INSTALL_DISCORD`, `INSTALL_DESKTOP_WALLPAPER`, `INSTALL_LOGIN_WALLPAPER`, `INSTALL_WALLPAPER_18`, `INSTALL_BILLIE_VIDEOS`) so install.sh runs fully automated with no prompts.
 
 ---
 
 ## 4. GDM WALLPAPER SWITCHER (`gdm` Fish Function)
 
-### File: `configs/fish/functions/gdm.fish` (~2051 lines)
+### File: `configs/fish/functions/gdm.fish` (~2215 lines)
 
 A persistent GDM wallpaper switching function that works entirely offline after the repo is cached once.
 
@@ -306,15 +312,30 @@ Key design decisions:
 - System-wide copy at `/usr/share/icons/hicolor/256x256/apps/` for all users
 - Flatpak aliases map short names to reverse-DNS (e.g., `discord.png` → `com.discordapp.Discord.png`)
 
+### `confirm()` Function (Both Files)
+- Replaces all `read -n 1` yes/no prompts with `read -rp` + input validation
+- Accepts: `y`/`Y`/`yes`/`Yes`/`yEs`/`yeS`/`YES` for yes, `n`/`N`/`no`/`No`/`nO`/`NO` for no
+- **Everything else** (k, h, x, random text) → `"Type y/yes or n/no"` → loops forever
+- Empty (Enter) → uses default (`Y` or `N`)
+- Uses `echo -en` + `read -r </dev/tty` instead of `read -p` (ANSI codes not interpreted by `read -p`)
+
 ### Ptyxis Removal
-- Ptyxis gets yeeted during setup because it conflicts with Kitty
+- Ptyxis gets removed during setup because it conflicts with Kitty
 - Removes package, config, data, dconf, desktop entries, symlinks
 - Installer blocks running from Ptyxis entirely
 
 ### Firefox Theming
 - Applied via `tweaks.sh -f` from upstream MacTahoe repo
+- **Close-wait loop**: If Firefox is running, sends `killall` then polls `pgrep` every 1s for up to 10s
+- After timeout, shows manual-close prompt with skip option (`s` to skip, Enter to retry)
 - Requires Firefox to have been launched once (to create profile directory)
-- If skipped, user is instructed to re-run install.sh
+
+### Login Screen Wallpaper (NEW prompt)
+- **Not mandatory anymore** — separate `INSTALL_LOGIN_WALLPAPER` env var
+- Prompted between desktop wallpaper and 18+ wallpapers
+- **Dual confirmation**: first `[Y/n]`, then a second `[Y/n]` if Yes
+- Second box reassures user they can change anytime with `gdm` terminal command
+- Both `apply_wallpapers()` copy and `setup_gdm()` background assignment guarded by the env var
 
 ### Sound System
 - Bundled Big Sur OGA files in `sounds/bigsur/stereo/`
@@ -402,7 +423,7 @@ Fedora Mactahoe Eprahemi GTK theme + Icon + Sf Pro Font/
 │   │       ├── extract.fish
 │   │       ├── fish_greeting.fish
 │   │       ├── func.fish       # Function archive
-│   │   ├── gdm.fish        # GDM wallpaper switcher (~2051 lines)
+│   │   ├── gdm.fish        # GDM wallpaper switcher (~2215 lines)
 │   │       ├── getdata.fish
 │   │       ├── hollywood.fish
 │   │       ├── l.fish
@@ -411,7 +432,7 @@ Fedora Mactahoe Eprahemi GTK theme + Icon + Sf Pro Font/
 │   │       ├── myip.fish
 │   │       ├── n.fish
 │   │       ├── passgen.fish
-│   │       ├── pfp.fish       # Profile picture manager (~740 lines, XDG search engine)
+│   │   ├── pfp.fish       # Profile picture manager (~878 lines, XDG search engine)
 │   │       ├── p.fish
 │   │       ├── qr.fish
 │   │       ├── refresh.fish
@@ -433,7 +454,7 @@ Fedora Mactahoe Eprahemi GTK theme + Icon + Sf Pro Font/
 │   └── SF-Pro-Display-Regular.otf
 ├── icons/
 │   └── 256x256/                # Custom macOS app icons
-├── install.sh                  # 2271 lines, 23 steps
+├── install.sh                  # 2301 lines, 23 steps
 ├── README.md
 ├── sounds/
 │   └── bigsur/
@@ -452,13 +473,22 @@ Fedora Mactahoe Eprahemi GTK theme + Icon + Sf Pro Font/
 ## 12. RECENT COMMITS (Latest on top)
 
 ```
+9184c59e fix alignment in splash banner warning - drop 'choices' to fit 62-char box width
+bd308c4f add bold red warning to splash banner: read yes/no prompts carefully, some choices are permanent
+3305d89b rephrase first login prompt to be unique from second confirmation
+4be9bb37 add gdm/gdm.fish info to first login screen prompt too
+da19007e fix GDM login second confirmation: reassure user they can change anytime with gdm command
+89fa6105 add separate login screen (GDM) wallpaper prompt with dual confirmation
+1d58e78c rename Gintama download to 'Gintama - Bad Boy.mp4'
+8e3fc8ce fix Firefox theming: wait for Firefox to close before running tweaks.sh -f
+c32ec981 fix confirm(): use echo -en + read instead of read -p (ANSI codes not interpreted by read -p)
+dfc0a688 add confirm() validation for all yes/no prompts + Billie prompt in bootstrap.sh
+ab9a593c Discord prompt: default to No (press Enter skips), fix colors
+b13c62d0 fix bootstrap.sh splash + Kitty prompts: accept Enter key like all other keys
 1222c77b pfp.fish + gdm.fish: strip /home/user prefix → ~ in all displayed paths
 c2db3c9c pfp.fish: add XDG search engine (gdm-style) — finds images in Pictures, Downloads, Documents, etc.
 a2206e2e gdm.fish: fix read -l scoping bug (loop-local vars lost after while break) + switch/case → if/else with string match
 494b746c fish: professionalize all prompts, errors, and comments (27 files)
-c232f29a gdm: keep only info subcommand, remove undo/save
-46f878a2 fix(gdm): move JPEG conversion to right before apply (after blur)
-c6e83e28 feat(gdm): auto-convert non-JPEG images to JPEG 90% quality for GDM
 ```
 
 ---
@@ -500,9 +530,16 @@ gtk-update-icon-cache ~/.local/share/icons/MacTahoe/
 ---
 
 ## 14. VERSION HISTORY
-- **Current:** `a2206e2e` (gdm.fish read -l scoping fix)
+- **Current:** `9184c59e` (splash banner alignment fix)
 - **Previous:** `494b746c` (fish professionalization)
-- **Initial work:** Multiple commits from earlier sessions (gdm.fish creation, blur system, etc.)
+- **Session highlights:**
+  - `dfc0a68` — confirm() validation + Billie prompt in bootstrap
+  - `8e3fc8c` — Firefox close-wait loop
+  - `1d58e78` — Gintama "Bad Boy" rename
+  - `89fa610` — Login screen wallpaper prompt
+  - `da19007` — GDM second confirm rewritten
+  - `bd308c4` — Splash banner warning
+  - `9184c59` — Alignment fix
 
 ---
 
@@ -510,7 +547,7 @@ gtk-update-icon-cache ~/.local/share/icons/MacTahoe/
 
 This section is the master record of every bug ever fixed in the Fedora MacTahoe project, directly from `ANCHORED_SESSION_SUMMARY.md`. **If you're about to edit install.sh or bootstrap.sh, read this first.**
 
-### 🔴 CLASS A: SCRIPT CRASHES (set -euo pipefail violations)
+### 🔴 CLASS A: SYNTAX / CRASH BUGS
 
 These caused (or would cause) the script to abort silently on edge cases.
 
@@ -521,6 +558,7 @@ These caused (or would cause) the script to abort silently on edge cases.
 | 3 | install.sh | `dl_url=$(curl … \| jq …)` — extension API failure aborts script | Added `\|\| true` |
 | 4 | install.sh | All `read -r -s -n 1 key` and `read -rp` — Ctrl+D aborts under `set -euo pipefail` | Added `\|\| true` after each read |
 | 5 | bootstrap.sh | Same `read` pattern without fallback | Added `\|\| true` |
+| 6 | install.sh | Missing `fi` for outer `if [ -z "${KITTY_PID:-}" ]` at line 78 — Kitty warning `while` loop had no closing `fi` for the if | Added missing `fi` after Kitty warning block |
 
 ### 🟡 CLASS B: LOGIC / INPUT BUGS
 
@@ -545,8 +583,9 @@ These caused (or would cause) the script to abort silently on edge cases.
 | 25 | install.sh | GResource icons at new-style paths (`scalable/actions/`) not found | Added 16 new-style dirs to `index.theme` + `mkdir` |
 | 26 | install.sh | Icon cache not rebuilt after install | `gtk-update-icon-cache` per theme + in finalize |
 | 27 | gdm.fish | `read -l` inside `while` loop — variable scoped to loop body, DESTROYED after `break` exits loop. Affected all 10 `read` calls, most visible: `blur_choice` was `c` after read but `""` at matching logic. | Changed all 10 `read -l -P` → `read -P` (function-scoped instead of loop-scoped) |
+| 28 | install.sh | Firefox theming step: `killall firefox firefox-bin` sent SIGTERM but didn't wait — `tweaks.sh -f` checked `pgrep` before Firefox exited and refused to run | Added close-wait loop: `killall` → poll `pgrep` every 1s up to 10s → manual prompt with skip → retry |
 
-### 🟠 CLASS C: CONTENT / UX ISSUES
+### 🟠 CLASS C: CONTENT / UX / MISSING FEATURES
 
 | # | Bug | Fix |
 |---|------|------|
@@ -558,6 +597,14 @@ These caused (or would cause) the script to abort silently on edge cases.
 | 25 | bootstrap.sh accidentally reverted to git HEAD during testing | Restored all content |
 | 26 | Icon fix applied only to current user | Added loop applying fixes to ALL `/home/*` users |
 | 27 | `rm -rf` used for user files | Use `gio trash` instead |
+| 28 | Gintama video saved as generic `gintama.mp4` | Renamed to `Gintama - Bad Boy.mp4` |
+| 29 | Login screen wallpaper was always mandatory with no prompt | Added separate `INSTALL_LOGIN_WALLPAPER` prompt with dual confirmation |
+| 30 | GDM second confirmation said scary "cannot be undone / manually reset" | Reassures user they can change anytime with `gdm` terminal command + explains `gdm.fish` |
+| 31 | First login screen prompt didn't mention gdm command | Added "Not stuck with just this one — the gdm command lets you swap wallpapers anytime" |
+| 32 | Splash banner had no warning about yes/no prompts | Added bold red line: "⚠  Read yes/no prompts carefully — some are permanent!" |
+| 33 | Discord defaulted to Yes | Changed to No (`[y/N]` default No) |
+| 34 | Billie & Jinx prompt missing from bootstrap.sh | Added before clone section |
+| 35 | All yes/no prompts used `read -n 1` with no validation | Replaced with `confirm()` function — validates y/yes/n/no, loops on invalid input |
 
 ### 🔵 CLASS D: ARCHITECTURE / DESIGN DECISIONS
 
@@ -641,13 +688,36 @@ Box inner width = 62 chars. Line total = 66 chars.
 
 ## Done
 
-### Progress
+### Progress (This Session)
 
-- **`passwd` function — no-password status, missing-line prompt, auto-add (new file `passwd.fish`, ~331 lines):** Toggles per-user passwordless sudo in `/etc/sudoers`. Subcommands: `on`, `off`, `enable`, `disable`, `toggle`, `status`, `--help`. Three complete feature additions:
-  1. **No-password status** — `passwd status` / `passwd` (no args) use `sudo -n` (non-interactive) for all grep calls, so they NEVER prompt for `sudo` credentials. If `sudo -n true` fails (no cached credentials and no NOPASSWD active), displays "Cannot check status without authentication" with hint to run `sudo passwd status` or `passwd enable`.
-  2. **Add new NOPASSWD line** — when `passwd enable` is called and the line doesn't exist at all (neither commented nor uncommented), appends `username ALL=(ALL) NOPASSWD: ALL` to `/etc/sudoers` using backup + `tee -a` append + `visudo -c` validation + revert on failure. Same mechanism for `passwd disable` when line is missing: says "nothing to disable".
-  3. **Prompt to add when missing** — `passwd status` status box shows `⚠️ Missing (no NOPASSWD line found)` and then asks `⚠️ No NOPASSWD line found for username. Add one? [Y/n]`. If Yes, uses the same backup + append + visudo flow.
-  Three-state detection separated into readonly (`sudo -n`, no prompt) and write (`sudo`, prompts) paths. Commits: `0420f56`, `b5819b8`, `2576e1e` + latest uncommitted: no-password status + missing-line prompt + auto-add.
+All changes from this session are committed and pushed to `origin/main`:
+
+| Commit | Change |
+|--------|--------|
+| `dfc0a68` | Added `confirm()` function to both files — validates y/yes/n/no, loops on invalid input |
+| `b13c62d` | Fixed Enter key for splash + Kitty any-key prompts |
+| `ab9a593` | Discord default changed to No (`[y/N]`) |
+| `dfc0a68` | Added Billie & Jinx prompt to bootstrap.sh before clone |
+| `c32ec98` | Fixed `confirm()` ANSI: `echo -en` + `read` instead of `read -p` |
+| `8e3fc8c` | Firefox close-wait loop — polls `pgrep` up to 10s, then manual prompt |
+| `1d58e78` | Gintama → `Gintama - Bad Boy.mp4` |
+| `89fa610` | Login screen wallpaper prompt with dual confirmation + env var guard |
+| `da19007` | GDM second confirm rewritten — reassures user about `gdm` command |
+| `4be9bb3` | First login prompt also mentions `gdm`/`gdm.fish` |
+| `3305d89` | Unique phrasing for first vs second login prompt |
+| `bd308c4` | Bold red warning in splash banner about yes/no prompts |
+| `9184c59` | Fixed alignment — dropped "choices" to fit 62-char box |
+
+### Key Stats
+
+| File | Old | New |
+|------|-----|-----|
+| `bootstrap.sh` | 299 lines | 410 lines |
+| `install.sh` | 2271 lines | 2301 lines |
+| Prompts in bootstrap.sh | 4 (before clone) | 7 + 2 Kitty any-key + splash |
+| Prompts in install.sh | 6 + 3 any-key | 8 confirm + 3 any-key + 1 Firefox |
+| `confirm()` calls | 0 | 7 in bootstrap, 8 in install |
+| `.md` reference sections | 22 | 23 |
 
 ### Relevant Files
 

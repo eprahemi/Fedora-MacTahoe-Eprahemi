@@ -58,7 +58,7 @@ cd Fedora-MacTahoe-Eprahemi
 bash install.sh
 ```
 
-The script walks through **22 steps** — everything from RPM Fusion + codecs to NVIDIA
+The script walks through **23 steps** — everything from RPM Fusion + codecs to NVIDIA
 drivers (auto-detected), apps, theme compilation, wallpaper/avatar replacement, GNOME config, extensions, and shell
 setup. It pauses with clear prompts at key points, so nothing happens
 without you saying "go."
