@@ -1220,11 +1220,11 @@ apply_dconf() {
   local cfg="$BUNDLE/configs"
   if [ -f "$cfg/gtk-3.0/settings.ini" ]; then
     mkdir -p "$HOME/.config/gtk-3.0"
-    cp "$cfg/gtk-3.0/settings.ini" "$HOME/.config/gtk-3.0/"
+    cp "$cfg/gtk-3.0/settings.ini" "$HOME/.config/gtk-3.0/" || warn "Failed to copy gtk-3.0 settings.ini"
   fi
   if [ -f "$cfg/gtk-4.0/settings.ini" ]; then
     mkdir -p "$HOME/.config/gtk-4.0"
-    cp "$cfg/gtk-4.0/settings.ini" "$HOME/.config/gtk-4.0/"
+    cp "$cfg/gtk-4.0/settings.ini" "$HOME/.config/gtk-4.0/" || warn "Failed to copy gtk-4.0 settings.ini"
   fi
 
   ok "dconf settings applied"
@@ -2129,7 +2129,8 @@ setup_terminal() {
       if [ -f "$_entry" ] && grep -q "kitty-maximized\|^Name=kitty$" "$_entry" 2>/dev/null; then
         _owner=$(stat -c '%U' "$_h" 2>/dev/null || echo root)
         if [ "$_owner" != "root" ]; then
-          cp "$desktop_src" "$_entry" 2>/dev/null && chown "$_owner:" "$_entry" 2>/dev/null
+          cp "$desktop_src" "$_entry" 2>/dev/null || warn "Failed to copy kitty.desktop for $_owner"
+          chown "$_owner:" "$_entry" 2>/dev/null || warn "Failed to chown kitty.desktop for $_owner"
           log "Fixed stale kitty.desktop for $_owner"
         fi
       fi
@@ -2145,8 +2146,11 @@ setup_shell() {
   next_step "Fish as Default Shell"
 
   if [ "$SHELL" != "/usr/bin/fish" ]; then
-    sudo chsh -s /usr/bin/fish "$USER"
-    ok "Default shell changed to fish (next login)"
+    if sudo chsh -s /usr/bin/fish "$USER"; then
+      ok "Default shell changed to fish (next login)"
+    else
+      warn "fish not set as default shell — run 'sudo chsh -s /usr/bin/fish $USER' manually"
+    fi
   else
     ok "Fish is already the default shell"
   fi
