@@ -797,7 +797,7 @@ install_mactahoe_theme() {
     find "$HOME/.local/share/icons/$icon" -name "*-symbolic.svg" -exec \
       sed -i 's/fill="#[^"]*"/fill="currentColor"/g; s/color="#[^"]*"/color="currentColor"/g; s/fill:#[^;";]*/fill:currentColor/g; s/;fill-opacity:[^;";]*//g' {} + 2>/dev/null || true
 
-    gtk-update-icon-cache "$HOME/.local/share/icons/$icon/" 2>/dev/null || true
+    gtk-update-icon-cache "$HOME/.local/share/icons/$icon/" 2>/dev/null || warn "Icon cache update failed for $icon"
   done
 
   # ── Apply same fixes to other users who already have the theme ──
@@ -863,7 +863,7 @@ install_mactahoe_theme() {
         done
         sudo -u "$_user" find "$_udir" -name "*-symbolic.svg" -exec \
           sed -i 's/fill="[^"]*"/fill="currentColor"/g; s/color="[^"]*"/color="currentColor"/g' {} + 2>/dev/null || true
-        sudo -u "$_user" gtk-update-icon-cache "$_udir/" 2>/dev/null || true
+        sudo -u "$_user" gtk-update-icon-cache "$_udir/" 2>/dev/null || warn "Icon cache update failed for $_user"
         log "Applied icon fixes for $_user ($icon)"
       fi
     done
@@ -934,8 +934,8 @@ install_mactahoe_theme() {
     done
 
     # ALWAYS rebuild icon cache last (ensures custom icons override any conflicts)
-    gtk-update-icon-cache "$HOME/.local/share/icons/MacTahoe-dark/" 2>/dev/null || true
-    gtk-update-icon-cache "$HOME/.local/share/icons/MacTahoe/" 2>/dev/null || true
+    gtk-update-icon-cache "$HOME/.local/share/icons/MacTahoe-dark/" 2>/dev/null || warn "Icon cache update failed for MacTahoe-dark"
+    gtk-update-icon-cache "$HOME/.local/share/icons/MacTahoe/" 2>/dev/null || warn "Icon cache update failed for MacTahoe"
     # Ensure hicolor has an index.theme so gtk-update-icon-cache works
     if [ ! -f "$HOME/.local/share/icons/hicolor/index.theme" ]; then
       cat > "$HOME/.local/share/icons/hicolor/index.theme" <<-EOF
@@ -946,7 +946,7 @@ Hidden=true
 Directories=256x256/apps
 EOF
     fi
-    gtk-update-icon-cache "$HOME/.local/share/icons/hicolor/" 2>/dev/null || true
+    gtk-update-icon-cache "$HOME/.local/share/icons/hicolor/" 2>/dev/null || warn "Icon cache update failed for hicolor"
 
     # ── System-wide: copy all icons + aliases so EVERY user gets them ──
     local sys="/usr/share/icons/hicolor/256x256/apps"
@@ -980,9 +980,9 @@ EOF
       sudo convert "$png" -trim +repage -resize 256x256 -gravity center -background transparent -extent 256x256 "$png"
     done
     # Rebuild system icon cache
-    sudo gtk-update-icon-cache /usr/share/icons/hicolor/ 2>/dev/null || true
+    sudo gtk-update-icon-cache /usr/share/icons/hicolor/ 2>/dev/null || warn "System-wide icon cache update failed"
 
-    ok "Custom macOS app icons installed ($(ls "$icon_src"/*.png 2>/dev/null | wc -l) PNGs + $(ls "$icon_src"/*.svg 2>/dev/null | wc -l) SVGs)"
+  ok "Custom macOS app icons installed ($(ls "$icon_src"/*.png 2>/dev/null | wc -l) PNGs + $(ls "$icon_src"/*.svg 2>/dev/null | wc -l) SVGs)"
   fi
 }
 
@@ -2268,10 +2268,12 @@ finalize() {
   for _ictx in /usr/share/icons/Adwaita /usr/share/icons/AdwaitaLegacy \
                "$HOME/.local/share/icons/MacTahoe" "$HOME/.local/share/icons/MacTahoe-dark" \
                "$HOME/.local/share/icons/hicolor"; do
-    [ -d "$_ictx" ] && gtk-update-icon-cache "$_ictx" 2>/dev/null || true
+    if [ -d "$_ictx" ]; then
+      gtk-update-icon-cache "$_ictx" 2>/dev/null || warn "Icon cache update failed for $_ictx"
+    fi
   done
   if command -v sudo &>/dev/null; then
-    sudo gtk-update-icon-cache /usr/share/icons/hicolor/ 2>/dev/null || true
+    sudo gtk-update-icon-cache /usr/share/icons/hicolor/ 2>/dev/null || warn "System icon cache update failed"
   fi
 
   # ── 11. Eprahemi Public License (silent, always overwrites) ──
