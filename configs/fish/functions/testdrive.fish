@@ -516,38 +516,9 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
         set -g __td_s_ram_total "$mem_total"
     end
 
-    function __td_report_disk_block --no-scope-shadowing
-        set -l test_file ""
-        set -l is_external 0
-
-        if test "$module" = "disk"
-            set test_file "$HOME/"(whoami)"_test_bin"
-            set is_external 0
-        else
-            set is_external 1
-            set -l drives (lsblk -pno MOUNTPOINT,SIZE,MODEL | grep "/run/media")
-            set -l drive_count (count $drives)
-            if test $drive_count -eq 0
-                echo -e "  $GY│$C  $RE⚠️  No external drives detected!$C" ; return 1
-            else if test $drive_count -gt 1
-                echo -e "  $GY│$C  $YE📋 Multiple drives detected. Select target:$C"
-                set -l i 1
-                for d in $drives
-                    echo -e "  $GY│$C  $CY$i)$C $d"
-                    set i (math $i + 1)
-                end
-                echo -n -e "  $GY│$C  $WHCHOOSE [1-$drive_count]: $C"
-                read choice
-                if test "$choice" -ge 1 -a "$choice" -le "$drive_count"
-                    set -l target_raw $drives[$choice]
-                    set test_file (echo $target_raw | awk '{print $1}')"/"(whoami)"_test_bin"
-                else
-                    echo -e "  $GY│$C  $RE❌ Invalid selection.$C" ; return 1
-                end
-            else
-                set test_file (echo $drives[1] | awk '{print $1}')"/"(whoami)"_test_bin"
-            end
-        end
+    # ── Benchmark a single disk (used by both single and all-drives mode) ──
+    function __td_benchmark_one_disk --no-scope-shadowing
+        # Expects $test_file to be set in shared scope
 
         # Signal-safe cleanup: ensure test file is removed on Ctrl+C
         set -g __td_disk_test_file "$test_file"
@@ -747,9 +718,56 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
         printf "  $GY│$C  $WH│$C  %-20s  $g_color%10s$C\n" "GRADE" "$grade"
         echo -e "  $GY│$C  $WH└──────────────────────────────────────────────────┘$C"
 
+        # Store results in globals (scoreboard uses these)
         set -g __td_s_disk_model "$dev_model"
         set -g __td_s_disk_tech "$tech_label"
         set -g __td_s_disk_speed "$write_mb MB/s"
+    end
+
+    function __td_report_disk_block --no-scope-shadowing
+        set -l test_file ""
+        set -l is_external 0
+
+        if test "$module" = "disk"
+            set test_file "$HOME/"(whoami)"_test_bin"
+            set is_external 0
+            __td_benchmark_one_disk
+        else
+            set is_external 1
+            set -l drives (lsblk -pno MOUNTPOINT,SIZE,MODEL | grep "/run/media")
+            set -l drive_count (count $drives)
+            if test $drive_count -eq 0
+                echo -e "  $GY│$C  $RE⚠️  No external drives detected!$C" ; return 1
+            else if test $drive_count -gt 1
+                echo -e "  $GY│$C  $YE📋 Multiple drives detected. Select target:$C"
+                set -l i 1
+                for d in $drives
+                    echo -e "  $GY│$C  $CY$i)$C $d"
+                    set i (math $i + 1)
+                end
+                echo -e "  $GY│$C  $CY0)$C $B$WHTest all drives$C"
+                echo -n -e "  $GY│$C  $WHCHOOSE [0-$drive_count]: $C"
+                read choice
+                if test "$choice" = "0"
+                    # Test ALL external drives
+                    for target_raw in $drives
+                        set test_file (echo $target_raw | awk '{print $1}')"/"(whoami)"_test_bin"
+                        set -l dev_label (echo $target_raw | awk '{print $1}')
+                        echo ""; echo -e "  $GY│$C  $WH═══ Drive: $dev_label ═══$C"
+                        __td_benchmark_one_disk
+                    end
+                else if test "$choice" -ge 1 -a "$choice" -le "$drive_count"
+                    set -l target_raw $drives[$choice]
+                    set test_file (echo $target_raw | awk '{print $1}')"/"(whoami)"_test_bin"
+                    __td_benchmark_one_disk
+                else
+                    echo -e "  $GY│$C  $RE❌ Invalid selection.$C" ; return 1
+                end
+            else
+                set test_file (echo $drives[1] | awk '{print $1}')"/"(whoami)"_test_bin"
+                __td_benchmark_one_disk
+            end
+        end
     end
 
     function __td_report_gpu_block --no-scope-shadowing
