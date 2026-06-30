@@ -809,6 +809,7 @@ function __pfp_apply --description 'Internal: apply image as profile picture'
                             if test -z "$confirm"; or string match -q -- "y" "$confirm"; or string match -q -- "Y" "$confirm"; or string match -iq -- "yes" "$confirm"
                                 set chosen 1
                                 set confirmed 1
+                                set _pfp_confirmed 1
                             else if string match -q -- "n" "$confirm"; or string match -q -- "N" "$confirm"; or string match -iq -- "no" "$confirm"
                                 set confirmed 1
                                 echo -e ""
@@ -821,6 +822,63 @@ function __pfp_apply --description 'Internal: apply image as profile picture'
                         echo -e "  $RE  Invalid choice. Enter 1-$result_count or 0 to cancel.$C"
                     end
                 end
+        end
+    end
+
+    # ── Preview + confirm (skip if already confirmed from multi-picker) ──
+    if not set -q _pfp_confirmed
+        echo -e ""
+        echo -e "  $D  Preview: "(string replace -- $HOME '~' "$source_img")"$C"
+        set -l previewed 0
+        if test -n "$KITTY_PID"; and command -q kitty
+            kitty +kitten icat --align left "$source_img" 2>/dev/null
+            and set previewed 1
+        end
+        if test $previewed -eq 0; and command -q chafa
+            chafa --symbols solid "$source_img" 2>/dev/null
+            and set previewed 1
+        end
+        if test $previewed -eq 0
+            echo -e "  $GY  Preview not available (install kitty or chafa)$C"
+        end
+
+        # ── Ask ──
+        echo -e ""
+        echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        set -l a1 "  🖼️  USE AS PROFILE PICTURE?"
+        echo -e "  $CY║$C  $WH$a1$C$(printf '%*s' (math "60 - "(string length "$a1")) '')$CY║$C"
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        set -l yt "  [Y] Yes  → Set as profile picture"
+        set -l nt "  [N] No   → Cancel"
+        echo -e "  $CY║$C  $GR$yt$C$(printf '%*s' (math "60 - "(string length "$yt")) '')$CY║$C"
+        echo -e "  $CY║$C  $RE$nt$C$(printf '%*s' (math "60 - "(string length "$nt")) '')$CY║$C"
+        echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+        echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
+        echo -e ""
+
+        set -l __cc 0
+        set -l pfp_choice ""
+        while true
+            read -P "  [Y/n]: " pfp_choice
+            set -l __rs $status
+            if test $__rs -ne 0
+                set __cc (math $__cc + 1)
+                if test $__cc -ge 2
+                    echo -e "  $D  → Cancelled.  $C"
+                    return 1
+                end
+                echo -e "  $D  (Ctrl+C again to cancel)  $C"
+                continue
+            end
+            break
+        end
+
+        if not test -z "$pfp_choice"; and not string match -qir '^y' "$pfp_choice"
+            echo -e "  $GY  ✧  Cancelled.$C"
+            return 0
         end
     end
 
