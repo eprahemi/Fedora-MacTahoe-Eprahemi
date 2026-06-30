@@ -168,6 +168,12 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
         end
         if test -z "$__td_s_disk_tech"
             set -l test_file "$HOME/"(whoami)"_test_bin"
+            # Signal-safe cleanup
+            set -g __td_disk_test_file "$test_file"
+            function __td_sigclean --on-signal SIGINT --on-signal SIGTERM
+                rm -f $__td_disk_test_file 2>/dev/null
+                functions --erase __td_sigclean 2>/dev/null
+            end
             touch $test_file 2>/dev/null
             set -l dp (df --output=source $test_file 2>/dev/null | tail -1)
             set -l rot (lsblk -no ROTA $dp 2>/dev/null)
@@ -175,8 +181,22 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
             if test "$rot" = "0"
                 if test "$nv" = "1"; set -g __td_s_disk_tech "NVMe"; else; set -g __td_s_disk_tech "SATA SSD"; end
             else if test "$rot" = "1"; set -g __td_s_disk_tech "HDD"; else; set -g __td_s_disk_tech "Virt"; end
-            set -g __td_s_disk_speed (dd if=/dev/zero of=$test_file bs=1G count=1 oflag=dsync 2>&1 | grep -oE '[0-9.]+ [MG]B/s')
+            # Check available space before benchmarking
+            set -l sb_need_mb 1024
+            if test "$rot" = "1"; set sb_need_mb 100; end
+            set sb_need_mb (math "$sb_need_mb * 2" 2>/dev/null)  # 2x safety
+            set -l sb_avail_mb (math (df --output=avail "$test_file" 2>/dev/null | tail -1) / 1024 2>/dev/null)
+
+            if test -n "$sb_avail_mb"; and test "$sb_avail_mb" -lt "$sb_need_mb"
+                echo -e "  $D (scoreboard disk benchmark skipped — low space: $sb_avail_mb MB free, need ~$sb_need_mb MB)$C"
+                set -g __td_s_disk_speed "?"
+            else if test "$rot" = "1"
+                set -g __td_s_disk_speed (dd if=/dev/zero of=$test_file bs=1M count=100 oflag=dsync 2>&1 | grep -oE '[0-9.]+ [MG]B/s')
+            else
+                set -g __td_s_disk_speed (dd if=/dev/zero of=$test_file bs=1G count=1 oflag=dsync 2>&1 | grep -oE '[0-9.]+ [MG]B/s')
+            end
             rm -f $test_file 2>/dev/null
+            functions --erase __td_sigclean 2>/dev/null
         end
         if test -z "$__td_s_gpu_name"
             set -g __td_s_gpu_name (type -q nvidia-smi; and nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1; or lspci 2>/dev/null | grep -i "VGA\|3D" | head -1 | sed 's/.*: //')
@@ -529,6 +549,13 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
             end
         end
 
+        # Signal-safe cleanup: ensure test file is removed on Ctrl+C
+        set -g __td_disk_test_file "$test_file"
+        function __td_sigclean --on-signal SIGINT --on-signal SIGTERM
+            rm -f $__td_disk_test_file 2>/dev/null
+            functions --erase __td_sigclean 2>/dev/null
+        end
+
         touch $test_file 2>/dev/null
 
         # ── Device Info ──
@@ -623,47 +650,77 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
         __td_divider
         echo -e "  $GY│$C  $BBenchmarking...$C"
 
-        # Sequential Write
-        echo -e "  $GY│$C  $D  Seq Write (1 GB)...$C"
-        set -l write_res (dd if=/dev/zero of=$test_file bs=1G count=1 oflag=dsync 2>&1 | grep -oE '[0-9.]+ [MG]B/s' | tail -1)
-        set -l write_val (echo $write_res | awk '{print $1}')
-        set -l write_unit (echo $write_res | awk '{print $2}')
-        set -l write_mb $write_val
-        if test "$write_unit" = "GB/s"
-            set write_mb (math "$write_val * 1024" 2>/dev/null; or echo $write_val)
+        # Determine benchmark sizes based on drive type
+        set -l seq_size "1 GB"
+        set -l seq_bs "1G"
+        set -l seq_count "1"
+        set -l iow_count "10000"
+        if test "$is_rotational" = "1"
+            set seq_size "100 MB"
+            set seq_bs "1M"
+            set seq_count "100"
+            set iow_count "2000"
         end
 
-        # Sequential Read
-        echo -e "  $GY│$C  $D  Seq Read (1 GB)...$C"
-        sync; echo 3 > /proc/sys/vm/drop_caches 2>/dev/null
-        set -l read_res (dd if=$test_file of=/dev/null bs=1G count=1 2>&1 | grep -oE '[0-9.]+ [MG]B/s' | tail -1)
-        set -l read_val (echo $read_res | awk '{print $1}')
-        set -l read_unit (echo $read_res | awk '{print $2}')
-        set -l read_mb $read_val
-        if test "$read_unit" = "GB/s"
-            set read_mb (math "$read_val * 1024" 2>/dev/null; or echo $read_val)
+        # Check available space on target filesystem (2x safety margin)
+        set -l need_mb 0
+        if test "$seq_bs" = "1G"; set need_mb 1024
+        else if test "$seq_bs" = "1M"; set need_mb $seq_count
+        end
+        set need_mb (math "$need_mb * 2" 2>/dev/null)
+        set -l avail_mb (math (df --output=avail "$test_file" 2>/dev/null | tail -1) / 1024 2>/dev/null)
+
+        if test -n "$avail_mb"; and test "$avail_mb" -lt "$need_mb"
+            echo -e "  $GY│$C  $YE⚠️  Low disk space: $avail_mb MB free, need ~$need_mb MB. Skipping benchmarks.$C"
+            set write_mb "N/A"
+            set read_mb "N/A"
+            set iow_iops "N/A"
+        else
+            # Sequential Write
+            echo -e "  $GY│$C  $D  Seq Write ($seq_size)...$C"
+            set -l write_res (dd if=/dev/zero of=$test_file bs=$seq_bs count=$seq_count oflag=dsync 2>&1 | grep -oE '[0-9.]+ [MG]B/s' | tail -1)
+            set -l write_val (echo $write_res | awk '{print $1}')
+            set -l write_unit (echo $write_res | awk '{print $2}')
+            set -l write_mb $write_val
+            if test "$write_unit" = "GB/s"
+                set write_mb (math "$write_val * 1024" 2>/dev/null; or echo $write_val)
+            end
+
+            # Sequential Read
+            echo -e "  $GY│$C  $D  Seq Read ($seq_size)...$C"
+            sync; sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches' 2>/dev/null
+            set -l read_res (dd if=$test_file of=/dev/null bs=$seq_bs count=$seq_count 2>&1 | grep -oE '[0-9.]+ [MG]B/s' | tail -1)
+            set -l read_val (echo $read_res | awk '{print $1}')
+            set -l read_unit (echo $read_res | awk '{print $2}')
+            set -l read_mb $read_val
+            if test "$read_unit" = "GB/s"
+                set read_mb (math "$read_val * 1024" 2>/dev/null; or echo $read_val)
+            end
+
+            # Random 4K Write IOPS
+            echo -e "  $GY│$C  $D  Random 4K Write (IOPS)...$C"
+            set -l iow_res (dd if=/dev/zero of=$test_file bs=4k count=$iow_count oflag=dsync 2>&1 | tail -1)
+            set -l iow_iops "N/A"
+            if string match -q "*bytes*" "$iow_res"
+                set -l iow_time (echo $iow_res | awk '{print $6}')
+                set -l iow_iops (math "$iow_count / $iow_time" 2>/dev/null; or echo "N/A")
+            end
         end
 
-        # Random 4K Write IOPS
-        echo -e "  $GY│$C  $D  Random 4K Write (IOPS)...$C"
-        set -l iow_res (dd if=/dev/zero of=$test_file bs=4k count=10000 oflag=dsync 2>&1 | tail -1)
-        set -l iow_iops "N/A"
-        if string match -q "*bytes*" "$iow_res"
-            set -l iow_time (echo $iow_res | awk '{print $6}')
-            set -l iow_iops (math "10000 / $iow_time" 2>/dev/null; or echo "N/A")
-        end
-
-        # Cleanup
+        # Cleanup (always runs even if skipped)
         rm -f $test_file 2>/dev/null
+        functions --erase __td_sigclean 2>/dev/null
 
-        # Speed Grading
-        set -l grade ""; set -l g_color ""
-        if test "$write_mb" -gt 3000; set grade "ELITE (NVMe Gen5)"; set g_color $GR
-        else if test "$write_mb" -gt 2000; set grade "HIGH-END (NVMe Gen4)"; set g_color $GR
-        else if test "$write_mb" -gt 500; set grade "EXCELLENT (SATA/NVMe Gen3)"; set g_color $GR
-        else if test "$write_mb" -gt 250; set grade "MID-RANGE (SATA SSD)"; set g_color $YE
-        else if test "$write_mb" -gt 80; set grade "STANDARD HDD"; set g_color $YE
-        else; set grade "BOTTLENECK"; set g_color $RE; end
+        # Speed Grading (guarded against N/A)
+        set -l grade "N/A"; set -l g_color "$D"
+        if test "$write_mb" != "N/A"; and test -n "$write_mb"
+            if test "$write_mb" -gt 3000; set grade "ELITE (NVMe Gen5)"; set g_color $GR
+            else if test "$write_mb" -gt 2000; set grade "HIGH-END (NVMe Gen4)"; set g_color $GR
+            else if test "$write_mb" -gt 500; set grade "EXCELLENT (SATA/NVMe Gen3)"; set g_color $GR
+            else if test "$write_mb" -gt 250; set grade "MID-RANGE (SATA SSD)"; set g_color $YE
+            else if test "$write_mb" -gt 80; set grade "STANDARD HDD"; set g_color $YE
+            else; set grade "BOTTLENECK"; set g_color $RE; end
+        end
 
         __td_divider
         echo -e "  $GY│$C  $WH┌── PERFORMANCE METRICS ──────────────────────────┐$C"
