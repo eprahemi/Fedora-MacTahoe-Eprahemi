@@ -37,7 +37,7 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
     function __td_show_commands --no-scope-shadowing
         echo -e ""
         echo -e "  $B$WH╭──────────────────────────────────────────────────────╮$C"
-        echo -e "  $B$WH│$C  $CY⚡$C  $B$WHMASTER COMMANDS$C  $B$WH│$C"
+        echo -e "  $B$WH│$C  $CY⚡$C  $B\033[1;37mMASTER COMMANDS$C  $B$WH│$C"
         echo -e "  $B$WH├──────────────────────────────────────────────────────┤$C"
         echo -e "  $B$WH│$C  $CY all        $C$D •$C  Full system autopsy — every module"
         echo -e "  $B$WH│$C  $CY disk       $C$D •$C  Internal storage: speed, IOPS, SMART"
@@ -61,7 +61,7 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
     end
 
     if not set -q argv[1]
-        echo -e "  $RE✦$C  $B$WHNo module specified.$C  Try:$C"
+        echo -e "  $RE✦$C  $B\033[1;37mNo module specified.$C  Try:$C"
         __td_show_commands
         return 1
     end
@@ -407,7 +407,7 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
         __td_row "L2 Cache" "$l2"
         __td_row "L3 Cache" "$l3"
         __td_divider
-        echo -e "  $GY│$C  $DCPU Features:$C"
+        echo -e "  $GY│$C  \033[2mCPU Features:$C"
         __td_row "  AVX" "$has_avx"
         __td_row "  AVX2" "$has_avx2"
         __td_row "  AES-NI" "$has_aes"
@@ -417,11 +417,11 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
         # Show top frequencies
         set -l freq_count (count $core_freqs)
         if test $freq_count -gt 1
-            echo -e "  $GY│$C  $DPer-Core Frequencies:$C"
+            echo -e "  $GY│$C  \033[2mPer-Core Frequencies:$C"
             set -l idx 0
             for f in $core_freqs
                 if test $idx -lt (math "min($freq_count, 8)")
-                    printf "  $GY│$C    $DCPU%02d:$C  $WH%s MHz$C\n" $idx "$f"
+                    printf "  $GY│$C    \033[2mCPU%02d:$C  $WH%s MHz$C\n" $idx "$f"
                     set idx (math $idx + 1)
                 end
             end
@@ -488,12 +488,12 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
         set -l pressure (cat /proc/pressure/memory 2>/dev/null | head -1 | awk '{print $2}' | sed 's/avg//')
         if test -n "$pressure"
             __td_divider
-            echo -e "  $GY│$C  $DMemory Pressure:$C  $WH$pressure$C"
+            echo -e "  $GY│$C  \033[2mMemory Pressure:$C  $WH$pressure$C"
         end
 
         # Benchmark
         __td_divider
-        echo -e "  $GY│$C  $BRunning memory throughput test...$C"
+        echo -e "  $GY│$C  \033[1mRunning memory throughput test...$C"
         __td_progress 0.8 "  Allocating 2 GB blocks"
         set -l ram_write (dd if=/dev/zero of=/dev/null bs=1M count=2000 2>&1 | tail -1 | awk '{print $8" "$9}')
         __td_row "Write Throughput" "$ram_write"
@@ -619,7 +619,7 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
 
         # ── Benchmarks ──
         __td_divider
-        echo -e "  $GY│$C  $BBenchmarking...$C"
+        echo -e "  $GY│$C  \033[1mBenchmarking...$C"
 
         # Determine benchmark sizes based on drive type
         set -l seq_size "1 GB"
@@ -742,17 +742,21 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
                 echo -e "  $GY│$C  $YE📋 Multiple drives detected. Select target:$C"
                 set -l i 1
                 for d in $drives
-                    echo -e "  $GY│$C  $CY$i)$C $d"
+                    set -l mp (echo $d | awk '{print $1}')
+                    set -l sz (echo $d | awk '{print $2}')
+                    set -l label (basename $mp)
+                    echo -e "  $GY│$C  $CY$i)$C $label ($sz)"
                     set i (math $i + 1)
                 end
-                echo -e "  $GY│$C  $CY0)$C $B$WHTest all drives$C"
-                echo -n -e "  $GY│$C  $WHCHOOSE [0-$drive_count]: $C"
-                read choice
+                echo -e "  $GY│$C  \033[1;36m0)$C $B\033[1;37mTest all drives$C"
+                set -l user_choice (read --prompt-str "  $GY│$C  \033[1;37mCHOOSE [0-$drive_count]: $C")
+                set choice "$user_choice"
                 if test "$choice" = "0"
                     # Test ALL external drives
                     for target_raw in $drives
                         set test_file (echo $target_raw | awk '{print $1}')"/"(whoami)"_test_bin"
-                        set -l dev_label (echo $target_raw | awk '{print $1}')
+                        set -l dev_mp (echo $target_raw | awk '{print $1}')
+                        set -l dev_label (basename $dev_mp)
                         echo ""; echo -e "  $GY│$C  $WH═══ Drive: $dev_label ═══$C"
                         __td_benchmark_one_disk
                     end
@@ -855,7 +859,7 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
         set -l has_sensors (type -q sensors; and echo 1; or echo 0)
 
         if test "$has_sensors" = "1"
-            echo -e "  $GY│$C  $DCPU Core Temperatures:$C"
+            echo -e "  $GY│$C  \033[2mCPU Core Temperatures:$C"
             sensors 2>/dev/null | grep -i "core " | while read -l line
                 set -l cleaned (echo $line | sed 's/\s*Core /Core /' | sed 's/^[[:space:]]*//')
                 echo -e "  $GY│$C    $WH$cleaned$C"
@@ -865,12 +869,12 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
             set -l pkg_temp (sensors 2>/dev/null | grep "Package id" | head -1 | sed 's/^[[:space:]]*//')
             if test -n "$pkg_temp"
                 __td_divider
-                echo -e "  $GY│$C  $DCPU Package:$C  $WH$pkg_temp$C"
+                echo -e "  $GY│$C  \033[2mCPU Package:$C  $WH$pkg_temp$C"
             end
 
             # Fan speeds
             __td_divider
-            echo -e "  $GY│$C  $DFan Speeds:$C"
+            echo -e "  $GY│$C  \033[2mFan Speeds:$C"
             sensors 2>/dev/null | grep -i "fan" | while read -l line
                 echo -e "  $GY│$C    $WH$(echo $line | sed 's/^[[:space:]]*//')$C"
             end
@@ -919,7 +923,7 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
 
     function __td_report_net_block --no-scope-shadowing
         # Interfaces
-        echo -e "  $GY│$C  $DActive Interfaces:$C"
+        echo -e "  $GY│$C  \033[2mActive Interfaces:$C"
         for iface in (ip -o link show up 2>/dev/null | grep -v "LOOPBACK" | awk -F': ' '{print $2}' | sed 's/@.*//')
             set -l ip4 (ip -4 -o addr show $iface 2>/dev/null | awk '{print $4}' | head -1)
             set -l ip6 (ip -6 -o addr show $iface 2>/dev/null | awk '{print $4}' | head -1)
@@ -939,7 +943,7 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
 
         # Ping multi-target
         __td_divider
-        echo -e "  $GY│$C  $DLatency (ping):$C"
+        echo -e "  $GY│$C  \033[2mLatency (ping):$C"
         for target in "1.1.1.1" "8.8.8.8" "$gateway"
             set -l ping_res (ping -c 2 -W 2 $target 2>/dev/null | tail -1 | grep -oE '[0-9.]+/[0-9.]+' | head -1)
             if test -n "$ping_res"
@@ -951,7 +955,7 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
 
         # DNS resolution
         __td_divider
-        echo -e "  $GY│$C  $DDNS Resolution:$C"
+        echo -e "  $GY│$C  \033[2mDNS Resolution:$C"
         set -l dns_res (dig google.com +short 2>/dev/null | tail -1)
         if test -n "$dns_res"
             __td_row "  google.com" "$dns_res"
@@ -969,7 +973,7 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
         end
 
         if type -q speedtest-cli
-            echo -e "  $GY│$C  $BRunning speed test...$C"
+            echo -e "  $GY│$C  \033[1mRunning speed test...$C"
             set -l speed_res (speedtest-cli --simple 2>/dev/null)
             if test -n "$speed_res"
                 printf '%s\n' $speed_res | while read -l line
@@ -1057,7 +1061,7 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
 
     function __td_report_boot_block --no-scope-shadowing
         if type -q systemd-analyze
-            echo -e "  $GY│$C  $DBoot Time Breakdown:$C"
+            echo -e "  $GY│$C  \033[2mBoot Time Breakdown:$C"
             set -l boot_time (systemd-analyze time 2>/dev/null)
             if test -n "$boot_time"
                 printf '%s\n' $boot_time | while read -l line
@@ -1066,17 +1070,17 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
             end
 
             __td_divider
-            echo -e "  $GY│$C  $DTop 5 slowest services:$C"
+            echo -e "  $GY│$C  \033[2mTop 5 slowest services:$C"
             systemd-analyze blame 2>/dev/null | head -5 | while read -l line
                 echo -e "  $GY│$C    $D$line$C"
             end
 
             __td_divider
-            echo -e "  $GY│$C  $DBoot loader:$C"
+            echo -e "  $GY│$C  \033[2mBoot loader:$C"
             set -l bootloader (bootctl status 2>/dev/null | grep "Product" | head -1; or echo "  $D  systemd-boot not available (likely GRUB)$C")
             echo -e "  $GY│$C    $WH$bootloader$C"
         else
-            echo -e "  $GY│$C  $Dsystemd-analyze not available$C"
+            echo -e "  $GY│$C  \033[2msystemd-analyze not available$C"
         end
     end
 
@@ -1132,15 +1136,15 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
     end
 
     function __td_report_top_block --no-scope-shadowing
-        echo -e "  $GY│$C  $DTotal processes: $(ps aux | wc -l)$C"
+        echo -e "  $GY│$C  \033[2mTotal processes: $(ps aux | wc -l)$C"
         echo ""
-        echo -e "  $GY│$C  $WHTop 5 by CPU:$C"
+        echo -e "  $GY│$C  \033[1;37mTop 5 by CPU:$C"
         ps aux --sort=-%cpu 2>/dev/null | head -6 | tail -5 | while read -l line
             echo -e "  $GY│$C    $D$line$C"
         end
 
         echo ""
-        echo -e "  $GY│$C  $WHTop 5 by Memory:$C"
+        echo -e "  $GY│$C  \033[1;37mTop 5 by Memory:$C"
         ps aux --sort=-%mem 2>/dev/null | head -6 | tail -5 | while read -l line
             echo -e "  $GY│$C    $D$line$C"
         end
@@ -1217,7 +1221,7 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
     # ════════════════════════════════════════════════════════════════
     if test "$module" = "all"
         echo -e "  $B$WH╔══════════════════════════════════════════════════════════╗$C"
-        echo -e "  $B$WH║$C  $CY🔬$C  $B$WHCOMPLETE SYSTEM AUTOPSY — RUNNING ALL MODULES$C  $B$WH║$C"
+        echo -e "  $B$WH║$C  $CY🔬$C  $B\033[1;37mCOMPLETE SYSTEM AUTOPSY — RUNNING ALL MODULES$C  $B$WH║$C"
         echo -e "  $B$WH╚══════════════════════════════════════════════════════════╝$C"
         echo ""
 
