@@ -1544,15 +1544,22 @@ EOF
     ok "Stock GNOME XMLs deleted"
   fi
 
-  # Set active desktop wallpaper
-  if [ "${INSTALL_DESKTOP_WALLPAPER:-true}" = "true" ] && [ -f "$wp/desktop/Himeno Fedora.jpg" ]; then
+  # Always copy Himeno Fedora.jpg to backgrounds dir (available in picker / for later use)
+  if [ -f "$wp/desktop/Himeno Fedora.jpg" ]; then
     cp "$wp/desktop/Himeno Fedora.jpg" "$HOME/.local/share/backgrounds/"
-    gsettings set org.gnome.desktop.background picture-uri "file://$HOME/.local/share/backgrounds/Himeno Fedora.jpg" 2>/dev/null || true
-    gsettings set org.gnome.desktop.background picture-uri-dark "file://$HOME/.local/share/backgrounds/Himeno Fedora.jpg" 2>/dev/null || true
-    gsettings set org.gnome.desktop.background picture-options "zoom" 2>/dev/null || true
-    ok "Desktop wallpaper set"
-  elif [ "${INSTALL_DESKTOP_WALLPAPER:-true}" = "true" ]; then
-    warn "Desktop wallpaper file not found"
+    ok "Himeno Fedora.jpg copied to ~/.local/share/backgrounds/"
+  fi
+
+  # Set active desktop wallpaper only if user opted in
+  if [ "${INSTALL_DESKTOP_WALLPAPER:-true}" = "true" ]; then
+    if [ -f "$HOME/.local/share/backgrounds/Himeno Fedora.jpg" ]; then
+      gsettings set org.gnome.desktop.background picture-uri "file://$HOME/.local/share/backgrounds/Himeno Fedora.jpg" 2>/dev/null || true
+      gsettings set org.gnome.desktop.background picture-uri-dark "file://$HOME/.local/share/backgrounds/Himeno Fedora.jpg" 2>/dev/null || true
+      gsettings set org.gnome.desktop.background picture-options "zoom" 2>/dev/null || true
+      ok "Desktop wallpaper applied via gsettings"
+    else
+      warn "Himeno Fedora.jpg not found in ~/.local/share/backgrounds/"
+    fi
   fi
 
   # GDM login wallpaper (optional — prompted separately)
