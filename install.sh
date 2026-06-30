@@ -1419,6 +1419,12 @@ apply_wallpapers() {
   fi
 
   sudo mkdir -p "$wp_norm"
+
+  # Clean up any leftover Himeno images from previous installs
+  if [ -d "$wp_norm" ]; then
+    sudo find "$wp_norm" -maxdepth 1 -name 'Himeno*' -type f -delete 2>/dev/null || true
+  fi
+
   local count_norm=0
   local count_18=0
 
