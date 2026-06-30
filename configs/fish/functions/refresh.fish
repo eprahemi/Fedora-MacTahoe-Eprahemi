@@ -332,9 +332,9 @@ function refresh --description 'Deep system refresh: cache, services, extensions
             count=$(shuf -i 3-7 -n 1);
             for i in $(seq $count); do
                 gsettings set org.gnome.desktop.background picture-uri "$wp_light";
-                sleep 0.6;
+                sleep 1.0;
                 gsettings set org.gnome.desktop.background picture-uri "'"'"'file://$black'"'"'";
-                sleep 0.6;
+                sleep 1.0;
             done;
             gsettings set org.gnome.desktop.background picture-uri "$wp_light";
             [ -n "$wp_dark" ] && gsettings set org.gnome.desktop.background picture-uri-dark "$wp_dark";
