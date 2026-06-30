@@ -15,7 +15,7 @@ BOLD='\033[1m'; WHITE='\033[1;37m'; DIM='\033[2m'; PINK='\033[1;35m'
 
 # ── Config ──
 # 18+ wallpaper zip — Google Drive direct download (file ID from share link)
-WALLPAPER_18_URL="https://drive.usercontent.google.com/download?id=12iMK2LBj7TQk5vIyXKTREvDUIh__5Zzb&export=download&confirm=t"
+WALLPAPER_18_URL="https://drive.usercontent.google.com/download?id=1pHuIkixIfQR_KMnaIOvMutHgaZ32oBRg&export=download&confirm=t"
 # 18+ faces zip — Google Drive direct download
 FACES_18_URL="https://drive.usercontent.google.com/download?id=1Zgy1OmrB1784TtSVb0p_ICTXMhlWAHRp&export=download&confirm=t"
 # 🔥 Hot Billie & Jinx video edits zip — Google Drive direct download
