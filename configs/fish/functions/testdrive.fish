@@ -679,36 +679,47 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
             set read_mb "N/A"
             set iow_iops "N/A"
         else
+            # Helper: get dd summary line (filters out ntfs-3g warnings mixed in stderr)
+            function __td_dd_summary
+                grep "copied" | tail -1
+            end
+
             # Sequential Write
             echo -e "  $GY│$C  $D  Seq Write ($seq_size)...$C"
-            set -l write_res (dd if=/dev/zero of=$test_file bs=$seq_bs count=$seq_count oflag=dsync 2>&1 | grep -oE '[0-9.]+ [MG]B/s' | tail -1)
+            set -l write_res (dd if=/dev/zero of=$test_file bs=$seq_bs count=$seq_count oflag=dsync 2>&1 | __td_dd_summary | grep -oE '[0-9.]+ [kMG]B/s' | tail -1)
             set -l write_val (echo $write_res | awk '{print $1}')
             set -l write_unit (echo $write_res | awk '{print $2}')
             set write_mb $write_val
             if test "$write_unit" = "GB/s"
                 set write_mb (math "$write_val * 1024" 2>/dev/null; or echo $write_val)
+            else if test "$write_unit" = "kB/s"
+                set write_mb (math "$write_val / 1024" 2>/dev/null; or echo $write_val)
             end
 
             # Sequential Read
             echo -e "  $GY│$C  $D  Seq Read ($seq_size)...$C"
             sync; sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches' 2>/dev/null
-            set -l read_res (dd if=$test_file of=/dev/null bs=$seq_bs count=$seq_count 2>&1 | grep -oE '[0-9.]+ [MG]B/s' | tail -1)
+            set -l read_res (dd if=$test_file of=/dev/null bs=$seq_bs count=$seq_count 2>&1 | __td_dd_summary | grep -oE '[0-9.]+ [kMG]B/s' | tail -1)
             set -l read_val (echo $read_res | awk '{print $1}')
             set -l read_unit (echo $read_res | awk '{print $2}')
             set read_mb $read_val
             if test "$read_unit" = "GB/s"
                 set read_mb (math "$read_val * 1024" 2>/dev/null; or echo $read_val)
+            else if test "$read_unit" = "kB/s"
+                set read_mb (math "$read_val / 1024" 2>/dev/null; or echo $read_val)
             end
 
             # Random 4K Write IOPS
             echo -e "  $GY│$C  $D  Random 4K Write (IOPS)...$C"
-            set -l iow_res (dd if=/dev/zero of=$test_file bs=4k count=$iow_count oflag=dsync 2>&1 | tail -1)
+            set -l iow_res (dd if=/dev/zero of=$test_file bs=4k count=$iow_count oflag=dsync 2>&1 | __td_dd_summary)
             set iow_iops "N/A"
-            # Extract elapsed time after "copied," regardless of field position
+            # Extract elapsed time from "... copied, X.XXXX s, ..."
             set -l iow_time (echo $iow_res | sed -n 's/.*copied, \([0-9.]*\) s,.*/\1/p')
             if test -n "$iow_time"
                 set iow_iops (math "$iow_count / $iow_time" 2>/dev/null; or echo "N/A")
             end
+
+            functions --erase __td_dd_summary 2>/dev/null
         end
 
         # Cleanup (always runs even if skipped)
