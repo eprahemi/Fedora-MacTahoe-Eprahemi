@@ -156,44 +156,37 @@ function refresh --description 'Deep system refresh: cache, services, extensions
 
     if test $do_icons -eq 1
         __refresh_section "FLATPAK ICON MIRROR"
-        __refresh_anim "Mirror 512×512 icons" "
-            set -l flatpak_h /var/lib/flatpak/exports/share/icons/hicolor;
-            set -l user_h ~/.local/share/icons/hicolor;
-            set -l user_48 \$user_h/48x48/apps;
-            if not test -d \"\$flatpak_h\"; exit 0; end;
-            mkdir -p \$user_48;
-            if not test -f \$user_h/index.theme;
-                echo '[Icon Theme]
-Name=Hicolor
-Comment=Local overrides
-Hidden=true
-Directories=256x256/apps,48x48/apps
-
-[48x48/apps]
-Size=48
-Context=Applications
-Type=Fixed' >\$user_h/index.theme;
-            end;
-            for f in (find \$flatpak_h -name '*.png' -o -name '*.svg' 2>/dev/null);
-                set name (basename \$f);
-                set noext (string replace -r '\.[^.]+$' '' \$name);
-                if test -f ~/.local/share/icons/MacTahoe-dark/\$name -o -f ~/.local/share/icons/MacTahoe-dark/\$noext.svg; continue; end;
-                if test -f \$user_h/48x48/apps/\$name -o -f \$user_h/48x48/apps/\$noext.svg; continue; end;
-                set ext (string match -r '\.([^.]+)$' \$name)[2];
-                if test \"\$ext\" = svg;
-                    mkdir -p \$user_h/scalable/apps;
-                    ln -sf \$f \$user_h/scalable/apps/\$name ^/dev/null; or cp -f \$f \$user_h/scalable/apps/\$name ^/dev/null;
-                else;
-                    set best '';
-                    for sz in 48x48 64x64 128x128 256x256 512x512;
-                        if test -f \$flatpak_h/\$sz/apps/\$name; set best \$flatpak_h/\$sz/apps/\$name; break; end;
-                    end;
-                    if test -z \"\$best\"; continue; end;
-                    ln -sf \$best \$user_48/\$name ^/dev/null; or cp -f \$best \$user_48/\$name ^/dev/null;
-                end;
-            end;
-            gtk-update-icon-cache ~/.local/share/icons/hicolor/ ^/dev/null 2>/dev/null;
-        "
+        # Inline bash (run via sh -c inside __refresh_anim)
+        __refresh_anim "Mirror 512×512 icons" '
+            fh=/var/lib/flatpak/exports/share/icons/hicolor;
+            uh=$HOME/.local/share/icons/hicolor;
+            u48=$uh/48x48/apps;
+            [ -d "$fh" ] || exit 0;
+            mkdir -p "$u48";
+            if [ ! -f "$uh/index.theme" ]; then
+                mkdir -p "$uh";
+                printf "[Icon Theme]\nName=Hicolor\nComment=Local overrides\nHidden=true\nDirectories=256x256/apps,48x48/apps\n\n[48x48/apps]\nSize=48\nContext=Applications\nType=Fixed\n" > "$uh/index.theme";
+            fi;
+            find "$fh" -name "*.png" -o -name "*.svg" 2>/dev/null | while IFS= read -r f; do
+                name=$(basename "$f");
+                noext="${name%.*}";
+                [ -f "$HOME/.local/share/icons/MacTahoe-dark/$name" ] || [ -f "$HOME/.local/share/icons/MacTahoe-dark/${noext}.svg" ] && continue;
+                [ -f "$uh/48x48/apps/$name" ] || [ -f "$uh/scalable/apps/${noext}.svg" ] && continue;
+                ext="${name##*.}";
+                if [ "$ext" = "svg" ]; then
+                    mkdir -p "$uh/scalable/apps";
+                    ln -sf "$f" "$uh/scalable/apps/$name" 2>/dev/null || cp -f "$f" "$uh/scalable/apps/$name" 2>/dev/null;
+                else
+                    best="";
+                    for sz in 48x48 64x64 128x128 256x256 512x512; do
+                        if [ -f "$fh/$sz/apps/$name" ]; then best="$fh/$sz/apps/$name"; break; fi;
+                    done;
+                    [ -n "$best" ] || continue;
+                    ln -sf "$best" "$u48/$name" 2>/dev/null || cp -f "$best" "$u48/$name" 2>/dev/null;
+                fi;
+            done;
+            gtk-update-icon-cache "$uh/" 2>/dev/null;
+        '
     end
 
     if test $do_pip -eq 1
