@@ -539,7 +539,9 @@ disc6="  Tip: set INSTALL_DISCORD=false to skip silently"
 
   # Starship prompt (not in Fedora repos — install via official script)
   if ! command -v starship &>/dev/null; then
-    curl -fsSL https://starship.rs/install.sh | sh -s -- -y 2>/dev/null || true
+    if ! curl -fsSL https://starship.rs/install.sh | sh -s -- -y 2>/dev/null; then
+      warn "Starship install failed — check network or https://starship.rs"
+    fi
   fi
 
   ok "RPM packages installed"
@@ -555,7 +557,9 @@ install_browsers() {
 
   # Chrome — create repo file directly (--from-repofile not supported by Google)
   if ! rpm -q google-chrome-stable &>/dev/null; then
-    sudo rpm --import https://dl.google.com/linux/linux_signing_key.pub 2>/dev/null || true
+    if ! sudo rpm --import https://dl.google.com/linux/linux_signing_key.pub 2>/dev/null; then
+      warn "Failed to import Google signing key — Chrome repo may not be trusted"
+    fi
     sudo tee /etc/yum.repos.d/google-chrome.repo > /dev/null <<-EOF
 [google-chrome]
 name=google-chrome
@@ -565,13 +569,17 @@ gpgcheck=1
 gpgkey=https://dl.google.com/linux/linux_signing_key.pub
 EOF
     # Install from repo, with direct RPM as offline fallback
-    sudo dnf install -y google-chrome-stable 2>/dev/null || \
-    sudo dnf install -y https://dl.google.com/linux/direct/google-chrome-stable_current_x86_64.rpm
+    if ! sudo dnf install -y google-chrome-stable 2>/dev/null && \
+       ! sudo dnf install -y https://dl.google.com/linux/direct/google-chrome-stable_current_x86_64.rpm; then
+      warn "Chrome installation failed — check network or Google repos"
+    fi
   fi
 
   # Edge — create repo file directly (--from-repofile URL is non-standard)
   if ! rpm -q microsoft-edge-stable &>/dev/null; then
-    sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc 2>/dev/null || true
+    if ! sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc 2>/dev/null; then
+      warn "Failed to import Microsoft signing key — Edge repo may not be trusted"
+    fi
     sudo tee /etc/yum.repos.d/microsoft-edge.repo > /dev/null <<-EOF
 [microsoft-edge]
 name=microsoft-edge
@@ -580,12 +588,16 @@ enabled=1
 gpgcheck=1
 gpgkey=https://packages.microsoft.com/keys/microsoft.asc
 EOF
-    sudo dnf install -y microsoft-edge-stable 2>/dev/null || true
+    if ! sudo dnf install -y microsoft-edge-stable 2>/dev/null; then
+      warn "Edge installation failed — check network or Microsoft repos"
+    fi
   fi
 
   # VS Code — repo file (existing working approach)
   if ! rpm -q code &>/dev/null; then
-    sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc 2>/dev/null || true
+    if ! sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc 2>/dev/null; then
+      warn "Failed to import Microsoft signing key — VS Code repo may not be trusted"
+    fi
     sudo tee /etc/yum.repos.d/vscode.repo > /dev/null <<-EOF
 [code]
 name=Visual Studio Code
@@ -604,26 +616,47 @@ EOF
 install_flatpaks() {
   next_step "Flatpak Apps"
 
+  local fp_ok=0 fp_fail=0
+  local fp_apps=(
+    com.rtosta.zapzap
+    io.github.amit9838.mousam
+    com.mattjakeman.ExtensionManager
+    com.github.tchx84.Flatseal
+    it.mijorus.gearlever
+    fr.handbrake.ghb
+    info.febvre.Komikku
+    md.obsidian.Obsidian
+    com.protonvpn.www
+    com.spotify.Client
+    org.localsend.localsend_app
+  )
+
   flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true
-  flatpak install -y flathub com.rtosta.zapzap 2>/dev/null || true
-  flatpak install -y flathub io.github.amit9838.mousam 2>/dev/null || true
-  flatpak install -y flathub com.mattjakeman.ExtensionManager 2>/dev/null || true
-  flatpak install -y flathub com.github.tchx84.Flatseal 2>/dev/null || true
-  flatpak install -y flathub it.mijorus.gearlever 2>/dev/null || true
-  flatpak install -y flathub fr.handbrake.ghb 2>/dev/null || true
-  flatpak install -y flathub info.febvre.Komikku 2>/dev/null || true
-  flatpak install -y flathub md.obsidian.Obsidian 2>/dev/null || true
-  flatpak install -y flathub com.protonvpn.www 2>/dev/null || true
-  flatpak install -y flathub com.spotify.Client 2>/dev/null || true
-  flatpak install -y flathub org.localsend.localsend_app 2>/dev/null || true
+
+  for _fp in "${fp_apps[@]}"; do
+    if flatpak install -y flathub "$_fp" 2>/dev/null; then
+      fp_ok=$((fp_ok + 1))
+    else
+      fp_fail=$((fp_fail + 1))
+    fi
+  done
 
   if [ "${INSTALL_DISCORD:-}" = "true" ]; then
-    flatpak install -y flathub com.discordapp.Discord 2>/dev/null || true
+    if flatpak install -y flathub com.discordapp.Discord 2>/dev/null; then
+      fp_ok=$((fp_ok + 1))
+    else
+      fp_fail=$((fp_fail + 1))
+    fi
   fi
 
+  if [ "$fp_ok" -gt 0 ]; then
+    ok "$fp_ok flatpak apps installed"
+  fi
+  [ "$fp_fail" -gt 0 ] && warn "$fp_fail flatpak(s) failed to install — check network or flathub status"
+
+  # Always attempt overrides (non-critical)
   sudo flatpak override --filesystem=xdg-config/gtk-3.0 2>/dev/null || true
   sudo flatpak override --filesystem=xdg-config/gtk-4.0 2>/dev/null || true
-  ok "Flatpak apps installed"
 }
 
 # ── PHASE 3: THEMES ──────────────────────────────────────────
@@ -960,7 +993,9 @@ install_font() {
   if [ -f "$font_src" ]; then
     mkdir -p "$HOME/.local/share/fonts"
     cp "$font_src" "$HOME/.local/share/fonts/"
-    fc-cache -fv 2>/dev/null || true
+    if ! fc-cache -fv 2>/dev/null; then
+      warn "Font cache update failed — SF Pro may not be available until next login"
+    fi
     ok "SF Pro Display font installed"
   else
     warn "SF-Pro-Display-Regular.otf not found in bundle — place it in fonts/ manually"
@@ -1962,12 +1997,16 @@ setup_flatpak_theme() {
   rm -rf "$pkg_cache"
   mkdir -p "$repo_dir"
 
-  ostree --repo="$repo_dir" init --mode=archive || true
-  ostree --repo="$repo_dir" config set core.min-free-space-percent 0 || true
+  if ! ostree --repo="$repo_dir" init --mode=archive 2>/dev/null; then
+    warn "ostree init failed — Flatpak theme runtime not built"
+    return
+  fi
+  ostree --repo="$repo_dir" config set core.min-free-space-percent 0 2>/dev/null || true
 
   rm -rf "$build_dir"
   mkdir -p "$build_dir/files"
-  cp -a "$theme_path/gtk-3.0/"{gtk.css,gtk-dark.css,thumbnail.png,assets,windows-assets} "$build_dir/files" 2>/dev/null || true
+  cp -a "$theme_path/gtk-3.0/"{gtk.css,gtk-dark.css,thumbnail.png,assets,windows-assets} "$build_dir/files" 2>/dev/null || \
+    warn "Theme assets not found in $theme_path/gtk-3.0/ — runtime may be incomplete"
 
   mkdir -p "$build_dir/files/share/appdata"
   cat >"$build_dir/files/share/appdata/$app_id.appdata.xml" <<EOF
@@ -1980,8 +2019,12 @@ setup_flatpak_theme() {
 </component>
 EOF
 
-  appstream-compose --prefix="$build_dir/files" --basename="$app_id" --origin=flatpak "$app_id" 2>/dev/null || true
-  ostree --repo="$repo_dir" commit -b base --tree=dir="$build_dir" || true
+  appstream-compose --prefix="$build_dir/files" --basename="$app_id" --origin=flatpak "$app_id" 2>/dev/null || \
+    warn "appstream-compose failed — metadata may be incomplete"
+  ostree --repo="$repo_dir" commit -b base --tree=dir="$build_dir" 2>/dev/null || {
+    warn "ostree commit failed — Flatpak theme runtime not built"
+    return
+  }
 
   local bundles=()
   while IFS= read -r arch; do
@@ -2009,12 +2052,19 @@ EOF
     return
   fi
 
+  local installed=0
   for bundle in "${bundles[@]}"; do
-    sudo flatpak install -y --system "$bundle" 2>/dev/null || true
+    if sudo flatpak install -y --system "$bundle" 2>/dev/null; then
+      installed=$((installed + 1))
+    fi
     rm -f "$bundle" 2>/dev/null || true
   done
 
-  ok "Flatpak runtime '$app_id' installed (${#bundles[@]} arch(s))"
+  if [ "$installed" -gt 0 ]; then
+    ok "Flatpak runtime '$app_id' installed ($installed arch(s))"
+  else
+    warn "Flatpak runtime '$app_id' could not be installed — check permissions or ostree"
+  fi
 }
 
 install_sounds() {
@@ -2126,17 +2176,29 @@ install_extensions() {
   )
 
   # Install from EGO using API (CLI install $uuid requires browser session)
-  local shell_version
+  local shell_version ext_ok=0 ext_fail=0
   shell_version=$(gnome-shell --version 2>/dev/null | grep -oP '\d+\.\d+' | head -1 || echo "50")
   for uuid in "${extensions[@]}"; do
     local dl_url
     dl_url=$(curl -s "https://extensions.gnome.org/extension-info/?uuid=$uuid&shell_version=$shell_version" | jq -r '.download_url // empty' 2>/dev/null) || true
-    if [ -n "$dl_url" ]; then
-      rm -f /tmp/ext-"$uuid".zip
-      curl -sL "https://extensions.gnome.org$dl_url" -o /tmp/ext-"$uuid".zip 2>/dev/null
-      gnome-extensions install --force /tmp/ext-"$uuid".zip 2>/dev/null || true
-      rm -f /tmp/ext-"$uuid".zip
+    if [ -z "$dl_url" ]; then
+      warn "Extension $uuid not found on EGO (shell $shell_version) — skipping"
+      ext_fail=$((ext_fail + 1))
+      continue
     fi
+    rm -f /tmp/ext-"$uuid".zip
+    if ! curl -sL "https://extensions.gnome.org$dl_url" -o /tmp/ext-"$uuid".zip 2>/dev/null; then
+      warn "Failed to download extension $uuid"
+      ext_fail=$((ext_fail + 1))
+      continue
+    fi
+    if gnome-extensions install --force /tmp/ext-"$uuid".zip 2>/dev/null; then
+      ext_ok=$((ext_ok + 1))
+    else
+      warn "Failed to install extension $uuid"
+      ext_fail=$((ext_fail + 1))
+    fi
+    rm -f /tmp/ext-"$uuid".zip
   done
 
   # Enable all installed extensions via direct gsettings (no D-Bus needed)
@@ -2153,7 +2215,10 @@ install_extensions() {
   # Also mark Fedora defaults as disabled
   gsettings set org.gnome.shell disabled-extensions "['background-logo@fedorahosted.org', 'apps-menu@gnome-shell-extensions.gcampax.github.com']" 2>/dev/null || true
 
-  ok "Extensions installed & configured"
+  if [ "$ext_ok" -gt 0 ]; then
+    ok "$ext_ok extension(s) installed"
+  fi
+  [ "$ext_fail" -gt 0 ] && warn "$ext_fail extension(s) failed — check extensions.gnome.org or your network"
 }
 
 # ── FINALIZE ──────────────────────────────────────────────────
