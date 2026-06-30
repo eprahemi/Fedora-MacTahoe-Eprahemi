@@ -1418,46 +1418,31 @@ apply_wallpapers() {
     ok "Stock system wallpapers removed"
   fi
 
-  sudo mkdir -p "$wp_norm"
-
-  # Clean up any leftover Himeno images from previous installs
-  if [ -d "$wp_norm" ]; then
-    sudo find "$wp_norm" -maxdepth 1 -name 'Himeno*' -type f -delete 2>/dev/null || true
-  fi
-
   local count_norm=0
   local count_18=0
 
-  # Copy desktop wallpaper (optional) → normal folder
-  # (Himeno Fedora.jpg is excluded — lives in ~/.local/share/backgrounds/)
-  if [ "${INSTALL_DESKTOP_WALLPAPER:-true}" = "true" ]; then
-    for img in "$wp/desktop/"*; do
-      [ -f "$img" ] || continue
-      bname="${img##*/}"
-      [ "$bname" = "Himeno Fedora.jpg" ] && continue
-      sudo cp "$img" "$wp_norm/" 2>/dev/null || true
-      count_norm=$((count_norm + 1))
-    done
-  fi
-
-  # Copy additional backgrounds: 30 custom wallpapers (only if NOT installing 18+)
-  if [ "${INSTALL_WALLPAPER_18:-false}" != "true" ]; then
-    for img in "$wp/background-normal/"*; do
-      [ -f "$img" ] || continue
-      sudo cp "$img" "$wp_norm/" 2>/dev/null || true
-      count_norm=$((count_norm + 1))
-    done
-  fi
-
-  # ── 18+ wallpapers (optional zip download) → +18 folder ──
+  # ══════════════════════════════════════════════════════════════════
+  # BRANCH: user chose +18 wallpapers
+  #   → Only "Wallvault Wallpapers +18" folder + XML survive
+  # BRANCH: user skipped +18 wallpapers
+  #   → Only "Wallvault Wallpapers" folder + XML survive
+  # ══════════════════════════════════════════════════════════════════
   if [ "${INSTALL_WALLPAPER_18:-false}" = "true" ]; then
+    # ── +18 MODE ──────────────────────────────────────────────
+    # Destroy normal folder + XML (no cache left behind)
+    [ -d "$wp_norm" ] && sudo rm -rf "$wp_norm" 2>/dev/null
+    [ -f "$xml_dir/wallvault-wallpapers.xml" ] && sudo rm -f "$xml_dir/wallvault-wallpapers.xml" 2>/dev/null
+
+    # Destroy old +18 folder so we start clean
+    [ -d "$wp_18" ] && sudo rm -rf "$wp_18" 2>/dev/null
+    sudo mkdir -p "$wp_18"
+
     log "Downloading 18+ wallpapers…"
     local zip_tmp="/tmp/wallpapers-18-$$.zip"
     local extract_tmp="/tmp/wallpapers-18-extract-$$"
     mkdir -p "$extract_tmp"
 
     if curl -L -b "download_warning=1" "$WALLPAPER_18_URL" -o "$zip_tmp" 2>/dev/null; then
-      sudo mkdir -p "$wp_18"
       if unzip -q "$zip_tmp" -d "$extract_tmp" 2>/dev/null; then
         while IFS= read -r -d '' img; do
           sudo cp "$img" "$wp_18/" 2>/dev/null || true
@@ -1472,43 +1457,9 @@ apply_wallpapers() {
       warn "Failed to download 18+ wallpapers — check WALLPAPER_18_URL"
     fi
     rm -rf "$extract_tmp" 2>/dev/null || true
-  fi
 
-  [ "$count_18"  -gt 0 ] && ok "$count_18 18+ wallpapers installed to $wp_18"
-
-  # ── Register wallpapers in GNOME background properties XML ──
-  local total=$((count_norm + count_18))
-
-  if [ "$total" -gt 0 ]; then
-    # Normal wallpapers XML (wallvault-wallpapers.xml)
-    if [ "$count_norm" -gt 0 ]; then
-      local xml_norm="$xml_dir/wallvault-wallpapers.xml"
-      {
-        echo '<?xml version="1.0" encoding="UTF-8"?>'
-        echo '<!DOCTYPE wallpapers SYSTEM "gnome-wp-list.dtd">'
-        echo '<wallpapers>'
-        for img in "$wp_norm/"*; do
-          [ -f "$img" ] || continue
-          local bname; bname=$(basename "$img")
-          local bname_noext="${bname%.*}"
-          cat << EOF
-      <wallpaper deleted="false">
-          <name>${bname_noext}</name>
-          <filename>${img}</filename>
-          <options>zoom</options>
-          <shade_type>solid</shade_type>
-          <pcolor>#000000</pcolor>
-          <scolor>#000000</scolor>
-      </wallpaper>
-EOF
-        done
-        echo '</wallpapers>'
-      } | sudo tee "$xml_norm" > /dev/null
-      ok "Wallvault Wallpapers registered in GNOME picker"
-    fi
-
-    # 18+ wallpapers XML (wallvault-wallpapers-18.xml)
     if [ "$count_18" -gt 0 ]; then
+      # Generate +18 XML
       local xml_18="$xml_dir/wallvault-wallpapers-18.xml"
       {
         echo '<?xml version="1.0" encoding="UTF-8"?>'
@@ -1532,16 +1483,79 @@ EOF
         echo '</wallpapers>'
       } | sudo tee "$xml_18" > /dev/null
       ok "Wallvault Wallpapers +18 registered in GNOME picker"
+
+      # Delete ALL stock XMLs except wallvault-wallpapers-18.xml
+      for sx in "$xml_dir"/*.xml; do
+        [ -f "$sx" ] || continue
+        [ "$sx" = "$xml_dir/wallvault-wallpapers-18.xml" ] && continue
+        sudo rm -f "$sx" 2>/dev/null || true
+      done
+      ok "Stock GNOME XMLs deleted"
+    fi
+  else
+    # ── NORMAL MODE ──────────────────────────────────────────
+    # Destroy +18 folder + XML (no cache left behind)
+    [ -d "$wp_18" ] && sudo rm -rf "$wp_18" 2>/dev/null
+    [ -f "$xml_dir/wallvault-wallpapers-18.xml" ] && sudo rm -f "$xml_dir/wallvault-wallpapers-18.xml" 2>/dev/null
+
+    # Destroy old normal folder so we start clean
+    [ -d "$wp_norm" ] && sudo rm -rf "$wp_norm" 2>/dev/null
+    sudo mkdir -p "$wp_norm"
+
+    # Copy desktop wallpapers (excluding Himeno — lives in ~/.local/share/backgrounds/)
+    if [ "${INSTALL_DESKTOP_WALLPAPER:-true}" = "true" ]; then
+      for img in "$wp/desktop/"*; do
+        [ -f "$img" ] || continue
+        bname="${img##*/}"
+        [ "$bname" = "Himeno Fedora.jpg" ] && continue
+        sudo cp "$img" "$wp_norm/" 2>/dev/null || true
+        count_norm=$((count_norm + 1))
+      done
     fi
 
-    # Delete ALL stock XMLs — keep only our two XMLs
-    for sx in "$xml_dir"/*.xml; do
-      [ -f "$sx" ] || continue
-      [ "$sx" = "$xml_dir/wallvault-wallpapers.xml" ] && continue
-      [ "$sx" = "$xml_dir/wallvault-wallpapers-18.xml" ] && continue
-      sudo rm -f "$sx" 2>/dev/null || true
+    # Copy all custom background images
+    for img in "$wp/background-normal/"*; do
+      [ -f "$img" ] || continue
+      sudo cp "$img" "$wp_norm/" 2>/dev/null || true
+      count_norm=$((count_norm + 1))
     done
-    ok "Stock GNOME XMLs deleted"
+
+    if [ "$count_norm" -gt 0 ]; then
+      ok "$count_norm wallpapers installed"
+
+      # Generate normal XML
+      local xml_norm="$xml_dir/wallvault-wallpapers.xml"
+      {
+        echo '<?xml version="1.0" encoding="UTF-8"?>'
+        echo '<!DOCTYPE wallpapers SYSTEM "gnome-wp-list.dtd">'
+        echo '<wallpapers>'
+        for img in "$wp_norm/"*; do
+          [ -f "$img" ] || continue
+          local bname; bname=$(basename "$img")
+          local bname_noext="${bname%.*}"
+          cat << EOF
+      <wallpaper deleted="false">
+          <name>${bname_noext}</name>
+          <filename>${img}</filename>
+          <options>zoom</options>
+          <shade_type>solid</shade_type>
+          <pcolor>#000000</pcolor>
+          <scolor>#000000</scolor>
+      </wallpaper>
+EOF
+        done
+        echo '</wallpapers>'
+      } | sudo tee "$xml_norm" > /dev/null
+      ok "Wallvault Wallpapers registered in GNOME picker"
+
+      # Delete ALL stock XMLs except wallvault-wallpapers.xml
+      for sx in "$xml_dir"/*.xml; do
+        [ -f "$sx" ] || continue
+        [ "$sx" = "$xml_dir/wallvault-wallpapers.xml" ] && continue
+        sudo rm -f "$sx" 2>/dev/null || true
+      done
+      ok "Stock GNOME XMLs deleted"
+    fi
   fi
 
   # Always copy Himeno Fedora.jpg to backgrounds dir (available in picker / for later use)
