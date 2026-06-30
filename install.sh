@@ -190,6 +190,10 @@ __system_dashboard() {
     gpu_info=$(lspci 2>/dev/null | grep -iE 'vga|3d|display' | sed 's/.*: //' | tr '\n' ' + ' | sed 's/ +$//')
   fi
   [ -z "$gpu_info" ] && gpu_info="Unknown GPU"
+  # Truncate to 50 chars so "  GPU:      ${gpu_info}" fits within 62-char box
+  if [ ${#gpu_info} -gt 50 ]; then
+    gpu_info="${gpu_info:0:47}..."
+  fi
 
   # ── RAM ──
   local ram_total="" ram_avail="" ram_used="" ram_pct=0 ram_bar=""
