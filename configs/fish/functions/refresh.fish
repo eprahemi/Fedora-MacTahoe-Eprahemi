@@ -14,6 +14,7 @@ function refresh --description 'Deep system refresh: cache, services, extensions
     set -l do_flatpak 0
     set -l do_pip 0
     set -l do_desktop 0
+    set -l do_icons 0
 
     if test (count $argv) -eq 0
         set do_all 1
@@ -29,6 +30,7 @@ function refresh --description 'Deep system refresh: cache, services, extensions
                 case -fp --flatpak; set do_flatpak 1
                 case -pip;         set do_pip 1
                 case -k --desktop; set do_desktop 1
+                case -i --icons;   set do_icons 1
                 case -h --help
                     echo -e "\033[1;36m"
                     echo "  ███████╗██████╗ ██████╗  █████╗ ██╗  ██╗███████╗███╗   ███╗██╗"
@@ -46,6 +48,7 @@ function refresh --description 'Deep system refresh: cache, services, extensions
                     echo -e "  \033[1;37mrefresh -e\033[0m        — cycle Dash-to-Dock extension"
                     echo -e "  \033[1;37mrefresh -d\033[0m        — flush DNS resolver cache"
                     echo -e "  \033[1;37mrefresh -k\033[0m        — refresh desktop app grid, icons, names"
+                    echo -e "  \033[1;37mrefresh -i\033[0m        — mirror Flatpak icons (GTK 512×512 bug fix)"
                     echo -e "  \033[1;37mrefresh -dnf\033[0m      — dnf clean all & autoremove"
                     echo -e "  \033[1;37mrefresh -fp\033[0m       — flatpak uninstall --unused"
                     echo -e "  \033[1;37mrefresh -pip\033[0m      — pip cache purge"
@@ -79,6 +82,7 @@ function refresh --description 'Deep system refresh: cache, services, extensions
         set do_flatpak 1
         set do_pip 1
         set do_desktop 1
+        set do_icons 1
         echo -e "  \033[1;34mMode: FULL SYSTEM REFRESH (full system)\033[0m\n"
     else
         echo -e "  \033[1;34mMode: SELECTIVE CLEANUP\033[0m\n"
@@ -98,6 +102,7 @@ function refresh --description 'Deep system refresh: cache, services, extensions
     if test $do_services -eq 1; set __rf_total (math $__rf_total + 4); end
     if test $do_extensions -eq 1; set __rf_total (math $__rf_total + 4); end
     if test $do_desktop -eq 1;  set __rf_total (math $__rf_total + 7); end
+    if test $do_icons -eq 1;    set __rf_total (math $__rf_total + 1); end
 
     function __refresh_anim
         set -l label $argv[1]
@@ -147,6 +152,48 @@ function refresh --description 'Deep system refresh: cache, services, extensions
     if test $do_flatpak -eq 1
         __refresh_section "FLATPAK CLEANUP"
         __refresh_anim "Unused runtimes" "flatpak uninstall --unused -y 2>/dev/null"
+    end
+
+    if test $do_icons -eq 1
+        __refresh_section "FLATPAK ICON MIRROR"
+        __refresh_anim "Mirror 512×512 icons" "
+            set -l flatpak_h /var/lib/flatpak/exports/share/icons/hicolor;
+            set -l user_h ~/.local/share/icons/hicolor;
+            set -l user_48 \$user_h/48x48/apps;
+            if not test -d \"\$flatpak_h\"; exit 0; end;
+            mkdir -p \$user_48;
+            if not test -f \$user_h/index.theme;
+                echo '[Icon Theme]
+Name=Hicolor
+Comment=Local overrides
+Hidden=true
+Directories=256x256/apps,48x48/apps
+
+[48x48/apps]
+Size=48
+Context=Applications
+Type=Fixed' >\$user_h/index.theme;
+            end;
+            for f in (find \$flatpak_h -name '*.png' -o -name '*.svg' 2>/dev/null);
+                set name (basename \$f);
+                set noext (string replace -r '\.[^.]+$' '' \$name);
+                if test -f ~/.local/share/icons/MacTahoe-dark/\$name -o -f ~/.local/share/icons/MacTahoe-dark/\$noext.svg; continue; end;
+                if test -f \$user_h/48x48/apps/\$name -o -f \$user_h/48x48/apps/\$noext.svg; continue; end;
+                set ext (string match -r '\.([^.]+)$' \$name)[2];
+                if test \"\$ext\" = svg;
+                    mkdir -p \$user_h/scalable/apps;
+                    ln -sf \$f \$user_h/scalable/apps/\$name ^/dev/null; or cp -f \$f \$user_h/scalable/apps/\$name ^/dev/null;
+                else;
+                    set best '';
+                    for sz in 48x48 64x64 128x128 256x256 512x512;
+                        if test -f \$flatpak_h/\$sz/apps/\$name; set best \$flatpak_h/\$sz/apps/\$name; break; end;
+                    end;
+                    if test -z \"\$best\"; continue; end;
+                    ln -sf \$best \$user_48/\$name ^/dev/null; or cp -f \$best \$user_48/\$name ^/dev/null;
+                end;
+            end;
+            gtk-update-icon-cache ~/.local/share/icons/hicolor/ ^/dev/null 2>/dev/null;
+        "
     end
 
     if test $do_pip -eq 1
