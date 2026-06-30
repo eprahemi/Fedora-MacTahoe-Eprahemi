@@ -670,6 +670,9 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
         set need_mb (math "$need_mb * 2" 2>/dev/null)
         set -l avail_mb (math (df --output=avail "$test_file" 2>/dev/null | tail -1) / 1024 2>/dev/null)
 
+        # Pre-declare result variables so they survive the if/else block
+        set write_mb ""; set read_mb ""; set iow_iops ""
+
         if test -n "$avail_mb"; and test "$avail_mb" -lt "$need_mb"
             echo -e "  $GY│$C  $YE⚠️  Low disk space: $avail_mb MB free, need ~$need_mb MB. Skipping benchmarks.$C"
             set write_mb "N/A"
@@ -681,7 +684,7 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
             set -l write_res (dd if=/dev/zero of=$test_file bs=$seq_bs count=$seq_count oflag=dsync 2>&1 | grep -oE '[0-9.]+ [MG]B/s' | tail -1)
             set -l write_val (echo $write_res | awk '{print $1}')
             set -l write_unit (echo $write_res | awk '{print $2}')
-            set -l write_mb $write_val
+            set write_mb $write_val
             if test "$write_unit" = "GB/s"
                 set write_mb (math "$write_val * 1024" 2>/dev/null; or echo $write_val)
             end
@@ -692,7 +695,7 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
             set -l read_res (dd if=$test_file of=/dev/null bs=$seq_bs count=$seq_count 2>&1 | grep -oE '[0-9.]+ [MG]B/s' | tail -1)
             set -l read_val (echo $read_res | awk '{print $1}')
             set -l read_unit (echo $read_res | awk '{print $2}')
-            set -l read_mb $read_val
+            set read_mb $read_val
             if test "$read_unit" = "GB/s"
                 set read_mb (math "$read_val * 1024" 2>/dev/null; or echo $read_val)
             end
@@ -700,10 +703,10 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
             # Random 4K Write IOPS
             echo -e "  $GY│$C  $D  Random 4K Write (IOPS)...$C"
             set -l iow_res (dd if=/dev/zero of=$test_file bs=4k count=$iow_count oflag=dsync 2>&1 | tail -1)
-            set -l iow_iops "N/A"
+            set iow_iops "N/A"
             if string match -q "*bytes*" "$iow_res"
                 set -l iow_time (echo $iow_res | awk '{print $6}')
-                set -l iow_iops (math "$iow_count / $iow_time" 2>/dev/null; or echo "N/A")
+                set iow_iops (math "$iow_count / $iow_time" 2>/dev/null; or echo "N/A")
             end
         end
 
