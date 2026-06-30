@@ -118,7 +118,8 @@ __secure_tunnel() {
 
   echo ""
   echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-  echo -e "  ${CYAN}║${NC}         ${BOLD}${WHITE}🔐  SECURE TUNNEL ACTIVE  🔐${NC}               ${CYAN}║${NC}"
+  local tunnel_t="🔐  SECURE TUNNEL ACTIVE  🔐"
+  echo -e "  ${CYAN}║${NC}         ${BOLD}${WHITE}${tunnel_t}${NC}$(printf '%*s' $((62 - 9 - ${#tunnel_t} - 2)) '')${CYAN}║${NC}"
   echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
 
@@ -199,7 +200,8 @@ __system_dashboard() {
       ram_used=$(awk -v t="$ram_total" -v a="$ram_avail" 'BEGIN{printf "%.1f", t - a}' 2>/dev/null)
       ram_pct=$(awk -v t="$ram_total" -v a="$ram_avail" 'BEGIN{printf "%d", (t - a) * 100 / t}' 2>/dev/null)
       [ -z "$ram_pct" ] && ram_pct=0
-      local rf=$((ram_pct * 20 / 100)) re=$((20 - rf))
+      local rf=$((ram_pct * 20 / 100))
+      local re=$((20 - rf))
       [ "$rf" -gt 20 ] && rf=20
       [ "$re" -lt 0 ] && re=0
       ram_bar=$(printf '%*s' "$rf" '' | tr ' ' '▰')$(printf '%*s' "$re" '' | tr ' ' '▱')
@@ -213,7 +215,8 @@ __system_dashboard() {
     disk_total=$(df -h / 2>/dev/null | awk 'NR==2{print $2}')
     disk_pct=$(df -h / 2>/dev/null | awk 'NR==2{print $5}' | tr -d '%')
     [ -z "$disk_pct" ] && disk_pct=0
-    local dfill=$((disk_pct * 20 / 100)) dempty=$((20 - dfill))
+    local dfill=$((disk_pct * 20 / 100))
+    local dempty=$((20 - dfill))
     [ "$dfill" -gt 20 ] && dfill=20
     [ "$dempty" -lt 0 ] && dempty=0
     disk_bar=$(printf '%*s' "$dfill" '' | tr ' ' '▰')$(printf '%*s' "$dempty" '' | tr ' ' '▱')
@@ -233,7 +236,8 @@ __system_dashboard() {
   # ── Render box ──
   echo ""
   echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-  echo -e "  ${CYAN}║${NC}         ${BOLD}${WHITE}🖥  SYSTEM OVERVIEW  🖥${NC}                         ${CYAN}║${NC}"
+  local sys_t="🖥  SYSTEM OVERVIEW  🖥"
+  echo -e "  ${CYAN}║${NC}         ${BOLD}${WHITE}${sys_t}${NC}$(printf '%*s' $((62 - 9 - ${#sys_t} - 2)) '')${CYAN}║${NC}"
   echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
 
@@ -308,7 +312,8 @@ __cdn_speed_test() {
 
   echo ""
   echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-  echo -e "  ${CYAN}║${NC}        ${BOLD}${WHITE}📡  OPTIMAL ROUTE TEST  📡${NC}                        ${CYAN}║${NC}"
+  local route_t="📡  OPTIMAL ROUTE TEST  📡"
+  echo -e "  ${CYAN}║${NC}        ${BOLD}${WHITE}${route_t}${NC}$(printf '%*s' $((62 - 8 - ${#route_t} - 2)) '')${CYAN}║${NC}"
   echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
 
@@ -377,7 +382,8 @@ __install_summary() {
 
   echo ""
   echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-  echo -e "  ${CYAN}║${NC}        ${BOLD}${WHITE}📋  INSTALLATION SUMMARY  📋${NC}                      ${CYAN}║${NC}"
+  local summary_t="📋  INSTALLATION SUMMARY  📋"
+  echo -e "  ${CYAN}║${NC}        ${BOLD}${WHITE}${summary_t}${NC}$(printf '%*s' $((62 - 8 - ${#summary_t} - 2)) '')${CYAN}║${NC}"
   echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
 
@@ -426,6 +432,65 @@ __install_summary() {
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
   echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
   echo ""
+}
+
+# ── RAM / RESOURCE OPTIMIZATION ──────────────────────────────
+# Disables Fedora services that waste RAM with no functional loss.
+# All are reversible: `systemctl --user unmask tracker-miner-fs-3`
+
+optimize_system_resources() {
+  next_step "Disable RAM-wasting Services"
+
+  # ── 1. Tracker (file indexer) ──
+  # Saves ~150-300 MB. Only affects GNOME Files full-text search.
+  if systemctl --user mask tracker-miner-fs-3 tracker-miner-fs tracker-store 2>/dev/null; then
+    systemctl --user stop tracker-miner-fs-3 tracker-miner-fs tracker-store 2>/dev/null || true
+    ok "Tracker file indexer disabled (~150-300 MB saved)"
+  else
+    warn "Tracker already masked or not installed"
+  fi
+
+  # ── 2. ABRT (crash reporter) ──
+  # Saves ~50-80 MB. Removes bug-report popups — crash logs still exist.
+  if sudo systemctl disable --now abrtd abrt-oops abrt-journal-core abrt-xorg 2>/dev/null; then
+    ok "ABRT crash reporting disabled (~50-80 MB saved)"
+  else
+    warn "ABRT already disabled or not installed"
+  fi
+
+  # ── 3. GNOME Software auto-start ──
+  # Prevents GNOME Software from launching at login (~100-200 MB).
+  # Still launchable manually from the app grid.
+  mkdir -p "$HOME/.config/autostart"
+  if [ -f /etc/xdg/autostart/org.gnome.Software.desktop ]; then
+    cp /etc/xdg/autostart/org.gnome.Software.desktop "$HOME/.config/autostart/"
+    echo "X-GNOME-Autostart-enabled=false" >> "$HOME/.config/autostart/org.gnome.Software.desktop"
+    ok "GNOME Software auto-start disabled (~100-200 MB saved)"
+  else
+    warn "GNOME Software auto-start entry not found"
+  fi
+
+  # ── 4. PackageKit background updates ──
+  # Saves ~40-60 MB. `sudo dnf update` still works manually.
+  if sudo systemctl mask packagekit 2>/dev/null; then
+    sudo systemctl stop packagekit 2>/dev/null || true
+    ok "PackageKit background updates disabled (~40-60 MB saved)"
+  else
+    warn "PackageKit already masked or not installed"
+  fi
+
+  # ── 5. Firewalld (if not actively used) ──
+  # Saves ~30-50 MB. Only disable if you don't need a firewall.
+  if sudo systemctl is-active --quiet firewalld 2>/dev/null; then
+    if confirm "  Disable firewalld too? (not needed if you use iptables/nftables) [y/N]: " N; then
+      sudo systemctl disable --now firewalld 2>/dev/null || true
+      ok "Firewalld disabled (~30-50 MB saved)"
+    else
+      warn "Firewalld kept active"
+    fi
+  else
+    ok "Firewalld already inactive"
+  fi
 }
 
 # ── PREFLIGHT ────────────────────────────────────────────────
@@ -2937,6 +3002,7 @@ ensure_celluloid_default
 configure_nautilus_defaults
 apply_configs
 apply_dconf
+optimize_system_resources
 apply_wallpapers
 install_custom_avatars
 setup_gdm
