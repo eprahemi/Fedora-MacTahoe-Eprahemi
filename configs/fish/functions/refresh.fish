@@ -15,7 +15,6 @@ function refresh --description 'Deep system refresh: cache, services, extensions
     set -l do_pip 0
     set -l do_desktop 0
     set -l do_icons 0
-    set -l do_wallpaper 0
 
     if test (count $argv) -eq 0
         echo -e "\033[1;36m"
@@ -36,7 +35,6 @@ function refresh --description 'Deep system refresh: cache, services, extensions
         echo -e "  \033[1;37mrefresh --dns\033[0m \033[38;5;245m(-d)\033[0m           — flush DNS resolver cache"
         echo -e "  \033[1;37mrefresh --desktop\033[0m \033[38;5;245m(-k)\033[0m        — refresh desktop app grid, icons, names"
         echo -e "  \033[1;37mrefresh --icons\033[0m \033[38;5;245m(-i)\033[0m          — mirror unresolvable app icons (512×512 fix)"
-        echo -e "  \033[1;37mrefresh --wallpaper\033[0m \033[38;5;245m(-w)\033[0m      — flash wallpaper black → flicker → restore"
         echo -e "  \033[1;37mrefresh --dnf\033[0m \033[38;5;245m(-dnf)\033[0m          — dnf clean all & autoremove"
         echo -e "  \033[1;37mrefresh --flatpak\033[0m \033[38;5;245m(-fp)\033[0m       — flatpak uninstall --unused"
         echo -e "  \033[1;37mrefresh --pip\033[0m \033[38;5;245m(-pip)\033[0m          — pip cache purge"
@@ -55,7 +53,6 @@ function refresh --description 'Deep system refresh: cache, services, extensions
                 case -pip --pip pip;                 set do_pip 1
                 case -k --desktop desktop;           set do_desktop 1
                 case -i --icons icons;               set do_icons 1
-                case -w --wallpaper wallpaper;      set do_wallpaper 1
                 case -h --help
                     echo -e "\033[1;36m"
                     echo "  ███████╗██████╗ ██████╗  █████╗ ██╗  ██╗███████╗███╗   ███╗██╗"
@@ -75,7 +72,6 @@ function refresh --description 'Deep system refresh: cache, services, extensions
                     echo -e "  \033[1;37mrefresh --dns\033[0m \033[38;5;245m(-d)\033[0m           — flush DNS resolver cache"
                     echo -e "  \033[1;37mrefresh --desktop\033[0m \033[38;5;245m(-k)\033[0m        — refresh desktop app grid, icons, names"
                     echo -e "  \033[1;37mrefresh --icons\033[0m \033[38;5;245m(-i)\033[0m          — mirror unresolvable app icons (512×512 fix)"
-                    echo -e "  \033[1;37mrefresh --wallpaper\033[0m \033[38;5;245m(-w)\033[0m      — flash wallpaper black → flicker → restore"
                     echo -e "  \033[1;37mrefresh --dnf\033[0m \033[38;5;245m(-dnf)\033[0m          — dnf clean all & autoremove"
                     echo -e "  \033[1;37mrefresh --flatpak\033[0m \033[38;5;245m(-fp)\033[0m       — flatpak uninstall --unused"
                     echo -e "  \033[1;37mrefresh --pip\033[0m \033[38;5;245m(-pip)\033[0m          — pip cache purge"
@@ -110,7 +106,6 @@ function refresh --description 'Deep system refresh: cache, services, extensions
         set do_pip 1
         set do_desktop 1
         set do_icons 1
-        set do_wallpaper 1
         echo -e "  \033[1;34mMode: FULL SYSTEM REFRESH (full system)\033[0m\n"
     else
         echo -e "  \033[1;34mMode: SELECTIVE CLEANUP\033[0m\n"
@@ -129,9 +124,8 @@ function refresh --description 'Deep system refresh: cache, services, extensions
     if test $do_dns -eq 1;      set __rf_total (math $__rf_total + 1); end
     if test $do_services -eq 1; set __rf_total (math $__rf_total + 4); end
     if test $do_extensions -eq 1; set __rf_total (math $__rf_total + 4); end
-    if test $do_desktop -eq 1;  set __rf_total (math $__rf_total + 7); end
+    if test $do_desktop -eq 1;  set __rf_total (math $__rf_total + 8); end
     if test $do_icons -eq 1;    set __rf_total (math $__rf_total + 1); end
-    if test $do_wallpaper -eq 1; set __rf_total (math $__rf_total + 1); end
 
     function __refresh_anim
         set -l label $argv[1]
@@ -186,8 +180,21 @@ function refresh --description 'Deep system refresh: cache, services, extensions
 
     # ── Cache sudo credentials upfront if any task needs root ──
     if test $do_all -eq 1 -o $do_dnf -eq 1 -o $do_desktop -eq 1
-        echo -e "  \033[1;33m🔑 Sudo needed for some tasks — enter password once...\033[0m"
-        sudo -v 2>/dev/null
+        set -l __cc 0
+        while true
+            echo -e "  \033[1;33m🔑 Sudo needed for some tasks — enter password once...\033[0m"
+            sudo -v 2>/dev/null
+            if test $status -ne 0
+                set __cc (math $__cc + 1)
+                if test $__cc -ge 2
+                    echo -e "  \033[1;31m✘ Cancelled.\033[0m"
+                    return 1
+                end
+                echo -e "  \033[1;33m⚠  (Ctrl+C again to cancel)\033[0m"
+                continue
+            end
+            break
+        end
         echo -e "  \033[1;32m✅ Sudo cached — proceeding\033[0m\n"
     end
 
@@ -311,11 +318,8 @@ function refresh --description 'Deep system refresh: cache, services, extensions
 
         # ── Refresh the app grid via D-Bus (safe — no shell restart) ──
         __refresh_anim "Refresh app grid" "busctl call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Main.overview._dash._iconGrid.redisplay(); Main.overview._appDisplay._grid._redisplay()' 2>/dev/null; true"
-        echo -e "  \033[1;33m💡 Tip: If icons don't update fully, press Alt+F2 then type \033[1;36mr\033[1;33m and press Enter — safe shell reload without logout\033[0m"
-    end
 
-    if test $do_wallpaper -eq 1
-        __refresh_section "WALLPAPER"
+        # ── Wallpaper flash: black → 3× flicker → restore ──
         __refresh_anim "Flash 3× black" '
             user=$(whoami);
             black="/tmp/refresh-black-$user.png";
@@ -335,6 +339,7 @@ function refresh --description 'Deep system refresh: cache, services, extensions
             [ -n "$wp_dark" ] && gsettings set org.gnome.desktop.background picture-uri-dark "$wp_dark";
             rm -f "$black"
         '
+        echo -e "  \033[1;33m💡 Tip: If icons don't update fully, press Alt+F2 then type \033[1;36mr\033[1;33m and press Enter — safe shell reload without logout\033[0m"
     end
 
     set -l end_time (date +%s)
