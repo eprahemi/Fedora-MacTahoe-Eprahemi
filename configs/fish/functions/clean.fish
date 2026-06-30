@@ -17,6 +17,24 @@ function clean --description 'DNF + pip cleanup. Flags: --all, --pip, --dry-run'
                 return 0
 
             case --all -a
+                # ── Sudo check (passwordless = skip, otherwise double Ctrl+C to cancel) ──
+                if not sudo -n true 2>/dev/null
+                    set -l __cc 0
+                    while true
+                        echo -e "  \033[1;33m🔑 Sudo needed — enter password once...\033[0m"
+                        sudo -v 2>/dev/null
+                        if test $status -ne 0
+                            set __cc (math $__cc + 1)
+                            if test $__cc -ge 2
+                                echo -e "  \033[1;31m✘ Cancelled.\033[0m"
+                                return 1
+                            end
+                            echo -e "  \033[1;33m⚠  (Ctrl+C again to cancel)\033[0m"
+                            continue
+                        end
+                        break
+                    end
+                end
                 echo -e "\033[1;36m"
                 echo "  ███████╗██████╗ ██████╗  █████╗ ██╗  ██╗███████╗███╗   ███╗██╗"
                 echo "  ██╔════╝██╔══██╗██╔══██╗██╔══██╗██║  ██║██╔════╝████╗ ████║██║"
@@ -80,6 +98,24 @@ function clean --description 'DNF + pip cleanup. Flags: --all, --pip, --dry-run'
     end
 
     # Default: standard DNF cleanup
+    # ── Sudo check (passwordless = skip, otherwise double Ctrl+C to cancel) ──
+    if not sudo -n true 2>/dev/null
+        set -l __cc 0
+        while true
+            echo -e "  \033[1;33m🔑 Sudo needed — enter password once...\033[0m"
+            sudo -v 2>/dev/null
+            if test $status -ne 0
+                set __cc (math $__cc + 1)
+                if test $__cc -ge 2
+                    echo -e "  \033[1;31m✘ Cancelled.\033[0m"
+                    return 1
+                end
+                echo -e "  \033[1;33m⚠  (Ctrl+C again to cancel)\033[0m"
+                continue
+            end
+            break
+        end
+    end
     echo -e "\033[1;36m"
     echo "  ███████╗██████╗ ██████╗  █████╗ ██╗  ██╗███████╗███╗   ███╗██╗"
     echo "  ██╔════╝██╔══██╗██╔══██╗██╔══██╗██║  ██║██╔════╝████╗ ████║██║"

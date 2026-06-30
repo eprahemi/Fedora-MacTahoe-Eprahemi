@@ -1226,7 +1226,23 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
         echo ""
 
         # Cache sudo upfront for the whole suite
-        sudo -v 2>/dev/null
+        if not sudo -n true 2>/dev/null
+            set -l __cc 0
+            while true
+                echo -e "  \033[1;33m🔑 Sudo needed — enter password once...\033[0m"
+                sudo -v 2>/dev/null
+                if test $status -ne 0
+                    set __cc (math $__cc + 1)
+                    if test $__cc -ge 2
+                        echo -e "  \033[1;31m✘ Cancelled.\033[0m"
+                        return 1
+                    end
+                    echo -e "  \033[1;33m⚠  (Ctrl+C again to cancel)\033[0m"
+                    continue
+                end
+                break
+            end
+        end
 
         # ── Collect scores ──
         set -g __td_s_cpu_model ""
@@ -1329,7 +1345,23 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
     # MODULE: info
     # ════════════════════════════════════════════════════════════════
     if test "$module" = "info"
-        sudo -v 2>/dev/null
+        if not sudo -n true 2>/dev/null
+            set -l __cc 0
+            while true
+                echo -e "  \033[1;33m🔑 Sudo needed — enter password once...\033[0m"
+                sudo -v 2>/dev/null
+                if test $status -ne 0
+                    set __cc (math $__cc + 1)
+                    if test $__cc -ge 2
+                        echo -e "  \033[1;31m✘ Cancelled.\033[0m"
+                        return 1
+                    end
+                    echo -e "  \033[1;33m⚠  (Ctrl+C again to cancel)\033[0m"
+                    continue
+                end
+                break
+            end
+        end
         __td_section "🖥️" "SYSTEM BLUEPRINT" "$B$WH Complete hardware, software & network inventory$C"
         __td_report_info_block
         __td_section_end
