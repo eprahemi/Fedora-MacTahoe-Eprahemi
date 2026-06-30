@@ -319,8 +319,8 @@ function refresh --description 'Deep system refresh: cache, services, extensions
         # ── Refresh the app grid via D-Bus (safe — no shell restart) ──
         __refresh_anim "Refresh app grid" "busctl call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Main.overview._dash._iconGrid.redisplay(); Main.overview._appDisplay._grid._redisplay()' 2>/dev/null; true"
 
-        # ── Wallpaper flash: black → 3× flicker → restore ──
-        __refresh_anim "Flash 3× black" '
+        # ── Wallpaper flash: black → random 3-7× flicker → restore ──
+        __refresh_anim "Flash wallpaper" '
             user=$(whoami);
             black="/tmp/refresh-black-$user.png";
             [ -f "$black" ] || magick -size 1x1 xc:black "$black" 2>/dev/null;
@@ -329,11 +329,12 @@ function refresh --description 'Deep system refresh: cache, services, extensions
             gsettings set org.gnome.desktop.background picture-uri "'"'"'file://$black'"'"'";
             [ -n "$wp_dark" ] && gsettings set org.gnome.desktop.background picture-uri-dark "'"'"'file://$black'"'"'";
             sleep 3;
-            for i in 1 2 3; do
+            count=$(shuf -i 3-7 -n 1);
+            for i in $(seq $count); do
                 gsettings set org.gnome.desktop.background picture-uri "$wp_light";
-                sleep 0.12;
+                sleep 0.3;
                 gsettings set org.gnome.desktop.background picture-uri "'"'"'file://$black'"'"'";
-                sleep 0.12;
+                sleep 0.3;
             done;
             gsettings set org.gnome.desktop.background picture-uri "$wp_light";
             [ -n "$wp_dark" ] && gsettings set org.gnome.desktop.background picture-uri-dark "$wp_dark";
