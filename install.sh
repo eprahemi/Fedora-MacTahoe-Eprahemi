@@ -1423,9 +1423,12 @@ apply_wallpapers() {
   local count_18=0
 
   # Copy desktop wallpaper (optional) → normal folder
+  # (Himeno Fedora.jpg is excluded — lives in ~/.local/share/backgrounds/)
   if [ "${INSTALL_DESKTOP_WALLPAPER:-true}" = "true" ]; then
     for img in "$wp/desktop/"*; do
       [ -f "$img" ] || continue
+      bname="${img##*/}"
+      [ "$bname" = "Himeno Fedora.jpg" ] && continue
       sudo cp "$img" "$wp_norm/" 2>/dev/null || true
       count_norm=$((count_norm + 1))
     done
