@@ -132,9 +132,15 @@ function refresh --description 'Deep system refresh: cache, services, extensions
         set -l cmd $argv[2]
         set __rf_current (math $__rf_current + 1)
 
-        sh -c "$cmd" 2>/dev/null &
+        # Temp files for stderr and exit code
+        set -l errfile (mktemp -t refresh-err-XXXXXXXXXX 2>/dev/null)
+        set -l exitfile (mktemp -t refresh-exit-XXXXXXXXXX 2>/dev/null)
+
+        # Start command in background; write exit code to exitfile when done
+        sh -c "($cmd) 2>\"$errfile\"; echo \$? > \"$exitfile\"" &
         set -l pid $last_pid
 
+        # Spinner while command is running
         set -l i 1
         while kill -0 $pid 2>/dev/null
             printf "\r  \033[1;37m⏳ \033[1;36m%s\033[1;37m... \033[1;33m%s  \033[1;31m[%d/%d]\033[0m" "$label" $__rf_frames[$i] $__rf_current $__rf_total
@@ -142,7 +148,29 @@ function refresh --description 'Deep system refresh: cache, services, extensions
             sleep 0.06
         end
         wait $pid 2>/dev/null
-        printf "\r  \033[1;37m⏳ \033[1;36m%s\033[1;37m... \033[1;32m✅  \033[1;31m[%d/%d]\033[0m\n" "$label" $__rf_current $__rf_total
+
+        # Read exit code from file
+        set -l exit_code 1
+        if test -f "$exitfile" -a -s "$exitfile"
+            set exit_code (cat "$exitfile" 2>/dev/null)
+        end
+
+        if test "$exit_code" = "0"
+            printf "\r  \033[1;37m⏳ \033[1;36m%s\033[1;37m... \033[1;32m✅  \033[1;31m[%d/%d]\033[0m\n" "$label" $__rf_current $__rf_total
+        else
+            printf "\r  \033[1;37m⏳ \033[1;36m%s\033[1;37m... \033[1;31m❌  \033[1;31m[%d/%d]\033[0m\n" "$label" $__rf_current $__rf_total
+            # Show first 3 lines of stderr in red
+            if test -s "$errfile"
+                for line in (head -3 "$errfile" 2>/dev/null)
+                    echo -e "  \033[1;31m✘ $line\033[0m"
+                end
+            end
+            if test (wc -l <"$errfile" 2>/dev/null) -gt 3
+                echo -e "  \033[38;5;244m  (... and more — check the command output)\033[0m"
+            end
+        end
+
+        rm -f "$errfile" "$exitfile" 2>/dev/null
     end
 
     function __refresh_section
@@ -231,21 +259,21 @@ function refresh --description 'Deep system refresh: cache, services, extensions
 
     if test $do_services -eq 1
         __refresh_section "SERVICES"
-        __refresh_anim "Restart Nautilus"        "nautilus -q 2>/dev/null"
-        __refresh_anim "Kill portal daemon"     "killall xdg-desktop-portal 2>/dev/null"
+        __refresh_anim "Restart Nautilus"        "nautilus -q 2>/dev/null; true"
+        __refresh_anim "Kill portal daemon"     "killall xdg-desktop-portal 2>/dev/null; true"
         __refresh_anim "Restart portal daemon"  "nohup /usr/libexec/xdg-desktop-portal >/dev/null 2>&1 &"
-        __refresh_anim "GPU display buffer"     "busctl call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Main.layoutManager._updateHotCorners();' 2>/dev/null"
+        __refresh_anim "GPU display buffer"     "busctl call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Main.layoutManager._updateHotCorners();' 2>/dev/null; true"
     end
 
     if test $do_extensions -eq 1
         __refresh_section "EXTENSIONS"
-        __refresh_anim "Disable Dash-to-Dock" "gnome-extensions disable dash-to-dock@micxgx.gmail.com 2>/dev/null"
+        __refresh_anim "Disable Dash-to-Dock" "gnome-extensions disable dash-to-dock@micxgx.gmail.com 2>/dev/null; true"
         sleep 0.3
-        __refresh_anim "Enable Dash-to-Dock"  "gnome-extensions enable dash-to-dock@micxgx.gmail.com 2>/dev/null"
+        __refresh_anim "Enable Dash-to-Dock"  "gnome-extensions enable dash-to-dock@micxgx.gmail.com 2>/dev/null; true"
         sleep 0.3
-        __refresh_anim "Disable User Themes"  "gnome-extensions disable user-theme@gnome-shell-extensions.gcampax.github.com 2>/dev/null"
+        __refresh_anim "Disable User Themes"  "gnome-extensions disable user-theme@gnome-shell-extensions.gcampax.github.com 2>/dev/null; true"
         sleep 0.3
-        __refresh_anim "Enable User Themes"   "gnome-extensions enable user-theme@gnome-shell-extensions.gcampax.github.com 2>/dev/null"
+        __refresh_anim "Enable User Themes"   "gnome-extensions enable user-theme@gnome-shell-extensions.gcampax.github.com 2>/dev/null; true"
     end
 
     if test $do_desktop -eq 1
