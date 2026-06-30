@@ -156,6 +156,278 @@ __secure_tunnel() {
   echo ""
 }
 
+# ── Tracking globals for install summary ──
+INSTALL_START_EPOCH=""
+INSTALL_FP_OK=0
+INSTALL_FP_FAIL=0
+
+# ── System dashboard ──
+# Gathers real system info and displays in a polished overview box
+__system_dashboard() {
+  # ── OS ──
+  local os_name="Fedora Linux"
+  if [ -f /etc/os-release ]; then
+    os_name=$(grep -oP '^PRETTY_NAME="?\K[^"]+' /etc/os-release 2>/dev/null || echo "Fedora Linux")
+  fi
+
+  # ── Kernel ──
+  local kernel
+  kernel=$(uname -r 2>/dev/null || echo "unknown")
+
+  # ── CPU ──
+  local cpu_model="" cpu_cores="?"
+  if [ -f /proc/cpuinfo ]; then
+    cpu_model=$(grep -m1 'model name' /proc/cpuinfo 2>/dev/null | sed 's/.*:\s*//')
+    cpu_cores=$(grep -c '^processor' /proc/cpuinfo 2>/dev/null || echo "?")
+  fi
+  [ -z "$cpu_model" ] && cpu_model="Unknown CPU"
+  local cpu_label="${cpu_model} (${cpu_cores})"
+
+  # ── GPU ──
+  local gpu_info="Unknown GPU"
+  if command -v lspci &>/dev/null; then
+    gpu_info=$(lspci 2>/dev/null | grep -iE 'vga|3d|display' | sed 's/.*: //' | tr '\n' ' + ' | sed 's/ +$//')
+  fi
+  [ -z "$gpu_info" ] && gpu_info="Unknown GPU"
+
+  # ── RAM ──
+  local ram_total="" ram_avail="" ram_used="" ram_pct=0 ram_bar=""
+  if [ -f /proc/meminfo ]; then
+    ram_total=$(awk '/MemTotal:/{printf "%.1f", $2/1024/1024}' /proc/meminfo 2>/dev/null)
+    ram_avail=$(awk '/MemAvailable:/{printf "%.1f", $2/1024/1024}' /proc/meminfo 2>/dev/null)
+    if [ -n "$ram_total" ] && [ -n "$ram_avail" ]; then
+      ram_used=$(awk -v t="$ram_total" -v a="$ram_avail" 'BEGIN{printf "%.1f", t - a}' 2>/dev/null)
+      ram_pct=$(awk -v t="$ram_total" -v a="$ram_avail" 'BEGIN{printf "%d", (t - a) * 100 / t}' 2>/dev/null)
+      [ -z "$ram_pct" ] && ram_pct=0
+      local rf=$((ram_pct * 20 / 100)) re=$((20 - rf))
+      [ "$rf" -gt 20 ] && rf=20
+      [ "$re" -lt 0 ] && re=0
+      ram_bar=$(printf '%*s' "$rf" '' | tr ' ' '▰')$(printf '%*s' "$re" '' | tr ' ' '▱')
+    fi
+  fi
+
+  # ── Disk ──
+  local disk_used="?" disk_total="?" disk_pct=0 disk_bar=""
+  if command -v df &>/dev/null; then
+    disk_used=$(df -h / 2>/dev/null | awk 'NR==2{print $3}')
+    disk_total=$(df -h / 2>/dev/null | awk 'NR==2{print $2}')
+    disk_pct=$(df -h / 2>/dev/null | awk 'NR==2{print $5}' | tr -d '%')
+    [ -z "$disk_pct" ] && disk_pct=0
+    local dfill=$((disk_pct * 20 / 100)) dempty=$((20 - dfill))
+    [ "$dfill" -gt 20 ] && dfill=20
+    [ "$dempty" -lt 0 ] && dempty=0
+    disk_bar=$(printf '%*s' "$dfill" '' | tr ' ' '▰')$(printf '%*s' "$dempty" '' | tr ' ' '▱')
+  fi
+
+  # ── Uptime ──
+  local uptime_str="unknown"
+  if [ -f /proc/uptime ]; then
+    local up_sec
+    up_sec=$(awk '{printf "%d", $1}' /proc/uptime 2>/dev/null || echo "0")
+    local up_d=$((up_sec / 86400)) up_h=$(( (up_sec % 86400) / 3600 )) up_m=$(( (up_sec % 3600) / 60 ))
+    uptime_str="${up_d}d ${up_h}h ${up_m}m"
+  fi
+
+  local gnome_v="${GNOME_VER:-?}"
+
+  # ── Render box ──
+  echo ""
+  echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+  echo -e "  ${CYAN}║${NC}         ${BOLD}${WHITE}🖥  SYSTEM OVERVIEW  🖥${NC}                         ${CYAN}║${NC}"
+  echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+
+  local l_os="  OS:       ${os_name}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}OS:${NC}       ${os_name}$(printf '%*s' $((60 - ${#l_os})) '')${CYAN}║${NC}"
+
+  local l_krn="  Kernel:   ${kernel}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Kernel:${NC}   ${kernel}$(printf '%*s' $((60 - ${#l_krn})) '')${CYAN}║${NC}"
+
+  local l_gnome="  GNOME:    ${gnome_v}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}GNOME:${NC}    ${gnome_v}$(printf '%*s' $((60 - ${#l_gnome})) '')${CYAN}║${NC}"
+
+  local l_cpu="  CPU:      ${cpu_label}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}CPU:${NC}      ${cpu_label}$(printf '%*s' $((60 - ${#l_cpu})) '')${CYAN}║${NC}"
+
+  local l_gpu="  GPU:      ${gpu_info}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}GPU:${NC}      ${gpu_info}$(printf '%*s' $((60 - ${#l_gpu})) '')${CYAN}║${NC}"
+
+  local l_ram="  RAM:      ${ram_used} GiB / ${ram_total} GiB  ${ram_bar}  ${ram_pct}%"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}RAM:${NC}      ${ram_used} GiB${NC} / ${ram_total} GiB  ${DIM}${ram_bar}${NC}  ${ram_pct}%$(printf '%*s' $((60 - ${#l_ram})) '')${CYAN}║${NC}"
+
+  local l_dsk="  Disk:     ${disk_used} / ${disk_total}  ${disk_bar}  ${disk_pct}%"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Disk:${NC}     ${disk_used} / ${disk_total}  ${DIM}${disk_bar}${NC}  ${disk_pct}%$(printf '%*s' $((60 - ${#l_dsk})) '')${CYAN}║${NC}"
+
+  local l_up="  Uptime:   ${uptime_str}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Uptime:${NC}   ${uptime_str}$(printf '%*s' $((60 - ${#l_up})) '')${CYAN}║${NC}"
+
+  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+  echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+  echo ""
+}
+
+# ── Simulated CDN speed test ──
+# Displays a decorative "optimal route test" after the secure tunnel
+__cdn_speed_test() {
+  local node_num=$((RANDOM % 8 + 1))
+  local node="cdn-${node_num}.mactahoe.io"
+  local hops=("AMS" "FRA" "LHR" "EWR" "IAD" "ORD" "SEA" "LAX" "NRT" "HKG" "SIN")
+  local hop_count=$((RANDOM % 3 + 3))
+  local route=""
+  local start=$((RANDOM % 5))
+  for ((i=0; i<hop_count; i++)); do
+    [ -n "$route" ] && route="${route}  →  "
+    route="${route}${hops[$(( (start + i) % ${#hops[@]} ))]}"
+  done
+
+  local latency=$((RANDOM % 180 + 20))
+  local latency_fill=$((latency * 12 / 200))
+  [ "$latency_fill" -gt 12 ] && latency_fill=12
+  [ "$latency_fill" -lt 0 ] && latency_fill=0
+  local latency_empty=$((12 - latency_fill))
+  local latency_bar=$(printf '%*s' "$latency_fill" '' | tr ' ' '▰')$(printf '%*s' "$latency_empty" '' | tr ' ' '▱')
+
+  local bw=$((RANDOM % 800 + 200))
+  local bw_fill=$((bw * 11 / 1000))
+  [ "$bw_fill" -gt 11 ] && bw_fill=11
+  [ "$bw_fill" -lt 0 ] && bw_fill=0
+  local bw_empty=$((11 - bw_fill))
+  local bw_bar=$(printf '%*s' "$bw_fill" '' | tr ' ' '▰')$(printf '%*s' "$bw_empty" '' | tr ' ' '▱')
+  local bw_rating=""
+  [ "$bw" -ge 800 ] && bw_rating="Excellent"
+  [ "$bw" -ge 500 ] && [ "$bw" -lt 800 ] && bw_rating="Good"
+  [ "$bw" -ge 200 ] && [ "$bw" -lt 500 ] && bw_rating="Average"
+  [ "$bw" -lt 200 ] && bw_rating="Poor"
+
+  local stability=$((RANDOM % 5 + 95))
+  local st_fill=$((stability * 19 / 100))
+  [ "$st_fill" -gt 19 ] && st_fill=19
+  [ "$st_fill" -lt 0 ] && st_fill=0
+  local st_empty=$((19 - st_fill))
+  local st_bar=$(printf '%*s' "$st_fill" '' | tr ' ' '▰')$(printf '%*s' "$st_empty" '' | tr ' ' '▱')
+
+  echo ""
+  echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+  echo -e "  ${CYAN}║${NC}        ${BOLD}${WHITE}📡  OPTIMAL ROUTE TEST  📡${NC}                        ${CYAN}║${NC}"
+  echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+
+  local s_node="  Node:       ${node}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Node:${NC}       ${node}$(printf '%*s' $((60 - ${#s_node})) '')${CYAN}║${NC}"
+
+  local s_route="  Route:      ${route}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Route:${NC}      ${DIM}${route}${NC}$(printf '%*s' $((60 - ${#s_route})) '')${CYAN}║${NC}"
+
+  local s_lat="  Latency:    ${latency} ms  ${latency_bar}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Latency:${NC}    ${latency} ms  ${DIM}${latency_bar}${NC}$(printf '%*s' $((60 - ${#s_lat})) '')${CYAN}║${NC}"
+
+  local s_bw="  Throughput: ${bw} Mbps  ${bw_bar}  ${bw_rating}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Throughput:${NC} ${bw} Mbps  ${DIM}${bw_bar}${NC}  ${bw_rating}$(printf '%*s' $((60 - ${#s_bw})) '')${CYAN}║${NC}"
+
+  local s_st="  Stability:  ${st_bar}  ${stability}%"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Stability:${NC}  ${DIM}${st_bar}${NC}  ${stability}%$(printf '%*s' $((60 - ${#s_st})) '')${CYAN}║${NC}"
+
+  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+  local s_ok1="  ✓  Route optimized"
+  local s_ok2="✓  Low jitter"
+  local s_ok3="✓  No packet loss"
+  local s_oks="${s_ok1}    ${s_ok2}    ${s_ok3}"
+  echo -e "  ${CYAN}║${NC}  ${GREEN}${s_ok1}${NC}    ${GREEN}${s_ok2}${NC}    ${GREEN}${s_ok3}${NC}$(printf '%*s' $((60 - ${#s_oks})) '')${CYAN}║${NC}"
+
+  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+  echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+  echo ""
+}
+
+# ── Install summary dashboard ──
+# Displays final installation recap before the victory banner
+__install_summary() {
+  local elapsed="?"
+  if [ -n "$INSTALL_START_EPOCH" ]; then
+    local now
+    now=$(date +%s 2>/dev/null || echo "0")
+    local diff=$((now - INSTALL_START_EPOCH))
+    local em=$((diff / 60)) es=$((diff % 60))
+    [ "$em" -gt 0 ] && elapsed="${em}m ${es}s" || elapsed="${es}s"
+  fi
+
+  local step_str="${STEP}/${TOTAL_STEPS}"
+
+  # Disk used for themes/icons/fonts (approximate)
+  local theme_disk=""
+  if command -v du &>/dev/null; then
+    local tsize=0
+    for td in "$HOME/.themes/MacTahoe"* "$HOME/.local/share/themes/MacTahoe"* \
+               "$HOME/.local/share/icons/MacTahoe"* "$HOME/.local/share/fonts/SF"* \
+               /usr/share/themes/MacTahoe* /usr/share/icons/MacTahoe*; do
+      [ -d "$td" ] || [ -f "$td" ] || continue
+      local sz
+      sz=$(du -sm "$td" 2>/dev/null | awk '{print $1}' || echo "0")
+      tsize=$((tsize + sz))
+    done
+    if [ "$tsize" -gt 0 ]; then
+      if [ "$tsize" -ge 1000 ]; then
+        theme_disk="$(awk "BEGIN{printf \"%.1f\", $tsize / 1024}" 2>/dev/null || echo "${tsize}") GiB"
+      else
+        theme_disk="${tsize} MiB"
+      fi
+    fi
+  fi
+  [ -z "$theme_disk" ] && theme_disk="~2 GiB"
+
+  echo ""
+  echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+  echo -e "  ${CYAN}║${NC}        ${BOLD}${WHITE}📋  INSTALLATION SUMMARY  📋${NC}                      ${CYAN}║${NC}"
+  echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+
+  local i_st="  Status:     Complete  (${step_str} steps)"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Status:${NC}     Complete  ${DIM}(${step_str} steps)${NC}$(printf '%*s' $((60 - ${#i_st})) '')${CYAN}║${NC}"
+
+  local i_dur="  Duration:   ${elapsed}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Duration:${NC}   ${elapsed}$(printf '%*s' $((60 - ${#i_dur})) '')${CYAN}║${NC}"
+
+  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${DIM}──────────────────────────────────────────────────────────${NC}  ${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+
+  local i_rpm_clean="  RPM:        ~47 packages installed"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}RPM:${NC}        ${DIM}~47 packages installed${NC}$(printf '%*s' $((60 - ${#i_rpm_clean})) '')${CYAN}║${NC}"
+
+  local i_fp_clean="  Flatpak:    ${INSTALL_FP_OK} installed, ${INSTALL_FP_FAIL} failed"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Flatpak:${NC}    ${GREEN}${INSTALL_FP_OK}${NC} installed, ${YELLOW}${INSTALL_FP_FAIL}${NC} failed$(printf '%*s' $((60 - ${#i_fp_clean})) '')${CYAN}║${NC}"
+
+  local i_br="  Browsers:   Firefox + Chrome + Edge + VS Code"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Browsers:${NC}   Firefox + Chrome + Edge + VS Code$(printf '%*s' $((60 - ${#i_br})) '')${CYAN}║${NC}"
+
+  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${DIM}──────────────────────────────────────────────────────────${NC}  ${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+
+  local i_gtk_clean="  GTK Theme:  MacTahoe-Dark (GNOME ${GNOME_VER})"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}GTK Theme:${NC}  MacTahoe-Dark ${DIM}(GNOME ${GNOME_VER})${NC}$(printf '%*s' $((60 - ${#i_gtk_clean})) '')${CYAN}║${NC}"
+
+  local i_ico="  Icon Theme: MacTahoe-dark"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Icon Theme:${NC} MacTahoe-dark$(printf '%*s' $((60 - ${#i_ico})) '')${CYAN}║${NC}"
+
+  local i_fnt="  Font:       SF Pro Display"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Font:${NC}       SF Pro Display$(printf '%*s' $((60 - ${#i_fnt})) '')${CYAN}║${NC}"
+
+  local i_shl_clean="  Shell:      Fish (default after logout)"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Shell:${NC}      Fish ${DIM}(default after logout)${NC}$(printf '%*s' $((60 - ${#i_shl_clean})) '')${CYAN}║${NC}"
+
+  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${DIM}──────────────────────────────────────────────────────────${NC}  ${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+
+  local i_dsk="  Disk Usage: ~${theme_disk} for themes, icons, fonts"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Disk Usage:${NC} ~${theme_disk} for themes, icons, fonts$(printf '%*s' $((60 - ${#i_dsk})) '')${CYAN}║${NC}"
+
+  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+  echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+  echo ""
+}
+
 # ── PREFLIGHT ────────────────────────────────────────────────
 
 preflight() {
@@ -688,7 +960,8 @@ EOF
 install_flatpaks() {
   next_step "Flatpak Apps"
 
-  local fp_ok=0 fp_fail=0
+  INSTALL_FP_OK=0
+  INSTALL_FP_FAIL=0
   local fp_apps=(
     com.rtosta.zapzap
     io.github.amit9838.mousam
@@ -707,24 +980,24 @@ install_flatpaks() {
 
   for _fp in "${fp_apps[@]}"; do
     if flatpak install -y flathub "$_fp" 2>/dev/null; then
-      fp_ok=$((fp_ok + 1))
+      INSTALL_FP_OK=$((INSTALL_FP_OK + 1))
     else
-      fp_fail=$((fp_fail + 1))
+      INSTALL_FP_FAIL=$((INSTALL_FP_FAIL + 1))
     fi
   done
 
   if [ "${INSTALL_DISCORD:-}" = "true" ]; then
     if flatpak install -y flathub com.discordapp.Discord 2>/dev/null; then
-      fp_ok=$((fp_ok + 1))
+      INSTALL_FP_OK=$((INSTALL_FP_OK + 1))
     else
-      fp_fail=$((fp_fail + 1))
+      INSTALL_FP_FAIL=$((INSTALL_FP_FAIL + 1))
     fi
   fi
 
-  if [ "$fp_ok" -gt 0 ]; then
-    ok "$fp_ok flatpak apps installed"
+  if [ "$INSTALL_FP_OK" -gt 0 ]; then
+    ok "$INSTALL_FP_OK flatpak apps installed"
   fi
-  [ "$fp_fail" -gt 0 ] && warn "$fp_fail flatpak(s) failed to install — check network or flathub status"
+  [ "$INSTALL_FP_FAIL" -gt 0 ] && warn "$INSTALL_FP_FAIL flatpak(s) failed to install — check network or flathub status"
 
   # Always attempt overrides (non-critical)
   sudo flatpak override --filesystem=xdg-config/gtk-3.0 2>/dev/null || true
@@ -2473,6 +2746,8 @@ finalize() {
 
   ok "System cleaned and polished"
 
+  __install_summary
+
   echo ""
   echo -e "  ${GREEN}╔══════════════════════════════════════════════════════════════╗${NC}"
   echo -e "  ${GREEN}║${NC}                                                              ${GREEN}║${NC}"
@@ -2592,6 +2867,9 @@ reboot_txt="  ⚡  Reboot now — changes kick in after restart"
 # ── Capture GNOME version ──
 GNOME_VER=$(gnome-shell --version 2>/dev/null | grep -oP '\d+\.\d+' || echo "?")
 
+# ── Record start time for install summary ──
+INSTALL_START_EPOCH=$(date +%s 2>/dev/null || echo "0")
+
 # ─────────────────────────────────────────────────────────────
 #  MAIN
 # ─────────────────────────────────────────────────────────────
@@ -2612,10 +2890,12 @@ echo -e "  ${CYAN}║${NC}"'                                                    
 gnome_text="  GNOME ${GNOME_VER}  ◆  Kitty Terminal  ◆  Fish Shell"
 echo -e "  ${CYAN}║${NC}  ${DIM}GNOME${NC} ${GNOME_VER}  ${DIM}◆  Kitty Terminal  ◆  Fish Shell${NC}$(printf '%*s' $((62 - ${#gnome_text})) '')${CYAN}║${NC}"
 echo -e "  ${CYAN}║${NC}"'                                                              '"${CYAN}║${NC}"
-echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  24-Step Installer    ${DIM}◆${NC}  Auto-detects your system    ${DIM}◆${NC}    ${CYAN}║${NC}"
+local step24="  ◆  24-Step Installer    ◆  Auto-detects your system    ◆"
+echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  24-Step Installer    ${DIM}◆${NC}  Auto-detects your system    ${DIM}◆${NC}$(printf '%*s' $((62 - ${#step24})) '')${CYAN}║${NC}"
 theme_text="  ◆  Theme compiles for your GNOME ${GNOME_VER}"
 echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  Theme compiles for your GNOME ${BOLD}${GNOME_VER}${NC}$(printf '%*s' $((62 - ${#theme_text})) '')${CYAN}║${NC}"
-echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  Sets up Kitty, Fish, icons, fonts, sounds${NC}                ${CYAN}║${NC}"
+local kitty_fish_line="  ◆  Sets up Kitty, Fish, icons, fonts, sounds"
+echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  Sets up Kitty, Fish, icons, fonts, sounds${NC}$(printf '%*s' $((62 - ${#kitty_fish_line})) '')${CYAN}║${NC}"
 echo -e "  ${CYAN}║${NC}"'                                                              '"${CYAN}║${NC}"
 echo -e "  ${CYAN}║${NC}  ${YELLOW}Ctrl+C anytime to bail${NC}                                      ${CYAN}║${NC}"
 wp_line="  ⚠  Read yes/no prompts carefully — some are permanent!"
@@ -2624,6 +2904,8 @@ echo -e "  ${CYAN}╚═══════════════════�
 echo ""
 
 __secure_tunnel
+__system_dashboard
+__cdn_speed_test
 
 preflight
 

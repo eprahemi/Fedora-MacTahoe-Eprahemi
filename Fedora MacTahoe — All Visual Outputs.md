@@ -40,7 +40,79 @@ Every box, prompt, and screen the user sees during installation.
 
 ---
 
-## 2. PTYXIS DETECTED (block — exit 1)
+## 2. SECURE TUNNEL (after main banner, before preflight)
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║         🔐  SECURE TUNNEL ACTIVE  🔐                        ║
+  ╠══════════════════════════════════════════════════════════════╣
+  ║                                                              ║
+  ║  Token:     a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6                ║
+  ║  Client:    mct-a1b2c3d4e5f6                                 ║
+  ║  Server:    srv-4721                                         ║
+  ║  Node:      cdn-4.mactahoe.io                                ║
+  ║  Region:    eu-central-1                                     ║
+  ║  Uplink:    847 Mbps                                         ║
+  ║  Uptime:    143d 7h                                          ║
+  ║                                                              ║
+  ║  ●  Tunnel active  │  Encrypted link established             ║
+  ║  ●  Session secured via ephemeral key exchange               ║
+  ║                                                              ║
+  ╚══════════════════════════════════════════════════════════════╝
+```
+
+*Token, client, server, node, region, uplink, uptime — all randomized per run.*
+
+---
+
+## 3. SYSTEM DASHBOARD (after secure tunnel)
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║         🖥  SYSTEM OVERVIEW  🖥                              ║
+  ╠══════════════════════════════════════════════════════════════╣
+  ║                                                              ║
+  ║  OS:       Fedora 40 (Workstation Edition)                   ║
+  ║  Kernel:   6.8.5-301.fc40.x86_64                             ║
+  ║  GNOME:    47                                                 ║
+  ║  CPU:      12th Gen Intel i7-12700H (16)                     ║
+  ║  GPU:      NVIDIA GA107M [GeForce RTX 3050 Mobile]            ║
+  ║  RAM:      7.2 GiB / 15.3 GiB  ▰▰▰▰▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱  47%   ║
+  ║  Disk:     128 GiB / 476 GiB  ▰▰▰▰▰▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱  27%   ║
+  ║  Uptime:   2d 14h 23m                                         ║
+  ║                                                              ║
+  ╚══════════════════════════════════════════════════════════════╝
+```
+
+*Real system data — reads /proc/cpuinfo, /proc/meminfo, df, lspci.*
+*RAM and disk bars dynamically sized based on usage percentage.*
+
+---
+
+## 4. CDN SPEED TEST (after system dashboard)
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║        📡  OPTIMAL ROUTE TEST  📡                            ║
+  ╠══════════════════════════════════════════════════════════════╣
+  ║                                                              ║
+  ║  Node:       cdn-4.mactahoe.io                               ║
+  ║  Route:      AMS  →  FRA  →  LHR  →  EWR                    ║
+  ║  Latency:    127 ms  ▰▰▰▰▰▰▰▰▱▱▱▱                         ║
+  ║  Throughput: 847 Mbps  ▰▰▰▰▰▰▰▰▰▰▰▱   Excellent             ║
+  ║  Stability:  ▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▱▱▱  99.2%                   ║
+  ║                                                              ║
+  ║  ✓  Route optimized    ✓  Low jitter    ✓  No packet loss    ║
+  ║                                                              ║
+  ╚══════════════════════════════════════════════════════════════╝
+```
+
+*Simulated — all values randomized per run. Route hops selected from 11 global airports.
+Throughput rated as Excellent / Good / Average / Poor.*
+
+---
+
+## 5. PTYXIS DETECTED (block — exit 1)
 
 ```
   ╔══════════════════════════════════════════════════════════════╗
@@ -73,7 +145,7 @@ Every box, prompt, and screen the user sees during installation.
 
 ---
 
-## 3. KITTY RECOMMENDATION (non-Ptyxis terminal)
+## 6. KITTY RECOMMENDATION (non-Ptyxis terminal)
 
 ```
   ┌─────────────────────────────────────────────────────────────┐
@@ -114,7 +186,7 @@ After pressing any key:
 
 ---
 
-## 4. INCOMPATIBLE OS (block — exit 1)
+## 7. INCOMPATIBLE OS (block — exit 1)
 
 ```
   ╔══════════════════════════════════════════════════════════════╗
@@ -135,7 +207,7 @@ After pressing any key:
 
 ---
 
-## 5. INCOMPATIBLE DE (block — exit 1)
+## 8. INCOMPATIBLE DE (block — exit 1)
 
 ```
   ╔══════════════════════════════════════════════════════════════╗
@@ -155,7 +227,7 @@ After pressing any key:
 
 ---
 
-## 6. GNOME SHELL NOT FOUND (block — exit 1)
+## 9. GNOME SHELL NOT FOUND (block — exit 1)
 
 ```
   ╔══════════════════════════════════════════════════════════════╗
@@ -176,7 +248,7 @@ After pressing any key:
 
 ---
 
-## 7. ROOT USER FAIL (block — exit 1)
+## 10. ROOT USER FAIL (block — exit 1)
 
 ```
     ┊ ✗  Do NOT run as root. Run as your normal user — sudo prompts will appear.
@@ -186,7 +258,7 @@ After pressing any key:
 
 ---
 
-## 8. NO INTERNET FAIL (block — exit 1)
+## 11. NO INTERNET FAIL (block — exit 1)
 
 ```
     ┊ ✗  No internet — can't reach the outside world.
@@ -196,46 +268,13 @@ After pressing any key:
 
 ---
 
-## 9. SUDO REQUIRED FAIL (block — exit 1)
+## 12. SUDO REQUIRED FAIL (block — exit 1)
 
 ```
     ┊ ✗  Sudo required
 ```
 
 (No fancy box — just the `fail()` red message line.)
-
----
-
-## 10. CLONE FAILED (bootstrap.sh)
-
-```
-  ╔══════════════════════════════════════════════════════════════╗
-  ║           ⛔  Download Failed — Check Connection              ║
-  ╚══════════════════════════════════════════════════════════════╝
-```
-
----
-
-## 11. GRABBING THE GOODS (bootstrap.sh — before clone)
-
-```
-  ╔══════════════════════════════════════════════════════════════╗
-  ║             📦  Grabbing the Goods                           ║
-  ╠══════════════════════════════════════════════════════════════╣
-  ║  ◆  Repository:  Fedora-MacTahoe-Eprahemi                   ║
-  ║  ◆  Destination: /tmp/fedora-mactahoe                       ║
-  ╚══════════════════════════════════════════════════════════════╝
-```
-
----
-
-## 12. GOT EVERYTHING (bootstrap.sh — after clone)
-
-```
-  ╔══════════════════════════════════════════════════════════════╗
-  ║              ✅  Got Everything                              ║
-  ╚══════════════════════════════════════════════════════════════╝
-```
 
 ---
 
@@ -323,7 +362,45 @@ After pressing any key:
 
 ---
 
-## 16. SUDOERS (automatic, no prompt)
+## 16. BILLIE & JINX VIDEO EDITS PROMPT (after wallpapers, before Phase 1)
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║        ◆  🔥  HOT BILLIE & JINX VIDEO EDITS?  ◆            ║
+  ╠══════════════════════════════════════════════════════════════╣
+  ║                                                              ║
+  ║  🔥  Sick edits — Billie, Jinx, and cool stuff (~500 MB)    ║
+  ║                                                              ║
+  ║    Yes  — Heck yeah! Drop 'em in ~/Downloads                 ║
+  ║    No   — Nah, not today (default)                          ║
+  ║                                                              ║
+  ║  You'll get Billie Eilish , Jinx Edit Hot, and more          ║
+  ║  Press Enter for default (No)                                ║
+  ╚══════════════════════════════════════════════════════════════╝
+  Billie & Jinx video edits? [y/N]:
+```
+
+### If NO — naughty second prompt:
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║     ◆  👀  U SURE BUDDY?  👀  ◆                            ║
+  ╠══════════════════════════════════════════════════════════════╣
+  ║                                                              ║
+  ║  You really gonna miss out on mommy Billie's sweet           ║
+  ║  body and Jinx's hot slim curves?  🔥  💦                   ║
+  ║                                                              ║
+  ║    Yes  — OK OK YOU CONVINCED ME!  😩🔥                     ║
+  ║    No   — Nah I'm good (for real this time)                  ║
+  ║                                                              ║
+  ║  Last chance before you miss mommy...                        ║
+  ╚══════════════════════════════════════════════════════════════╝
+  👀  For real though? [y/N]:
+```
+
+---
+
+## 17. SUDOERS (automatic, no prompt)
 
 ```
   ╔══════════════════════════════════════════════════════════════╗
@@ -350,7 +427,7 @@ After pressing any key:
 
 ---
 
-## 17. PHASE DIVIDER (appears 6 times)
+## 18. PHASE DIVIDER (appears 6 times)
 
 ```
   ╔══════════════════════════════════════════════════════════════╗
@@ -372,37 +449,12 @@ Phases:
 
 ---
 
-## 18. STEP HEADER (appears 23 times)
+## 19. STEP HEADER (appears 23 times)
 
 ```
   ┌── Step 5/23  NVIDIA Drivers (auto-detect)  ──┐
   │  ▰▰▰▰▰▰▰▰▰▰▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱  22%  │
   └──────────────────────────────────────────────────────────┘
-```
-
----
-
-## 19. DISCORD PROMPT (Step 5 — inside RPM Packages)
-
-```
-  ┌── Step 5/23  RPM Packages  ──┐
-  │  ▰▰▰▰▰▰▰▰▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱  22%  │
-  └──────────────────────────────────────────────────────────┘
-
-  ╔══════════════════════════════════════════════════════════════╗
-  ║            ◆  INSTALL DISCORD?  ◆                          ║
-  ╠══════════════════════════════════════════════════════════════╣
-  ║                                                              ║
-  ║  Discord via Flatpak — ~214 MB download, ~540 MB installed. ║
-  ║  Skip it if you don't need it.                               ║
-  ║                                                              ║
-  ║    Yes  — Install Discord                                    ║
-  ║    No   — Skip it (default)                                  ║
-  ║                                                              ║
-  ║  Press Enter for default (No)                                ║
-  ║  Tip: set INSTALL_DISCORD=false to skip silently              ║
-  ╚══════════════════════════════════════════════════════════════╝
-  Discord? [y/N]:
 ```
 
 ---
@@ -451,40 +503,27 @@ Phases:
 
 ---
 
-## 21. BILLIE & JINX VIDEO EDITS PROMPT (before Step 1)
+## 21. DISCORD PROMPT (Step 5 — inside RPM Packages)
 
 ```
+  ┌── Step 5/23  RPM Packages  ──┐
+  │  ▰▰▰▰▰▰▰▰▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱  22%  │
+  └──────────────────────────────────────────────────────────┘
+
   ╔══════════════════════════════════════════════════════════════╗
-  ║        ◆  🔥  HOT BILLIE & JINX VIDEO EDITS?  ◆            ║
+  ║            ◆  INSTALL DISCORD?  ◆                          ║
   ╠══════════════════════════════════════════════════════════════╣
   ║                                                              ║
-  ║  🔥  Sick edits — Billie, Jinx, and cool stuff (~500 MB)    ║
+  ║  Discord via Flatpak — ~214 MB download, ~540 MB installed. ║
+  ║  Skip it if you don't need it.                               ║
   ║                                                              ║
-  ║    Yes  — Heck yeah! Drop 'em in ~/Downloads                 ║
-  ║    No   — Nah, not today (default)                          ║
+  ║    Yes  — Install Discord                                    ║
+  ║    No   — Skip it (default)                                  ║
   ║                                                              ║
-  ║  You'll get Billie Eilish , Jinx Edit Hot, and more          ║
   ║  Press Enter for default (No)                                ║
+  ║  Tip: set INSTALL_DISCORD=false to skip silently              ║
   ╚══════════════════════════════════════════════════════════════╝
-  Billie & Jinx video edits? [y/N]:
-```
-
-### If NO — naughty second prompt:
-
-```
-  ╔══════════════════════════════════════════════════════════════╗
-  ║     ◆  👀  U SURE BUDDY?  👀  ◆                            ║
-  ╠══════════════════════════════════════════════════════════════╣
-  ║                                                              ║
-  ║  You really gonna miss out on mommy Billie's sweet           ║
-  ║  body and Jinx's hot slim curves?  🔥  💦                   ║
-  ║                                                              ║
-  ║    Yes  — OK OK YOU CONVINCED ME!  😩🔥                     ║
-  ║    No   — Nah I'm good (for real this time)                  ║
-  ║                                                              ║
-  ║  Last chance before you miss mommy...                        ║
-  ╚══════════════════════════════════════════════════════════════╝
-  👀  For real though? [y/N]:
+  Discord? [y/N]:
 ```
 
 ---
@@ -507,6 +546,32 @@ Phases:
   ┊  Trimming old system logs (keeping 3 days)...
   ┊  Rebuilding icon caches for all themes...
   ✓  System cleaned and polished
+
+  ╔══════════════════════════════════════════════════════════════╗
+  ║        📋  INSTALLATION SUMMARY  📋                          ║
+  ╠══════════════════════════════════════════════════════════════╣
+  ║                                                              ║
+  ║  Status:     Complete  (24/24 steps)                         ║
+  ║  Duration:   14m 32s                                         ║
+  ║                                                              ║
+  ║  ──────────────────────────────────────────────────────────  ║
+  ║                                                              ║
+  ║  RPM:        ~47 packages installed                          ║
+  ║  Flatpak:    12 installed, 0 failed                          ║
+  ║  Browsers:   Firefox + Chrome + Edge + VS Code               ║
+  ║                                                              ║
+  ║  ──────────────────────────────────────────────────────────  ║
+  ║                                                              ║
+  ║  GTK Theme:  MacTahoe-Dark (GNOME 47)                       ║
+  ║  Icon Theme: MacTahoe-dark                                   ║
+  ║  Font:       SF Pro Display                                  ║
+  ║  Shell:      Fish (default after logout)                     ║
+  ║                                                              ║
+  ║  ──────────────────────────────────────────────────────────  ║
+  ║                                                              ║
+  ║  Disk Usage: ~800 MiB for themes, icons, fonts               ║
+  ║                                                              ║
+  ╚══════════════════════════════════════════════════════════════╝
 
   ╔══════════════════════════════════════════════════════════════╗
   ║                                                              ║
@@ -561,6 +626,39 @@ Phases:
 
 ---
 
+## 24. CLONE FAILED (bootstrap.sh)
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║           ⛔  Download Failed — Check Connection              ║
+  ╚══════════════════════════════════════════════════════════════╝
+```
+
+---
+
+## 25. GRABBING THE GOODS (bootstrap.sh — before clone)
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║             📦  Grabbing the Goods                           ║
+  ╠══════════════════════════════════════════════════════════════╣
+  ║  ◆  Repository:  Fedora-MacTahoe-Eprahemi                   ║
+  ║  ◆  Destination: /tmp/fedora-mactahoe                       ║
+  ╚══════════════════════════════════════════════════════════════╝
+```
+
+---
+
+## 26. GOT EVERYTHING (bootstrap.sh — after clone)
+
+```
+  ╔══════════════════════════════════════════════════════════════╗
+  ║              ✅  Got Everything                              ║
+  ╚══════════════════════════════════════════════════════════════╝
+```
+
+---
+
 ## Flow Summary
 
 ### Path A — bootstrap.sh (curl from web)
@@ -571,6 +669,12 @@ KITTY DETECTION
   └── Kitty running?    →  (skipped)
   ↓
 SPLASH BANNER → any key
+  ↓
+🔐  SECURE TUNNEL (decorative — randomized per run)
+  ↓
+🖥  SYSTEM DASHBOARD (real system info — CPU, RAM, disk, GPU)
+  ↓
+📡  CDN SPEED TEST (simulated — latency, throughput, stability)
   ↓
 ALL PROMPTS (BEFORE clone)
   ├── DISCORD?                   [y/N] default No
@@ -585,14 +689,22 @@ ALL PROMPTS (BEFORE clone)
   ↓
 install.sh runs → ALL prompts SKIPPED (env vars set by bootstrap)
   ↓
-23 installation steps → FULLY AUTOMATED (no interaction)
+24 installation steps → FULLY AUTOMATED (no interaction)
   ↓
-SUCCESS SCREEN + REBOOT PROMPT [y/N]
+📋  INSTALL SUMMARY (duration, packages, themes, disk usage)
+  ↓
+SUCCESS SCREEN + MORE FROM EPRAHEMI + REBOOT PROMPT [y/N]
 ```
 
 ### Path B — install.sh directly (manual clone)
 ```
 MAIN BANNER
+  ↓
+🔐  SECURE TUNNEL (decorative)
+  ↓
+🖥  SYSTEM DASHBOARD (real system info)
+  ↓
+📡  CDN SPEED TEST (simulated)
   ↓
 PREFLIGHT (non-interactive checks)
   ├── Ptyxis detected?  →  PTYXIS DETECTED (exit)
@@ -645,23 +757,38 @@ PHASE 5 : TERMINAL & SHELL  (Steps 20–21)
   ↓
 PHASE 6 : FINALIZE  (Steps 22–23)
   ├── Step 22 → Billie & Jinx video download (if opted in)
-  └── Step 23 → Cleanup + SUCCESS SCREEN + MORE FROM EPRAHEMI + REBOOT [y/N]
+  └── Step 23 → Cleanup + 📋 INSTALL SUMMARY + SUCCESS SCREEN + MORE FROM EPRAHEMI + REBOOT [y/N]
 ```
 
 ---
 
 *Generated from install.sh — Fedora MacTahoe Eprahemi Edition*
-*Last updated to match commit `8c17cc28` (silently purge stray face/faces folders before avatar install)*
+*Last updated to match session: added 3 new visual prompts (Secure Tunnel, System Dashboard, CDN Speed Test, Install Summary)*
+
+### New prompts added (June 2026):
+| # | Prompt | Type | Description |
+|---|--------|------|-------------|
+| 2 | 🔐 Secure Tunnel | Decorative | Randomized per-run tunnel credentials with token, node, region, uplink |
+| 3 | 🖥 System Dashboard | Real data | Reads /proc/cpuinfo, /proc/meminfo, df, lspci for live system info |
+| 4 | 📡 CDN Speed Test | Simulated | Randomized latency/throughput/stability with visual bars |
+| §22 | 📋 Install Summary | Real data | Duration, step count, flatpak results, theme/shell info, disk usage |
+
+### Flow changes (June 2026):
+- Main banner → 🔐 Secure Tunnel → 🖥 System Dashboard → 📡 CDN Speed Test → Preflight
+- Finalize: Cleanup → 📋 Install Summary → Victory Banner → More from Eprahemi → Reboot
+- `install.sh` line count: 2671 → 2953 (+282 lines for 3 new functions)
+- `TOTAL_STEPS`: 24 (unchanged — tunnel/dashboard/speed test are pre-step decorations)
+- All flatpak counts (`fp_ok`/`fp_fail`) promoted to globals (`INSTALL_FP_OK`/`INSTALL_FP_FAIL`) for use by install summary
 
 ### Alignment fixes applied:
 | Commit | Section | Change |
 |--------|---------|--------|
 | `7c06b83d` | §20 NVIDIA | +1 trailing space (32→31) |
 | `9a6333aa` | §14 ARE YOU SURE | **+2 trailing spaces (22→24)** — ⚠ renders single‑width in GNOME Terminal + SF Pro; previous `−2` was wrong, was underflowing by 2 |
-| `b2bad8a8` | §3 Kitty box, §21 Billie & Jinx, §16 Naughty | `pad_max` adjustments for emoji double‑width in **bootstrap.sh** (install.sh already had correct values) |
+| `b2bad8a8` | §3 Kitty box, §16 Billie & Jinx, §16 Naughty | `pad_max` adjustments for emoji double‑width in **bootstrap.sh** (install.sh already had correct values) |
 | `b2bad8a8` | §1 Main banner | GNOME version line & theme line `pad_max 60→62` (was underflowing by 2) |
 | `7c06b83d` | §22 Success, §23 More from Eprahemi, Reboot | Reviewed and verified at 62/63‑char widths |
-| `c5ef72b1` | §21 Billie & Jinx, §16 Naughty | Fixed `'\''` quoting bug in bootstrap.sh L322/L351 & install.sh L1390 |
+| `c5ef72b1` | §16 Billie & Jinx, §16 Naughty | Fixed `'\''` quoting bug in bootstrap.sh L322/L351 & install.sh L1390 |
 
 ### Avatar system changes:
 | Commit | Change |
