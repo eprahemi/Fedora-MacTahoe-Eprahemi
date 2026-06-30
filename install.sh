@@ -43,7 +43,17 @@ confirm() {
   done
 }
 
-TOTAL_STEPS=23
+# ── Helpers ──
+# Check if a file is a valid ZIP by magic bytes (more reliable than `file --mime-type`)
+# Returns 0 if valid, 1 otherwise
+is_valid_zip() {
+  local f="$1"
+  [ ! -f "$f" ] && return 1
+  # ZIP magic: PK\x03\x04 (50 4B 03 04) at offset 0
+  od -A n -t x1 -N 4 "$f" 2>/dev/null | grep -qi "50 4b 03 04"
+}
+
+TOTAL_STEPS=24
 STEP=0
 
 next_step() {
@@ -1478,9 +1488,9 @@ apply_wallpapers() {
     mkdir -p "$extract_tmp"
 
     if curl -L -b "download_warning=1" "$WALLPAPER_18_URL" -o "$zip_tmp" 2>/dev/null; then
-      local mime
-      mime=$(file --brief --mime-type "$zip_tmp" 2>/dev/null)
-      if [ "$mime" != "application/zip" ]; then
+      if ! is_valid_zip "$zip_tmp"; then
+        local mime
+        mime=$(file --brief --mime-type "$zip_tmp" 2>/dev/null || echo "unknown")
         warn "Downloaded 18+ wallpapers is not a valid zip (got: $mime) — file may be deleted from Google Drive"
         rm -f "$zip_tmp" 2>/dev/null || true
       elif unzip -q "$zip_tmp" -d "$extract_tmp" 2>/dev/null; then
@@ -1688,9 +1698,9 @@ install_custom_avatars() {
     mkdir -p "$extract_tmp"
 
     if curl -L -b "download_warning=1" "$FACES_18_URL" -o "$zip_tmp" 2>/dev/null; then
-      local mime
-      mime=$(file --brief --mime-type "$zip_tmp" 2>/dev/null)
-      if [ "$mime" != "application/zip" ]; then
+      if ! is_valid_zip "$zip_tmp"; then
+        local mime
+        mime=$(file --brief --mime-type "$zip_tmp" 2>/dev/null || echo "unknown")
         warn "Downloaded 18+ faces is not a valid zip (got: $mime) — file may be deleted from Google Drive"
         rm -f "$zip_tmp" 2>/dev/null || true
       else
@@ -1728,12 +1738,14 @@ download_optional_videos() {
     local zip_tmp="/tmp/billie-videos-$$.zip"
     mkdir -p "$dl_dest" 2>/dev/null || true
     if curl -L -b "download_warning=1" "$DOWNLOADS_URL" -o "$zip_tmp" 2>/dev/null; then
-      local dl_mime
-      dl_mime=$(file --brief --mime-type "$zip_tmp" 2>/dev/null)
-      if echo "$dl_mime" | grep -qi "html"; then
+      if is_valid_zip "$zip_tmp"; then
+        unzip -j -o -q "$zip_tmp" -d "$dl_dest" 2>/dev/null && \
+          ok "🔥  Billie & Jinx edits landed in ~/Downloads - enjoy!" || \
+          warn "Billie & Jinx archive could not be extracted (may be corrupted)"
+      elif file --brief --mime-type "$zip_tmp" 2>/dev/null | grep -qi "html"; then
         warn "Downloaded Billie & Jinx archive looks like an HTML page — the file may be deleted from Google Drive"
-        rm -f "$zip_tmp" 2>/dev/null || true
       else
+        # Try extracting anyway (some zips don't have PK magic at offset 0)
         unzip -j -o -q "$zip_tmp" -d "$dl_dest" 2>/dev/null && \
           ok "🔥  Billie & Jinx edits landed in ~/Downloads - enjoy!" || \
           warn "Billie & Jinx archive could not be extracted (may be corrupted)"
@@ -1743,12 +1755,12 @@ download_optional_videos() {
       log "Fetching Gintama video edits..."
       local gintama_tmp="/tmp/gintama-videos-$$"
       if curl -L -b "download_warning=1" "$GINTAMA_URL" -o "$gintama_tmp" 2>/dev/null; then
-        # Detect type: zip or mp4 (reject html garbage)
+        # Detect type: zip, mp4, or html
         local gintama_mime
-        gintama_mime=$(file --brief --mime-type "$gintama_tmp" 2>/dev/null)
+        gintama_mime=$(file --brief --mime-type "$gintama_tmp" 2>/dev/null || echo "unknown")
         if echo "$gintama_mime" | grep -qi "html"; then
           warn "Downloaded Gintama file is an HTML page — the file may be deleted from Google Drive"
-        elif echo "$gintama_mime" | grep -qi "zip"; then
+        elif is_valid_zip "$gintama_tmp"; then
           unzip -j -o -q "$gintama_tmp" -d "$dl_dest" 2>/dev/null || true
           ok "Gintama edits landed in ~/Downloads"
         elif echo "$gintama_mime" | grep -qi "mp4\|video"; then
@@ -1864,6 +1876,12 @@ configure_nautilus_defaults() {
 
 setup_gdm() {
   next_step "GDM Login Screen Theme"
+
+  # User said "n" to the GDM prompt — skip everything
+  if [ "${INSTALL_LOGIN_WALLPAPER:-true}" != "true" ]; then
+    ok "GDM login screen skipped (user opted out)"
+    return
+  fi
 
   local wp="$BUNDLE/wallpapers"
   local bg=""
@@ -2227,6 +2245,99 @@ install_extensions() {
   fi
 }
 
+# ── MIRROR FLATPAK ICONS ──────────────────────────────────────
+# GTK 3.24.52 on Fedora 44 cannot resolve icons that only exist at 512×512 in
+# the Flatpak system hicolor (/var/lib/flatpak/exports/share/icons/hicolor/).
+# This function mirrors them into ~/.local/share/icons/hicolor/48x48/apps/
+# so they show up in the GNOME app grid.
+# See: https://github.com/eprahemi/Fedora-MacTahoe-Eprahemi/issues
+
+mirror_flatpak_icons() {
+  local flatpak_hicolor="/var/lib/flatpak/exports/share/icons/hicolor"
+  local user_hicolor="$HOME/.local/share/icons/hicolor"
+  local user_48="$user_hicolor/48x48/apps"
+  local mirrored=0 skipped=0
+
+  [ ! -d "$flatpak_hicolor" ] && { ok "No Flatpak hicolor icons to mirror"; return 0; }
+
+  mkdir -p "$user_48"
+
+  # Ensure user hicolor has an index.theme so gtk-update-icon-cache works
+  if [ ! -f "$user_hicolor/index.theme" ]; then
+    cat > "$user_hicolor/index.theme" <<-EOF
+[Icon Theme]
+Name=Hicolor
+Comment=Fallback icon theme (local overrides)
+Hidden=true
+Directories=256x256/apps,48x48/apps
+
+[48x48/apps]
+Size=48
+Context=Applications
+Type=Fixed
+EOF
+  fi
+
+  # Collect all unique icon names from Flatpak hicolor (any subdir)
+  local -A seen_names
+  local flatpak_files
+  flatpak_files=$(find "$flatpak_hicolor" -name '*.png' -o -name '*.svg' 2>/dev/null) || true
+
+  while IFS= read -r -d '' f; do
+    local name; name=$(basename "$f")
+    local name_noext="${name%.*}"
+    local ext="${name##*.}"
+
+    # Skip if we've already processed this icon name
+    [ -n "${seen_names[$name_noext]:-}" ] && continue
+    seen_names[$name_noext]=1
+
+    # Check if MacTahoe-dark already has this icon (PNG or SVG in any dir)
+    local mac_icon
+    mac_icon=$(find "$HOME/.local/share/icons/MacTahoe-dark" -name "$name" -o -name "${name_noext}.svg" 2>/dev/null | head -1) || true
+    [ -n "$mac_icon" ] && { skipped=$((skipped + 1)); continue; }
+
+    # Check if user hicolor already has it at a resolvable size (48x48 or scalable)
+    if [ -f "$user_hicolor/48x48/apps/$name" ] || [ -f "$user_hicolor/scalable/apps/${name_noext}.svg" ]; then
+      skipped=$((skipped + 1))
+      continue
+    fi
+
+    # Check if Flatpak icon is SVG (best — GTK can scale it)
+    if [ "$ext" = "svg" ]; then
+      local target_dir="$user_hicolor/scalable/apps"
+      mkdir -p "$target_dir"
+      ln -sf "$f" "$target_dir/$name" 2>/dev/null || \
+        cp -f "$f" "$target_dir/$name" 2>/dev/null || true
+      mirrored=$((mirrored + 1))
+      continue
+    fi
+
+    # PNG: prefer the smallest available source (48 if exists, else any)
+    local best_src=""
+    for size_dir in 48x48 64x64 128x128 256x256 512x512; do
+      local candidate="$flatpak_hicolor/$size_dir/apps/$name"
+      if [ -f "$candidate" ]; then
+        best_src="$candidate"
+        break
+      fi
+    done
+    [ -z "$best_src" ] && { skipped=$((skipped + 1)); continue; }
+
+    # Create symlink (or copy if symlink fails) at 48x48
+    ln -sf "$best_src" "$user_48/$name" 2>/dev/null || \
+      cp -f "$best_src" "$user_48/$name" 2>/dev/null || true
+    mirrored=$((mirrored + 1))
+  done < <(find "$flatpak_hicolor" -name '*.png' -o -name '*.svg' -print0 2>/dev/null)
+
+  # Rebuild user hicolor cache
+  if [ "$mirrored" -gt 0 ]; then
+    gtk-update-icon-cache "$user_hicolor/" 2>/dev/null || warn "Icon cache update failed for $user_hicolor"
+  fi
+
+  log "Mirrored $mirrored Flatpak icon(s) to $user_hicolor/48x48/apps/ ($skipped already covered)"
+}
+
 # ── FINALIZE ──────────────────────────────────────────────────
 
 finalize() {
@@ -2269,11 +2380,15 @@ finalize() {
   log "Trimming old system logs (keeping 3 days)..."
   sudo journalctl --vacuum-time=3d 2>/dev/null || true
 
-  # ── 10. Rebuild all icon theme caches (Adwaita + local) ──
+  # ── 10. Mirror Flatpak app icons that GTK 3.24 can't resolve at 512×512 ──
+  mirror_flatpak_icons
+
+  # ── 11. Rebuild all icon theme caches (Adwaita + local + Flatpak hicolor) ──
   log "Rebuilding icon caches for all themes..."
   for _ictx in /usr/share/icons/Adwaita /usr/share/icons/AdwaitaLegacy \
                "$HOME/.local/share/icons/MacTahoe" "$HOME/.local/share/icons/MacTahoe-dark" \
-               "$HOME/.local/share/icons/hicolor"; do
+               "$HOME/.local/share/icons/hicolor" \
+               "/var/lib/flatpak/exports/share/icons/hicolor"; do
     if [ -d "$_ictx" ]; then
       gtk-update-icon-cache "$_ictx" 2>/dev/null || warn "Icon cache update failed for $_ictx"
     fi
@@ -2385,7 +2500,7 @@ echo -e "  ${CYAN}║${NC}"'                                                    
 gnome_text="  GNOME ${GNOME_VER}  ◆  Kitty Terminal  ◆  Fish Shell"
 echo -e "  ${CYAN}║${NC}  ${DIM}GNOME${NC} ${GNOME_VER}  ${DIM}◆  Kitty Terminal  ◆  Fish Shell${NC}$(printf '%*s' $((62 - ${#gnome_text})) '')${CYAN}║${NC}"
 echo -e "  ${CYAN}║${NC}"'                                                              '"${CYAN}║${NC}"
-echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  23-Step Installer    ${DIM}◆${NC}  Auto-detects your system    ${DIM}◆${NC}    ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  24-Step Installer    ${DIM}◆${NC}  Auto-detects your system    ${DIM}◆${NC}    ${CYAN}║${NC}"
 theme_text="  ◆  Theme compiles for your GNOME ${GNOME_VER}"
 echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  Theme compiles for your GNOME ${BOLD}${GNOME_VER}${NC}$(printf '%*s' $((62 - ${#theme_text})) '')${CYAN}║${NC}"
 echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  Sets up Kitty, Fish, icons, fonts, sounds${NC}                ${CYAN}║${NC}"
