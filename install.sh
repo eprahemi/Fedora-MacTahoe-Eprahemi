@@ -2481,8 +2481,34 @@ reboot_txt="  ⚡  Reboot now — changes kick in after restart"
     echo -e "  ${GREEN}See you on the other side! Rebooting...${NC}"
     sudo reboot
   else
-    echo -e "  ${BOLD}${RED}⚠️  Dash-to-Dock, GTK themes, and GDM login screen will not work properly until you reboot.${NC}"
-    echo -e "  ${BOLD}${RED}⚠️  Restart as soon as possible for all effects to be completed.${NC}"
+    echo -e ""
+    echo -e "  ${BOLD}${RED}╔══════════════════════════════════════════════════════════════╗${NC}"
+    echo -e "  ${BOLD}${RED}║${NC}  ${BOLD}${WHITE} ⚠  SYSTEM RESTART REQUIRED                          ${BOLD}${RED}║${NC}"
+    echo -e "  ${BOLD}${RED}║${NC}  ${DIM}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}  ${BOLD}${RED}║${NC}"
+    echo -e "  ${BOLD}${RED}║${NC}                                                              ${BOLD}${RED}║${NC}"
+    echo -e "  ${BOLD}${RED}║${NC}  A reboot finalizes the following critical operations:        ${BOLD}${RED}║${NC}"
+    echo -e "  ${BOLD}${RED}║${NC}                                                              ${BOLD}${RED}║${NC}"
+    echo -e "  ${BOLD}${RED}║${NC}    • Flush and reinitialize session-level caches              ${BOLD}${RED}║${NC}"
+    echo -e "  ${BOLD}${RED}║${NC}    • Reload GNOME Shell extensions (Dash-to-Dock, etc.)       ${BOLD}${RED}║${NC}"
+    echo -e "  ${BOLD}${RED}║${NC}    • Apply GTK theme contexts across all running processes    ${BOLD}${RED}║${NC}"
+    echo -e "  ${BOLD}${RED}║${NC}    • Activate GDM login screen theme and wallpaper            ${BOLD}${RED}║${NC}"
+    echo -e "  ${BOLD}${RED}║${NC}    • Register updated icon caches and font configurations     ${BOLD}${RED}║${NC}"
+    echo -e "  ${BOLD}${RED}║${NC}    • Initialize desktop environment session parameters        ${BOLD}${RED}║${NC}"
+    echo -e "  ${BOLD}${RED}║${NC}                                                              ${BOLD}${RED}║${NC}"
+    echo -e "  ${BOLD}${RED}║${NC}  ${BOLD}${WHITE}Until restarted, theme elements, dock behavior, and${NC}        ${BOLD}${RED}║${NC}"
+    echo -e "  ${BOLD}${RED}║${NC}  ${BOLD}${WHITE}login screen customizations will remain in a${NC}               ${BOLD}${RED}║${NC}"
+    echo -e "  ${BOLD}${RED}║${NC}  ${BOLD}${WHITE}pending state.${NC}                                               ${BOLD}${RED}║${NC}"
+    echo -e "  ${BOLD}${RED}║${NC}                                                              ${BOLD}${RED}║${NC}"
+    echo -e "  ${BOLD}${RED}╚══════════════════════════════════════════════════════════════╝${NC}"
+    echo -e ""
+    if confirm "  Restart now to apply changes? [y/N]: " N; then
+      echo -e "  ${GREEN}See you on the other side! Rebooting...${NC}"
+      sudo reboot
+    else
+      echo -e ""
+      echo -e "  ${BOLD}${YELLOW}⚠  Postponed — restart at your earliest convenience.${NC}"
+      echo -e "  ${DIM}   Run ${NC}${BOLD}${WHITE}sudo reboot${NC}${DIM} when ready to finalize.${NC}"
+    fi
   fi
 }
 
