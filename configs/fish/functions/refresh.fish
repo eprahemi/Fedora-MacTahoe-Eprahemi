@@ -34,7 +34,7 @@ function refresh --description 'Deep system refresh: cache, services, extensions
         echo -e "  \033[1;37mrefresh --extensions\033[0m \033[38;5;245m(-e)\033[0m     — cycle Dash-to-Dock extension"
         echo -e "  \033[1;37mrefresh --dns\033[0m \033[38;5;245m(-d)\033[0m           — flush DNS resolver cache"
         echo -e "  \033[1;37mrefresh --desktop\033[0m \033[38;5;245m(-k)\033[0m        — refresh desktop app grid, icons, names"
-        echo -e "  \033[1;37mrefresh --icons\033[0m \033[38;5;245m(-i)\033[0m          — mirror Flatpak icons (GTK 512×512 bug fix)"
+        echo -e "  \033[1;37mrefresh --icons\033[0m \033[38;5;245m(-i)\033[0m          — mirror unresolvable app icons (512×512 fix)"
         echo -e "  \033[1;37mrefresh --dnf\033[0m \033[38;5;245m(-dnf)\033[0m          — dnf clean all & autoremove"
         echo -e "  \033[1;37mrefresh --flatpak\033[0m \033[38;5;245m(-fp)\033[0m       — flatpak uninstall --unused"
         echo -e "  \033[1;37mrefresh --pip\033[0m \033[38;5;245m(-pip)\033[0m          — pip cache purge"
@@ -43,16 +43,16 @@ function refresh --description 'Deep system refresh: cache, services, extensions
     else
         for arg in $argv
             switch $arg
-                case -a --all all;          set do_all 1
-                case -c --cache cache;      set do_cache 1
-                case -s --services services; set do_services 1
-                case -e --extensions extensions; set do_extensions 1
-                case -d --dns dns;          set do_dns 1
-                case -dnf --dnf dnf;        set do_dnf 1
-                case -fp --flatpak flatpak; set do_flatpak 1
-                case -pip --pip pip;        set do_pip 1
-                case -k --desktop desktop;  set do_desktop 1
-                case -i --icons icons;      set do_icons 1
+                case -a --all all;                   set do_all 1
+                case -c --cache cache;               set do_cache 1
+                case -s --services services;         set do_services 1
+                case -e --extensions extensions;     set do_extensions 1
+                case -d --dns dns;                   set do_dns 1
+                case -dnf --dnf dnf;                 set do_dnf 1
+                case -fp --flatpak flatpak;          set do_flatpak 1
+                case -pip --pip pip;                 set do_pip 1
+                case -k --desktop desktop;           set do_desktop 1
+                case -i --icons icons;               set do_icons 1
                 case -h --help
                     echo -e "\033[1;36m"
                     echo "  ███████╗██████╗ ██████╗  █████╗ ██╗  ██╗███████╗███╗   ███╗██╗"
@@ -71,7 +71,7 @@ function refresh --description 'Deep system refresh: cache, services, extensions
                     echo -e "  \033[1;37mrefresh --extensions\033[0m \033[38;5;245m(-e)\033[0m     — cycle Dash-to-Dock extension"
                     echo -e "  \033[1;37mrefresh --dns\033[0m \033[38;5;245m(-d)\033[0m           — flush DNS resolver cache"
                     echo -e "  \033[1;37mrefresh --desktop\033[0m \033[38;5;245m(-k)\033[0m        — refresh desktop app grid, icons, names"
-                    echo -e "  \033[1;37mrefresh --icons\033[0m \033[38;5;245m(-i)\033[0m          — mirror Flatpak icons (GTK 512×512 bug fix)"
+                    echo -e "  \033[1;37mrefresh --icons\033[0m \033[38;5;245m(-i)\033[0m          — mirror unresolvable app icons (512×512 fix)"
                     echo -e "  \033[1;37mrefresh --dnf\033[0m \033[38;5;245m(-dnf)\033[0m          — dnf clean all & autoremove"
                     echo -e "  \033[1;37mrefresh --flatpak\033[0m \033[38;5;245m(-fp)\033[0m       — flatpak uninstall --unused"
                     echo -e "  \033[1;37mrefresh --pip\033[0m \033[38;5;245m(-pip)\033[0m          — pip cache purge"
@@ -178,35 +178,38 @@ function refresh --description 'Deep system refresh: cache, services, extensions
     end
 
     if test $do_icons -eq 1
-        __refresh_section "FLATPAK ICON MIRROR"
+        __refresh_section "ICON MIRROR"
         # Inline bash (run via sh -c inside __refresh_anim)
         __refresh_anim "Mirror 512×512 icons" '
-            fh=/var/lib/flatpak/exports/share/icons/hicolor;
             uh=$HOME/.local/share/icons/hicolor;
             u48=$uh/48x48/apps;
-            [ -d "$fh" ] || exit 0;
             mkdir -p "$u48";
             if [ ! -f "$uh/index.theme" ]; then
                 mkdir -p "$uh";
                 printf "[Icon Theme]\nName=Hicolor\nComment=Local overrides\nHidden=true\nDirectories=256x256/apps,48x48/apps\n\n[48x48/apps]\nSize=48\nContext=Applications\nType=Fixed\n" > "$uh/index.theme";
             fi;
-            find "$fh" -name "*.png" -o -name "*.svg" 2>/dev/null | while IFS= read -r f; do
-                name=$(basename "$f");
-                noext="${name%.*}";
-                [ -f "$HOME/.local/share/icons/MacTahoe-dark/$name" ] || [ -f "$HOME/.local/share/icons/MacTahoe-dark/${noext}.svg" ] && continue;
-                [ -f "$uh/48x48/apps/$name" ] || [ -f "$uh/scalable/apps/${noext}.svg" ] && continue;
-                ext="${name##*.}";
-                if [ "$ext" = "svg" ]; then
-                    mkdir -p "$uh/scalable/apps";
-                    ln -sf "$f" "$uh/scalable/apps/$name" 2>/dev/null || cp -f "$f" "$uh/scalable/apps/$name" 2>/dev/null;
-                else
-                    best="";
-                    for sz in 48x48 64x64 128x128 256x256 512x512; do
-                        if [ -f "$fh/$sz/apps/$name" ]; then best="$fh/$sz/apps/$name"; break; fi;
-                    done;
-                    [ -n "$best" ] || continue;
-                    ln -sf "$best" "$u48/$name" 2>/dev/null || cp -f "$best" "$u48/$name" 2>/dev/null;
-                fi;
+            for base in /var/lib/flatpak/exports/share/icons/hicolor \
+                        "$HOME/.local/share/icons/hicolor" \
+                        /usr/share/icons/hicolor; do
+                [ -d "$base" ] || continue;
+                find "$base" -path "*/apps/*" \( -name "*.png" -o -name "*.svg" \) 2>/dev/null | while IFS= read -r f; do
+                    name=$(basename "$f");
+                    noext="${name%.*}";
+                    [ -f "$HOME/.local/share/icons/MacTahoe-dark/$name" ] || [ -f "$HOME/.local/share/icons/MacTahoe-dark/${noext}.svg" ] && continue;
+                    [ -f "$uh/48x48/apps/$name" ] || [ -f "$uh/scalable/apps/${noext}.svg" ] && continue;
+                    ext="${name##*.}";
+                    if [ "$ext" = "svg" ]; then
+                        mkdir -p "$uh/scalable/apps";
+                        ln -sf "$f" "$uh/scalable/apps/$name" 2>/dev/null || cp -f "$f" "$uh/scalable/apps/$name" 2>/dev/null;
+                    else
+                        best="";
+                        for sz in 48x48 64x64 128x128 256x256 512x512; do
+                            if [ -f "$base/$sz/apps/$name" ]; then best="$base/$sz/apps/$name"; break; fi;
+                        done;
+                        [ -n "$best" ] || continue;
+                        ln -sf "$best" "$u48/$name" 2>/dev/null || cp -f "$best" "$u48/$name" 2>/dev/null;
+                    fi;
+                done;
             done;
             gtk-update-icon-cache "$uh/" 2>/dev/null;
         '

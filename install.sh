@@ -2253,17 +2253,24 @@ install_extensions() {
 # See: https://github.com/eprahemi/Fedora-MacTahoe-Eprahemi/issues
 
 mirror_flatpak_icons() {
-  local flatpak_hicolor="/var/lib/flatpak/exports/share/icons/hicolor"
   local user_hicolor="$HOME/.local/share/icons/hicolor"
   local user_48="$user_hicolor/48x48/apps"
   local mirrored=0 skipped=0
+  local bases=()
+  local base
 
-  [ ! -d "$flatpak_hicolor" ] && { ok "No Flatpak hicolor icons to mirror"; return 0; }
+  # Build list of hicolor sources that exist
+  [ -d "/var/lib/flatpak/exports/share/icons/hicolor" ] && bases+=("/var/lib/flatpak/exports/share/icons/hicolor")
+  [ -d "$HOME/.local/share/icons/hicolor" ] && bases+=("$HOME/.local/share/icons/hicolor")
+  [ -d "/usr/share/icons/hicolor" ] && bases+=("/usr/share/icons/hicolor")
+
+  [ ${#bases[@]} -eq 0 ] && { ok "No hicolor icon directories to scan"; return 0; }
 
   mkdir -p "$user_48"
 
   # Ensure user hicolor has an index.theme so gtk-update-icon-cache works
   if [ ! -f "$user_hicolor/index.theme" ]; then
+    mkdir -p "$user_hicolor"
     cat > "$user_hicolor/index.theme" <<-EOF
 [Icon Theme]
 Name=Hicolor
@@ -2278,64 +2285,65 @@ Type=Fixed
 EOF
   fi
 
-  # Collect all unique icon names from Flatpak hicolor (any subdir)
+  # Collect all unique icon names from all hicolor sources (apps/ only)
   local -A seen_names
-  local flatpak_files
-  flatpak_files=$(find "$flatpak_hicolor" -name '*.png' -o -name '*.svg' 2>/dev/null) || true
 
-  while IFS= read -r -d '' f; do
-    local name; name=$(basename "$f")
-    local name_noext="${name%.*}"
-    local ext="${name##*.}"
+  for base in "${bases[@]}"; do
+    while IFS= read -r -d '' f; do
+      local name; name=$(basename "$f")
+      local name_noext="${name%.*}"
+      local ext="${name##*.}"
 
-    # Skip if we've already processed this icon name
-    [ -n "${seen_names[$name_noext]:-}" ] && continue
-    seen_names[$name_noext]=1
+      # Skip if we've already processed this icon name
+      [ -n "${seen_names[$name_noext]:-}" ] && continue
+      seen_names[$name_noext]=1
 
-    # Check if MacTahoe-dark already has this icon (PNG or SVG in any dir)
-    local mac_icon
-    mac_icon=$(find "$HOME/.local/share/icons/MacTahoe-dark" -name "$name" -o -name "${name_noext}.svg" 2>/dev/null | head -1) || true
-    [ -n "$mac_icon" ] && { skipped=$((skipped + 1)); continue; }
+      # Check if MacTahoe-dark already has this icon (PNG or SVG in any dir)
+      local mac_icon
+      mac_icon=$(find "$HOME/.local/share/icons/MacTahoe-dark" -name "$name" -o -name "${name_noext}.svg" 2>/dev/null | head -1) || true
+      [ -n "$mac_icon" ] && { skipped=$((skipped + 1)); continue; }
 
-    # Check if user hicolor already has it at a resolvable size (48x48 or scalable)
-    if [ -f "$user_hicolor/48x48/apps/$name" ] || [ -f "$user_hicolor/scalable/apps/${name_noext}.svg" ]; then
-      skipped=$((skipped + 1))
-      continue
-    fi
-
-    # Check if Flatpak icon is SVG (best — GTK can scale it)
-    if [ "$ext" = "svg" ]; then
-      local target_dir="$user_hicolor/scalable/apps"
-      mkdir -p "$target_dir"
-      ln -sf "$f" "$target_dir/$name" 2>/dev/null || \
-        cp -f "$f" "$target_dir/$name" 2>/dev/null || true
-      mirrored=$((mirrored + 1))
-      continue
-    fi
-
-    # PNG: prefer the smallest available source (48 if exists, else any)
-    local best_src=""
-    for size_dir in 48x48 64x64 128x128 256x256 512x512; do
-      local candidate="$flatpak_hicolor/$size_dir/apps/$name"
-      if [ -f "$candidate" ]; then
-        best_src="$candidate"
-        break
+      # Check if user hicolor already has it at a resolvable size (48x48 or scalable)
+      if [ -f "$user_hicolor/48x48/apps/$name" ] || [ -f "$user_hicolor/scalable/apps/${name_noext}.svg" ]; then
+        skipped=$((skipped + 1))
+        continue
       fi
-    done
-    [ -z "$best_src" ] && { skipped=$((skipped + 1)); continue; }
 
-    # Create symlink (or copy if symlink fails) at 48x48
-    ln -sf "$best_src" "$user_48/$name" 2>/dev/null || \
-      cp -f "$best_src" "$user_48/$name" 2>/dev/null || true
-    mirrored=$((mirrored + 1))
-  done < <(find "$flatpak_hicolor" -name '*.png' -o -name '*.svg' -print0 2>/dev/null)
+      # SVG is best — GTK can scale it
+      if [ "$ext" = "svg" ]; then
+        local target_dir="$user_hicolor/scalable/apps"
+        mkdir -p "$target_dir"
+        ln -sf "$f" "$target_dir/$name" 2>/dev/null || \
+          cp -f "$f" "$target_dir/$name" 2>/dev/null || true
+        mirrored=$((mirrored + 1))
+        continue
+      fi
+
+      # PNG: prefer the smallest available source in this base
+      local best_src=""
+      local size_dir
+      for size_dir in 48x48 64x64 128x128 256x256 512x512; do
+        local candidate="$base/$size_dir/apps/$name"
+        if [ -f "$candidate" ]; then
+          best_src="$candidate"
+          break
+        fi
+      done
+      [ -z "$best_src" ] && { skipped=$((skipped + 1)); continue; }
+
+      # Create symlink (or copy if symlink fails) at 48x48
+      ln -sf "$best_src" "$user_48/$name" 2>/dev/null || \
+        cp -f "$best_src" "$user_48/$name" 2>/dev/null || true
+      mirrored=$((mirrored + 1))
+    done < <(find "$base" -path '*/apps/*' \( -name '*.png' -o -name '*.svg' \) -print0 2>/dev/null)
+  done
 
   # Rebuild user hicolor cache
   if [ "$mirrored" -gt 0 ]; then
     gtk-update-icon-cache "$user_hicolor/" 2>/dev/null || warn "Icon cache update failed for $user_hicolor"
   fi
 
-  log "Mirrored $mirrored Flatpak icon(s) to $user_hicolor/48x48/apps/ ($skipped already covered)"
+  log "Mirrored $mirrored icon(s) to $user_hicolor/48x48/apps/ ($skipped already covered)"
 }
 
 # ── FINALIZE ──────────────────────────────────────────────────
@@ -2380,7 +2388,7 @@ finalize() {
   log "Trimming old system logs (keeping 3 days)..."
   sudo journalctl --vacuum-time=3d 2>/dev/null || true
 
-  # ── 10. Mirror Flatpak app icons that GTK 3.24 can't resolve at 512×512 ──
+  # ── 10. Mirror unresolvable app icons (Flatpak + system + user-local) ──
   mirror_flatpak_icons
 
   # ── 11. Rebuild all icon theme caches (Adwaita + local + Flatpak hicolor) ──
