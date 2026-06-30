@@ -1548,6 +1548,11 @@ EOF
 
   # GDM login wallpaper (optional — prompted separately)
   if [ "${INSTALL_LOGIN_WALLPAPER:-true}" = "true" ] && [ -f "$wp/login/Himeno Fedora LoginScreen.jpg" ]; then
+    # Clean up any leftover login wallpaper from previous installs
+    if [ -f "$HOME/.local/share/backgrounds/Himeno Fedora LoginScreen.jpg" ]; then
+      rm "$HOME/.local/share/backgrounds/Himeno Fedora LoginScreen.jpg"
+      ok "Removed leftover login wallpaper from ~/.local/share/backgrounds/"
+    fi
     cp "$wp/login/Himeno Fedora LoginScreen.jpg" /tmp/Himeno\ Fedora\ LoginScreen.jpg
     ok "Login screen wallpaper copied to /tmp/"
   fi
