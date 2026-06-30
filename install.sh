@@ -2222,7 +2222,9 @@ install_extensions() {
   if [ "$ext_ok" -gt 0 ]; then
     ok "$ext_ok extension(s) installed"
   fi
-  [ "$ext_fail" -gt 0 ] && warn "$ext_fail extension(s) failed — check extensions.gnome.org or your network"
+  if [ "$ext_fail" -gt 0 ]; then
+    warn "$ext_fail extension(s) failed — check extensions.gnome.org or your network"
+  fi
 }
 
 # ── FINALIZE ──────────────────────────────────────────────────
