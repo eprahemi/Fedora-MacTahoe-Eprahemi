@@ -17,7 +17,30 @@ function refresh --description 'Deep system refresh: cache, services, extensions
     set -l do_icons 0
 
     if test (count $argv) -eq 0
-        set do_all 1
+        echo -e "\033[1;36m"
+        echo "  ███████╗██████╗ ██████╗  █████╗ ██╗  ██╗███████╗███╗   ███╗██╗"
+        echo "  ██╔════╝██╔══██╗██╔══██╗██╔══██╗██║  ██║██╔════╝████╗ ████║██║"
+        echo "  █████╗  ██████╔╝██████╔╝███████║███████║█████╗  ██╔████╔██║██║"
+        echo "  ██╔══╝  ██╔═══╝ ██╔══██╗██╔══██║██╔══██║██╔══╝  ██║╚██╔╝██║██║"
+        echo "  ███████╗██║     ██║  ██║██║  ██║██║  ██║███████╗██║ ╚═╝ ██║██║"
+        echo "  ╚══════╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝╚═╝"
+        echo -e "\033[1;36m╔══════════════════════════════════════════════════════════╗\033[0m"
+        echo -e "\033[1;36m║           \033[1;33mREFRESH FLAGS - USAGE GUIDE\033[1;36m                  ║\033[0m"
+        echo -e "\033[1;36m╚══════════════════════════════════════════════════════════╝\033[0m"
+        echo -e "  \033[1;37mrefresh\033[0m           — show this help menu"
+        echo -e "  \033[1;37mrefresh --help\033[0m    — show this help menu"
+        echo -e "  \033[1;37mrefresh -a\033[0m        — full safe refresh (all below)"
+        echo -e "  \033[1;37mrefresh -c\033[0m        — thumbnail, gnome-software, PackageKit caches"
+        echo -e "  \033[1;37mrefresh -s\033[0m        — restart Nautilus + xdg-desktop-portal"
+        echo -e "  \033[1;37mrefresh -e\033[0m        — cycle Dash-to-Dock extension"
+        echo -e "  \033[1;37mrefresh -d\033[0m        — flush DNS resolver cache"
+        echo -e "  \033[1;37mrefresh -k\033[0m        — refresh desktop app grid, icons, names"
+        echo -e "  \033[1;37mrefresh -i\033[0m        — mirror Flatpak icons (GTK 512×512 bug fix)"
+        echo -e "  \033[1;37mrefresh -dnf\033[0m      — dnf clean all & autoremove"
+        echo -e "  \033[1;37mrefresh -fp\033[0m       — flatpak uninstall --unused"
+        echo -e "  \033[1;37mrefresh -pip\033[0m      — pip cache purge"
+        echo -e "  \033[38;5;248m📦 Desktop refresh, D-Bus app grid, icon cache rebuild (Jun 2026)\033[0m"
+        return 0
     else
         for arg in $argv
             switch $arg
@@ -42,7 +65,9 @@ function refresh --description 'Deep system refresh: cache, services, extensions
                     echo -e "\033[1;36m╔══════════════════════════════════════════════════════════╗\033[0m"
                     echo -e "\033[1;36m║           \033[1;33mREFRESH FLAGS - USAGE GUIDE\033[1;36m                  ║\033[0m"
                     echo -e "\033[1;36m╚══════════════════════════════════════════════════════════╝\033[0m"
-                    echo -e "  \033[1;37mrefresh\033[0m           — full safe refresh (all below)"
+                    echo -e "  \033[1;37mrefresh\033[0m           — show this help menu"
+                    echo -e "  \033[1;37mrefresh --help\033[0m    — show this help menu"
+                    echo -e "  \033[1;37mrefresh -a\033[0m        — full safe refresh (all below)"
                     echo -e "  \033[1;37mrefresh -c\033[0m        — thumbnail, gnome-software, PackageKit caches"
                     echo -e "  \033[1;37mrefresh -s\033[0m        — restart Nautilus + xdg-desktop-portal"
                     echo -e "  \033[1;37mrefresh -e\033[0m        — cycle Dash-to-Dock extension"
