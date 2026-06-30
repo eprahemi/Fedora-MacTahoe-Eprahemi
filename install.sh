@@ -1548,8 +1548,8 @@ EOF
 
   # GDM login wallpaper (optional — prompted separately)
   if [ "${INSTALL_LOGIN_WALLPAPER:-true}" = "true" ] && [ -f "$wp/login/Himeno Fedora LoginScreen.jpg" ]; then
-    cp "$wp/login/Himeno Fedora LoginScreen.jpg" "$HOME/.local/share/backgrounds/"
-    ok "Login screen wallpaper copied to ~/.local/share/backgrounds/"
+    cp "$wp/login/Himeno Fedora LoginScreen.jpg" /tmp/Himeno\ Fedora\ LoginScreen.jpg
+    ok "Login screen wallpaper copied to /tmp/"
   fi
 }
 
