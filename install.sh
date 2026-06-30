@@ -2481,7 +2481,8 @@ reboot_txt="  ⚡  Reboot now — changes kick in after restart"
     echo -e "  ${GREEN}See you on the other side! Rebooting...${NC}"
     sudo reboot
   else
-    echo -e "  ${DIM}No worries — just remember to reboot before everything clicks into place.${NC}"
+    echo -e "  ${BOLD}${RED}⚠️  Dash-to-Dock, GTK themes, and GDM login screen will not work properly until you reboot.${NC}"
+    echo -e "  ${BOLD}${RED}⚠️  Restart as soon as possible for all effects to be completed.${NC}"
   fi
 }
 
