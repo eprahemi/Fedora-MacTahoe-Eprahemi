@@ -704,8 +704,9 @@ function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/g
             echo -e "  $GY│$C  $D  Random 4K Write (IOPS)...$C"
             set -l iow_res (dd if=/dev/zero of=$test_file bs=4k count=$iow_count oflag=dsync 2>&1 | tail -1)
             set iow_iops "N/A"
-            if string match -q "*bytes*" "$iow_res"
-                set -l iow_time (echo $iow_res | awk '{print $6}')
+            # Extract elapsed time after "copied," regardless of field position
+            set -l iow_time (echo $iow_res | sed -n 's/.*copied, \([0-9.]*\) s,.*/\1/p')
+            if test -n "$iow_time"
                 set iow_iops (math "$iow_count / $iow_time" 2>/dev/null; or echo "N/A")
             end
         end
