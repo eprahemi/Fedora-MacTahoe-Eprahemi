@@ -187,38 +187,39 @@ __secure_tunnel() {
 
   echo ""
   echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-  echo -e "  ${CYAN}║${NC}         ${BOLD}${WHITE}🔐  SECURE TUNNEL ACTIVE  🔐${NC}               ${CYAN}║${NC}"
+  local tunnel_t="🔐  SECURE TUNNEL ACTIVE  🔐"
+  echo -e "  ${CYAN}║${NC}         ${BOLD}${WHITE}${tunnel_t}${NC}$(printf '%*s' $((62 - 9 - ${#tunnel_t} - 2)) '')${CYAN}║${NC}"
   echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
 
   local t1="  Token:     ${token}"
-  echo -e "  ${CYAN}║${NC}  ${DIM}Token:${NC}     ${BOLD}${WHITE}${token}${NC}$(printf '%*s' $((60 - ${#t1})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${DIM}Token:${NC}     ${BOLD}${WHITE}${token}${NC}$(printf '%*s' $((62 - ${#t1})) '')${CYAN}║${NC}"
 
   local t2="  Client:    ${client_id}"
-  echo -e "  ${CYAN}║${NC}  ${DIM}Client:${NC}    ${BOLD}${WHITE}${client_id}${NC}$(printf '%*s' $((60 - ${#t2})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${DIM}Client:${NC}    ${BOLD}${WHITE}${client_id}${NC}$(printf '%*s' $((62 - ${#t2})) '')${CYAN}║${NC}"
 
   local t3="  Server:    ${server_id}"
-  echo -e "  ${CYAN}║${NC}  ${DIM}Server:${NC}    ${BOLD}${WHITE}${server_id}${NC}$(printf '%*s' $((60 - ${#t3})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${DIM}Server:${NC}    ${BOLD}${WHITE}${server_id}${NC}$(printf '%*s' $((62 - ${#t3})) '')${CYAN}║${NC}"
 
   local t4="  Node:      ${node}"
-  echo -e "  ${CYAN}║${NC}  ${DIM}Node:${NC}      ${BOLD}${WHITE}${node}${NC}$(printf '%*s' $((60 - ${#t4})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${DIM}Node:${NC}      ${BOLD}${WHITE}${node}${NC}$(printf '%*s' $((62 - ${#t4})) '')${CYAN}║${NC}"
 
   local t5="  Region:    ${location}"
-  echo -e "  ${CYAN}║${NC}  ${DIM}Region:${NC}    ${BOLD}${WHITE}${location}${NC}$(printf '%*s' $((60 - ${#t5})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${DIM}Region:${NC}    ${BOLD}${WHITE}${location}${NC}$(printf '%*s' $((62 - ${#t5})) '')${CYAN}║${NC}"
 
   local t6="  Uplink:    ${bw_label}"
-  echo -e "  ${CYAN}║${NC}  ${DIM}Uplink:${NC}    ${BOLD}${WHITE}${bw_label}${NC}$(printf '%*s' $((60 - ${#t6})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${DIM}Uplink:${NC}    ${BOLD}${WHITE}${bw_label}${NC}$(printf '%*s' $((62 - ${#t6})) '')${CYAN}║${NC}"
 
   local t7="  Uptime:    ${uptime}"
-  echo -e "  ${CYAN}║${NC}  ${DIM}Uptime:${NC}    ${BOLD}${WHITE}${uptime}${NC}$(printf '%*s' $((60 - ${#t7})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${DIM}Uptime:${NC}    ${BOLD}${WHITE}${uptime}${NC}$(printf '%*s' $((62 - ${#t7})) '')${CYAN}║${NC}"
 
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
 
   local s1="  ●  Tunnel active  │  Encrypted link established"
-  echo -e "  ${CYAN}║${NC}  ${GREEN}●${NC}  Tunnel active  │  Encrypted link established$(printf '%*s' $((60 - ${#s1})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${GREEN}●${NC}  Tunnel active  │  Encrypted link established$(printf '%*s' $((62 - ${#s1})) '')${CYAN}║${NC}"
 
   local s2="  ●  Session secured via ephemeral key exchange"
-  echo -e "  ${CYAN}║${NC}  ${GREEN}●${NC}  Session secured via ephemeral key exchange$(printf '%*s' $((60 - ${#s2})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${GREEN}●${NC}  Session secured via ephemeral key exchange$(printf '%*s' $((62 - ${#s2})) '')${CYAN}║${NC}"
 
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
   echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"

@@ -124,33 +124,33 @@ __secure_tunnel() {
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
 
   local t1="  Token:     ${token}"
-  echo -e "  ${CYAN}║${NC}  ${DIM}Token:${NC}     ${BOLD}${WHITE}${token}${NC}$(printf '%*s' $((60 - ${#t1})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${DIM}Token:${NC}     ${BOLD}${WHITE}${token}${NC}$(printf '%*s' $((62 - ${#t1})) '')${CYAN}║${NC}"
 
   local t2="  Client:    ${client_id}"
-  echo -e "  ${CYAN}║${NC}  ${DIM}Client:${NC}    ${BOLD}${WHITE}${client_id}${NC}$(printf '%*s' $((60 - ${#t2})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${DIM}Client:${NC}    ${BOLD}${WHITE}${client_id}${NC}$(printf '%*s' $((62 - ${#t2})) '')${CYAN}║${NC}"
 
   local t3="  Server:    ${server_id}"
-  echo -e "  ${CYAN}║${NC}  ${DIM}Server:${NC}    ${BOLD}${WHITE}${server_id}${NC}$(printf '%*s' $((60 - ${#t3})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${DIM}Server:${NC}    ${BOLD}${WHITE}${server_id}${NC}$(printf '%*s' $((62 - ${#t3})) '')${CYAN}║${NC}"
 
   local t4="  Node:      ${node}"
-  echo -e "  ${CYAN}║${NC}  ${DIM}Node:${NC}      ${BOLD}${WHITE}${node}${NC}$(printf '%*s' $((60 - ${#t4})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${DIM}Node:${NC}      ${BOLD}${WHITE}${node}${NC}$(printf '%*s' $((62 - ${#t4})) '')${CYAN}║${NC}"
 
   local t5="  Region:    ${location}"
-  echo -e "  ${CYAN}║${NC}  ${DIM}Region:${NC}    ${BOLD}${WHITE}${location}${NC}$(printf '%*s' $((60 - ${#t5})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${DIM}Region:${NC}    ${BOLD}${WHITE}${location}${NC}$(printf '%*s' $((62 - ${#t5})) '')${CYAN}║${NC}"
 
   local t6="  Uplink:    ${bw_label}"
-  echo -e "  ${CYAN}║${NC}  ${DIM}Uplink:${NC}    ${BOLD}${WHITE}${bw_label}${NC}$(printf '%*s' $((60 - ${#t6})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${DIM}Uplink:${NC}    ${BOLD}${WHITE}${bw_label}${NC}$(printf '%*s' $((62 - ${#t6})) '')${CYAN}║${NC}"
 
   local t7="  Uptime:    ${uptime}"
-  echo -e "  ${CYAN}║${NC}  ${DIM}Uptime:${NC}    ${BOLD}${WHITE}${uptime}${NC}$(printf '%*s' $((60 - ${#t7})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${DIM}Uptime:${NC}    ${BOLD}${WHITE}${uptime}${NC}$(printf '%*s' $((62 - ${#t7})) '')${CYAN}║${NC}"
 
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
 
   local s1="  ●  Tunnel active  │  Encrypted link established"
-  echo -e "  ${CYAN}║${NC}  ${GREEN}●${NC}  Tunnel active  │  Encrypted link established$(printf '%*s' $((60 - ${#s1})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${GREEN}●${NC}  Tunnel active  │  Encrypted link established$(printf '%*s' $((62 - ${#s1})) '')${CYAN}║${NC}"
 
   local s2="  ●  Session secured via ephemeral key exchange"
-  echo -e "  ${CYAN}║${NC}  ${GREEN}●${NC}  Session secured via ephemeral key exchange$(printf '%*s' $((60 - ${#s2})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${GREEN}●${NC}  Session secured via ephemeral key exchange$(printf '%*s' $((62 - ${#s2})) '')${CYAN}║${NC}"
 
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
   echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
@@ -242,28 +242,28 @@ __system_dashboard() {
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
 
   local l_os="  OS:       ${os_name}"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}OS:${NC}       ${os_name}$(printf '%*s' $((60 - ${#l_os})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}OS:${NC}       ${os_name}$(printf '%*s' $((62 - ${#l_os})) '')${CYAN}║${NC}"
 
   local l_krn="  Kernel:   ${kernel}"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}Kernel:${NC}   ${kernel}$(printf '%*s' $((60 - ${#l_krn})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Kernel:${NC}   ${kernel}$(printf '%*s' $((62 - ${#l_krn})) '')${CYAN}║${NC}"
 
   local l_gnome="  GNOME:    ${gnome_v}"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}GNOME:${NC}    ${gnome_v}$(printf '%*s' $((60 - ${#l_gnome})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}GNOME:${NC}    ${gnome_v}$(printf '%*s' $((62 - ${#l_gnome})) '')${CYAN}║${NC}"
 
   local l_cpu="  CPU:      ${cpu_label}"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}CPU:${NC}      ${cpu_label}$(printf '%*s' $((60 - ${#l_cpu})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}CPU:${NC}      ${cpu_label}$(printf '%*s' $((62 - ${#l_cpu})) '')${CYAN}║${NC}"
 
   local l_gpu="  GPU:      ${gpu_info}"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}GPU:${NC}      ${gpu_info}$(printf '%*s' $((60 - ${#l_gpu})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}GPU:${NC}      ${gpu_info}$(printf '%*s' $((62 - ${#l_gpu})) '')${CYAN}║${NC}"
 
   local l_ram="  RAM:      ${ram_used} GiB / ${ram_total} GiB  ${ram_bar}  ${ram_pct}%"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}RAM:${NC}      ${ram_used} GiB${NC} / ${ram_total} GiB  ${DIM}${ram_bar}${NC}  ${ram_pct}%$(printf '%*s' $((60 - ${#l_ram})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}RAM:${NC}      ${ram_used} GiB${NC} / ${ram_total} GiB  ${DIM}${ram_bar}${NC}  ${ram_pct}%$(printf '%*s' $((62 - ${#l_ram})) '')${CYAN}║${NC}"
 
   local l_dsk="  Disk:     ${disk_used} / ${disk_total}  ${disk_bar}  ${disk_pct}%"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}Disk:${NC}     ${disk_used} / ${disk_total}  ${DIM}${disk_bar}${NC}  ${disk_pct}%$(printf '%*s' $((60 - ${#l_dsk})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Disk:${NC}     ${disk_used} / ${disk_total}  ${DIM}${disk_bar}${NC}  ${disk_pct}%$(printf '%*s' $((62 - ${#l_dsk})) '')${CYAN}║${NC}"
 
   local l_up="  Uptime:   ${uptime_str}"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}Uptime:${NC}   ${uptime_str}$(printf '%*s' $((60 - ${#l_up})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Uptime:${NC}   ${uptime_str}$(printf '%*s' $((62 - ${#l_up})) '')${CYAN}║${NC}"
 
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
   echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
@@ -318,19 +318,19 @@ __cdn_speed_test() {
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
 
   local s_node="  Node:       ${node}"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}Node:${NC}       ${node}$(printf '%*s' $((60 - ${#s_node})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Node:${NC}       ${node}$(printf '%*s' $((62 - ${#s_node})) '')${CYAN}║${NC}"
 
   local s_route="  Route:      ${route}"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}Route:${NC}      ${DIM}${route}${NC}$(printf '%*s' $((60 - ${#s_route})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Route:${NC}      ${DIM}${route}${NC}$(printf '%*s' $((62 - ${#s_route})) '')${CYAN}║${NC}"
 
   local s_lat="  Latency:    ${latency} ms  ${latency_bar}"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}Latency:${NC}    ${latency} ms  ${DIM}${latency_bar}${NC}$(printf '%*s' $((60 - ${#s_lat})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Latency:${NC}    ${latency} ms  ${DIM}${latency_bar}${NC}$(printf '%*s' $((62 - ${#s_lat})) '')${CYAN}║${NC}"
 
   local s_bw="  Throughput: ${bw} Mbps  ${bw_bar}  ${bw_rating}"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}Throughput:${NC} ${bw} Mbps  ${DIM}${bw_bar}${NC}  ${bw_rating}$(printf '%*s' $((60 - ${#s_bw})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Throughput:${NC} ${bw} Mbps  ${DIM}${bw_bar}${NC}  ${bw_rating}$(printf '%*s' $((62 - ${#s_bw})) '')${CYAN}║${NC}"
 
   local s_st="  Stability:  ${st_bar}  ${stability}%"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}Stability:${NC}  ${DIM}${st_bar}${NC}  ${stability}%$(printf '%*s' $((60 - ${#s_st})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Stability:${NC}  ${DIM}${st_bar}${NC}  ${stability}%$(printf '%*s' $((62 - ${#s_st})) '')${CYAN}║${NC}"
 
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
   local s_ok1="  ✓  Route optimized"
@@ -388,46 +388,46 @@ __install_summary() {
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
 
   local i_st="  Status:     Complete  (${step_str} steps)"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}Status:${NC}     Complete  ${DIM}(${step_str} steps)${NC}$(printf '%*s' $((60 - ${#i_st})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Status:${NC}     Complete  ${DIM}(${step_str} steps)${NC}$(printf '%*s' $((62 - ${#i_st})) '')${CYAN}║${NC}"
 
   local i_dur="  Duration:   ${elapsed}"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}Duration:${NC}   ${elapsed}$(printf '%*s' $((60 - ${#i_dur})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Duration:${NC}   ${elapsed}$(printf '%*s' $((62 - ${#i_dur})) '')${CYAN}║${NC}"
 
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
   echo -e "  ${CYAN}║${NC}  ${DIM}──────────────────────────────────────────────────────────${NC}  ${CYAN}║${NC}"
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
 
   local i_rpm_clean="  RPM:        ~47 packages installed"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}RPM:${NC}        ${DIM}~47 packages installed${NC}$(printf '%*s' $((60 - ${#i_rpm_clean})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}RPM:${NC}        ${DIM}~47 packages installed${NC}$(printf '%*s' $((62 - ${#i_rpm_clean})) '')${CYAN}║${NC}"
 
   local i_fp_clean="  Flatpak:    ${INSTALL_FP_OK} installed, ${INSTALL_FP_FAIL} failed"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}Flatpak:${NC}    ${GREEN}${INSTALL_FP_OK}${NC} installed, ${YELLOW}${INSTALL_FP_FAIL}${NC} failed$(printf '%*s' $((60 - ${#i_fp_clean})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Flatpak:${NC}    ${GREEN}${INSTALL_FP_OK}${NC} installed, ${YELLOW}${INSTALL_FP_FAIL}${NC} failed$(printf '%*s' $((62 - ${#i_fp_clean})) '')${CYAN}║${NC}"
 
   local i_br="  Browsers:   Firefox + Chrome + Edge + VS Code"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}Browsers:${NC}   Firefox + Chrome + Edge + VS Code$(printf '%*s' $((60 - ${#i_br})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Browsers:${NC}   Firefox + Chrome + Edge + VS Code$(printf '%*s' $((62 - ${#i_br})) '')${CYAN}║${NC}"
 
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
   echo -e "  ${CYAN}║${NC}  ${DIM}──────────────────────────────────────────────────────────${NC}  ${CYAN}║${NC}"
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
 
   local i_gtk_clean="  GTK Theme:  MacTahoe-Dark (GNOME ${GNOME_VER})"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}GTK Theme:${NC}  MacTahoe-Dark ${DIM}(GNOME ${GNOME_VER})${NC}$(printf '%*s' $((60 - ${#i_gtk_clean})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}GTK Theme:${NC}  MacTahoe-Dark ${DIM}(GNOME ${GNOME_VER})${NC}$(printf '%*s' $((62 - ${#i_gtk_clean})) '')${CYAN}║${NC}"
 
   local i_ico="  Icon Theme: MacTahoe-dark"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}Icon Theme:${NC} MacTahoe-dark$(printf '%*s' $((60 - ${#i_ico})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Icon Theme:${NC} MacTahoe-dark$(printf '%*s' $((62 - ${#i_ico})) '')${CYAN}║${NC}"
 
   local i_fnt="  Font:       SF Pro Display"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}Font:${NC}       SF Pro Display$(printf '%*s' $((60 - ${#i_fnt})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Font:${NC}       SF Pro Display$(printf '%*s' $((62 - ${#i_fnt})) '')${CYAN}║${NC}"
 
   local i_shl_clean="  Shell:      Fish (default after logout)"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}Shell:${NC}      Fish ${DIM}(default after logout)${NC}$(printf '%*s' $((60 - ${#i_shl_clean})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Shell:${NC}      Fish ${DIM}(default after logout)${NC}$(printf '%*s' $((62 - ${#i_shl_clean})) '')${CYAN}║${NC}"
 
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
   echo -e "  ${CYAN}║${NC}  ${DIM}──────────────────────────────────────────────────────────${NC}  ${CYAN}║${NC}"
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
 
   local i_dsk="  Disk Usage: ~${theme_disk} for themes, icons, fonts"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}Disk Usage:${NC} ~${theme_disk} for themes, icons, fonts$(printf '%*s' $((60 - ${#i_dsk})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Disk Usage:${NC} ~${theme_disk} for themes, icons, fonts$(printf '%*s' $((62 - ${#i_dsk})) '')${CYAN}║${NC}"
 
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
   echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
