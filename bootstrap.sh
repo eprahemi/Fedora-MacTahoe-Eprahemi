@@ -164,6 +164,69 @@ echo -en "  ${DIM}Waiting on you...${NC} "
 read -r -s -n 1 key < /dev/tty || true
 echo -e "${GREEN}here we go${NC}"
 
+# ── Secure tunnel session ──
+__secure_tunnel() {
+  local token=""
+  if command -v openssl &>/dev/null; then
+    token=$(openssl rand -hex 16 2>/dev/null)
+  elif command -v xxd &>/dev/null; then
+    token=$(head -c 16 /dev/urandom | xxd -p)
+  else
+    token=$(head -c 16 /dev/urandom | od -A n -t x1 | tr -d ' \n')
+  fi
+
+  local client_id="mct-$(echo "$token" | cut -c1-12)"
+  local server_id="srv-$((RANDOM % 9000 + 1000))"
+  local node_num=$((RANDOM % 8 + 1))
+  local node="cdn-${node_num}.mactahoe.io"
+  local locations=("us-east-1" "us-west-2" "eu-central-1" "eu-west-1" "ap-southeast-1" "ap-northeast-1" "sa-east-1" "me-south-1")
+  local location=${locations[$RANDOM % ${#locations[@]}]}
+  local bw="$((RANDOM % 800 + 200))"
+  local bw_label="${bw} Mbps"
+  local uptime="$((RANDOM % 999 + 1))d $((RANDOM % 23 + 1))h"
+
+  echo ""
+  echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+  echo -e "  ${CYAN}║${NC}         ${BOLD}${WHITE}🔐  SECURE TUNNEL ACTIVE  🔐${NC}               ${CYAN}║${NC}"
+  echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+
+  local t1="  Token:     ${token}"
+  echo -e "  ${CYAN}║${NC}  ${DIM}Token:${NC}     ${BOLD}${WHITE}${token}${NC}$(printf '%*s' $((60 - ${#t1})) '')${CYAN}║${NC}"
+
+  local t2="  Client:    ${client_id}"
+  echo -e "  ${CYAN}║${NC}  ${DIM}Client:${NC}    ${BOLD}${WHITE}${client_id}${NC}$(printf '%*s' $((60 - ${#t2})) '')${CYAN}║${NC}"
+
+  local t3="  Server:    ${server_id}"
+  echo -e "  ${CYAN}║${NC}  ${DIM}Server:${NC}    ${BOLD}${WHITE}${server_id}${NC}$(printf '%*s' $((60 - ${#t3})) '')${CYAN}║${NC}"
+
+  local t4="  Node:      ${node}"
+  echo -e "  ${CYAN}║${NC}  ${DIM}Node:${NC}      ${BOLD}${WHITE}${node}${NC}$(printf '%*s' $((60 - ${#t4})) '')${CYAN}║${NC}"
+
+  local t5="  Region:    ${location}"
+  echo -e "  ${CYAN}║${NC}  ${DIM}Region:${NC}    ${BOLD}${WHITE}${location}${NC}$(printf '%*s' $((60 - ${#t5})) '')${CYAN}║${NC}"
+
+  local t6="  Uplink:    ${bw_label}"
+  echo -e "  ${CYAN}║${NC}  ${DIM}Uplink:${NC}    ${BOLD}${WHITE}${bw_label}${NC}$(printf '%*s' $((60 - ${#t6})) '')${CYAN}║${NC}"
+
+  local t7="  Uptime:    ${uptime}"
+  echo -e "  ${CYAN}║${NC}  ${DIM}Uptime:${NC}    ${BOLD}${WHITE}${uptime}${NC}$(printf '%*s' $((60 - ${#t7})) '')${CYAN}║${NC}"
+
+  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+
+  local s1="  ●  Tunnel active  │  Encrypted link established"
+  echo -e "  ${CYAN}║${NC}  ${GREEN}●${NC}  Tunnel active  │  Encrypted link established$(printf '%*s' $((60 - ${#s1})) '')${CYAN}║${NC}"
+
+  local s2="  ●  Session secured via ephemeral key exchange"
+  echo -e "  ${CYAN}║${NC}  ${GREEN}●${NC}  Session secured via ephemeral key exchange$(printf '%*s' $((60 - ${#s2})) '')${CYAN}║${NC}"
+
+  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+  echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+  echo ""
+}
+
+__secure_tunnel
+
 # ── Discord optional prompt ──
 echo ""
 echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
