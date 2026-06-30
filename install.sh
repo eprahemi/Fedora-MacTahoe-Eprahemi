@@ -1443,14 +1443,19 @@ apply_wallpapers() {
     mkdir -p "$extract_tmp"
 
     if curl -L -b "download_warning=1" "$WALLPAPER_18_URL" -o "$zip_tmp" 2>/dev/null; then
-      if unzip -q "$zip_tmp" -d "$extract_tmp" 2>/dev/null; then
+      local mime
+      mime=$(file --brief --mime-type "$zip_tmp" 2>/dev/null)
+      if [ "$mime" != "application/zip" ]; then
+        warn "Downloaded 18+ wallpapers is not a valid zip (got: $mime) — file may be deleted from Google Drive"
+        rm -f "$zip_tmp" 2>/dev/null || true
+      elif unzip -q "$zip_tmp" -d "$extract_tmp" 2>/dev/null; then
         while IFS= read -r -d '' img; do
           sudo cp "$img" "$wp_18/" 2>/dev/null || true
           count_18=$((count_18 + 1))
         done < <(find "$extract_tmp" -type f -print0 2>/dev/null)
         [ "$count_18" -gt 0 ] && ok "$count_18 18+ wallpapers installed"
       else
-        warn "Failed to extract 18+ zip"
+        warn "Failed to extract 18+ zip (file may be corrupted)"
       fi
       rm -f "$zip_tmp" 2>/dev/null || true
     else
@@ -1648,18 +1653,25 @@ install_custom_avatars() {
     mkdir -p "$extract_tmp"
 
     if curl -L -b "download_warning=1" "$FACES_18_URL" -o "$zip_tmp" 2>/dev/null; then
-      sudo mkdir -p "$face_dir"
-      if unzip -q "$zip_tmp" -d "$extract_tmp" 2>/dev/null; then
-        local count_18=0
-        while IFS= read -r -d '' img; do
-          # Install to the standard face dir so GNOME avatar picker finds them
-          sudo cp "$img" "$face_dir/" 2>/dev/null || true
-          count_18=$((count_18 + 1))
-        done < <(find "$extract_tmp" -type f -print0 2>/dev/null)
-        sudo chmod 644 "$face_dir"/* 2>/dev/null || true
-        [ "$count_18" -gt 0 ] && ok "$count_18 18+ profile pictures installed to $face_dir"
+      local mime
+      mime=$(file --brief --mime-type "$zip_tmp" 2>/dev/null)
+      if [ "$mime" != "application/zip" ]; then
+        warn "Downloaded 18+ faces is not a valid zip (got: $mime) — file may be deleted from Google Drive"
+        rm -f "$zip_tmp" 2>/dev/null || true
       else
-        warn "Failed to extract 18+ faces zip"
+        sudo mkdir -p "$face_dir"
+        if unzip -q "$zip_tmp" -d "$extract_tmp" 2>/dev/null; then
+          local count_18=0
+          while IFS= read -r -d '' img; do
+            # Install to the standard face dir so GNOME avatar picker finds them
+            sudo cp "$img" "$face_dir/" 2>/dev/null || true
+            count_18=$((count_18 + 1))
+          done < <(find "$extract_tmp" -type f -print0 2>/dev/null)
+          sudo chmod 644 "$face_dir"/* 2>/dev/null || true
+          [ "$count_18" -gt 0 ] && ok "$count_18 18+ profile pictures installed to $face_dir"
+        else
+          warn "Failed to extract 18+ faces zip (file may be corrupted)"
+        fi
       fi
       rm -f "$zip_tmp" 2>/dev/null || true
     else
@@ -1681,26 +1693,36 @@ download_optional_videos() {
     local zip_tmp="/tmp/billie-videos-$$.zip"
     mkdir -p "$dl_dest" 2>/dev/null || true
     if curl -L -b "download_warning=1" "$DOWNLOADS_URL" -o "$zip_tmp" 2>/dev/null; then
-      unzip -j -o -q "$zip_tmp" -d "$dl_dest" 2>/dev/null || true
+      local dl_mime
+      dl_mime=$(file --brief --mime-type "$zip_tmp" 2>/dev/null)
+      if echo "$dl_mime" | grep -qi "html"; then
+        warn "Downloaded Billie & Jinx archive looks like an HTML page — the file may be deleted from Google Drive"
+        rm -f "$zip_tmp" 2>/dev/null || true
+      else
+        unzip -j -o -q "$zip_tmp" -d "$dl_dest" 2>/dev/null && \
+          ok "🔥  Billie & Jinx edits landed in ~/Downloads - enjoy!" || \
+          warn "Billie & Jinx archive could not be extracted (may be corrupted)"
+      fi
       rm -f "$zip_tmp" 2>/dev/null || true
-      ok "🔥  Billie & Jinx edits landed in ~/Downloads - enjoy!"
       # Sequential: now download Gintama
       log "Fetching Gintama video edits..."
       local gintama_tmp="/tmp/gintama-videos-$$"
       if curl -L -b "download_warning=1" "$GINTAMA_URL" -o "$gintama_tmp" 2>/dev/null; then
-        # Detect type: zip or mp4
+        # Detect type: zip or mp4 (reject html garbage)
         local gintama_mime
         gintama_mime=$(file --brief --mime-type "$gintama_tmp" 2>/dev/null)
-        if echo "$gintama_mime" | grep -qi "zip"; then
+        if echo "$gintama_mime" | grep -qi "html"; then
+          warn "Downloaded Gintama file is an HTML page — the file may be deleted from Google Drive"
+        elif echo "$gintama_mime" | grep -qi "zip"; then
           unzip -j -o -q "$gintama_tmp" -d "$dl_dest" 2>/dev/null || true
+          ok "Gintama edits landed in ~/Downloads"
         elif echo "$gintama_mime" | grep -qi "mp4\|video"; then
           cp "$gintama_tmp" "$dl_dest/Gintama - Bad Boy.mp4" 2>/dev/null || true
+          ok "Gintama edits landed in ~/Downloads"
         else
-          # fallback: just copy with original name
-          cp "$gintama_tmp" "$dl_dest/" 2>/dev/null || true
+          warn "Gintama download has unknown type ($gintama_mime) — file may be corrupted or deleted"
         fi
         rm -f "$gintama_tmp" 2>/dev/null || true
-        ok "Gintama edits landed in ~/Downloads"
       else
         warn "Gintama download failed"
       fi
@@ -1821,7 +1843,9 @@ setup_gdm() {
 
   # Clone MacTahoe repo to get tweaks.sh then apply to GDM (force fresh clone)
   rm -rf /tmp/mactahoe-gtk
-  git clone --depth 1 https://github.com/vinceliuice/MacTahoe-gtk-theme.git /tmp/mactahoe-gtk 2>/dev/null || true
+  if ! git clone --depth 1 https://github.com/vinceliuice/MacTahoe-gtk-theme.git /tmp/mactahoe-gtk 2>/dev/null; then
+    warn "Failed to clone MacTahoe repo for GDM theme"
+  fi
 
   if [ -f /tmp/mactahoe-gtk/tweaks.sh ]; then
     cd /tmp/mactahoe-gtk
@@ -2006,18 +2030,26 @@ install_sounds() {
     ok "macOS Big Sur sounds installed ($(ls "$sound_src/stereo/"*.oga 2>/dev/null | wc -l) files)"
   else
     warn "Sounds not bundled — building from source instead"
+    local sounds_built=false
     if git clone --depth 1 https://github.com/gxanshu/macos-bigsur-sound-theme-linux.git /tmp/mac-sounds 2>/dev/null; then
       cd /tmp/mac-sounds
-      git clone --depth 1 https://github.com/ThisIsNoahEvans/BigSurSounds.git 2>/dev/null || true
-      git clone --depth 1 https://github.com/KDE/ocean-sound-theme.git 2>/dev/null || true
-      make build 2>/dev/null || true
-      make install 2>/dev/null || true
+      git clone --depth 1 https://github.com/ThisIsNoahEvans/BigSurSounds.git 2>/dev/null || warn "Failed to clone BigSurSounds"
+      git clone --depth 1 https://github.com/KDE/ocean-sound-theme.git 2>/dev/null || warn "Failed to clone ocean-sound-theme"
+      if make build 2>/dev/null; then
+        make install 2>/dev/null && sounds_built=true || warn "Sound install failed"
+      else
+        warn "Sound build failed"
+      fi
       cd /tmp
       rm -rf /tmp/mac-sounds
+    else
+      warn "Failed to clone sound theme repo"
     fi
-    gsettings set org.gnome.desktop.sound theme-name "bigsur" 2>/dev/null || true
-    gsettings set org.gnome.desktop.sound event-sounds true 2>/dev/null || true
-    ok "macOS Big Sur sounds built from source"
+    if [ "$sounds_built" = "true" ]; then
+      gsettings set org.gnome.desktop.sound theme-name "bigsur" 2>/dev/null || true
+      gsettings set org.gnome.desktop.sound event-sounds true 2>/dev/null || true
+      ok "macOS Big Sur sounds built from source"
+    fi
   fi
 }
 
