@@ -53,7 +53,7 @@ is_valid_zip() {
   od -A n -t x1 -N 4 "$f" 2>/dev/null | grep -qi "50 4b 03 04"
 }
 
-TOTAL_STEPS=24
+TOTAL_STEPS=25
 STEP=0
 
 next_step() {
@@ -482,7 +482,31 @@ optimize_system_resources() {
   # ── 5. Firewalld (if not actively used) ──
   # Saves ~30-50 MB. Only disable if you don't need a firewall.
   if sudo systemctl is-active --quiet firewalld 2>/dev/null; then
-    if confirm "  Disable firewalld too? (not needed if you use iptables/nftables) [y/N]: " N; then
+    echo ""
+    echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+fw_t="            ◆  DISABLE FIREWALLD?  ◆"
+    echo -e "  ${CYAN}║${NC}${fw_t}$(printf '%*s' $((62 - ${#fw_t})) '')${CYAN}║${NC}"
+    echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+fw1="  Firewalld is currently active and using ~30-50 MB RAM."
+    echo -e "  ${CYAN}║${NC}${fw1}$(printf '%*s' $((62 - ${#fw1})) '')${CYAN}║${NC}"
+fw2="  Disable it if you rely on iptables, nftables, or don't"
+    echo -e "  ${CYAN}║${NC}${fw2}$(printf '%*s' $((62 - ${#fw2})) '')${CYAN}║${NC}"
+fw3="  need a firewall at all. Keep it if you use firewalld"
+    echo -e "  ${CYAN}║${NC}${fw3}$(printf '%*s' $((62 - ${#fw3})) '')${CYAN}║${NC}"
+fw4="  rules or docker/podman with firewall integration."
+    echo -e "  ${CYAN}║${NC}${fw4}$(printf '%*s' $((62 - ${#fw4})) '')${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+fw5="    Yes  — Disable firewalld (save RAM)"
+    echo -e "  ${CYAN}║${NC}    ${BOLD}${GREEN}Y${NC}${BOLD}es${NC}  — Disable firewalld (save RAM)$(printf '%*s' $((62 - ${#fw5})) '')${CYAN}║${NC}"
+fw6="    no   — Keep firewalld active"
+    echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}n${NC}${BOLD}o${NC}   — Keep firewalld active$(printf '%*s' $((62 - ${#fw6})) '')${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+fw7="  Press Enter for default (No)"
+    echo -e "  ${CYAN}║${NC}${DIM}${fw7}$(printf '%*s' $((62 - ${#fw7})) '')${NC}${CYAN}║${NC}"
+    echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    if confirm "Disable firewalld? [y/N]: " N; then
       sudo systemctl disable --now firewalld 2>/dev/null || true
       ok "Firewalld disabled (~30-50 MB saved)"
     else
