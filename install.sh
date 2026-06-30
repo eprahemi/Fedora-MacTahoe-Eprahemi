@@ -1581,12 +1581,6 @@ EOF
     rm "$HOME/.local/share/backgrounds/Himeno Fedora LoginScreen.jpg"
     ok "Removed leftover login wallpaper from ~/.local/share/backgrounds/"
   fi
-
-  # GDM login wallpaper (optional — prompted separately)
-  if [ "${INSTALL_LOGIN_WALLPAPER:-true}" = "true" ] && [ -f "$wp/login/Himeno Fedora LoginScreen.jpg" ]; then
-    cp "$wp/login/Himeno Fedora LoginScreen.jpg" /tmp/Himeno\ Fedora\ LoginScreen.jpg
-    ok "Login screen wallpaper copied to /tmp/"
-  fi
 }
 
 install_custom_avatars() {
