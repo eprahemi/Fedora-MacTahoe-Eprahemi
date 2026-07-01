@@ -49,8 +49,14 @@ trap '_fed_log_error $LINENO $?' ERR
 # ── Padded header row helper ──
 _fed_header_row() {
   local _lbl="$1" _val="$2"
-  local _content_before_val=18
-  local _pad=$((62 - _content_before_val - ${#_val}))
+  # Visible chars before value: 2 (spaces after ║) + 12 (label) + 5 ("  :  ") = 19
+  # Total inner width between ║ chars: 64 (matches the 64 ═'s in the border)
+  # Max value length = 64 - 19 - 1 (min pad) = 44
+  local _max_val=43  # leaves room for ellipsis + 1 pad
+  if [ ${#_val} -gt 44 ]; then
+    _val="${_val:0:_max_val}…"
+  fi
+  local _pad=$((64 - 19 - ${#_val}))
   [ "$_pad" -lt 1 ] && _pad=1
   echo -e "  ${CYAN}║${NC}  ${BOLD}$(printf "%-12s" "$_lbl")${NC}  :  ${_val}$(printf '%*s' "$_pad" '')${CYAN}║${NC}"
 }
