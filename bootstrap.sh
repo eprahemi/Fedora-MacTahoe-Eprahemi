@@ -1,4 +1,15 @@
 #!/usr/bin/env bash
+
+# ── Bootstrap log ──
+# Generates a unique 8-char session ID and logs ALL output to ~/FedoraTahoe_log.<ID>.txt
+_FED_ID=$(tr -dc 'a-zA-Z0-9' < /dev/urandom 2>/dev/null | head -c 8)
+[ -z "$_FED_ID" ] && _FED_ID="X$(date +%s 2>/dev/null | sha256sum 2>/dev/null | head -c7 || echo "00000001")"
+_FED_LOG="$HOME/FedoraTahoe_log.${_FED_ID}.txt"
+touch "$_FED_LOG" 2>/dev/null || true
+# Preserve original stdout/stderr, then redirect all output to both terminal and log
+exec 5>&1 6>&2
+exec > >(tee -a "$_FED_LOG") 2>&1
+
 set -euo pipefail
 
 REPO="https://github.com/eprahemi/Fedora-MacTahoe-Eprahemi.git"
@@ -6,6 +17,46 @@ TMP="/tmp/fedora-mactahoe"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 BOLD='\033[1m'; WHITE='\033[1;37m'; DIM='\033[2m'; PINK='\033[1;35m'
+
+# ── Log finalization (runs on normal exit, crash, or Ctrl+C) ──
+_fed_log_finalize() {
+  local _rc=$?
+  sleep 0.3 2>/dev/null || true
+  exec 1>&5 2>&6 2>/dev/null || true
+  echo -e "  ${GREEN}Log saved: ${_FED_LOG}${NC}"
+  trap - EXIT
+}
+trap _fed_log_finalize EXIT
+
+# ── Error logging ──
+_fed_log_error() {
+  local _line=$1 _code=$2
+  echo -e "\n  ${RED}${BOLD}✗  ERROR at line ${_line} (exit code: ${_code})${NC}"
+  echo -e "  ${YELLOW}${BOLD}   Full log: ${_FED_LOG}${NC}"
+}
+trap '_fed_log_error $LINENO $?' ERR
+
+# ── Log header — system info and start timestamp ──
+echo ""
+echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}        ${BOLD}${WHITE}FEDORA MACTAHOE — EPRAHEMI EDITION${NC}                     ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}        ${DIM}Bootstrap Log${NC}                                                ${CYAN}║${NC}"
+echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
+echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ${BOLD}Hostname${NC}  :  $(hostname)                                            ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ${BOLD}User${NC}      :  $(whoami)                                               ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ${BOLD}Date${NC}      :  $(date '+%Y-%m-%d %H:%M:%S')                                 ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ${BOLD}Session${NC}   :  $_FED_ID                                            ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ${BOLD}Log${NC}       :  FedoraTahoe_log.${_FED_ID}.txt                             ${CYAN}║${NC}"
+echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
+echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
+echo -e "  ${CYAN}║${NC}  ${DIM}https://github.com/eprahemi/Fedora-MacTahoe-Eprahemi${NC}               ${CYAN}║${NC}"
+echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
+echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+echo ""
 
 # ── Ctrl+C / Interrupt handling ──
 # First press warns, second press force-exits immediately.
@@ -22,10 +73,10 @@ trap _handle_sigint INT TERM
 
 confirm() {
   local prompt="$1" default="${2:-}"
-  local reply
+  local reply=""
   while true; do
     echo -en "  ${DIM}${prompt}${NC} " >/dev/tty
-    read -r reply </dev/tty || true
+    read -r reply </dev/tty || reply=""
     case "${reply,,}" in
       y|yes) return 0 ;;
       n|no)  return 1 ;;
