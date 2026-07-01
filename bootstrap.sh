@@ -6,12 +6,9 @@ _FED_ID=$(tr -dc 'a-zA-Z0-9' < /dev/urandom 2>/dev/null | head -c 8)
 [ -z "$_FED_ID" ] && _FED_ID="X$(date +%s 2>/dev/null | sha256sum 2>/dev/null | head -c7 || echo "00000001")"
 _FED_LOG="$HOME/FedoraTahoe_log.${_FED_ID}.txt"
 touch "$_FED_LOG" 2>/dev/null || true
-# Preserve original stdout/stderr
+# Preserve original stdout/stderr, then redirect all output to both terminal and log
 exec 5>&1 6>&2
-# ANSI escape byte used by sed to strip colour codes from the log file
-_FED_ESC=$'\x1b'
-# Redirect all output: terminal gets colours, log file gets clean plain text
-exec > >(tee >(sed -E "s/${_FED_ESC}\[[0-9;]*[a-zA-Z]//g" > "$_FED_LOG")) 2>&1
+exec > >(tee -a "$_FED_LOG") 2>&1
 
 set -euo pipefail
 
@@ -24,8 +21,13 @@ BOLD='\033[1m'; WHITE='\033[1;37m'; DIM='\033[2m'; PINK='\033[1;35m'
 # ── Log finalization (runs on normal exit, crash, or Ctrl+C) ──
 _fed_log_finalize() {
   local _rc=$?
-  sleep 0.3 2>/dev/null || true
   exec 1>&5 2>&6 2>/dev/null || true
+  sleep 0.5 2>/dev/null || true
+  # Strip ANSI escape sequences from log file (post-process, no pipe race)
+  if [ -n "${_FED_LOG:-}" ] && [ -f "$_FED_LOG" ]; then
+    LC_ALL=C sed -i 's/\x1b\[[0-9;]*[a-zA-Z]//g' "$_FED_LOG" 2>/dev/null || true
+    LC_ALL=C sed -i 's/\x1b\][0-9;]*[^\x07\x1b]*[\x07\x1b]//g' "$_FED_LOG" 2>/dev/null || true
+  fi
   echo -e "  ${GREEN}Log saved: ${_FED_LOG}${NC}"
   trap - EXIT
 }
@@ -72,7 +74,7 @@ _handle_sigint() {
   fi
   echo -e "\n  ${YELLOW}${BOLD}⚠  Interrupted. Press Ctrl+C again to exit.${NC}"
 }
-trap _handle_sigint INT TERM
+trap _handle_sigint INT
 
 confirm() {
   local prompt="$1" default="${2:-}"

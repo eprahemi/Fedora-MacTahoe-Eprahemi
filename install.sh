@@ -6,20 +6,22 @@ _FED_ID=$(tr -dc 'a-zA-Z0-9' < /dev/urandom 2>/dev/null | head -c 8)
 [ -z "$_FED_ID" ] && _FED_ID="X$(date +%s 2>/dev/null | sha256sum 2>/dev/null | head -c7 || echo "00000001")"
 _FED_LOG="$HOME/FedoraTahoe_log.${_FED_ID}.txt"
 touch "$_FED_LOG" 2>/dev/null || true
-# Preserve original stdout/stderr
+# Preserve original stdout/stderr, then redirect all output to both terminal and log
 exec 5>&1 6>&2
-# ANSI escape byte used by sed to strip colour codes from the log file
-_FED_ESC=$'\x1b'
-# Redirect all output: terminal gets colours, log file gets clean plain text
-exec > >(tee >(sed -E "s/${_FED_ESC}\[[0-9;]*[a-zA-Z]//g" > "$_FED_LOG")) 2>&1
+exec > >(tee -a "$_FED_LOG") 2>&1
 
 set -euo pipefail
 
 # ── Log finalization (runs on normal exit, crash, or Ctrl+C) ──
 _fed_log_finalize() {
   local _rc=$?
-  sleep 0.3 2>/dev/null || true
   exec 1>&5 2>&6 2>/dev/null || true
+  sleep 0.5 2>/dev/null || true
+  # Strip ANSI escape sequences from log file (post-process, no pipe race)
+  if [ -n "${_FED_LOG:-}" ] && [ -f "$_FED_LOG" ]; then
+    LC_ALL=C sed -i 's/\x1b\[[0-9;]*[a-zA-Z]//g' "$_FED_LOG" 2>/dev/null || true
+    LC_ALL=C sed -i 's/\x1b\][0-9;]*[^\x07\x1b]*[\x07\x1b]//g' "$_FED_LOG" 2>/dev/null || true
+  fi
   echo -e "  ${GREEN}Log saved: ${_FED_LOG}${NC}"
   trap - EXIT
 }
@@ -78,7 +80,7 @@ _handle_sigint() {
   fi
   echo -e "\n  ${YELLOW}${BOLD}⚠  Interrupted. Press Ctrl+C again to exit.${NC}"
 }
-trap _handle_sigint INT TERM
+trap _handle_sigint INT
 
 # ── Config ──
 # 18+ wallpaper zip — Google Drive direct download (file ID from share link)
@@ -132,8 +134,8 @@ next_step() {
   
   echo ""
   echo -e "  ${CYAN}┌──${NC} ${YELLOW}${BOLD}Step ${STEP}/${TOTAL_STEPS}${NC}  ${WHITE}${BOLD}$1${NC}  ${CYAN}──┐${NC}"
-  local bar_filled=$(printf '%*s' "$filled" '' | tr ' ' '▰')
-  local bar_empty=$(printf '%*s' "$empty" '' | tr ' ' '▱')
+  local bar_filled=$(printf '%*s' "$filled" '' | sed 's/ /▰/g')
+  local bar_empty=$(printf '%*s' "$empty" '' | sed 's/ /▱/g')
   printf "  ${CYAN}│${NC}  ${GREEN}%s${NC}${DIM}%s${NC}  ${YELLOW}%3d%%${NC}  ${CYAN}│${NC}\n" "$bar_filled" "$bar_empty" "$pct"
   echo -e "  ${CYAN}└──────────────────────────────────────────────────────────┘${NC}"
 }
@@ -276,7 +278,7 @@ __system_dashboard() {
       local re=$((20 - rf))
       [ "$rf" -gt 20 ] && rf=20
       [ "$re" -lt 0 ] && re=0
-      ram_bar=$(printf '%*s' "$rf" '' | tr ' ' '▰')$(printf '%*s' "$re" '' | tr ' ' '▱')
+      ram_bar=$(printf '%*s' "$rf" '' | sed 's/ /▰/g')$(printf '%*s' "$re" '' | sed 's/ /▱/g')
     fi
   fi
 
@@ -291,7 +293,7 @@ __system_dashboard() {
     local dempty=$((20 - dfill))
     [ "$dfill" -gt 20 ] && dfill=20
     [ "$dempty" -lt 0 ] && dempty=0
-    disk_bar=$(printf '%*s' "$dfill" '' | tr ' ' '▰')$(printf '%*s' "$dempty" '' | tr ' ' '▱')
+    disk_bar=$(printf '%*s' "$dfill" '' | sed 's/ /▰/g')$(printf '%*s' "$dempty" '' | sed 's/ /▱/g')
   fi
 
   # ── Uptime ──
@@ -361,14 +363,14 @@ __cdn_speed_test() {
   [ "$latency_fill" -gt 12 ] && latency_fill=12
   [ "$latency_fill" -lt 0 ] && latency_fill=0
   local latency_empty=$((12 - latency_fill))
-  local latency_bar=$(printf '%*s' "$latency_fill" '' | tr ' ' '▰')$(printf '%*s' "$latency_empty" '' | tr ' ' '▱')
+  local latency_bar=$(printf '%*s' "$latency_fill" '' | sed 's/ /▰/g')$(printf '%*s' "$latency_empty" '' | sed 's/ /▱/g')
 
   local bw=$((RANDOM % 800 + 200))
   local bw_fill=$((bw * 11 / 1000))
   [ "$bw_fill" -gt 11 ] && bw_fill=11
   [ "$bw_fill" -lt 0 ] && bw_fill=0
   local bw_empty=$((11 - bw_fill))
-  local bw_bar=$(printf '%*s' "$bw_fill" '' | tr ' ' '▰')$(printf '%*s' "$bw_empty" '' | tr ' ' '▱')
+  local bw_bar=$(printf '%*s' "$bw_fill" '' | sed 's/ /▰/g')$(printf '%*s' "$bw_empty" '' | sed 's/ /▱/g')
   local bw_rating=""
   [ "$bw" -ge 800 ] && bw_rating="Excellent"
   [ "$bw" -ge 500 ] && [ "$bw" -lt 800 ] && bw_rating="Good"
@@ -380,7 +382,7 @@ __cdn_speed_test() {
   [ "$st_fill" -gt 19 ] && st_fill=19
   [ "$st_fill" -lt 0 ] && st_fill=0
   local st_empty=$((19 - st_fill))
-  local st_bar=$(printf '%*s' "$st_fill" '' | tr ' ' '▰')$(printf '%*s' "$st_empty" '' | tr ' ' '▱')
+  local st_bar=$(printf '%*s' "$st_fill" '' | sed 's/ /▰/g')$(printf '%*s' "$st_empty" '' | sed 's/ /▱/g')
 
   echo ""
   echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
