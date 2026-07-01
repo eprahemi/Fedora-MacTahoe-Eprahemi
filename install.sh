@@ -23,6 +23,9 @@ _fed_log_finalize() {
   if [ -n "${_FED_LOG:-}" ] && [ -f "$_FED_LOG" ]; then
     LC_ALL=C sed -i 's/\x1b\[[0-9;]*[a-zA-Z]//g' "$_FED_LOG" 2>/dev/null || true
     LC_ALL=C sed -i 's/\x1b\][0-9;]*[^\x07\x1b]*[\x07\x1b]//g' "$_FED_LOG" 2>/dev/null || true
+    # Set custom icon for this log file
+    command -v gio &>/dev/null && [ -f "${_FED_ICON_PATH:-}" ] && \
+      gio set "$_FED_LOG" metadata::custom-icon "file://$_FED_ICON_PATH" 2>/dev/null || true
   fi
   echo -e "  ${GREEN}Log saved: ${_FED_LOG}${NC}"
   trap - EXIT
@@ -45,6 +48,13 @@ trap '_fed_log_error $LINENO $?' ERR
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUNDLE="$SCRIPT_DIR"
+
+# ── Set up custom icon for log files ──
+_FED_ICON_PATH="$HOME/.local/share/icons/fedora-mactahoe/mactahoe_log_icon.png"
+mkdir -p "$HOME/.local/share/icons/fedora-mactahoe" 2>/dev/null || true
+if [ -f "$SCRIPT_DIR/assets/mactahoe_log_icon.png" ]; then
+  cp -f "$SCRIPT_DIR/assets/mactahoe_log_icon.png" "$_FED_ICON_PATH" 2>/dev/null || true
+fi
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 BOLD='\033[1m'; WHITE='\033[1;37m'; DIM='\033[2m'; PINK='\033[1;35m'

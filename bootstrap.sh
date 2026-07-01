@@ -29,6 +29,9 @@ _fed_log_finalize() {
   if [ -n "${_FED_LOG:-}" ] && [ -f "$_FED_LOG" ]; then
     LC_ALL=C sed -i 's/\x1b\[[0-9;]*[a-zA-Z]//g' "$_FED_LOG" 2>/dev/null || true
     LC_ALL=C sed -i 's/\x1b\][0-9;]*[^\x07\x1b]*[\x07\x1b]//g' "$_FED_LOG" 2>/dev/null || true
+    # Set custom icon for this log file (icon may not exist yet on first bootstrap run — silently ignored)
+    command -v gio &>/dev/null && [ -f "${HOME}/.local/share/icons/fedora-mactahoe/mactahoe_log_icon.png" ] && \
+      gio set "$_FED_LOG" metadata::custom-icon "file://${HOME}/.local/share/icons/fedora-mactahoe/mactahoe_log_icon.png" 2>/dev/null || true
   fi
   echo -e "  ${GREEN}Log saved: ${_FED_LOG}${NC}"
   trap - EXIT
