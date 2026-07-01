@@ -6,9 +6,12 @@ _FED_ID=$(tr -dc 'a-zA-Z0-9' < /dev/urandom 2>/dev/null | head -c 8)
 [ -z "$_FED_ID" ] && _FED_ID="X$(date +%s 2>/dev/null | sha256sum 2>/dev/null | head -c7 || echo "00000001")"
 _FED_LOG="$HOME/FedoraTahoe_log.${_FED_ID}.txt"
 touch "$_FED_LOG" 2>/dev/null || true
-# Preserve original stdout/stderr, then redirect all output to both terminal and log
+# Preserve original stdout/stderr
 exec 5>&1 6>&2
-exec > >(tee -a "$_FED_LOG") 2>&1
+# ANSI escape byte used by sed to strip colour codes from the log file
+_FED_ESC=$'\x1b'
+# Redirect all output: terminal gets colours, log file gets clean plain text
+exec > >(tee >(sed -E "s/${_FED_ESC}\[[0-9;]*[a-zA-Z]//g" > "$_FED_LOG")) 2>&1
 
 set -euo pipefail
 
