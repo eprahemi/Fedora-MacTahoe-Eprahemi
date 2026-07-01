@@ -47,27 +47,125 @@ BUNDLE="$SCRIPT_DIR"
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 BOLD='\033[1m'; WHITE='\033[1;37m'; DIM='\033[2m'; PINK='\033[1;35m'
 
+# ── Padded header row helper ──
+# Prints "  ║  LABEL (padded to 12)  :  VALUE <pad>║"
+# All labels are padded to 12 chars so colons always align.
+_fed_header_row() {
+  local _lbl="$1" _val="$2"
+  local _content_before_val=18   # 2 (leading spaces) + 12 (label) + 4 ("  :  ")
+  local _pad=$((62 - _content_before_val - ${#_val}))
+  [ "$_pad" -lt 1 ] && _pad=1
+  echo -e "  ${CYAN}║${NC}  ${BOLD}$(printf "%-12s" "$_lbl")${NC}  :  ${_val}$(printf '%*s' "$_pad" '')${CYAN}║${NC}"
+}
+
 # ── Log header — system info and start timestamp ──
-echo ""
-echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
-echo -e "  ${CYAN}║${NC}        ${BOLD}${WHITE}FEDORA MACTAHOE — EPRAHEMI EDITION${NC}                     ${CYAN}║${NC}"
-echo -e "  ${CYAN}║${NC}        ${DIM}Installation Log${NC}                                             ${CYAN}║${NC}"
-echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
-echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
-echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
-echo -e "  ${CYAN}║${NC}  ${BOLD}Hostname${NC}  :  $(hostname)                                            ${CYAN}║${NC}"
-echo -e "  ${CYAN}║${NC}  ${BOLD}User${NC}      :  $(whoami)                                               ${CYAN}║${NC}"
-echo -e "  ${CYAN}║${NC}  ${BOLD}Date${NC}      :  $(date '+%Y-%m-%d %H:%M:%S')                                 ${CYAN}║${NC}"
-echo -e "  ${CYAN}║${NC}  ${BOLD}Session${NC}   :  $_FED_ID                                            ${CYAN}║${NC}"
-echo -e "  ${CYAN}║${NC}  ${BOLD}Log${NC}       :  FedoraTahoe_log.${_FED_ID}.txt                             ${CYAN}║${NC}"
-echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
-echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
-echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
-echo -e "  ${CYAN}║${NC}  ${DIM}https://github.com/eprahemi/Fedora-MacTahoe-Eprahemi${NC}               ${CYAN}║${NC}"
-echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
-echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
-echo ""
+_print_log_header() {
+  local _hn _user _os _kernel _de _session_type _term _shell _cpu _gpu _ram _disk _uptime _date _sid _log_name
+  
+  _hn=$(hostname 2>/dev/null || echo "?")
+  _user=$(whoami 2>/dev/null || echo "?")
+  _date=$(date '+%Y-%m-%d %H:%M:%S' 2>/dev/null || echo "?")
+  _sid="${_FED_ID:-?}"
+  _log_name="FedoraTahoe_log.${_FED_ID:-?}.txt"
+
+  # OS
+  _os="?"
+  [ -f /etc/os-release ] && _os=$(grep -m1 '^PRETTY_NAME=' /etc/os-release 2>/dev/null | cut -d'"' -f2)
+  [ -z "$_os" ] && command -v lsb_release &>/dev/null && _os=$(lsb_release -ds 2>/dev/null)
+  [ -z "$_os" ] && _os="Linux"
+
+  # Kernel
+  _kernel=$(uname -r 2>/dev/null || echo "?")
+
+  # Desktop Environment
+  _de="${XDG_CURRENT_DESKTOP:-?}"
+
+  # Session type (Wayland / X11)
+  _session_type="${XDG_SESSION_TYPE:-?}"
+
+  # Terminal emulator
+  if [ -n "${KITTY_PID:-}" ]; then
+    _term="kitty"
+  else
+    _term="${TERMINAL:-${TERM:-?}}"
+  fi
+
+  # Shell
+  _shell=$(basename "${SHELL:-?}" 2>/dev/null || echo "?")
+
+  # CPU — model name + core count
+  _cpu="?"
+  if [ -f /proc/cpuinfo ]; then
+    _cpu=$(grep -m1 '^model name' /proc/cpuinfo 2>/dev/null | cut -d: -f2 | sed 's/^ //')
+    local _cores
+    _cores=$(grep -c '^processor' /proc/cpuinfo 2>/dev/null || echo "?")
+    [ "$_cores" != "?" ] && [ -n "$_cores" ] && _cpu="${_cpu} (${_cores})"
+  fi
+  [ -z "$_cpu" ] && _cpu="?"
+
+  # GPU — fast check via lspci
+  _gpu="?"
+  if command -v lspci &>/dev/null; then
+    _gpu=$(lspci 2>/dev/null | grep -im1 'vga\|3d\|display' | sed 's/.*: //' | sed 's/ \[.*//' | sed 's/ (rev.*//')
+  fi
+  [ -z "$_gpu" ] && _gpu="?"
+
+  # RAM total
+  _ram="?"
+  if [ -f /proc/meminfo ]; then
+    _ram=$(awk '/MemTotal:/{printf "%.1f GiB", $2/1024/1024}' /proc/meminfo 2>/dev/null)
+  fi
+  [ -z "$_ram" ] && _ram="?"
+
+  # Disk total
+  _disk="?"
+  if command -v df &>/dev/null; then
+    _disk=$(df -h / 2>/dev/null | awk 'NR==2{print $2}')
+  fi
+  [ -z "$_disk" ] && _disk="?"
+
+  # Uptime
+  _uptime="?"
+  if [ -f /proc/uptime ]; then
+    local _up_s
+    _up_s=$(awk '{printf "%d", int($1)}' /proc/uptime 2>/dev/null || echo "0")
+    _uptime="$((_up_s / 86400))d $(((_up_s % 86400) / 3600))h $(((_up_s % 3600) / 60))m"
+  fi
+
+  # ── Render the box ──
+  echo ""
+  echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+  echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}        ${BOLD}${WHITE}FEDORA MACTAHOE — EPRAHEMI EDITION${NC}                     ${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}        ${DIM}Installation Log${NC}                                             ${CYAN}║${NC}"
+  echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
+  echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+  echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
+  _fed_header_row "Hostname"   "$_hn"
+  _fed_header_row "User"       "$_user"
+  _fed_header_row "OS"         "$_os"
+  _fed_header_row "Kernel"     "$_kernel"
+  _fed_header_row "Desktop"    "$_de"
+  _fed_header_row "Session"    "$_session_type"
+  _fed_header_row "Terminal"   "$_term"
+  _fed_header_row "Shell"      "$_shell"
+  _fed_header_row "CPU"        "$_cpu"
+  _fed_header_row "GPU"        "$_gpu"
+  _fed_header_row "RAM"        "$_ram"
+  _fed_header_row "Disk"       "$_disk"
+  _fed_header_row "Uptime"     "$_uptime"
+  _fed_header_row "Date"       "$_date"
+  _fed_header_row "Session ID" "$_sid"
+  _fed_header_row "Log"        "$_log_name"
+  echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
+  echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+  echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}  ${DIM}https://github.com/eprahemi/Fedora-MacTahoe-Eprahemi${NC}               ${CYAN}║${NC}"
+  echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
+  echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+  echo ""
+}
+_print_log_header
 
 # ── Ctrl+C / Interrupt handling ──
 # First press warns, second press force-exits immediately.
