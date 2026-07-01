@@ -53,7 +53,7 @@ is_valid_zip() {
   od -A n -t x1 -N 4 "$f" 2>/dev/null | grep -qi "50 4b 03 04"
 }
 
-TOTAL_STEPS=25
+TOTAL_STEPS=27
 STEP=0
 
 next_step() {
@@ -3037,8 +3037,7 @@ phase_divider "PHASE 3 : THEMES" 8 9
 install_mactahoe_theme
 install_font
 
-phase_divider "PHASE 4 : CONFIGURATION" 10 19
-install_extensions
+phase_divider "PHASE 4 : CONFIGURATION" 11 22
 apply_desktop_entries
 ensure_celluloid_default
 configure_nautilus_defaults
@@ -3052,10 +3051,11 @@ setup_firefox_theme
 setup_flatpak_theme
 install_sounds
 
-phase_divider "PHASE 5 : TERMINAL & SHELL" 20 21
+phase_divider "PHASE 5 : TERMINAL & SHELL" 23 24
 setup_terminal
 setup_shell
 
-phase_divider "PHASE 6 : FINALIZE" 22 23
+phase_divider "PHASE 6 : EXTENSIONS & FINALIZE" 25 27
+install_extensions
 download_optional_videos
 finalize
