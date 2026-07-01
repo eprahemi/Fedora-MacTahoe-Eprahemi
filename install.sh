@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 
 # ── Unique installation log ──
-# Generates a unique 8-char session ID and logs ALL output to ~/FedoraTahoe_log.<ID>.txt
+# Generates a unique 8-char session ID and logs ALL output to
+# ~/FedoraTahoe_log.<date>.<time>.<ID>.txt  (sorts chronologically)
 _FED_ID=$(tr -dc 'a-zA-Z0-9' < /dev/urandom 2>/dev/null | head -c 8)
 [ -z "$_FED_ID" ] && _FED_ID="X$(date +%s 2>/dev/null | sha256sum 2>/dev/null | head -c7 || echo "00000001")"
-_FED_LOG="$HOME/FedoraTahoe_log.${_FED_ID}.txt"
+_FED_DATE_STAMP=$(date '+%Y-%m-%d.%H-%M-%S' 2>/dev/null || echo "unknown")
+_FED_LOG="$HOME/FedoraTahoe_log.${_FED_DATE_STAMP}.${_FED_ID}.txt"
 touch "$_FED_LOG" 2>/dev/null || true
 # Preserve original stdout/stderr, then redirect all output to both terminal and log
 exec 5>&1 6>&2
@@ -66,7 +68,7 @@ _print_log_header() {
   _user=$(whoami 2>/dev/null || echo "?")
   _date=$(date '+%Y-%m-%d %H:%M:%S' 2>/dev/null || echo "?")
   _sid="${_FED_ID:-?}"
-  _log_name="FedoraTahoe_log.${_FED_ID:-?}.txt"
+  _log_name="FedoraTahoe_log.${_FED_DATE_STAMP:-?}.${_FED_ID:-?}.txt"
 
   # OS
   _os="?"
