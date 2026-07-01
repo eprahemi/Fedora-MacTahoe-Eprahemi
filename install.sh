@@ -13,6 +13,19 @@ BUNDLE="$SCRIPT_DIR"
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 BOLD='\033[1m'; WHITE='\033[1;37m'; DIM='\033[2m'; PINK='\033[1;35m'
 
+# ── Ctrl+C / Interrupt handling ──
+# First press warns, second press force-exits immediately.
+_INT_PRESS=0
+_handle_sigint() {
+  _INT_PRESS=$((_INT_PRESS + 1))
+  if [ "$_INT_PRESS" -ge 2 ]; then
+    echo -e "\n  ${RED}${BOLD}⛔  Forced exit.${NC}"
+    exit 130
+  fi
+  echo -e "\n  ${YELLOW}${BOLD}⚠  Interrupted. Press Ctrl+C again to exit.${NC}"
+}
+trap _handle_sigint INT TERM
+
 # ── Config ──
 # 18+ wallpaper zip — Google Drive direct download (file ID from share link)
 WALLPAPER_18_URL="https://drive.usercontent.google.com/download?id=1pHuIkixIfQR_KMnaIOvMutHgaZ32oBRg&export=download&confirm=t"
@@ -57,6 +70,7 @@ TOTAL_STEPS=27
 STEP=0
 
 next_step() {
+  sudo -n -v 2>/dev/null || true  # refresh sudo credential silently
   STEP=$((STEP + 1))
   local pct=$((STEP * 100 / TOTAL_STEPS))
   local filled=$((STEP * 30 / TOTAL_STEPS))

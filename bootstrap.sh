@@ -7,6 +7,19 @@ TMP="/tmp/fedora-mactahoe"
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 BOLD='\033[1m'; WHITE='\033[1;37m'; DIM='\033[2m'; PINK='\033[1;35m'
 
+# ── Ctrl+C / Interrupt handling ──
+# First press warns, second press force-exits immediately.
+_INT_PRESS=0
+_handle_sigint() {
+  _INT_PRESS=$((_INT_PRESS + 1))
+  if [ "$_INT_PRESS" -ge 2 ]; then
+    echo -e "\n  ${RED}${BOLD}⛔  Forced exit.${NC}"
+    exit 130
+  fi
+  echo -e "\n  ${YELLOW}${BOLD}⚠  Interrupted. Press Ctrl+C again to exit.${NC}"
+}
+trap _handle_sigint INT TERM
+
 confirm() {
   local prompt="$1" default="${2:-}"
   local reply
