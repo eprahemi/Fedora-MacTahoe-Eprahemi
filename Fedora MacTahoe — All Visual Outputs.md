@@ -434,7 +434,7 @@ After pressing any key:
   ║                                                              ║
   ║  ◈◈◈  PHASE 1 : SYSTEM FOUNDATIONS  ◈◈◈                   ║
   ║                                                              ║
-  ║  Steps 3–4 of 23                                             ║
+  ║  Steps 3–4 of 25                                             ║
   ║                                                              ║
   ╚══════════════════════════════════════════════════════════════╝
 ```
@@ -443,16 +443,16 @@ Phases:
 - **PHASE 1 : SYSTEM FOUNDATIONS** — Steps 3–4 (RPM Fusion, NVIDIA)
 - **PHASE 2 : PACKAGES** — Steps 5–7 (RPM packages, browsers, Flatpaks)
 - **PHASE 3 : THEMES** — Steps 8–9 (MacTahoe theme, fonts)
-- **PHASE 4 : CONFIGURATION** — Steps 10–19 (extensions, dconf, wallpapers, GDM, Firefox, Flatpak theme, sounds)
-- **PHASE 5 : TERMINAL & SHELL** — Steps 20–21 (Kitty, Fish)
-- **PHASE 6 : FINALIZE** — Steps 22–23 (Billie videos, cleanup + reboot)
+- **PHASE 4 : CONFIGURATION** — Steps 10–21 (extensions, dconf+firewalld, wallpapers, GDM, Firefox, Flatpak theme, sounds)
+- **PHASE 5 : TERMINAL & SHELL** — Steps 22–23 (Kitty, Fish)
+- **PHASE 6 : FINALIZE** — Steps 24–25 (Billie videos, cleanup + reboot)
 
 ---
 
 ## 19. STEP HEADER (appears 23 times)
 
 ```
-  ┌── Step 5/23  NVIDIA Drivers (auto-detect)  ──┐
+  ┌── Step 5/25  NVIDIA Drivers (auto-detect)  ──┐
   │  ▰▰▰▰▰▰▰▰▰▰▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱  22%  │
   └──────────────────────────────────────────────────────────┘
 ```
@@ -503,10 +503,44 @@ Phases:
 
 ---
 
-## 21. DISCORD PROMPT (Step 5 — inside RPM Packages)
+## 21. FIREWALLD PROMPT (Step 15 — during dconf configuration)
 
 ```
-  ┌── Step 5/23  RPM Packages  ──┐
+  ╔══════════════════════════════════════════════════════════════╗
+  ║            ◆  DISABLE FIREWALLD?  ◆                          ║
+  ╠══════════════════════════════════════════════════════════════╣
+  ║                                                              ║
+  ║  Firewalld is running and using ~30-50 MB RAM.               ║
+  ║                                                              ║
+  ║    Disabling it is NOT a security disaster.                  ║
+  ║  Your system still has iptables/nftables underneath.         ║
+  ║  Firewalld is just a frontend that manages those rules.      ║
+  ║  Your existing rules stay in place. No ports get exposed.    ║
+  ║  Nothing opens up. Nothing breaks. No drama.                 ║
+  ║                                                              ║
+  ║    ⚠  THINGS TO KEEP IN MIND:                                ║
+  ║                                                              ║
+  ║    ◆  No firewall GUI — manage rules manually if needed      ║
+  ║    ◆  Docker/podman won't auto-add firewalld rules           ║
+  ║    ◆  No pop-up alerts for blocked connections               ║
+  ║    ◆  Re-enable:  sudo systemctl enable --now firewalld      ║
+  ║                                                              ║
+  ║    Yes  — Disable firewalld (save RAM)                       ║
+  ║    no   — Keep firewalld active                              ║
+  ║                                                              ║
+  ║  Press Enter for default (No)                                ║
+  ╚══════════════════════════════════════════════════════════════╝
+```
+
+> Color scheme: **YELLOW** borders (matching NVIDIA prompt), **green bold** reassurance line, **red bold** warning header and 4 consequence bullets.
+> [y/N] prompt — default No (press Enter to keep firewalld active).
+
+---
+
+## 22. DISCORD PROMPT (Step 5 — inside RPM Packages)
+
+```
+  ┌── Step 5/25  RPM Packages  ──┐
   │  ▰▰▰▰▰▰▰▰▰▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱▱  22%  │
   └──────────────────────────────────────────────────────────┘
 
@@ -528,10 +562,10 @@ Phases:
 
 ---
 
-## 22. SUCCESS SCREEN (Step 23 — finalize)
+## 23. SUCCESS SCREEN (Step 24 — finalize)
 
 ```
-  ┌── Step 23/23  Cleanup & Reboot  ──┐
+  ┌── Step 25/25  Cleanup & Reboot  ──┐
   │  ▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰▰ 100%  │
   └──────────────────────────────────────────────────────────┘
 
@@ -551,7 +585,7 @@ Phases:
   ║        📋  INSTALLATION SUMMARY  📋                          ║
   ╠══════════════════════════════════════════════════════════════╣
   ║                                                              ║
-  ║  Status:     Complete  (24/24 steps)                         ║
+  ║  Status:     Complete  (25/25 steps)                         ║
   ║  Duration:   14m 32s                                         ║
   ║                                                              ║
   ║  ──────────────────────────────────────────────────────────  ║
@@ -605,7 +639,7 @@ Phases:
 
 ---
 
-## 23. MORE FROM EPRAHEMI + REBOOT PROMPT
+## 24. MORE FROM EPRAHEMI + REBOOT PROMPT
 
 ```
   ╭─ ✦  More from Eprahemi ───────────────────────────────────────── ╮
@@ -626,7 +660,7 @@ Phases:
 
 ---
 
-## 24. CLONE FAILED (bootstrap.sh)
+## 25. CLONE FAILED (bootstrap.sh)
 
 ```
   ╔══════════════════════════════════════════════════════════════╗
@@ -636,7 +670,7 @@ Phases:
 
 ---
 
-## 25. GRABBING THE GOODS (bootstrap.sh — before clone)
+## 26. GRABBING THE GOODS (bootstrap.sh — before clone)
 
 ```
   ╔══════════════════════════════════════════════════════════════╗
@@ -649,7 +683,7 @@ Phases:
 
 ---
 
-## 26. GOT EVERYTHING (bootstrap.sh — after clone)
+## 27. GOT EVERYTHING (bootstrap.sh — after clone)
 
 ```
   ╔══════════════════════════════════════════════════════════════╗
@@ -689,7 +723,7 @@ ALL PROMPTS (BEFORE clone)
   ↓
 install.sh runs → ALL prompts SKIPPED (env vars set by bootstrap)
   ↓
-24 installation steps → FULLY AUTOMATED (no interaction)
+25 installation steps → FULLY AUTOMATED (no interaction)
   ↓
 📋  INSTALL SUMMARY (duration, packages, themes, disk usage)
   ↓
@@ -737,13 +771,13 @@ PHASE 3 : THEMES  (Steps 8–9)
   ├── Step 8  → MacTahoe Theme
   └── Step 9  → SF Pro Font
   ↓
-PHASE 4 : CONFIGURATION  (Steps 10–19)
+PHASE 4 : CONFIGURATION  (Steps 10–21)
   ├── Step 10 → GNOME Extensions
   ├── Step 11 → Desktop Entries
   ├── Step 12 → Celluloid default video player
   ├── Step 13 → Nautilus defaults
   ├── Step 14 → Configs
-  ├── Step 15 → dconf
+  ├── Step 15 → dconf + Firewalld prompt (if active)
   ├── Step 16 → Wallpaper + Login Screen
   ├── Step 17 → Custom Avatars
   ├── Step 18 → GDM Login Screen
@@ -751,13 +785,13 @@ PHASE 4 : CONFIGURATION  (Steps 10–19)
   ├── Step 20 → Flatpak Theme
   └── Step 21 → Big Sur Sounds
   ↓
-PHASE 5 : TERMINAL & SHELL  (Steps 20–21)
+PHASE 5 : TERMINAL & SHELL  (Steps 22–23)
   ├── Step 22 → Kitty Terminal
   └── Step 23 → Fish Shell
   ↓
-PHASE 6 : FINALIZE  (Steps 22–23)
-  ├── Step 22 → Billie & Jinx video download (if opted in)
-  └── Step 23 → Cleanup + 📋 INSTALL SUMMARY + SUCCESS SCREEN + MORE FROM EPRAHEMI + REBOOT [y/N]
+PHASE 6 : FINALIZE  (Steps 24–25)
+  ├── Step 24 → Billie & Jinx video download (if opted in)
+  └── Step 25 → Cleanup + 📋 INSTALL SUMMARY + SUCCESS SCREEN + MORE FROM EPRAHEMI + REBOOT [y/N]
 ```
 
 ---
@@ -776,8 +810,8 @@ PHASE 6 : FINALIZE  (Steps 22–23)
 ### Flow changes (June 2026):
 - Main banner → 🔐 Secure Tunnel → 🖥 System Dashboard → 📡 CDN Speed Test → Preflight
 - Finalize: Cleanup → 📋 Install Summary → Victory Banner → More from Eprahemi → Reboot
-- `install.sh` line count: 2671 → 2953 (+282 lines for 3 new functions)
-- `TOTAL_STEPS`: 24 (unchanged — tunnel/dashboard/speed test are pre-step decorations)
+- `install.sh` line count: 2671 → 3064 (+393 lines)
+- `TOTAL_STEPS`: 25 (optimize_system_resources added as step 15)
 - All flatpak counts (`fp_ok`/`fp_fail`) promoted to globals (`INSTALL_FP_OK`/`INSTALL_FP_FAIL`) for use by install summary
 
 ### Alignment fixes applied:
@@ -789,6 +823,10 @@ PHASE 6 : FINALIZE  (Steps 22–23)
 | `b2bad8a8` | §1 Main banner | GNOME version line & theme line `pad_max 60→62` (was underflowing by 2) |
 | `7c06b83d` | §22 Success, §23 More from Eprahemi, Reboot | Reviewed and verified at 62/63‑char widths |
 | `c5ef72b1` | §16 Billie & Jinx, §16 Naughty | Fixed `'\''` quoting bug in bootstrap.sh L322/L351 & install.sh L1390 |
+| `124d684d` | §21 Firewalld prompt | Redesigned to NVIDIA style — YELLOW borders, red bold warnings, green bold reassurance |
+| `7ceda8f3` | §3 System Dashboard | Truncated `gpu_info` to 50 chars to prevent GPU line overflow |
+| `5f95c5c9` | §15 Billie & Jinx, §15 Naughty | Fixed remaining 60→62 pad in `nsty_t`, `nsty2`, `nsty3` |
+| `8d42857b` | §2 Secure Tunnel, §3 System Dashboard, §4 CDN, §23 Summary | Changed all dashboard `60→62` pad; fixed bootstrap banner |
 
 ### Avatar system changes:
 | Commit | Change |
