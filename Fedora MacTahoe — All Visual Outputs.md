@@ -526,7 +526,7 @@ Phases:
   ║    ◆  Re-enable:  sudo systemctl enable --now firewalld      ║
   ║                                                              ║
   ║    Yes  — Disable firewalld (save RAM)                       ║
-  ║    no   — Keep firewalld active                              ║
+  ║    no   — Keep/enable firewalld                               ║
   ║                                                              ║
   ║  Press Enter for default (No)                                ║
   ╚══════════════════════════════════════════════════════════════╝
@@ -777,7 +777,7 @@ PHASE 4 : CONFIGURATION  (Steps 10–21)
   ├── Step 12 → Celluloid default video player
   ├── Step 13 → Nautilus defaults
   ├── Step 14 → Configs
-  ├── Step 15 → dconf + Firewalld prompt (if active)
+  ├── Step 15 → dconf + Firewalld prompt (always, Yes=disable / No=enable)
   ├── Step 16 → Wallpaper + Login Screen
   ├── Step 17 → Custom Avatars
   ├── Step 18 → GDM Login Screen

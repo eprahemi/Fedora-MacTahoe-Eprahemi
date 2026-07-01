@@ -483,58 +483,55 @@ optimize_system_resources() {
     warn "PackageKit already masked or not installed"
   fi
 
-  # ── 5. Firewalld (if not actively used) ──
-  # Saves ~30-50 MB. Only disable if you don't need a firewall.
-  if sudo systemctl is-active --quiet firewalld 2>/dev/null; then
-    echo ""
-    echo -e "  ${YELLOW}╔══════════════════════════════════════════════════════════════╗${NC}"
+  # ── 5. Firewalld (user chooses on/off) ──
+  # Always prompt — user says Yes=disable or No=enable.
+  echo ""
+  echo -e "  ${YELLOW}╔══════════════════════════════════════════════════════════════╗${NC}"
 fw_t="            ◆  DISABLE FIREWALLD?  ◆"
-    echo -e "  ${YELLOW}║${NC}${fw_t}$(printf '%*s' $((62 - ${#fw_t})) '')${YELLOW}║${NC}"
-    echo -e "  ${YELLOW}╠══════════════════════════════════════════════════════════════╣${NC}"
-    echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}${fw_t}$(printf '%*s' $((62 - ${#fw_t})) '')${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}╠══════════════════════════════════════════════════════════════╣${NC}"
+  echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
 fw1="  Firewalld is running and using ~30-50 MB RAM."
-    echo -e "  ${YELLOW}║${NC}${fw1}$(printf '%*s' $((62 - ${#fw1})) '')${YELLOW}║${NC}"
-    echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}${fw1}$(printf '%*s' $((62 - ${#fw1})) '')${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
 fw2="  Disabling it is NOT a security disaster."
-    echo -e "  ${YELLOW}║${NC}  ${BOLD}${GREEN}${fw2}${NC}$(printf '%*s' $((60 - ${#fw2})) '')${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}  ${BOLD}${GREEN}${fw2}${NC}$(printf '%*s' $((60 - ${#fw2})) '')${YELLOW}║${NC}"
 fw3="  Your system still has iptables/nftables underneath."
-    echo -e "  ${YELLOW}║${NC}${fw3}$(printf '%*s' $((62 - ${#fw3})) '')${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}${fw3}$(printf '%*s' $((62 - ${#fw3})) '')${YELLOW}║${NC}"
 fw4="  Firewalld is just a frontend that manages those rules."
-    echo -e "  ${YELLOW}║${NC}${fw4}$(printf '%*s' $((62 - ${#fw4})) '')${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}${fw4}$(printf '%*s' $((62 - ${#fw4})) '')${YELLOW}║${NC}"
 fw5="  Your existing rules stay in place. No ports get exposed."
-    echo -e "  ${YELLOW}║${NC}${fw5}$(printf '%*s' $((62 - ${#fw5})) '')${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}${fw5}$(printf '%*s' $((62 - ${#fw5})) '')${YELLOW}║${NC}"
 fw6="  Nothing opens up. Nothing breaks. No drama."
-    echo -e "  ${YELLOW}║${NC}${fw6}$(printf '%*s' $((62 - ${#fw6})) '')${YELLOW}║${NC}"
-    echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}${fw6}$(printf '%*s' $((62 - ${#fw6})) '')${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
 fw_warn="  ⚠  THINGS TO KEEP IN MIND:"
-    echo -e "  ${YELLOW}║${NC}  ${BOLD}${RED}${fw_warn}${NC}$(printf '%*s' $((60 - ${#fw_warn})) '')${YELLOW}║${NC}"
-    echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}  ${BOLD}${RED}${fw_warn}${NC}$(printf '%*s' $((60 - ${#fw_warn})) '')${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
 fw_i1="  ◆  No firewall GUI — manage rules manually if needed"
-    echo -e "  ${YELLOW}║${NC}  ${BOLD}${RED}${fw_i1}${NC}$(printf '%*s' $((60 - ${#fw_i1})) '')${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}  ${BOLD}${RED}${fw_i1}${NC}$(printf '%*s' $((60 - ${#fw_i1})) '')${YELLOW}║${NC}"
 fw_i2="  ◆  Docker/podman won't auto-add firewalld rules"
-    echo -e "  ${YELLOW}║${NC}  ${BOLD}${RED}${fw_i2}${NC}$(printf '%*s' $((60 - ${#fw_i2})) '')${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}  ${BOLD}${RED}${fw_i2}${NC}$(printf '%*s' $((60 - ${#fw_i2})) '')${YELLOW}║${NC}"
 fw_i3="  ◆  No pop-up alerts for blocked connections"
-    echo -e "  ${YELLOW}║${NC}  ${BOLD}${RED}${fw_i3}${NC}$(printf '%*s' $((60 - ${#fw_i3})) '')${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}  ${BOLD}${RED}${fw_i3}${NC}$(printf '%*s' $((60 - ${#fw_i3})) '')${YELLOW}║${NC}"
 fw_i4="  ◆  Re-enable:  sudo systemctl enable --now firewalld"
-    echo -e "  ${YELLOW}║${NC}  ${BOLD}${RED}${fw_i4}${NC}$(printf '%*s' $((60 - ${#fw_i4})) '')${YELLOW}║${NC}"
-    echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}  ${BOLD}${RED}${fw_i4}${NC}$(printf '%*s' $((60 - ${#fw_i4})) '')${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
 fw_yn1="    Yes  — Disable firewalld (save RAM)"
-    echo -e "  ${YELLOW}║${NC}    ${BOLD}${GREEN}Y${NC}${BOLD}es${NC}  — Disable firewalld (save RAM)$(printf '%*s' $((62 - ${#fw_yn1})) '')${YELLOW}║${NC}"
-fw_yn2="    no   — Keep firewalld active"
-    echo -e "  ${YELLOW}║${NC}    ${BOLD}${YELLOW}n${NC}${BOLD}o${NC}   — Keep firewalld active$(printf '%*s' $((62 - ${#fw_yn2})) '')${YELLOW}║${NC}"
-    echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}    ${BOLD}${GREEN}Y${NC}${BOLD}es${NC}  — Disable firewalld (save RAM)$(printf '%*s' $((62 - ${#fw_yn1})) '')${YELLOW}║${NC}"
+fw_yn2="    no   — Keep/enable firewalld"
+  echo -e "  ${YELLOW}║${NC}    ${BOLD}${YELLOW}n${NC}${BOLD}o${NC}   — Keep/enable firewalld$(printf '%*s' $((62 - ${#fw_yn2})) '')${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
 fw7="  Press Enter for default (No)"
-    echo -e "  ${YELLOW}║${NC}${DIM}${fw7}$(printf '%*s' $((62 - ${#fw7})) '')${NC}${YELLOW}║${NC}"
-    echo -e "  ${YELLOW}╚══════════════════════════════════════════════════════════════╝${NC}"
-    echo ""
-    if confirm "Disable firewalld? [y/N]: " N; then
-      sudo systemctl disable --now firewalld 2>/dev/null || true
-      ok "Firewalld disabled (~30-50 MB saved)"
-    else
-      warn "Firewalld kept active"
-    fi
+  echo -e "  ${YELLOW}║${NC}${DIM}${fw7}$(printf '%*s' $((62 - ${#fw7})) '')${NC}${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}╚══════════════════════════════════════════════════════════════╝${NC}"
+  echo ""
+  if confirm "Disable firewalld? [y/N]: " N; then
+    sudo systemctl disable --now firewalld 2>/dev/null || true
+    ok "Firewalld disabled (~30-50 MB saved)"
   else
-    ok "Firewalld already inactive"
+    sudo systemctl enable --now firewalld 2>/dev/null || true
+    ok "Firewalld enabled and active"
   fi
 }
 
