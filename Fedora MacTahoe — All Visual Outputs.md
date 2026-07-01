@@ -533,7 +533,7 @@ Phases:
 ```
 
 > Color scheme: **YELLOW** borders (matching NVIDIA prompt), **green bold** reassurance line, **red bold** warning header and 4 consequence bullets.
-> [y/N] prompt — default No (press Enter to keep firewalld active).
+> Always shown — user decides: **Yes** = disable firewalld, **No** = enable firewalld. Default No.
 
 ---
 
@@ -827,6 +827,7 @@ PHASE 6 : FINALIZE  (Steps 24–25)
 | `7ceda8f3` | §3 System Dashboard | Truncated `gpu_info` to 50 chars to prevent GPU line overflow |
 | `5f95c5c9` | §15 Billie & Jinx, §15 Naughty | Fixed remaining 60→62 pad in `nsty_t`, `nsty2`, `nsty3` |
 | `8d42857b` | §2 Secure Tunnel, §3 System Dashboard, §4 CDN, §23 Summary | Changed all dashboard `60→62` pad; fixed bootstrap banner |
+| `5043cd95` | §21 Firewalld | Removed outer `if active` guard — prompt always shows; Yes=disable, No=enable unconditionally |
 
 ### Avatar system changes:
 | Commit | Change |
