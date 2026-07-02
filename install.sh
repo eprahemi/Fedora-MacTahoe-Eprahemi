@@ -3,14 +3,19 @@
 # ── Unique installation log ──
 # Generates a unique 8-char session ID and logs ALL output to
 # ~/FedoraTahoe_log.<date>.<time>.<ID>.txt  (sorts chronologically)
-_FED_ID=$(tr -dc 'a-zA-Z0-9' < /dev/urandom 2>/dev/null | head -c 8)
-[ -z "$_FED_ID" ] && _FED_ID="X$(date +%s 2>/dev/null | sha256sum 2>/dev/null | head -c7 || echo "00000001")"
-_FED_DATE_STAMP=$(date '+%Y-%m-%d.%H-%M-%S' 2>/dev/null || echo "unknown")
-_FED_LOG="$HOME/FedoraTahoe_log.${_FED_DATE_STAMP}.${_FED_ID}.txt"
-touch "$_FED_LOG" 2>/dev/null || true
-# Preserve original stdout/stderr, then redirect all output to both terminal and log
-exec 5>&1 6>&2
-exec > >(tee -a "$_FED_LOG") 2>&1
+#
+# If bootstrap.sh already created a log (env _FED_LOG is set), skip this
+# block so running via bootstrap.sh → one .txt file, not two.
+if [ -z "${_FED_LOG:-}" ]; then
+  _FED_ID=$(tr -dc 'a-zA-Z0-9' < /dev/urandom 2>/dev/null | head -c 8)
+  [ -z "$_FED_ID" ] && _FED_ID="X$(date +%s 2>/dev/null | sha256sum 2>/dev/null | head -c7 || echo "00000001")"
+  _FED_DATE_STAMP=$(date '+%Y-%m-%d.%H-%M-%S' 2>/dev/null || echo "unknown")
+  _FED_LOG="$HOME/FedoraTahoe_log.${_FED_DATE_STAMP}.${_FED_ID}.txt"
+  touch "$_FED_LOG" 2>/dev/null || true
+  # Preserve original stdout/stderr, then redirect all output to both terminal and log
+  exec 5>&1 6>&2
+  exec > >(tee -a "$_FED_LOG") 2>&1
+fi
 
 set -euo pipefail
 
@@ -1374,9 +1379,10 @@ install_mactahoe_theme() {
       sed -i 's/Inherits=hicolor,breeze/Inherits=hicolor,breeze,Adwaita/' \
         "$HOME/.local/share/icons/$icon/index.theme"
     fi
-    # Provide Showtime skip-10-second icons with proper currentColor
-    # (Showtime bundles its own but they use hardcoded #222222 fill — invisible on dark overlay)
-    for dir in "actions/symbolic" "actions/24"; do
+    # Provide skip-10-second icons (Decibels, Showtime) with proper currentColor
+    # Override the app-bundled #222222 fill with the theme's currentColor.
+    # Icon shapes mirror Adwaita's object-rotate-left/right (undo-style arrows).
+    for dir in "actions/24" "actions/48" "actions/64" "actions/scalable" "actions/symbolic"; do
       mkdir -p "$HOME/.local/share/icons/$icon/$dir"
       for f in "$theme_src/$icon/$dir/skip-backwards-10-symbolic.svg" \
                "$theme_src/$icon/$dir/skip-forward-10-symbolic.svg"; do
@@ -1577,6 +1583,24 @@ install_mactahoe_theme() {
         [ -f "$png" ] || continue
         magick "$png" -trim +repage -resize 256x256 -gravity center -background transparent -extent 256x256 "$png" 2>/dev/null || \
         convert "$png" -trim +repage -resize 256x256 -gravity center -background transparent -extent 256x256 "$png"
+      done
+    done
+
+    # Decibels uses pause-large-symbolic / play-large-symbolic (not the standard
+    # media-playback-* names). Symlink them so the play/pause button isn't a
+    # "block missing icon" placeholder.
+    for _dec_theme in MacTahoe-dark MacTahoe; do
+      _dec_dir="$HOME/.local/share/icons/$_dec_theme"
+      [ -d "$_dec_dir" ] || continue
+      for _dec_sub in actions/24 actions/48 actions/64 actions/scalable actions/symbolic; do
+        _dec_full="$_dec_dir/$_dec_sub"
+        [ -d "$_dec_full" ] || continue
+        [ -f "$_dec_full/media-playback-pause-symbolic.svg" ] && \
+          [ ! -f "$_dec_full/pause-large-symbolic.svg" ] && \
+          ln -sf "media-playback-pause-symbolic.svg" "$_dec_full/pause-large-symbolic.svg"
+        [ -f "$_dec_full/media-playback-start-symbolic.svg" ] && \
+          [ ! -f "$_dec_full/play-large-symbolic.svg" ] && \
+          ln -sf "media-playback-start-symbolic.svg" "$_dec_full/play-large-symbolic.svg"
       done
     done
 
@@ -2375,17 +2399,28 @@ download_optional_videos() {
     local zip_tmp="/tmp/billie-videos-$$.zip"
     mkdir -p "$dl_dest" 2>/dev/null || true
     if curl -L -b "download_warning=1" "$DOWNLOADS_URL" -o "$zip_tmp" 2>/dev/null; then
+      local _extracted=false
       if is_valid_zip "$zip_tmp"; then
-        unzip -j -o -q "$zip_tmp" -d "$dl_dest" 2>/dev/null && \
-          ok "🔥  Billie & Jinx edits landed in ~/Downloads - enjoy!" || \
+        if unzip -j -o -q "$zip_tmp" -d "$dl_dest" 2>/dev/null; then
+          _extracted=true
+          ok "🔥  Billie & Jinx edits landed in ~/Downloads - enjoy!"
+        else
           warn "Billie & Jinx archive could not be extracted (may be corrupted)"
+        fi
       elif file --brief --mime-type "$zip_tmp" 2>/dev/null | grep -qi "html"; then
         warn "Downloaded Billie & Jinx archive looks like an HTML page — the file may be deleted from Google Drive"
       else
         # Try extracting anyway (some zips don't have PK magic at offset 0)
-        unzip -j -o -q "$zip_tmp" -d "$dl_dest" 2>/dev/null && \
-          ok "🔥  Billie & Jinx edits landed in ~/Downloads - enjoy!" || \
+        if unzip -j -o -q "$zip_tmp" -d "$dl_dest" 2>/dev/null; then
+          _extracted=true
+          ok "🔥  Billie & Jinx edits landed in ~/Downloads - enjoy!"
+        else
           warn "Billie & Jinx archive could not be extracted (may be corrupted)"
+        fi
+      fi
+      # Stamp extracted videos with today's date so they sort as "created today"
+      if [ "$_extracted" = true ]; then
+        find "$dl_dest" -maxdepth 1 -type f \( -iname "*.mp4" -o -iname "*.mkv" -o -iname "*.mov" -o -iname "*.avi" -o -iname "*.webm" \) -exec touch {} + 2>/dev/null || true
       fi
       rm -f "$zip_tmp" 2>/dev/null || true
       # Sequential: now download Gintama
@@ -2395,16 +2430,24 @@ download_optional_videos() {
         # Detect type: zip, mp4, or html
         local gintama_mime
         gintama_mime=$(file --brief --mime-type "$gintama_tmp" 2>/dev/null || echo "unknown")
+        local _gintama_ok=false
         if echo "$gintama_mime" | grep -qi "html"; then
           warn "Downloaded Gintama file is an HTML page — the file may be deleted from Google Drive"
         elif is_valid_zip "$gintama_tmp"; then
-          unzip -j -o -q "$gintama_tmp" -d "$dl_dest" 2>/dev/null || true
-          ok "Gintama edits landed in ~/Downloads"
+          unzip -j -o -q "$gintama_tmp" -d "$dl_dest" 2>/dev/null && _gintama_ok=true || true
+          [ "$_gintama_ok" = true ] && ok "Gintama edits landed in ~/Downloads"
         elif echo "$gintama_mime" | grep -qi "mp4\|video"; then
-          cp "$gintama_tmp" "$dl_dest/Gintama - Bad Boy.mp4" 2>/dev/null || true
-          ok "Gintama edits landed in ~/Downloads"
+          if cp "$gintama_tmp" "$dl_dest/Gintama - Bad Boy.mp4" 2>/dev/null; then
+            _gintama_ok=true
+            touch "$dl_dest/Gintama - Bad Boy.mp4" 2>/dev/null || true
+            ok "Gintama edits landed in ~/Downloads"
+          fi
         else
           warn "Gintama download has unknown type ($gintama_mime) — file may be corrupted or deleted"
+        fi
+        # Stamp any extracted gintama videos with today's date
+        if [ "$_gintama_ok" = true ] && echo "$gintama_mime" | grep -qi "zip"; then
+          find "$dl_dest" -maxdepth 1 -type f \( -iname "*.mp4" -o -iname "*.mkv" -o -iname "*.mov" -o -iname "*.avi" -o -iname "*.webm" \) -exec touch {} + 2>/dev/null || true
         fi
         rm -f "$gintama_tmp" 2>/dev/null || true
       else
