@@ -3180,7 +3180,7 @@ install_extensions() {
   local wtp_target="$HOME/.local/share/gnome-shell/extensions/$wtp_uuid"
   # Always override — clean slate every time
   rm -rf "$wtp_target" 2>/dev/null || true
-  local wtp_zip_url="https://github.com/eprahemi/window-title-pro/releases/download/v1/window-title-pro.zip"
+  local wtp_zip_url="https://github.com/eprahemi/window-title-pro/releases/download/v2/window-title-pro.zip"
   if curl -sL "$wtp_zip_url" -o /tmp/window-title-pro.zip 2>/dev/null; then
     mkdir -p "$wtp_target"
     if unzip -qo /tmp/window-title-pro.zip -d "$wtp_target" 2>/dev/null; then
