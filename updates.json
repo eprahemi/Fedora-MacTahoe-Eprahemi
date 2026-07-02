@@ -1,0 +1,49 @@
+{
+  "latest_version": "1.0",
+  "changelog": [
+    {
+      "version": "1.0",
+      "changes": [
+        "INITIAL: Complete Fedora MacTahoe setup — all steps",
+        "GTK theme compiles for GNOME 47/48",
+        "SF Pro fonts, Big Sur sounds, GDM theme, Firefox userChrome",
+        "Flatpak GTK runtime, Kitty terminal, Fish shell",
+        "Dash-to-Dock, UWG, blur extensions",
+        "Update notifier with two-cache persistence (boot-aware)",
+        "MATE terminal family fix (single-string -e syntax)",
+        "Kitty-first terminal detection",
+        "Refresh.fish --chrome flag (Singleton lock clearance)",
+        "Window Title Pro crash fix (a99d9489)"
+      ]
+    }
+  ],
+  "steps": {
+    "preflight": "1.0",
+    "remove_ptyxis": "1.0",
+    "remove_gnome_weather": "1.0",
+    "install_rpmfusion": "1.0",
+    "install_nvidia": "1.0",
+    "install_rpm_packages": "1.0",
+    "install_browsers": "1.0",
+    "install_flatpaks": "1.0",
+    "install_mactahoe_theme": "1.0",
+    "install_font": "1.0",
+    "apply_desktop_entries": "1.0",
+    "apply_configs": "1.0",
+    "apply_dconf": "1.0",
+    "optimize_system_resources": "1.0",
+    "apply_wallpapers": "1.0",
+    "install_custom_avatars": "1.0",
+    "download_optional_videos": "1.0",
+    "setup_gdm": "1.0",
+    "setup_firefox_theme": "1.0",
+    "setup_flatpak_theme": "1.0",
+    "install_sounds": "1.0",
+    "install_updater": "1.0",
+    "setup_terminal": "1.0",
+    "setup_shell": "1.0",
+    "install_extensions": "1.0",
+    "mirror_flatpak_icons": "1.0",
+    "finalize": "1.0"
+  }
+}

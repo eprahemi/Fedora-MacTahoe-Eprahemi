@@ -22,17 +22,7 @@ if [ "$CURRENT_BOOT_ID" != "$LAST_BOOT_ID" ]; then
   echo "$CURRENT_BOOT_ID" > "$BOOT_ID_FILE"
 fi
 
-# ── Detect terminal ──
-# Prefer Kitty (Fedora MacTahoe installs it by default).
-# Fall back to the user's configured terminal if Kitty isn't available.
-if command -v kitty &>/dev/null; then
-  TERMINAL="kitty"
-else
-  TERMINAL=$(gsettings get org.gnome.desktop.default-applications.terminal exec 2>/dev/null | tr -d "'")
-  [ -z "$TERMINAL" ] && TERMINAL="kgx"
-fi
-
-# ── Fetch latest commit from GitHub ──
+# ── Fetch latest commit + version from GitHub ──
 LATEST_JSON=$(curl -sf "https://api.github.com/repos/${REPO}/commits/main" 2>/dev/null)
 if [ -z "$LATEST_JSON" ]; then
   exit 0  # offline or unreachable — skip silently
@@ -59,6 +49,20 @@ except Exception:
 
 [ -z "$LATEST_HASH" ] && exit 0
 
+# ── Fetch version info from updates.json ──
+LATEST_VER=""
+UPDATES_JSON=$(curl -sf "https://raw.githubusercontent.com/${REPO}/main/updates.json" 2>/dev/null)
+if [ -n "$UPDATES_JSON" ]; then
+  LATEST_VER=$(echo "$UPDATES_JSON" | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    print(d.get('latest_version', ''))
+except Exception:
+    print('')
+" 2>/dev/null)
+fi
+
 # ── Already updated to this commit? ──
 if [ -f "$NOTIFIED_FILE" ]; then
   NOTIFIED=$(cat "$NOTIFIED_FILE" 2>/dev/null || true)
@@ -71,6 +75,11 @@ if [ -f "$DISMISSED_FILE" ]; then
   [ "$LATEST_HASH" = "$DISMISSED" ] && exit 0
 fi
 
+# ── Build notification title and body ──
+NOTIFY_TITLE="Fedora MacTahoe — Update Available"
+[ -n "$LATEST_VER" ] && NOTIFY_TITLE="Fedora MacTahoe — Update v${LATEST_VER}"
+NOTIFY_BODY="New: ${LATEST_MSG} (${LATEST_HASH})"
+
 # ── Notify with action buttons ──
 # -u critical -t 0 → stays on screen until user clicks a button
 RESULT=$(notify-send -u critical -t 0 \
@@ -79,8 +88,8 @@ RESULT=$(notify-send -u critical -t 0 \
   -h "string:sound-name:message-attention" \
   -A "update=Update Now" \
   -A "later=Later" \
-  "Fedora MacTahoe — Update Available" \
-  "New: ${LATEST_MSG} (${LATEST_HASH})" 2>/dev/null)
+  "${NOTIFY_TITLE}" \
+  "${NOTIFY_BODY}" 2>/dev/null)
 
 # ── Handle user action ──
 if [ "$RESULT" = "update" ]; then
@@ -89,21 +98,17 @@ if [ "$RESULT" = "update" ]; then
 
   BOOTSTRAP_URL="https://raw.githubusercontent.com/${REPO}/main/bootstrap.sh"
 
-  # Different terminals use different syntax to run a command:
-  #   gnome-terminal/kgx  →  --  (remaining args after --)
-  #   kitty/konsole       →  -e  (remaining args after -e)
-  #   mate-terminal       →  -e  (single string argument only)
-  case "$TERMINAL" in
-    gnome-terminal|kgx)
-      nohup "$TERMINAL" -- bash -c "curl -fsSL '$BOOTSTRAP_URL' | bash" >/dev/null 2>&1 &
-      ;;
-    mate-terminal|xfce4-terminal|lxterminal|sakura)
-      nohup "$TERMINAL" -e "bash -c 'curl -fsSL $BOOTSTRAP_URL | bash'" >/dev/null 2>&1 &
-      ;;
-    *)
-      nohup "$TERMINAL" -e bash -c "curl -fsSL '$BOOTSTRAP_URL' | bash" >/dev/null 2>&1 &
-      ;;
-  esac
+  # Kitty is the only supported terminal for updates
+  if command -v kitty &>/dev/null; then
+    nohup kitty -e bash -c "curl -fsSL '${BOOTSTRAP_URL}' | bash" >/dev/null 2>&1 &
+  else
+    # Kitty not installed — show error notification
+    notify-send -u critical -t 10000 \
+      -a "Fedora MacTahoe" \
+      -i dialog-error \
+      "Kitty terminal not found" \
+      "Kitty is required for updates. Install it with: sudo dnf install kitty" 2>/dev/null || true
+  fi
 else
   # "Later" or X / Esc — dismiss until next boot only
   echo "$LATEST_HASH" > "$DISMISSED_FILE"

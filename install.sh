@@ -246,6 +246,222 @@ is_valid_zip() {
 TOTAL_STEPS=27
 STEP=0
 
+# ── Incremental update state ──────────────────────────────
+STATE_DIR="$HOME/.cache/fedora-mactahoe"
+STATE_FILE="$STATE_DIR/install-state.json"
+MANIFEST_FILE="$SCRIPT_DIR/updates.json"
+
+# Associative arrays: step_id → version
+declare -A STEP_MAN_VERS=()   # from manifest (updates.json)
+declare -A STEP_USR_VERS=()   # from user state (install-state.json)
+declare -A PR_ANS=()          # prompt answers from state
+declare -A PR_VER=()          # prompt answer versions
+
+MANIFEST_VERSION="0.0"
+USER_VERSION="0.0"
+STATE_JSON='{"version":"0.0","steps":{},"prompts":{}}'
+
+# ── Load manifest (updates.json from repo bundle) ──
+if [ -f "$MANIFEST_FILE" ]; then
+  _MANIFEST_RAW=$(cat "$MANIFEST_FILE" 2>/dev/null || echo "")
+  if [ -n "$_MANIFEST_RAW" ]; then
+    MANIFEST_VERSION=$(echo "$_MANIFEST_RAW" | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    print(d.get('latest_version', '0.0'))
+except Exception:
+    print('0.0')
+" 2>/dev/null || echo "0.0")
+
+    # Must use temp file to avoid pipe issues with eval + python3
+    _MANIFEST_EVAL=$(echo "$_MANIFEST_RAW" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+lines = []
+for sid, sv in d.get('steps', {}).items():
+    lines.append(f\"STEP_MAN_VERS['{sid}']='{sv}'\")
+print('; '.join(lines))
+" 2>/dev/null || true)
+    [ -n "$_MANIFEST_EVAL" ] && eval "$_MANIFEST_EVAL" 2>/dev/null || true
+  fi
+fi
+
+# ── Load user state ──
+if [ -f "$STATE_FILE" ]; then
+  STATE_JSON=$(cat "$STATE_FILE" 2>/dev/null || echo "")
+  if [ -n "$STATE_JSON" ]; then
+    USER_VERSION=$(echo "$STATE_JSON" | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    print(d.get('version', '0.0'))
+except Exception:
+    print('0.0')
+" 2>/dev/null || echo "0.0")
+
+    _STATE_EVAL=$(echo "$STATE_JSON" | python3 -c "
+import sys, json
+d = json.load(sys.stdin)
+lines = []
+for sid, sv in d.get('steps', {}).items():
+    lines.append(f\"STEP_USR_VERS['{sid}']='{sv}'\")
+for pid, pdata in d.get('prompts', {}).items():
+    ans = pdata.get('choice', '')
+    pv = pdata.get('version', '0.0')
+    lines.append(f\"PR_ANS['{pid}']='{ans}'\")
+    lines.append(f\"PR_VER['{pid}']='{pv}'\")
+print('; '.join(lines))
+" 2>/dev/null || true)
+    [ -n "$_STATE_EVAL" ] && eval "$_STATE_EVAL" 2>/dev/null || true
+  fi
+fi
+
+# ── Initialize empty state file if missing ──
+if [ ! -f "$STATE_FILE" ]; then
+  mkdir -p "$STATE_DIR" 2>/dev/null || true
+  echo "$STATE_JSON" > "$STATE_FILE" 2>/dev/null || true
+fi
+
+# ── If manifest is missing or unparseable, run all steps ──
+_INCREMENTAL_ACTIVE=true
+if [ ! -f "$MANIFEST_FILE" ] || [ "$MANIFEST_VERSION" = "0.0" ]; then
+  _INCREMENTAL_ACTIVE=false
+fi
+
+# ── Version comparison helper ──
+# Returns 0 (true) if v1 < v2, 1 (false) otherwise
+_ver_lt() {
+  [ "$(echo -e "$1\n$2" | sort -V 2>/dev/null | head -1)" = "$1" ] && [ "$1" != "$2" ]
+}
+
+# ── Step gate helper ──
+# Returns 0 if step needs to run (manifest version > user version)
+_step_should_run() {
+  $_INCREMENTAL_ACTIVE || return 0   # no manifest → run all steps
+  local sid="$1"
+  local mv="${STEP_MAN_VERS[$sid]:-0.0}"
+  local uv="${STEP_USR_VERS[$sid]:-0.0}"
+  _ver_lt "$uv" "$mv"
+}
+
+# ── Prompt gate helper ──
+# Returns 0 if prompt should be asked (no saved answer, or answer outdated)
+_prompt_should_ask() {
+  local pid="$1"
+  local ans="${PR_ANS[$pid]:-}"
+  [ -z "$ans" ] && return 0
+  local pv="${PR_VER[$pid]:-0.0}"
+  _ver_lt "$pv" "$MANIFEST_VERSION"
+}
+
+# ── Load saved prompt answers into installer variables ──
+# Only loads answers for prompts that are up-to-date (version matches manifest).
+# Outdated prompts remain unset so they trigger re-asking.
+_load_prompt_answers() {
+  local ans
+  if ! _prompt_should_ask "wallpaper_desktop"; then
+    ans="${PR_ANS['wallpaper_desktop']:-}"
+    [ -n "$ans" ] && INSTALL_DESKTOP_WALLPAPER="$ans"
+  fi
+  if ! _prompt_should_ask "wallpaper_login"; then
+    ans="${PR_ANS['wallpaper_login']:-}"
+    [ -n "$ans" ] && INSTALL_LOGIN_WALLPAPER="$ans"
+  fi
+  if ! _prompt_should_ask "wallpaper_18"; then
+    ans="${PR_ANS['wallpaper_18']:-}"
+    [ -n "$ans" ] && INSTALL_WALLPAPER_18="$ans"
+  fi
+  if ! _prompt_should_ask "billie_videos"; then
+    ans="${PR_ANS['billie_videos']:-}"
+    [ -n "$ans" ] && INSTALL_BILLIE_VIDEOS="$ans"
+  fi
+}
+
+# ── Save a single prompt answer to state ──
+_save_prompt_answer() {
+  local pid="$1" choice="$2"
+  [ -z "$pid" ] && return
+  PR_ANS["$pid"]="$choice"
+  PR_VER["$pid"]="$MANIFEST_VERSION"
+  local _MERGED
+  _MERGED=$(echo "$STATE_JSON" | python3 -c "
+import sys, json
+try:
+    s = json.load(sys.stdin)
+except Exception:
+    s = {'version': '0.0', 'steps': {}, 'prompts': {}}
+try:
+    if 'prompts' not in s:
+        s['prompts'] = {}
+    s['prompts']['$pid'] = {'answered': True, 'choice': '$choice', 'version': '$MANIFEST_VERSION'}
+    print(json.dumps(s))
+except Exception:
+    print('$STATE_JSON')
+" 2>/dev/null || echo "$STATE_JSON")
+  [ -n "$_MERGED" ] && STATE_JSON="$_MERGED"
+  local _TMPFILE
+  _TMPFILE=$(mktemp "$STATE_DIR/state.XXXXXX" 2>/dev/null || echo "")
+  if [ -n "$_TMPFILE" ]; then
+    echo "$STATE_JSON" > "$_TMPFILE" 2>/dev/null && mv "$_TMPFILE" "$STATE_FILE" 2>/dev/null || true
+  fi
+}
+
+# ── Save all prompt answers from installer variables into state ──
+_save_prompt_answers_all() {
+  [ -n "${INSTALL_DESKTOP_WALLPAPER:-}" ] && _save_prompt_answer "wallpaper_desktop" "$INSTALL_DESKTOP_WALLPAPER"
+  [ -n "${INSTALL_LOGIN_WALLPAPER:-}" ]   && _save_prompt_answer "wallpaper_login"   "$INSTALL_LOGIN_WALLPAPER"
+  [ -n "${INSTALL_WALLPAPER_18:-}" ]      && _save_prompt_answer "wallpaper_18"      "$INSTALL_WALLPAPER_18"
+  [ -n "${INSTALL_BILLIE_VIDEOS:-}" ]     && _save_prompt_answer "billie_videos"     "$INSTALL_BILLIE_VIDEOS"
+}
+
+# ── Update a single step's version in state ──
+_update_step_state() {
+  local sid="$1"
+  local sv="${STEP_MAN_VERS[$sid]:-0.0}"
+  [ "$sv" = "0.0" ] && sv="$MANIFEST_VERSION"
+  STEP_USR_VERS["$sid"]="$sv"
+  local _MERGED
+  _MERGED=$(echo "$STATE_JSON" | python3 -c "
+import sys, json
+try:
+    s = json.load(sys.stdin)
+except Exception:
+    s = {'version': '0.0', 'steps': {}, 'prompts': {}}
+try:
+    if 'steps' not in s:
+        s['steps'] = {}
+    s['steps']['$sid'] = '$sv'
+    print(json.dumps(s))
+except Exception:
+    print('$STATE_JSON')
+" 2>/dev/null || echo "$STATE_JSON")
+  [ -n "$_MERGED" ] && STATE_JSON="$_MERGED"
+  local _TMPFILE
+  _TMPFILE=$(mktemp "$STATE_DIR/state.XXXXXX" 2>/dev/null || echo "")
+  if [ -n "$_TMPFILE" ]; then
+    echo "$STATE_JSON" > "$_TMPFILE" 2>/dev/null && mv "$_TMPFILE" "$STATE_FILE" 2>/dev/null || true
+  fi
+}
+
+# ── Step wrapper: only runs if step version is outdated ──
+_run_step() {
+  local step_id="$1"
+  local func_name="$2"
+  if _step_should_run "$step_id"; then
+    "$func_name"
+    _update_step_state "$step_id"
+  else
+    if $_INCREMENTAL_ACTIVE; then
+      local uv="${STEP_USR_VERS[$step_id]:-0.0}"
+      echo -e "  ${DIM}  ┊ SKIP  ${NC} ${func_name} ${DIM}(v${uv} current)${NC}"
+    fi
+  fi
+}
+
+# ── Copy saved prompt answers into installer variables ──
+_load_prompt_answers
+
 next_step() {
   sudo -n -v 2>/dev/null || true  # refresh sudo credential silently
   STEP=$((STEP + 1))
@@ -3153,6 +3369,48 @@ finalize() {
 
   ok "System cleaned and polished"
 
+  # ── 12. Finalize install state (overall version + date) ──
+  local _FINAL_JSON
+  _FINAL_JSON=$(echo "$STATE_JSON" | python3 -c "
+import sys, json
+try:
+    s = json.load(sys.stdin)
+except Exception:
+    s = {'version': '0.0', 'steps': {}, 'prompts': {}}
+try:
+    s['version'] = '$MANIFEST_VERSION'
+    s['install_date'] = '$(date -Iseconds 2>/dev/null || date +%Y-%m-%dT%H:%M:%S)'
+    print(json.dumps(s))
+except Exception:
+    print('$STATE_JSON')
+" 2>/dev/null || echo "$STATE_JSON")
+  [ -n "$_FINAL_JSON" ] && STATE_JSON="$_FINAL_JSON"
+  local _TMPFILE
+  _TMPFILE=$(mktemp "$STATE_DIR/state.XXXXXX" 2>/dev/null || echo "")
+  if [ -n "$_TMPFILE" ]; then
+    echo "$STATE_JSON" > "$_TMPFILE" 2>/dev/null && mv "$_TMPFILE" "$STATE_FILE" 2>/dev/null || true
+  fi
+
+  # ── 13. Tell the updater we're up to date ──
+  # If the user ran install.sh manually (not via the updater's "Update Now"
+  # button), the updater's last-notified-commit is never saved, causing the
+  # notification to reappear on every boot. We fetch the latest commit hash
+  # and save it so the updater stays silent until the next real update.
+  log "Syncing updater notification state..."
+  local _LATEST_COMMIT
+  _LATEST_COMMIT=$(curl -sf "https://api.github.com/repos/eprahemi/Fedora-MacTahoe-Eprahemi/commits/main" 2>/dev/null | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    print(d.get('sha', '')[:8])
+except Exception:
+    print('')
+" 2>/dev/null || true)
+  if [ -n "$_LATEST_COMMIT" ]; then
+    echo "$_LATEST_COMMIT" > "$HOME/.cache/fedora-mactahoe/last-notified-commit" 2>/dev/null || true
+    ok "Updater synchronized (commit $_LATEST_COMMIT)"
+  fi
+
   __install_summary
 
   echo ""
@@ -3316,49 +3574,66 @@ __secure_tunnel
 __system_dashboard
 __cdn_speed_test
 
-preflight
+# ── Before any prompts, load saved answers from state ──
+# This populates INSTALL_DESKTOP_WALLPAPER, INSTALL_LOGIN_WALLPAPER,
+# INSTALL_WALLPAPER_18, and INSTALL_BILLIE_VIDEOS from previous runs
+_load_prompt_answers
 
-remove_ptyxis
-remove_gnome_weather
+# ── Preflight (always runs) ──
+_run_step "preflight" preflight
 
-prompt_optional_wallpapers
+# ── System cleanup steps ──
+_run_step "remove_ptyxis" remove_ptyxis
+_run_step "remove_gnome_weather" remove_gnome_weather
 
-prompt_billie_videos
+# ── Interactive prompts (gated by saved answers + version) ──
+if _prompt_should_ask "wallpaper_desktop" || _prompt_should_ask "wallpaper_login" || _prompt_should_ask "wallpaper_18"; then
+  prompt_optional_wallpapers
+  _save_prompt_answer "wallpaper_desktop" "${INSTALL_DESKTOP_WALLPAPER:-false}"
+  _save_prompt_answer "wallpaper_login" "${INSTALL_LOGIN_WALLPAPER:-false}"
+  _save_prompt_answer "wallpaper_18" "${INSTALL_WALLPAPER_18:-false}"
+fi
+
+if _prompt_should_ask "billie_videos"; then
+  prompt_billie_videos
+  _save_prompt_answer "billie_videos" "${INSTALL_BILLIE_VIDEOS:-false}"
+fi
+
 prompt_sudoers_entry
 
 phase_divider "PHASE 1 : SYSTEM FOUNDATIONS" 3 4
-install_rpmfusion
-install_nvidia
+_run_step "install_rpmfusion" install_rpmfusion
+_run_step "install_nvidia" install_nvidia
 
 phase_divider "PHASE 2 : PACKAGES" 5 7
-install_rpm_packages
-install_browsers
-install_flatpaks
+_run_step "install_rpm_packages" install_rpm_packages
+_run_step "install_browsers" install_browsers
+_run_step "install_flatpaks" install_flatpaks
 
 phase_divider "PHASE 3 : THEMES" 8 9
-install_mactahoe_theme
-install_font
+_run_step "install_mactahoe_theme" install_mactahoe_theme
+_run_step "install_font" install_font
 
 phase_divider "PHASE 4 : CONFIGURATION" 11 23
-apply_desktop_entries
+_run_step "apply_desktop_entries" apply_desktop_entries
 ensure_celluloid_default
 configure_nautilus_defaults
-apply_configs
-apply_dconf
-optimize_system_resources
-apply_wallpapers
-install_custom_avatars
-setup_gdm
-setup_firefox_theme
-setup_flatpak_theme
-install_sounds
-install_updater
+_run_step "apply_configs" apply_configs
+_run_step "apply_dconf" apply_dconf
+_run_step "optimize_system_resources" optimize_system_resources
+_run_step "apply_wallpapers" apply_wallpapers
+_run_step "install_custom_avatars" install_custom_avatars
+_run_step "setup_gdm" setup_gdm
+_run_step "setup_firefox_theme" setup_firefox_theme
+_run_step "setup_flatpak_theme" setup_flatpak_theme
+_run_step "install_sounds" install_sounds
+_run_step "install_updater" install_updater
 
 phase_divider "PHASE 5 : TERMINAL & SHELL" 24 25
-setup_terminal
-setup_shell
+_run_step "setup_terminal" setup_terminal
+_run_step "setup_shell" setup_shell
 
 phase_divider "PHASE 6 : EXTENSIONS & FINALIZE" 26 28
-install_extensions
-download_optional_videos
-finalize
+_run_step "install_extensions" install_extensions
+_run_step "download_optional_videos" download_optional_videos
+_run_step "finalize" finalize
