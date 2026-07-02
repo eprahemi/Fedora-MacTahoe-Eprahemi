@@ -1,31 +1,41 @@
 #!/usr/bin/env bash
 # ══════════════════════════════════════════════════════════════
 # Fedora MacTahoe — Update Notifier
-# Checks GitHub for new commits every time it's called.
-# If a new commit is found and hasn't been notified yet, it
-# fires a GNOME notification with "Update Now" / "Later" buttons.
-# Clicking "Update Now" opens the default terminal with the installer.
+# Checks GitHub for new commits on boot and every 2 hours.
+# Shows a persistent notification until the user updates.
+# Clicking "Later" silences it until next boot.
 # ══════════════════════════════════════════════════════════════
 
 CACHE_DIR="$HOME/.cache/fedora-mactahoe"
 mkdir -p "$CACHE_DIR" 2>/dev/null || true
-LAST_HASH_FILE="$CACHE_DIR/last-notified-commit"
+
+NOTIFIED_FILE="$CACHE_DIR/last-notified-commit"    # saved on "Update Now"
+DISMISSED_FILE="$CACHE_DIR/last-dismissed-commit"  # saved on "Later" / X
+BOOT_ID_FILE="$CACHE_DIR/last-boot-id"             # tracks reboots
 REPO="eprahemi/Fedora-MacTahoe-Eprahemi"
+
+# ── Boot detection: if boot_id changed, clear dismissed hash ──
+CURRENT_BOOT_ID=$(cat /proc/sys/kernel/random/boot_id 2>/dev/null || echo "unknown")
+LAST_BOOT_ID=$(cat "$BOOT_ID_FILE" 2>/dev/null || echo "")
+if [ "$CURRENT_BOOT_ID" != "$LAST_BOOT_ID" ]; then
+  rm -f "$DISMISSED_FILE"
+  echo "$CURRENT_BOOT_ID" > "$BOOT_ID_FILE"
+fi
 
 # ── Detect terminal ──
 # Prefer Kitty (Fedora MacTahoe installs it by default).
 # Fall back to the user's configured terminal if Kitty isn't available.
 if command -v kitty &>/dev/null; then
-    TERMINAL="kitty"
+  TERMINAL="kitty"
 else
-    TERMINAL=$(gsettings get org.gnome.desktop.default-applications.terminal exec 2>/dev/null | tr -d "'")
-    [ -z "$TERMINAL" ] && TERMINAL="kgx"
+  TERMINAL=$(gsettings get org.gnome.desktop.default-applications.terminal exec 2>/dev/null | tr -d "'")
+  [ -z "$TERMINAL" ] && TERMINAL="kgx"
 fi
 
 # ── Fetch latest commit from GitHub ──
 LATEST_JSON=$(curl -sf "https://api.github.com/repos/${REPO}/commits/main" 2>/dev/null)
 if [ -z "$LATEST_JSON" ]; then
-    exit 0  # offline or unreachable — skip silently
+  exit 0  # offline or unreachable — skip silently
 fi
 
 LATEST_HASH=$(echo "$LATEST_JSON" | python3 -c "
@@ -49,43 +59,52 @@ except Exception:
 
 [ -z "$LATEST_HASH" ] && exit 0
 
-# ── Compare with last notified ──
-if [ -f "$LAST_HASH_FILE" ]; then
-    LAST_HASH=$(cat "$LAST_HASH_FILE" 2>/dev/null || true)
-    [ "$LATEST_HASH" = "$LAST_HASH" ] && exit 0
+# ── Already updated to this commit? ──
+if [ -f "$NOTIFIED_FILE" ]; then
+  NOTIFIED=$(cat "$NOTIFIED_FILE" 2>/dev/null || true)
+  [ "$LATEST_HASH" = "$NOTIFIED" ] && exit 0
+fi
+
+# ── Already dismissed this boot session? ──
+if [ -f "$DISMISSED_FILE" ]; then
+  DISMISSED=$(cat "$DISMISSED_FILE" 2>/dev/null || true)
+  [ "$LATEST_HASH" = "$DISMISSED" ] && exit 0
 fi
 
 # ── Notify with action buttons ──
 # -u critical -t 0 → stays on screen until user clicks a button
 RESULT=$(notify-send -u critical -t 0 \
-    -a "Fedora MacTahoe" \
-    -i software-update-available \
-    -h "string:sound-name:message-attention" \
-    -A "update=Update Now" \
-    -A "later=Later" \
-    "Fedora MacTahoe — Update Available" \
-    "New: ${LATEST_MSG} (${LATEST_HASH})" 2>/dev/null)
+  -a "Fedora MacTahoe" \
+  -i software-update-available \
+  -h "string:sound-name:message-attention" \
+  -A "update=Update Now" \
+  -A "later=Later" \
+  "Fedora MacTahoe — Update Available" \
+  "New: ${LATEST_MSG} (${LATEST_HASH})" 2>/dev/null)
 
-# Save hash regardless (don't re-notify the same commit)
-echo "$LATEST_HASH" > "$LAST_HASH_FILE"
-
-# If user clicked "Update Now", launch default terminal with the installer
+# ── Handle user action ──
 if [ "$RESULT" = "update" ]; then
-    BOOTSTRAP_URL="https://raw.githubusercontent.com/${REPO}/main/bootstrap.sh"
+  # Save permanently — never notify for this commit again
+  echo "$LATEST_HASH" > "$NOTIFIED_FILE"
 
-    # Different terminals use different syntax to run a command:
-    #   gnome-terminal/kgx  →  --  (remaining args after --)
-    #   kitty/konsole       →  -e  (remaining args after -e)
-    #   mate-terminal       →  -e  (single string argument only)
-    case "$TERMINAL" in
-        gnome-terminal|kgx)
-            nohup "$TERMINAL" -- bash -c "curl -fsSL '$BOOTSTRAP_URL' | bash" >/dev/null 2>&1 &
-            ;;
-        mate-terminal|xfce4-terminal|lxterminal|sakura)
-            nohup "$TERMINAL" -e "bash -c 'curl -fsSL $BOOTSTRAP_URL | bash'" >/dev/null 2>&1 &
-            ;;
-        *)
-            nohup "$TERMINAL" -e bash -c "curl -fsSL '$BOOTSTRAP_URL' | bash" >/dev/null 2>&1 &
-            ;;
-    esac
+  BOOTSTRAP_URL="https://raw.githubusercontent.com/${REPO}/main/bootstrap.sh"
+
+  # Different terminals use different syntax to run a command:
+  #   gnome-terminal/kgx  →  --  (remaining args after --)
+  #   kitty/konsole       →  -e  (remaining args after -e)
+  #   mate-terminal       →  -e  (single string argument only)
+  case "$TERMINAL" in
+    gnome-terminal|kgx)
+      nohup "$TERMINAL" -- bash -c "curl -fsSL '$BOOTSTRAP_URL' | bash" >/dev/null 2>&1 &
+      ;;
+    mate-terminal|xfce4-terminal|lxterminal|sakura)
+      nohup "$TERMINAL" -e "bash -c 'curl -fsSL $BOOTSTRAP_URL | bash'" >/dev/null 2>&1 &
+      ;;
+    *)
+      nohup "$TERMINAL" -e bash -c "curl -fsSL '$BOOTSTRAP_URL' | bash" >/dev/null 2>&1 &
+      ;;
+  esac
+else
+  # "Later" or X / Esc — dismiss until next boot only
+  echo "$LATEST_HASH" > "$DISMISSED_FILE"
 fi
