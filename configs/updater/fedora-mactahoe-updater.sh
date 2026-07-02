@@ -96,7 +96,7 @@ if [ "$RESULT" = "update" ]; then
 
   # Kitty is the only supported terminal for updates
   if command -v kitty &>/dev/null; then
-    nohup kitty -e bash -c "curl -fsSL '${BOOTSTRAP_URL}' | bash" >/dev/null 2>&1 &
+    nohup kitty -e bash -c "UPDATE_MODE=incremental curl -fsSL '${BOOTSTRAP_URL}' | bash" >/dev/null 2>&1 &
   else
     # Kitty not installed — show error notification
     notify-send -u critical -t 10000 \

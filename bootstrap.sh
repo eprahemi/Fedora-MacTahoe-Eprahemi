@@ -633,5 +633,10 @@ else
 fi
 echo ""
 
+# Full re-install for direct bootstrap.sh; incremental for update / notification
+if [ "${UPDATE_MODE:-}" != "incremental" ]; then
+    rm -f "$HOME/.cache/fedora-mactahoe/install-state.json"
+fi
+
 cd "$TMP"
 bash install.sh

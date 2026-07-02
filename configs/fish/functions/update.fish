@@ -103,7 +103,7 @@ except Exception:
     echo -e "  \033[1;37mFetching latest installer from GitHub...\033[0m"
 
     set -l url "https://raw.githubusercontent.com/$repo/main/bootstrap.sh"
-    curl -fsSL "$url" | bash
+    env UPDATE_MODE=incremental curl -fsSL "$url" | bash
 
     set -l exit_code $status
     if test $exit_code -eq 0

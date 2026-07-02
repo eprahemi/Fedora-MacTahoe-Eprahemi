@@ -56,11 +56,11 @@
     "setup_firefox_theme": "1.0",
     "setup_flatpak_theme": "1.0",
     "install_sounds": "1.0",
-    "install_updater": "1.0",
+    "install_updater": "1.1",
     "setup_terminal": "1.0",
     "setup_shell": "1.0",
     "install_extensions": "1.0",
     "mirror_flatpak_icons": "1.0",
-    "finalize": "1.0"
+    "finalize": "1.1"
   }
 }
