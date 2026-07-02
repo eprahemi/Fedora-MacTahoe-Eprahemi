@@ -2871,6 +2871,35 @@ install_extensions() {
   if [ "$ext_fail" -gt 0 ]; then
     warn "$ext_fail extension(s) failed — check extensions.gnome.org or your network"
   fi
+
+  # ── Window Title Pro (installed from GitHub release until EGO review passes) ──
+  local wtp_uuid="window-title-pro@eprahemi.github.io"
+  local wtp_target="$HOME/.local/share/gnome-shell/extensions/$wtp_uuid"
+  if [ -d "$wtp_target" ]; then
+    info "Window Title Pro already installed — removing prior copy"
+    rm -rf "$wtp_target"
+  fi
+  local wtp_zip_url="https://github.com/eprahemi/window-title-pro/releases/download/v1/window-title-pro.zip"
+  if curl -sL "$wtp_zip_url" -o /tmp/window-title-pro.zip 2>/dev/null; then
+    mkdir -p "$wtp_target"
+    if unzip -qo /tmp/window-title-pro.zip -d "$wtp_target" 2>/dev/null; then
+      glib-compile-schemas "$wtp_target/schemas" 2>/dev/null || true
+      # Add to enabled-extensions list if not already there
+      if ! echo "${ext_list[@]}" | grep -q "$wtp_uuid"; then
+        ext_list+=("'$wtp_uuid'")
+        gsettings set org.gnome.shell enabled-extensions "[$(IFS=,; echo "${ext_list[*]}")]" 2>/dev/null || true
+      fi
+      ok "Window Title Pro installed"
+      ext_ok=$((ext_ok + 1))
+    else
+      warn "Failed to extract Window Title Pro"
+      ext_fail=$((ext_fail + 1))
+    fi
+    rm -f /tmp/window-title-pro.zip
+  else
+    warn "Failed to download Window Title Pro from GitHub"
+    ext_fail=$((ext_fail + 1))
+  fi
 }
 
 # ── MIRROR FLATPAK ICONS ──────────────────────────────────────
