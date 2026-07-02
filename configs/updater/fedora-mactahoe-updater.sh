@@ -96,7 +96,19 @@ if [ "$RESULT" = "update" ]; then
 
   # Kitty is the only supported terminal for updates
   if command -v kitty &>/dev/null; then
-    nohup kitty -e bash -c "UPDATE_MODE=incremental curl -fsSL '${BOOTSTRAP_URL}' | bash" >/dev/null 2>&1 &
+    # Write a temp launcher script to avoid quoting issues and keep window open
+    LAUNCHER="/tmp/.mct-update-$(date +%s).sh"
+    cat > "$LAUNCHER" << 'LAUNCHER_EOF'
+#!/usr/bin/env bash
+UPDATE_MODE=incremental bash <(curl -fsSL 'https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/bootstrap.sh')
+echo ""
+read -rp "Press Enter to close this window..."
+LAUNCHER_EOF
+    chmod +x "$LAUNCHER"
+    kitty --title "Fedora MacTahoe Update" "$LAUNCHER" &
+    disown
+    sleep 3
+    rm -f "$LAUNCHER" 2>/dev/null || true
   else
     # Kitty not installed — show error notification
     notify-send -u critical -t 10000 \
