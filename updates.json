@@ -1,6 +1,14 @@
 {
-  "latest_version": "1.1",
+  "latest_version": "1.2",
   "changelog": [
+    {
+      "version": "1.2",
+      "changes": [
+        "Window Title Pro v2 — show-title now defaults to off (set <default>false</default> in gschema)",
+        "update.fish ANSI escape fix: replaced echo with printf (Fish echo ignores \\033)",
+        "update.fish read prompt fix: plain text in -P instead of \\e codes"
+      ]
+    },
     {
       "version": "1.1",
       "changes": [
@@ -45,7 +53,7 @@
     "install_mactahoe_theme": "1.0",
     "install_font": "1.0",
     "apply_desktop_entries": "1.0",
-    "apply_configs": "1.1",
+    "apply_configs": "1.2",
     "apply_dconf": "1.0",
     "optimize_system_resources": "1.0",
     "apply_wallpapers": "1.0",
@@ -58,8 +66,8 @@
     "install_updater": "1.1",
     "setup_terminal": "1.0",
     "setup_shell": "1.0",
-    "install_extensions": "1.0",
+    "install_extensions": "1.2",
     "mirror_flatpak_icons": "1.0",
-    "finalize": "1.1"
+    "finalize": "1.2"
   }
 }
