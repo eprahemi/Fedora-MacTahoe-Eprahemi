@@ -2,7 +2,7 @@
 Description=Check Fedora MacTahoe updates on boot and every 2 hours
 
 [Timer]
-OnBootSec=5min
+OnBootSec=2min
 OnUnitActiveSec=2h
 Persistent=true
 
