@@ -2801,6 +2801,41 @@ install_sounds() {
   fi
 }
 
+# ── PHASE 4b: UPDATE NOTIFIER ──────────────────────────────
+
+install_updater() {
+  next_step "Fedora MacTahoe Update Notifier"
+
+  local updater_src="$BUNDLE/configs/updater"
+  if [ ! -d "$updater_src" ]; then
+    warn "Updater files not found at $updater_src — skipping"
+    return
+  fi
+
+  # 1. Install the script
+  mkdir -p "$HOME/.local/bin"
+  cp "$updater_src/fedora-mactahoe-updater.sh" "$HOME/.local/bin/fedora-mactahoe-updater.sh"
+  chmod +x "$HOME/.local/bin/fedora-mactahoe-updater.sh"
+  log "Updater script installed to ~/.local/bin/"
+
+  # 2. Install systemd user units
+  mkdir -p "$HOME/.config/systemd/user"
+  cp "$updater_src/fedora-mactahoe-updater.service" "$HOME/.config/systemd/user/"
+  cp "$updater_src/fedora-mactahoe-updater.timer" "$HOME/.config/systemd/user/"
+  log "Systemd timer and service installed"
+
+  # 3. Reload, enable, start
+  systemctl --user daemon-reload 2>/dev/null || true
+  systemctl --user enable fedora-mactahoe-updater.timer 2>/dev/null || true
+  systemctl --user start fedora-mactahoe-updater.timer 2>/dev/null || true
+
+  if systemctl --user is-enabled fedora-mactahoe-updater.timer &>/dev/null; then
+    ok "Update notifier active (checks GitHub every 30 min)"
+  else
+    warn "Update notifier timer could not be enabled"
+  fi
+}
+
 # ── PHASE 5: TERMINAL & SHELL ────────────────────────────────
 
 setup_terminal() {
@@ -3150,6 +3185,8 @@ v6="  ◆  GDM login screen themed"
   echo -e "  ${GREEN}║${NC}  ${YELLOW}${v6}${NC}$(printf '%*s' $((60 - ${#v6})) '')${GREEN}║${NC}"
 v7="  ◆  Flatpak GTK runtime installed"
   echo -e "  ${GREEN}║${NC}  ${YELLOW}${v7}${NC}$(printf '%*s' $((60 - ${#v7})) '')${GREEN}║${NC}"
+v8="  ◆  Update notifier active (GitHub check every 30 min)"
+  echo -e "  ${GREEN}║${NC}  ${YELLOW}${v8}${NC}$(printf '%*s' $((60 - ${#v8})) '')${GREEN}║${NC}"
   if [ "${FIREFOX_THEME_FAILED:-0}" = 1 ]; then
     echo -e "  ${GREEN}║${NC}                                                              ${GREEN}║${NC}"
     ff1="  ⚠  Firefox not themed — log in, launch Firefox once"
@@ -3262,8 +3299,8 @@ echo -e "  ${CYAN}║${NC}"'                                                    
 gnome_text="  GNOME ${GNOME_VER}  ◆  Kitty Terminal  ◆  Fish Shell"
 echo -e "  ${CYAN}║${NC}  ${DIM}GNOME${NC} ${GNOME_VER}  ${DIM}◆  Kitty Terminal  ◆  Fish Shell${NC}$(printf '%*s' $((62 - ${#gnome_text})) '')${CYAN}║${NC}"
 echo -e "  ${CYAN}║${NC}"'                                                              '"${CYAN}║${NC}"
-step24="  ◆  24-Step Installer    ◆  Auto-detects your system    ◆"
-echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  24-Step Installer    ${DIM}◆${NC}  Auto-detects your system    ${DIM}◆${NC}$(printf '%*s' $((62 - ${#step24})) '')${CYAN}║${NC}"
+step28="  ◆  28-Step Installer    ◆  Auto-detects your system    ◆"
+echo -e "  ${CYAN}║${NC}  ${DIM}${step28}${NC}$(printf '%*s' $((62 - ${#step28})) '')${CYAN}║${NC}"
 theme_text="  ◆  Theme compiles for your GNOME ${GNOME_VER}"
 echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  Theme compiles for your GNOME ${BOLD}${GNOME_VER}${NC}$(printf '%*s' $((62 - ${#theme_text})) '')${CYAN}║${NC}"
 kitty_fish_line="  ◆  Sets up Kitty, Fish, icons, fonts, sounds"
@@ -3302,7 +3339,7 @@ phase_divider "PHASE 3 : THEMES" 8 9
 install_mactahoe_theme
 install_font
 
-phase_divider "PHASE 4 : CONFIGURATION" 11 22
+phase_divider "PHASE 4 : CONFIGURATION" 11 23
 apply_desktop_entries
 ensure_celluloid_default
 configure_nautilus_defaults
@@ -3315,12 +3352,13 @@ setup_gdm
 setup_firefox_theme
 setup_flatpak_theme
 install_sounds
+install_updater
 
-phase_divider "PHASE 5 : TERMINAL & SHELL" 23 24
+phase_divider "PHASE 5 : TERMINAL & SHELL" 24 25
 setup_terminal
 setup_shell
 
-phase_divider "PHASE 6 : EXTENSIONS & FINALIZE" 25 27
+phase_divider "PHASE 6 : EXTENSIONS & FINALIZE" 26 28
 install_extensions
 download_optional_videos
 finalize

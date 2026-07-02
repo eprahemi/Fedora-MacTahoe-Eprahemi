@@ -1,0 +1,6 @@
+[Unit]
+Description=Fedora MacTahoe update checker
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/fedora-mactahoe-updater.sh
