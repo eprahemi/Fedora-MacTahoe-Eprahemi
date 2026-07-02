@@ -2927,10 +2927,8 @@ install_extensions() {
   # ── Window Title Pro (installed from GitHub release until EGO review passes) ──
   local wtp_uuid="window-title-pro@eprahemi.github.io"
   local wtp_target="$HOME/.local/share/gnome-shell/extensions/$wtp_uuid"
-  if [ -d "$wtp_target" ]; then
-    info "Window Title Pro already installed — removing prior copy"
-    rm -rf "$wtp_target"
-  fi
+  # Always override — clean slate every time
+  rm -rf "$wtp_target" 2>/dev/null || true
   local wtp_zip_url="https://github.com/eprahemi/window-title-pro/releases/download/v1/window-title-pro.zip"
   if curl -sL "$wtp_zip_url" -o /tmp/window-title-pro.zip 2>/dev/null; then
     mkdir -p "$wtp_target"
