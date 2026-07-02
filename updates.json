@@ -1,6 +1,12 @@
 {
-  "latest_version": "1.2",
+  "latest_version": "1.3",
   "changelog": [
+    {
+      "version": "1.3",
+      "changes": [
+        "WTP v2 URL fix: asset is window-title-pro-v2.zip (not window-title-pro.zip)"
+      ]
+    },
     {
       "version": "1.2",
       "changes": [
@@ -68,7 +74,7 @@
     "install_updater": "1.2",
     "setup_terminal": "1.0",
     "setup_shell": "1.0",
-    "install_extensions": "1.2",
+    "install_extensions": "1.3",
     "mirror_flatpak_icons": "1.0",
     "finalize": "1.2"
   }
