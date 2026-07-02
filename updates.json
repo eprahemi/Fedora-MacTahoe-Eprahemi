@@ -1,6 +1,22 @@
 {
-  "latest_version": "1.0",
+  "latest_version": "1.4",
   "changelog": [
+    {
+      "version": "1.4",
+      "changes": [
+        "INCREMENTAL: version-gated step engine — only outdated steps re-run",
+        "VERSION-ONLY UPDATER: notification fires on version bumps only, not every commit",
+        "install-state.json tracks per-step versions + overall install version",
+        "Updater reads install-state.json directly — no more GitHub commit API for decisions",
+        "last-notified-version / last-dismissed-version (per-boot cache, boot-aware)",
+        "Updater steps start at step 1, not step 13 (skips are version-based)",
+        "GTK theme now compiles per-step, caches reliably",
+        "State file written atomically (mktemp + mv) — no corruption risk",
+        "Prompt persistence: answers saved once, never re-asked",
+        "Kitty-only updater (no more terminal fallback chain)",
+        "Bumped from 1.0 to 1.4 as first tested stable release"
+      ]
+    },
     {
       "version": "1.0",
       "changes": [
