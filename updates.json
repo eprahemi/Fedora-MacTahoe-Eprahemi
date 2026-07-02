@@ -45,7 +45,7 @@
     "install_mactahoe_theme": "1.0",
     "install_font": "1.0",
     "apply_desktop_entries": "1.0",
-    "apply_configs": "1.0",
+    "apply_configs": "1.1",
     "apply_dconf": "1.0",
     "optimize_system_resources": "1.0",
     "apply_wallpapers": "1.0",
