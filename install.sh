@@ -3314,6 +3314,9 @@ finalize() {
   rm -rf /tmp/mactahoe-* /tmp/mac-sounds /tmp/ext-* 2>/dev/null || true
   rm -f /tmp/*.rpm 2>/dev/null || true
 
+  # ── 1b. Remove old commit-based cache files (pre-v1.4 migration) ──
+  rm -f "$STATE_DIR/last-notified-commit" "$STATE_DIR/last-dismissed-commit" 2>/dev/null || true
+
   # ── 2. Flatpak theme build cache ──
   log "Cleaning Flatpak theme build cache..."
   rm -rf "$HOME/.cache/pakitheme" 2>/dev/null || true
