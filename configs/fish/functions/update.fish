@@ -7,16 +7,16 @@
 function update --description 'Fedora MacTahoe update — Kitty only (same as Update Now)'
     # ── Kitty gate: only Kitty is supported ──
     if not set -q KITTY_PID
-        echo -e "\033[1;31m"
-        echo "  ╔═══════════════════════════════════════════╗"
-        echo "  ║            \033[1;37m🚫  BLOCKED\033[1;31m                  ║"
-        echo "  ║                                           ║"
-        echo "  ║  \033[1;33mFedora MacTahoe requires\033[1;31m               ║"
-        echo "  ║  \033[1;33mKitty terminal.\033[1;31m                        ║"
-        echo "  ║                                           ║"
-        echo "  ║  \033[1;37mOpen Kitty and type 'update' there.\033[1;31m    ║"
-        echo "  ╚══════════════════════════════════════════════╝"
-        echo -e "\033[0m"
+        printf "\e[1;31m\n"
+        printf "  ╔═══════════════════════════════════════════╗\n"
+        printf "  ║            \e[1;37m🚫  BLOCKED\e[1;31m                  ║\n"
+        printf "  ║                                           ║\n"
+        printf "  ║  \e[1;33mFedora MacTahoe requires\e[1;31m               ║\n"
+        printf "  ║  \e[1;33mKitty terminal.\e[1;31m                        ║\n"
+        printf "  ║                                           ║\n"
+        printf "  ║  \e[1;37mOpen Kitty and type 'update' there.\e[1;31m    ║\n"
+        printf "  ╚══════════════════════════════════════════════╝\n"
+        printf "\e[0m\n"
         return 1
     end
 
@@ -50,18 +50,18 @@ except Exception:
     end
 
     # ── Display header ──
-    echo -e "\033[1;36m"
-    echo "  ╔═══════════════════════════════════════════╗"
-    echo "  ║      \033[1;33mFEDORA MACTAHOE UPDATER\033[1;36m           ║"
-    echo "  ╚══════════════════════════════════════════════╝"
-    echo -e "\033[0m"
+    printf "\e[1;36m\n"
+    printf "  ╔═══════════════════════════════════════════╗\n"
+    printf "  ║      \e[1;33mFEDORA MACTAHOE UPDATER\e[1;36m           ║\n"
+    printf "  ╚══════════════════════════════════════════════╝\n"
+    printf "\e[0m\n"
 
     # ── Show versions ──
-    echo -e "  \033[1;37mInstalled:\033[0m  \033[1;36m$current_ver\033[0m"
+    printf "  \e[1;37mInstalled:\e[0m  \e[1;36m%s\e[0m\n" "$current_ver"
     if test -n "$latest_ver"
-        echo -e "  \033[1;37mAvailable:\033[0m \033[1;33m$latest_ver\033[0m"
+        printf "  \e[1;37mAvailable:\e[0m \e[1;33m%s\e[0m\n" "$latest_ver"
     else
-        echo -e "  \033[1;37mAvailable:\033[0m \033[1;31mcould not fetch\033[0m"
+        printf "  \e[1;37mAvailable:\e[0m \e[1;31mcould not fetch\e[0m\n"
     end
     echo ""
 
@@ -76,17 +76,19 @@ except Exception:
     end
 
     if test $needs_update -eq 0
-        echo -e "  \033[1;32m✓ You're already at the latest version.\033[0m"
+        printf "  \e[1;32m✓ You're already at the latest version.\e[0m\n"
         return 0
     end
 
     # ── Prompt y/n (Ctrl+C cancels) ──
-    echo -e "  \033[1;33mAn update is available.\033[0m"
-    read -l confirm -P "  \033[1;37mProceed with update? [y/N]: \033[0m"
+    printf "  \e[1;33mAn update is available.\e[0m\n"
+    # Print prompt separately: read -P does not interpret \e escapes
+    printf "  \e[1;37mProceed with update? [y/N]: \e[0m"
+    read -l confirm
     if test $status -ne 0
         # Ctrl+C or error during read
         echo ""
-        echo -e "  \033[1;31m✘ Cancelled.\033[0m"
+        printf "  \e[1;31m✘ Cancelled.\e[0m\n"
         return 1
     end
 
@@ -94,22 +96,22 @@ except Exception:
         case y Y yes Yes YES
             # confirmed — proceed below
         case '*'
-            echo -e "  \033[1;31m✘ Cancelled.\033[0m"
+            printf "  \e[1;31m✘ Cancelled.\e[0m\n"
             return 1
     end
 
     # ── Run the installer ──
     echo ""
-    echo -e "  \033[1;37mFetching latest installer from GitHub...\033[0m"
+    printf "  \e[1;37mFetching latest installer from GitHub...\e[0m\n"
 
     set -l url "https://raw.githubusercontent.com/$repo/main/bootstrap.sh"
     env UPDATE_MODE=incremental curl -fsSL "$url" | bash
 
     set -l exit_code $status
     if test $exit_code -eq 0
-        echo -e "\n  \033[1;32m✅ Update complete — you're at the latest version\033[0m"
+        printf "\n  \e[1;32m✅ Update complete — you're at the latest version\e[0m\n"
     else
-        echo -e "\n  \033[1;31m✘ Update failed (exit code $exit_code)\033[0m"
+        printf "\n  \e[1;31m✘ Update failed (exit code %s)\e[0m\n" $exit_code
     end
 
     return $exit_code
