@@ -15,6 +15,7 @@ function refresh --description 'Deep system refresh: cache, services, extensions
     set -l do_pip 0
     set -l do_desktop 0
     set -l do_icons 0
+    set -l do_chrome 0
 
     if test (count $argv) -eq 0
         echo -e "\033[1;36m"
@@ -38,6 +39,7 @@ function refresh --description 'Deep system refresh: cache, services, extensions
         echo -e "  \033[1;37mrefresh --dnf\033[0m \033[38;5;245m(-dnf)\033[0m          — dnf clean all & autoremove"
         echo -e "  \033[1;37mrefresh --flatpak\033[0m \033[38;5;245m(-fp)\033[0m       — flatpak uninstall --unused"
         echo -e "  \033[1;37mrefresh --pip\033[0m \033[38;5;245m(-pip)\033[0m          — pip cache purge"
+        echo -e "  \033[1;37mrefresh --chrome\033[0m \033[38;5;245m(-ch)\033[0m        — clear stale browser lock files (Chrome/Edge/Brave)"
         echo -e "  \033[38;5;248m📦 Desktop refresh, D-Bus app grid, icon cache rebuild (Jun 2026)\033[0m"
         return 0
     else
@@ -53,6 +55,7 @@ function refresh --description 'Deep system refresh: cache, services, extensions
                 case -pip --pip pip;                 set do_pip 1
                 case -k --desktop desktop;           set do_desktop 1
                 case -i --icons icons;               set do_icons 1
+                case -ch --chrome chrome;            set do_chrome 1
                 case -h --help
                     echo -e "\033[1;36m"
                     echo "  ███████╗██████╗ ██████╗  █████╗ ██╗  ██╗███████╗███╗   ███╗██╗"
@@ -74,6 +77,7 @@ function refresh --description 'Deep system refresh: cache, services, extensions
                     echo -e "  \033[1;37mrefresh --icons\033[0m \033[38;5;245m(-i)\033[0m          — mirror unresolvable app icons (512×512 fix)"
                     echo -e "  \033[1;37mrefresh --dnf\033[0m \033[38;5;245m(-dnf)\033[0m          — dnf clean all & autoremove"
                     echo -e "  \033[1;37mrefresh --flatpak\033[0m \033[38;5;245m(-fp)\033[0m       — flatpak uninstall --unused"
+                    echo -e "  \033[1;37mrefresh --chrome\033[0m \033[38;5;245m(-ch)\033[0m        — clear stale browser lock files (Chrome/Edge/Brave)"
                     echo -e "  \033[1;37mrefresh --pip\033[0m \033[38;5;245m(-pip)\033[0m          — pip cache purge"
                     echo -e "  \033[38;5;248m📦 Desktop refresh, D-Bus app grid, icon cache rebuild (Jun 2026)\033[0m"
                     return 0
@@ -106,6 +110,7 @@ function refresh --description 'Deep system refresh: cache, services, extensions
         set do_pip 1
         set do_desktop 1
         set do_icons 1
+        set do_chrome 1
         echo -e "  \033[1;34mMode: FULL SYSTEM REFRESH (full system)\033[0m\n"
     else
         echo -e "  \033[1;34mMode: SELECTIVE CLEANUP\033[0m\n"
@@ -126,6 +131,7 @@ function refresh --description 'Deep system refresh: cache, services, extensions
     if test $do_extensions -eq 1; set __rf_total (math $__rf_total + 4); end
     if test $do_desktop -eq 1;  set __rf_total (math $__rf_total + 8); end
     if test $do_icons -eq 1;    set __rf_total (math $__rf_total + 1); end
+    if test $do_chrome -eq 1;   set __rf_total (math $__rf_total + 4); end
 
     function __refresh_anim
         set -l label $argv[1]
@@ -269,6 +275,14 @@ function refresh --description 'Deep system refresh: cache, services, extensions
         else
             __refresh_anim "Pip cache purge" "true"
         end
+    end
+
+    if test $do_chrome -eq 1
+        __refresh_section "BROWSER LOCKS"
+        __refresh_anim "Google Chrome"    "rm -f ~/.config/google-chrome/Singleton* 2>/dev/null; true"
+        __refresh_anim "Chromium"         "rm -f ~/.config/chromium/Singleton* 2>/dev/null; true"
+        __refresh_anim "Microsoft Edge"   "rm -f ~/.config/microsoft-edge/Singleton* 2>/dev/null; true"
+        __refresh_anim "Brave"            "rm -f ~/.config/brave-browser/Singleton* 2>/dev/null; true"
     end
 
     if test $do_dns -eq 1
