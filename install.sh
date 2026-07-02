@@ -3391,26 +3391,6 @@ except Exception:
     echo "$STATE_JSON" > "$_TMPFILE" 2>/dev/null && mv "$_TMPFILE" "$STATE_FILE" 2>/dev/null || true
   fi
 
-  # ── 13. Tell the updater we're up to date ──
-  # If the user ran install.sh manually (not via the updater's "Update Now"
-  # button), the updater's last-notified-commit is never saved, causing the
-  # notification to reappear on every boot. We fetch the latest commit hash
-  # and save it so the updater stays silent until the next real update.
-  log "Syncing updater notification state..."
-  local _LATEST_COMMIT
-  _LATEST_COMMIT=$(curl -sf "https://api.github.com/repos/eprahemi/Fedora-MacTahoe-Eprahemi/commits/main" 2>/dev/null | python3 -c "
-import sys, json
-try:
-    d = json.load(sys.stdin)
-    print(d.get('sha', '')[:8])
-except Exception:
-    print('')
-" 2>/dev/null || true)
-  if [ -n "$_LATEST_COMMIT" ]; then
-    echo "$_LATEST_COMMIT" > "$HOME/.cache/fedora-mactahoe/last-notified-commit" 2>/dev/null || true
-    ok "Updater synchronized (commit $_LATEST_COMMIT)"
-  fi
-
   __install_summary
 
   echo ""

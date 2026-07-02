@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ══════════════════════════════════════════════════════════════
 # Fedora MacTahoe — Update Notifier
-# Checks GitHub for new commits on boot and every 2 hours.
+# Checks updates.json on GitHub for version bumps only.
 # Shows a persistent notification until the user updates.
 # Clicking "Later" silences it until next boot.
 # ══════════════════════════════════════════════════════════════
@@ -9,12 +9,18 @@
 CACHE_DIR="$HOME/.cache/fedora-mactahoe"
 mkdir -p "$CACHE_DIR" 2>/dev/null || true
 
-NOTIFIED_FILE="$CACHE_DIR/last-notified-commit"    # saved on "Update Now"
-DISMISSED_FILE="$CACHE_DIR/last-dismissed-commit"  # saved on "Later" / X
-BOOT_ID_FILE="$CACHE_DIR/last-boot-id"             # tracks reboots
+NOTIFIED_FILE="$CACHE_DIR/last-notified-version"    # saved on "Update Now"
+DISMISSED_FILE="$CACHE_DIR/last-dismissed-version"  # saved on "Later" / X
+BOOT_ID_FILE="$CACHE_DIR/last-boot-id"              # tracks reboots
+STATE_FILE="$CACHE_DIR/install-state.json"          # installed version from install.sh
 REPO="eprahemi/Fedora-MacTahoe-Eprahemi"
 
-# ── Boot detection: if boot_id changed, clear dismissed hash ──
+# ── Version comparison helper (returns 0 if v1 < v2) ──
+_ver_lt() {
+  [ "$(echo -e "$1\n$2" | sort -V 2>/dev/null | head -1)" = "$1" ] && [ "$1" != "$2" ]
+}
+
+# ── Boot detection: if boot_id changed, clear dismissed version ──
 CURRENT_BOOT_ID=$(cat /proc/sys/kernel/random/boot_id 2>/dev/null || echo "unknown")
 LAST_BOOT_ID=$(cat "$BOOT_ID_FILE" 2>/dev/null || echo "")
 if [ "$CURRENT_BOOT_ID" != "$LAST_BOOT_ID" ]; then
@@ -22,38 +28,14 @@ if [ "$CURRENT_BOOT_ID" != "$LAST_BOOT_ID" ]; then
   echo "$CURRENT_BOOT_ID" > "$BOOT_ID_FILE"
 fi
 
-# ── Fetch latest commit + version from GitHub ──
-LATEST_JSON=$(curl -sf "https://api.github.com/repos/${REPO}/commits/main" 2>/dev/null)
-if [ -z "$LATEST_JSON" ]; then
+# ── Fetch latest version from updates.json on GitHub ──
+LATEST_VER=""
+UPDATES_JSON=$(curl -sf "https://raw.githubusercontent.com/${REPO}/main/updates.json" 2>/dev/null)
+if [ -z "$UPDATES_JSON" ]; then
   exit 0  # offline or unreachable — skip silently
 fi
 
-LATEST_HASH=$(echo "$LATEST_JSON" | python3 -c "
-import sys, json
-try:
-    d = json.load(sys.stdin)
-    print(d['sha'][:8])
-except Exception:
-    print('')
-" 2>/dev/null)
-
-LATEST_MSG=$(echo "$LATEST_JSON" | python3 -c "
-import sys, json
-try:
-    d = json.load(sys.stdin)
-    msg = d['commit']['message'].split(chr(10))[0]
-    print(msg[:80])
-except Exception:
-    print('')
-" 2>/dev/null)
-
-[ -z "$LATEST_HASH" ] && exit 0
-
-# ── Fetch version info from updates.json ──
-LATEST_VER=""
-UPDATES_JSON=$(curl -sf "https://raw.githubusercontent.com/${REPO}/main/updates.json" 2>/dev/null)
-if [ -n "$UPDATES_JSON" ]; then
-  LATEST_VER=$(echo "$UPDATES_JSON" | python3 -c "
+LATEST_VER=$(echo "$UPDATES_JSON" | python3 -c "
 import sys, json
 try:
     d = json.load(sys.stdin)
@@ -61,24 +43,38 @@ try:
 except Exception:
     print('')
 " 2>/dev/null)
+
+[ -z "$LATEST_VER" ] && exit 0
+
+# ── Read user's installed version from install-state.json ──
+USER_VER="0.0"
+if [ -f "$STATE_FILE" ]; then
+  USER_VER=$(cat "$STATE_FILE" | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    print(d.get('version', '0.0'))
+except Exception:
+    print('0.0')
+" 2>/dev/null || echo "0.0")
 fi
 
-# ── Already updated to this commit? ──
+# ── If user's installed version is already at or above latest → nothing to do ──
+if ! _ver_lt "$USER_VER" "$LATEST_VER"; then
+  exit 0
+fi
+
+# ── Already clicked "Update Now" for this version? ──
 if [ -f "$NOTIFIED_FILE" ]; then
   NOTIFIED=$(cat "$NOTIFIED_FILE" 2>/dev/null || true)
-  [ "$LATEST_HASH" = "$NOTIFIED" ] && exit 0
+  [ "$LATEST_VER" = "$NOTIFIED" ] && exit 0
 fi
 
-# ── Already dismissed this boot session? ──
+# ── Already dismissed this version this boot session? ──
 if [ -f "$DISMISSED_FILE" ]; then
   DISMISSED=$(cat "$DISMISSED_FILE" 2>/dev/null || true)
-  [ "$LATEST_HASH" = "$DISMISSED" ] && exit 0
+  [ "$LATEST_VER" = "$DISMISSED" ] && exit 0
 fi
-
-# ── Build notification title and body ──
-NOTIFY_TITLE="Fedora MacTahoe — Update Available"
-[ -n "$LATEST_VER" ] && NOTIFY_TITLE="Fedora MacTahoe — Update v${LATEST_VER}"
-NOTIFY_BODY="New: ${LATEST_MSG} (${LATEST_HASH})"
 
 # ── Notify with action buttons ──
 # -u critical -t 0 → stays on screen until user clicks a button
@@ -88,13 +84,13 @@ RESULT=$(notify-send -u critical -t 0 \
   -h "string:sound-name:message-attention" \
   -A "update=Update Now" \
   -A "later=Later" \
-  "${NOTIFY_TITLE}" \
-  "${NOTIFY_BODY}" 2>/dev/null)
+  "Fedora MacTahoe — Update v${LATEST_VER}" \
+  "A new version is available. Click Update Now to upgrade." 2>/dev/null)
 
 # ── Handle user action ──
 if [ "$RESULT" = "update" ]; then
-  # Save permanently — never notify for this commit again
-  echo "$LATEST_HASH" > "$NOTIFIED_FILE"
+  # Save permanently — never notify for this version again
+  echo "$LATEST_VER" > "$NOTIFIED_FILE"
 
   BOOTSTRAP_URL="https://raw.githubusercontent.com/${REPO}/main/bootstrap.sh"
 
@@ -111,5 +107,5 @@ if [ "$RESULT" = "update" ]; then
   fi
 else
   # "Later" or X / Esc — dismiss until next boot only
-  echo "$LATEST_HASH" > "$DISMISSED_FILE"
+  echo "$LATEST_VER" > "$DISMISSED_FILE"
 fi
