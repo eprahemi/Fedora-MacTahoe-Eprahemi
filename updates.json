@@ -7,7 +7,8 @@
         "Window Title Pro v2 — show-title now defaults to off (set <default>false</default> in gschema)",
         "update.fish ANSI escape fix: replaced echo with printf (Fish echo ignores \\033)",
         "update.fish read prompt fix: plain text in -P instead of \\e codes",
-        "Update check timer: OnBootSec reduced from 5min to 2min"
+        "Update check timer: OnBootSec reduced from 5min to 2min",
+        "Fix 'Update Now' not opening Kitty: replaced nohup+inline with temp launcher script"
       ]
     },
     {
