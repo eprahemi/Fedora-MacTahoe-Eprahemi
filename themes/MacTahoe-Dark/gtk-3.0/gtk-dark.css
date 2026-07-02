@@ -947,7 +947,7 @@ button:checked:disabled {
 }
 
 window.background.csd.unified > deck > grid > paned > .sidebar actionbar button, .nemo-window.background .primary-toolbar button, .nemo-window.background .toolbar > button, .raven .raven-header:not(.top) button.image-button, .budgie-panel.background button.flat.launcher, .budgie-popover.background button.budgie-menu-launcher, .budgie-popover.background > frame > box.vertical > box.vertical > box.horizontal > button.image-button.toggle, .budgie-popover.background.budgie-menu list.left-overlay-menu > row.activatable button.menuitem, grid#CanvasGrid > button:not(.flat), .geary-main-window leaflet > leaflet > box.vertical > revealer > components-conversation-actions button, tabbox > tab button, notebook > header button.image-button, .background toolbar box:not(.linked) > button, .inline-toolbar toolbutton > button, button.flat {
-  color: #afafaf;
+  color: #d0d0d0;
   border: none;
   background-color: transparent;
   box-shadow: none;

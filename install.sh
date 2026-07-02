@@ -1343,6 +1343,15 @@ install_mactahoe_theme() {
     cp -a "$d" "$HOME/.local/share/themes/$base"
   done
 
+  # Post-compilation patches to the compiled CSS
+  for _theme_dir in "$HOME/.themes/MacTahoe"* "$HOME/.local/share/themes/MacTahoe"*; do
+    [ -d "$_theme_dir" ] || continue
+    for _css in "$_theme_dir/gtk-3.0/gtk-dark.css" "$_theme_dir/gtk-4.0/gtk-dark.css"; do
+      [ -f "$_css" ] && sed -i 's/color: #afafaf;/color: #d0d0d0;/g' "$_css" 2>/dev/null || true
+    done
+  done
+  log "Patched flat button color (#afafaf → #d0d0d0) for better media-player visibility"
+
   ok "MacTahoe theme compiled & installed for GNOME $gtk_version"
 
   # ── Icon themes (always from bundle, never change) ─────────

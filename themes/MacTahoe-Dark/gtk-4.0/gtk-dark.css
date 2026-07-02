@@ -906,7 +906,7 @@ row.spin spinbutton > button.image-button.down:checked:disabled:not(.flat):not(.
 tabbar tabbox > tab button.tab-close-button, panelstatusbar > menubutton > button,
 panelstatusbar > paneltogglebutton button, datechooser button.circular.day, .scale-popup button, popover.menu box.circular-buttons button.circular.image-button.model, popover.menu box.inline-buttons button.image-button.model, .toolbar > button, splitbutton.suggested-action > button, splitbutton.suggested-action > menubutton > button, splitbutton.destructive-action > button, splitbutton.destructive-action > menubutton > button, splitbutton.opaque > button, splitbutton.opaque > menubutton > button, splitbutton.flat > button,
 splitbutton.flat > menubutton > button, menubutton.suggested-action > button, menubutton.destructive-action > button, menubutton.opaque > button, menubutton.flat > button, button.flat {
-  color: #afafaf;
+  color: #d0d0d0;
   border: none;
   background-color: transparent;
   box-shadow: none;
