@@ -1,21 +1,20 @@
 {
-  "latest_version": "1.4",
+  "latest_version": "1.1",
   "changelog": [
     {
-      "version": "1.4",
+      "version": "1.1",
       "changes": [
-        "INCREMENTAL: version-gated step engine — only outdated steps re-run",
-        "VERSION-ONLY UPDATER: notification fires on version bumps only, not every commit",
-        "install-state.json tracks per-step versions + overall install version",
-        "Updater reads install-state.json directly — no more GitHub commit API for decisions",
-        "last-notified-version / last-dismissed-version (per-boot cache, boot-aware)",
-        "Updater steps start at step 1, not step 13 (skips are version-based)",
-        "GTK theme now compiles per-step, caches reliably",
-        "State file written atomically (mktemp + mv) — no corruption risk",
+        "FRESH START — consolidated baseline for all Fedora MacTahoe features",
+        "Full re-install: bash bootstrap.sh deletes state and runs all 27 steps fresh",
+        "Incremental update: update.fish + 'Update Now' use UPDATE_MODE=incremental",
+        "Version-only updater: notification fires on version bumps, not every commit",
+        "install-state.json: per-step versions + overall install version, atomic writes",
+        "GTK theme compiles for GNOME 47/48, per-step caching",
+        "SF Pro fonts, Big Sur sounds, GDM theme, Firefox userChrome",
+        "Flatpak GTK runtime, Kitty terminal, Fish shell, Dash-to-Dock, UWG, blur",
+        "Kitty-only updater with boot-aware two-cache persistence",
         "Prompt persistence: answers saved once, never re-asked",
-        "Kitty-only updater (no more terminal fallback chain)",
-        "Bumped from 1.0 to 1.4 as first tested stable release",
-        "update.fish: type 'update' in Kitty to manually fetch latest install.sh"
+        "Step versions: apply_configs 1.1, install_updater 1.1, finalize 1.1"
       ]
     },
     {
