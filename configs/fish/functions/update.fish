@@ -82,9 +82,7 @@ except Exception:
 
     # ── Prompt y/n (Ctrl+C cancels) ──
     printf "  \e[1;33mAn update is available.\e[0m\n"
-    # Print prompt separately: read -P does not interpret \e escapes
-    printf "  \e[1;37mProceed with update? [y/N]: \e[0m"
-    read -l confirm
+    read -l confirm -P "  Proceed with update? [y/N]: "
     if test $status -ne 0
         # Ctrl+C or error during read
         echo ""
