@@ -14,7 +14,8 @@
         "State file written atomically (mktemp + mv) — no corruption risk",
         "Prompt persistence: answers saved once, never re-asked",
         "Kitty-only updater (no more terminal fallback chain)",
-        "Bumped from 1.0 to 1.4 as first tested stable release"
+        "Bumped from 1.0 to 1.4 as first tested stable release",
+        "update.fish: type 'update' in Kitty to manually fetch latest install.sh"
       ]
     },
     {
