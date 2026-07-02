@@ -1243,6 +1243,7 @@ remove_gnome_weather() {
 
 install_rpmfusion() {
   next_step "RPM Fusion + Codecs"
+  log "Tip: If this step hangs on repo metadata, press Ctrl+C once — the script handles it safely"
 
   local release
   release=$(rpm -E %fedora 2>/dev/null) || release="40"
@@ -1254,7 +1255,7 @@ install_rpmfusion() {
     "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${release}.noarch.rpm" \
     "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${release}.noarch.rpm"
 
-  sudo dnf check-update 2>/dev/null || true
+  timeout 60 sudo dnf check-update 2>/dev/null || true
 
   # Fedora 44+ ships ffmpeg-free which conflicts with RPM Fusion's ffmpeg.
   # Swap it out cleanly before installing the rest.
