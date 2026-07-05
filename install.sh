@@ -3176,31 +3176,64 @@ install_extensions() {
     warn "$ext_fail extension(s) failed — check extensions.gnome.org or your network"
   fi
 
-  # ── Window Title Pro (installed from GitHub release until EGO review passes) ──
+  # ── Window Title Pro (from GNOME Extensions / EGO) ──
   local wtp_uuid="window-title-pro@eprahemi.github.io"
   local wtp_target="$HOME/.local/share/gnome-shell/extensions/$wtp_uuid"
+  local wtp_pk="10319"
+  local wtp_installed=false
+
   # Always override — clean slate every time
   rm -rf "$wtp_target" 2>/dev/null || true
-  local wtp_zip_url="https://github.com/eprahemi/window-title-pro/releases/download/v4/window-title-pro-v4.zip"
-  if curl -sL "$wtp_zip_url" -o /tmp/window-title-pro.zip 2>/dev/null; then
-    mkdir -p "$wtp_target"
-    if unzip -qo /tmp/window-title-pro.zip -d "$wtp_target" 2>/dev/null; then
-      glib-compile-schemas "$wtp_target/schemas" 2>/dev/null || true
-      # Add to enabled-extensions list if not already there
-      if ! echo "${ext_list[@]}" | grep -q "$wtp_uuid"; then
-        ext_list+=("'$wtp_uuid'")
-        gsettings set org.gnome.shell enabled-extensions "[$(IFS=,; echo "${ext_list[*]}")]" 2>/dev/null || true
+
+  # Try 1: install via gnome-extensions CLI with EGO page URL
+  if gnome-extensions install "https://extensions.gnome.org/extension/$wtp_pk/window-title-pro/" --force 2>/dev/null; then
+    ok "Window Title Pro installed from EGO"
+    ext_ok=$((ext_ok + 1))
+    wtp_installed=true
+  fi
+
+  # Try 2: download from EGO API and extract manually
+  if [ "$wtp_installed" = false ]; then
+    local wtp_api_url="https://extensions.gnome.org/extension-info/?pk=$wtp_pk&shell_version=50"
+    local wtp_dl_url
+    wtp_dl_url=$(curl -s "$wtp_api_url" 2>/dev/null | python3 -c "
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    print(data.get('download_url', ''))
+except:
+    print('')
+" 2>/dev/null || true)
+
+    if [ -n "$wtp_dl_url" ]; then
+      mkdir -p "$wtp_target"
+      if curl -sL "https://extensions.gnome.org$wtp_dl_url" -o /tmp/window-title-pro.zip 2>/dev/null; then
+        if unzip -qo /tmp/window-title-pro.zip -d "$wtp_target" 2>/dev/null; then
+          glib-compile-schemas "$wtp_target/schemas" 2>/dev/null || true
+          wtp_installed=true
+          ok "Window Title Pro installed from EGO"
+          ext_ok=$((ext_ok + 1))
+        else
+          warn "Failed to extract Window Title Pro"
+          ext_fail=$((ext_fail + 1))
+        fi
+        rm -f /tmp/window-title-pro.zip
+      else
+        warn "Failed to download Window Title Pro from EGO"
+        ext_fail=$((ext_fail + 1))
       fi
-      ok "Window Title Pro installed"
-      ext_ok=$((ext_ok + 1))
     else
-      warn "Failed to extract Window Title Pro"
+      warn "Failed to get EGO download URL for Window Title Pro"
       ext_fail=$((ext_fail + 1))
     fi
-    rm -f /tmp/window-title-pro.zip
-  else
-    warn "Failed to download Window Title Pro from GitHub"
-    ext_fail=$((ext_fail + 1))
+  fi
+
+  # Add to enabled-extensions list if installed successfully
+  if [ "$wtp_installed" = true ]; then
+    if ! echo "${ext_list[@]}" | grep -q "$wtp_uuid"; then
+      ext_list+=("'$wtp_uuid'")
+      gsettings set org.gnome.shell enabled-extensions "[$(IFS=,; echo "${ext_list[*]}")]" 2>/dev/null || true
+    fi
   fi
 }
 
