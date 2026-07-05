@@ -1,6 +1,12 @@
 {
-  "latest_version": "1.4",
+  "latest_version": "1.5",
   "changelog": [
+    {
+      "version": "1.5",
+      "changes": [
+        "Window Title Pro updated to v4 — fixed-width default now off (set <default>false</default> in gschema)"
+      ]
+    },
     {
       "version": "1.4",
       "changes": [
@@ -80,7 +86,7 @@
     "install_updater": "1.2",
     "setup_terminal": "1.0",
     "setup_shell": "1.0",
-    "install_extensions": "1.4",
+    "install_extensions": "1.5",
     "mirror_flatpak_icons": "1.0",
     "finalize": "1.2"
   }
