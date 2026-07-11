@@ -828,7 +828,7 @@ function __pfp_apply --description 'Internal: apply image as profile picture'
     # ── Preview + confirm (skip if already confirmed from multi-picker) ──
     if not set -q _pfp_confirmed
         echo -e ""
-        echo -e "  $D  Preview: "(string replace -- $HOME '~' "$source_img")"$C"
+        echo -e "  $D  Full image: "(string replace -- $HOME '~' "$source_img")"$C"
         set -l previewed 0
         if test -n "$KITTY_PID"; and command -q kitty
             kitty +kitten icat --align left "$source_img" 2>/dev/null
@@ -840,6 +840,27 @@ function __pfp_apply --description 'Internal: apply image as profile picture'
         end
         if test $previewed -eq 0
             echo -e "  $GY  Preview not available (install kitty or chafa)$C"
+        end
+
+        # ── Cropped preview ──
+        if command -q magick
+            set -l crop_tmp "/tmp/pfp-crop-preview-$USER.png"
+            if magick "$source_img" -resize 512x512^ -gravity center -extent 512x512 "$crop_tmp" 2>/dev/null
+                echo -e ""
+                echo -e "  $D  Cropped preview (512x512):$C"
+                set -l crop_previewed 0
+                if test -n "$KITTY_PID"; and command -q kitty
+                    kitty +kitten icat --align left "$crop_tmp" 2>/dev/null
+                    and set crop_previewed 1
+                end
+                if test $crop_previewed -eq 0; and command -q chafa
+                    chafa --symbols solid "$crop_tmp" 2>/dev/null
+                    and set crop_previewed 1
+                end
+                if test $crop_previewed -eq 0
+                    echo -e "  $GY  (cropped preview not available)$C"
+                end
+            end
         end
 
         # ── Ask ──
