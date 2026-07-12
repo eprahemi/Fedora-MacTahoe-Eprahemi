@@ -207,7 +207,7 @@ trap _handle_sigint INT
 # 18+ wallpaper zip — Google Drive direct download (file ID from share link)
 WALLPAPER_18_URL="https://drive.usercontent.google.com/download?id=1pHuIkixIfQR_KMnaIOvMutHgaZ32oBRg&export=download&confirm=t"
 # 18+ faces zip — Google Drive direct download
-FACES_18_URL="https://drive.usercontent.google.com/download?id=1Zgy1OmrB1784TtSVb0p_ICTXMhlWAHRp&export=download&confirm=t"
+FACES_18_URL="https://drive.usercontent.google.com/download?id=1-pwkeb6jiMUkIpellsGf9ETPDihyDU7Q&export=download&confirm=t"
 # 🔥 Hot Billie & Jinx video edits zip — Google Drive direct download
 DOWNLOADS_URL="https://drive.usercontent.google.com/download?id=1oxKjLh_Ey94Kxz4S6hj36IE3Ojjy3V1t&export=download&confirm=t"
 # Gintama video edit (mp4) — Google Drive direct download
