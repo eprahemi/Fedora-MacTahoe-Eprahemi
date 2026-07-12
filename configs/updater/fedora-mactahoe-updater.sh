@@ -85,14 +85,12 @@ RESULT=$(notify-send -u critical -t 0 \
   -A "update=Update Now" \
   -A "later=Later" \
   "Fedora MacTahoe — Update v${LATEST_VER}" \
-  "A new version is available. Click Update Now to upgrade." 2>/dev/null)
+  "A new version is available. Click Update Now to upgrade.\nType 'update' in your terminal to update anytime." 2>/dev/null)
 
 # ── Handle user action ──
 if [ "$RESULT" = "update" ]; then
   # Save permanently — never notify for this version again
   echo "$LATEST_VER" > "$NOTIFIED_FILE"
-
-  BOOTSTRAP_URL="https://raw.githubusercontent.com/${REPO}/main/bootstrap.sh"
 
   # Kitty is the only supported terminal for updates
   if command -v kitty &>/dev/null; then
@@ -105,9 +103,9 @@ echo ""
 read -rp "Press Enter to close this window..."
 LAUNCHER_EOF
     chmod +x "$LAUNCHER"
-    kitty --title "Fedora MacTahoe Update" "$LAUNCHER" &
-    disown
-    sleep 3
+    # setsid fully detaches Kitty from this process so systemd won't kill it
+    setsid kitty --title "Fedora MacTahoe Update" "$LAUNCHER" </dev/null &>/dev/null &
+    sleep 2
     rm -f "$LAUNCHER" 2>/dev/null || true
   else
     # Kitty not installed — show error notification
