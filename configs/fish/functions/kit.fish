@@ -26,8 +26,8 @@ function kit --description 'Toggle kitty.conf theme: kit original/theme'
             printf "  \033[1;32m╠%s╣\033[0m\n" "$sep"
             printf "  \033[1;32m║\033[0m  \033[1;37mSUBCOMMANDS:\033[0m\n"
             printf "  \033[1;32m║\033[0m\n"
-            printf "  \033[1;32m║\033[0m    \033[1;36mkit original\033[0m  \033[2;37m(\033[1;36mkit o\033[2;37m)\033[0m      \033[2;37m→\033[0m  \033[1;33mDisable MacTahoe theme\033[0m\n"
-            printf "  \033[1;32m║\033[0m    \033[1;36mkit theme\033[0m     \033[2;37m(\033[1;36mkit t\033[2;37m)\033[0m      \033[2;37m→\033[0m  \033[1;32mRestore MacTahoe theme\033[0m\n"
+            printf "  \033[1;32m║\033[0m    \033[1;36mkit original\033[0m  \033[2;37m(\033[1;36mkit o\033[2;37m, \033[1;36mkit off\033[2;37m)\033[0m   \033[2;37m→\033[0m  \033[1;33mDisable MacTahoe theme\033[0m\n"
+            printf "  \033[1;32m║\033[0m    \033[1;36mkit theme\033[0m     \033[2;37m(\033[1;36mkit t\033[2;37m, \033[1;36mkit on\033[2;37m)\033[0m    \033[2;37m→\033[0m  \033[1;32mRestore MacTahoe theme\033[0m\n"
             printf "  \033[1;32m║\033[0m    \033[1;36mkit\033[0m                            \033[2;37m→\033[0m  \033[1;37mShow this status\033[0m\n"
             printf "  \033[1;32m║\033[0m    \033[1;36mkit --help\033[0m   \033[2;37m(\033[1;36m-h\033[2;37m)\033[0m        \033[2;37m→\033[0m  \033[1;37mShow help\033[0m\n"
             printf "  \033[1;32m║\033[0m\n"
@@ -49,8 +49,8 @@ function kit --description 'Toggle kitty.conf theme: kit original/theme'
             printf "  \033[1;33m╠%s╣\033[0m\n" "$sep"
             printf "  \033[1;33m║\033[0m  \033[1;37mSUBCOMMANDS:\033[0m\n"
             printf "  \033[1;33m║\033[0m\n"
-            printf "  \033[1;33m║\033[0m    \033[1;36mkit original\033[0m  \033[2;37m(\033[1;36mkit o\033[2;37m)\033[0m      \033[2;37m→\033[0m  \033[1;33mAlready stock defaults\033[0m\n"
-            printf "  \033[1;33m║\033[0m    \033[1;36mkit theme\033[0m     \033[2;37m(\033[1;36mkit t\033[2;37m)\033[0m      \033[2;37m→\033[0m  \033[1;32mRestore MacTahoe theme\033[0m\n"
+            printf "  \033[1;33m║\033[0m    \033[1;36mkit original\033[0m  \033[2;37m(\033[1;36mkit o\033[2;37m, \033[1;36mkit off\033[2;37m)\033[0m   \033[2;37m→\033[0m  \033[1;33mAlready stock defaults\033[0m\n"
+            printf "  \033[1;33m║\033[0m    \033[1;36mkit theme\033[0m     \033[2;37m(\033[1;36mkit t\033[2;37m, \033[1;36mkit on\033[2;37m)\033[0m    \033[2;37m→\033[0m  \033[1;32mRestore MacTahoe theme\033[0m\n"
             printf "  \033[1;33m║\033[0m    \033[1;36mkit\033[0m                            \033[2;37m→\033[0m  \033[1;37mShow this status\033[0m\n"
             printf "  \033[1;33m║\033[0m    \033[1;36mkit --help\033[0m   \033[2;37m(\033[1;36m-h\033[2;37m)\033[0m        \033[2;37m→\033[0m  \033[1;37mShow help\033[0m\n"
             printf "  \033[1;33m║\033[0m\n"
@@ -73,7 +73,7 @@ function kit --description 'Toggle kitty.conf theme: kit original/theme'
     end
 
     switch $argv[1]
-        case original o
+        case original o off
             if test -f "$hash"
                 printf "\n"
                 printf "  \033[1;33m╔%s╗\033[0m\n" "$sep"
@@ -109,7 +109,7 @@ function kit --description 'Toggle kitty.conf theme: kit original/theme'
                 return 1
             end
 
-        case theme t th
+        case theme t th on
             if test -f "$conf"
                 printf "\n"
                 printf "  \033[1;32m╔%s╗\033[0m\n" "$sep"
@@ -163,11 +163,11 @@ function kit --description 'Toggle kitty.conf theme: kit original/theme'
             printf "  \033[1;36m║\033[0m  \033[1;37mCOMMANDS:\033[0m\n"
             printf "  \033[1;36m║\033[0m\n"
             printf "  \033[1;36m║\033[0m    \033[1;36mkit\033[0m                            \033[2;37m→\033[0m  \033[1;37mShow current status\033[0m\n"
-            printf "  \033[1;36m║\033[0m    \033[1;36mkit original\033[0m  \033[2;37m(\033[1;36mkit o\033[2;37m)\033[0m      \033[2;37m→\033[0m  \033[1;33mDisable theme → stock defaults\033[0m\n"
-            printf "  \033[1;36m║\033[0m    \033[1;36mkit theme\033[0m     \033[2;37m(\033[1;36mkit t\033[2;37m)\033[0m      \033[2;37m→\033[0m  \033[1;32mRestore theme → MacTahoe\033[0m\n"
+            printf "  \033[1;36m║\033[0m    \033[1;36mkit original\033[0m  \033[2;37m(\033[1;36mkit o\033[2;37m, \033[1;36mkit off\033[2;37m)\033[0m   \033[2;37m→\033[0m  \033[1;33mDisable theme → stock defaults\033[0m\n"
+            printf "  \033[1;36m║\033[0m    \033[1;36mkit theme\033[0m     \033[2;37m(\033[1;36mkit t\033[2;37m, \033[1;36mkit on\033[2;37m)\033[0m    \033[2;37m→\033[0m  \033[1;32mRestore theme → MacTahoe\033[0m\n"
             printf "  \033[1;36m║\033[0m    \033[1;36mkit --help\033[0m   \033[2;37m(\033[1;36m-h\033[2;37m)\033[0m        \033[2;37m→\033[0m  \033[1;37mShow this help\033[0m\n"
             printf "  \033[1;36m║\033[0m\n"
-            printf "  \033[1;36m║\033[0m  \033[2;37mAliases: kit o = kit original  |  kit t = kit theme\033[0m\n"
+            printf "  \033[1;36m║\033[0m  \033[2;37mAliases: kit o/off = kit original  |  kit t/on = kit theme\033[0m\n"
             printf "  \033[1;36m║\033[0m\n"
             printf "  \033[1;36m║\033[0m  \033[1;33mNOTE:\033[0m \033[2;37mRestart Kitty after toggle to apply changes\033[0m\n"
             printf "  \033[1;36m║\033[0m  \033[2;37mVersion: July 2026\033[0m\n"
