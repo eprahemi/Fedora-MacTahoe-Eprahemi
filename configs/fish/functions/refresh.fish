@@ -130,7 +130,7 @@ function refresh --description 'Deep system refresh: cache, services, extensions
     if test $do_services -eq 1; set __rf_total (math $__rf_total + 4); end
     if test $do_extensions -eq 1; set __rf_total (math $__rf_total + 4); end
     if test $do_desktop -eq 1;  set __rf_total (math $__rf_total + 9); end
-    if test $do_icons -eq 1;    set __rf_total (math $__rf_total + 1); end
+    if test $do_icons -eq 1;    set __rf_total (math $__rf_total + 2); end
     if test $do_chrome -eq 1;   set __rf_total (math $__rf_total + 4); end
 
     function __refresh_anim
@@ -266,6 +266,8 @@ function refresh --description 'Deep system refresh: cache, services, extensions
             done;
             gtk-update-icon-cache "$uh/" 2>/dev/null;
         '
+        # ── Clears all app grid folders — removes ghost/empty ones instantly ──
+        __refresh_anim "Clear app grid folders" "gsettings set org.gnome.desktop.app-folders folder-children '[]' 2>/dev/null; true"
     end
 
     if test $do_pip -eq 1
