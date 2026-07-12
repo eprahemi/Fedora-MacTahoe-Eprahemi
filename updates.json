@@ -1,6 +1,15 @@
 {
-  "latest_version": "1.6",
+  "latest_version": "1.7",
   "changelog": [
+    {
+      "version": "1.7",
+      "changes": [
+        "Window Title Pro Topbar v8 — separator dropdown, font size control, smart row sensitivity, readable shortcuts (Super+Y)",
+        "New Fish functions: kit (Kitty theme toggle), ghlogin (GitHub auth + git config with auto-fetch), pfp (profile picture with cropped preview)",
+        "install.sh: 28 proper steps — Celluloid default player + Nautilus per-folder defaults now tracked steps",
+        "Kitty close warning enabled (confirm_os_window_close 1)"
+      ]
+    },
     {
       "version": "1.6",
       "changes": [
@@ -79,7 +88,9 @@
     "install_mactahoe_theme": "1.0",
     "install_font": "1.0",
     "apply_desktop_entries": "1.0",
-    "apply_configs": "1.2",
+    "ensure_celluloid_default": "1.0",
+    "configure_nautilus_defaults": "1.0",
+    "apply_configs": "1.7",
     "apply_dconf": "1.0",
     "optimize_system_resources": "1.0",
     "apply_wallpapers": "1.0",
@@ -92,8 +103,8 @@
     "install_updater": "1.2",
     "setup_terminal": "1.0",
     "setup_shell": "1.0",
-    "install_extensions": "1.6",
+    "install_extensions": "1.7",
     "mirror_flatpak_icons": "1.0",
-    "finalize": "1.2"
+    "finalize": "1.7"
   }
 }

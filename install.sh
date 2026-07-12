@@ -243,7 +243,7 @@ is_valid_zip() {
   od -A n -t x1 -N 4 "$f" 2>/dev/null | grep -qi "50 4b 03 04"
 }
 
-TOTAL_STEPS=27
+TOTAL_STEPS=28
 STEP=0
 
 # ── Incremental update state ──────────────────────────────
@@ -2681,6 +2681,7 @@ download_optional_videos() {
 # ── Set Celluloid as default video player ──
 # Every run re-asserts the association so it sticks
 ensure_celluloid_default() {
+  next_step "Celluloid Default (Video Player)"
   local celluloid_desk="io.github.celluloid_player.Celluloid.desktop"
   local video_mimes=(
     "video/mp4" "video/x-matroska" "video/webm" "video/avi"
@@ -2713,6 +2714,7 @@ ensure_celluloid_default() {
 # File-chooser dialogs: do NOT sort folders before files
 # (Nautilus 46+ no longer exposes sort-directories-first as a gsetting)
 configure_nautilus_defaults() {
+  next_step "Nautilus Per-Folder Defaults"
   # ── 1. Per‑folder sort order (via GVFS metadata — what Nautilus 50 actually reads) ──
   gio set "$HOME/Downloads"  metadata::nautilus-icon-view-sort-by        date_modified  2>/dev/null || true
   gio set "$HOME/Downloads"  metadata::nautilus-icon-view-sort-reversed  true           2>/dev/null || true
@@ -3633,8 +3635,8 @@ _run_step "install_font" install_font
 
 phase_divider "PHASE 4 : CONFIGURATION" 11 23
 _run_step "apply_desktop_entries" apply_desktop_entries
-ensure_celluloid_default
-configure_nautilus_defaults
+_run_step "ensure_celluloid_default" ensure_celluloid_default
+_run_step "configure_nautilus_defaults" configure_nautilus_defaults
 _run_step "apply_configs" apply_configs
 _run_step "apply_dconf" apply_dconf
 _run_step "optimize_system_resources" optimize_system_resources
