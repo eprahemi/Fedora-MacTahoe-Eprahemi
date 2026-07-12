@@ -129,7 +129,7 @@ function refresh --description 'Deep system refresh: cache, services, extensions
     if test $do_dns -eq 1;      set __rf_total (math $__rf_total + 1); end
     if test $do_services -eq 1; set __rf_total (math $__rf_total + 4); end
     if test $do_extensions -eq 1; set __rf_total (math $__rf_total + 4); end
-    if test $do_desktop -eq 1;  set __rf_total (math $__rf_total + 8); end
+    if test $do_desktop -eq 1;  set __rf_total (math $__rf_total + 9); end
     if test $do_icons -eq 1;    set __rf_total (math $__rf_total + 1); end
     if test $do_chrome -eq 1;   set __rf_total (math $__rf_total + 4); end
 
@@ -335,6 +335,9 @@ function refresh --description 'Deep system refresh: cache, services, extensions
         if test -n "$gtk_theme"
             __refresh_anim "Re-apply GTK theme" "gsettings set org.gnome.desktop.interface gtk-theme '$gtk_theme' 2>/dev/null"
         end
+
+        # ── Clears all app grid folders — removes ghost/empty ones instantly ──
+        __refresh_anim "Clear app grid folders" "gsettings set org.gnome.desktop.app-folders folder-children '[]' 2>/dev/null; true"
 
         # ── Refresh the app grid via D-Bus (safe — no shell restart) ──
         __refresh_anim "Refresh app grid" "busctl call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Main.overview._dash._iconGrid.redisplay(); Main.overview._appDisplay._grid._redisplay()' 2>/dev/null; true"
