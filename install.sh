@@ -183,7 +183,8 @@ _print_log_header() {
   echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
   echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
   echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
-  echo -e "  ${CYAN}║${NC}  ${DIM}https://github.com/eprahemi/Fedora-MacTahoe-Eprahemi${NC}               ${CYAN}║${NC}"
+  _repo_url="https://github.com/eprahemi/Fedora-MacTahoe-Eprahemi"
+  echo -e "  ${CYAN}║${NC}  ${DIM}${_repo_url}${NC}$(printf '%*s' $((60 - ${#_repo_url})) '')${CYAN}║${NC}"
   echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
   echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
   echo ""
@@ -1553,10 +1554,14 @@ install_mactahoe_theme() {
   }
 
   log "Compiling all theme variants with blur + libadwaita..."
-  "$repo/install.sh" -t all -b -l 2>&1 || {
+  local _compile_log="/tmp/mactahoe-compile.log"
+  "$repo/install.sh" -t all -b -l > "$_compile_log" 2>&1 || {
     warn "Compilation failed — theme not installed"
+    tail -20 "$_compile_log" 2>/dev/null
+    rm -f "$_compile_log"
     return
   }
+  rm -f "$_compile_log"
 
   # XDG compat: also available in ~/.local/share/themes/
   mkdir -p "$HOME/.local/share/themes"
@@ -3603,8 +3608,8 @@ echo -e "  ${CYAN}║${NC}"'                                                    
 gnome_text="  GNOME ${GNOME_VER}  ◆  Kitty Terminal  ◆  Fish Shell"
 echo -e "  ${CYAN}║${NC}  ${DIM}GNOME${NC} ${GNOME_VER}  ${DIM}◆  Kitty Terminal  ◆  Fish Shell${NC}$(printf '%*s' $((62 - ${#gnome_text})) '')${CYAN}║${NC}"
 echo -e "  ${CYAN}║${NC}"'                                                              '"${CYAN}║${NC}"
-step28="  ◆  28-Step Installer    ◆  Auto-detects your system    ◆"
-echo -e "  ${CYAN}║${NC}  ${DIM}${step28}${NC}$(printf '%*s' $((62 - ${#step28})) '')${CYAN}║${NC}"
+step28="◆  28-Step Installer    ◆  Auto-detects your system    ◆"
+echo -e "  ${CYAN}║${NC}  ${DIM}${step28}${NC}$(printf '%*s' $((60 - ${#step28})) '')${CYAN}║${NC}"
 theme_text="  ◆  Theme compiles for your GNOME ${GNOME_VER}"
 echo -e "  ${CYAN}║${NC}  ${DIM}◆${NC}  Theme compiles for your GNOME ${BOLD}${GNOME_VER}${NC}$(printf '%*s' $((62 - ${#theme_text})) '')${CYAN}║${NC}"
 kitty_fish_line="  ◆  Sets up Kitty, Fish, icons, fonts, sounds"

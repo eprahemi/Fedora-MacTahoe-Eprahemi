@@ -124,6 +124,7 @@ function kit --description 'Toggle kitty.conf theme: kit original/theme'
             end
             # ── Tier 1: restore from #kitty.conf ──
             if test -f "$hash"
+                mkdir -p "$HOME/.config/kitty" 2>/dev/null
                 mv "$hash" "$conf"
                 if test $status -eq 0
                     printf "\n"
@@ -147,6 +148,7 @@ function kit --description 'Toggle kitty.conf theme: kit original/theme'
             # ── Tier 2: restore from /tmp backup ──
             set -l tmp_backup "/tmp/kit-kitty-backup/kitty.conf"
             if test -f "$tmp_backup"
+                mkdir -p "$HOME/.config/kitty" 2>/dev/null
                 cp "$tmp_backup" "$conf" 2>/dev/null
                 if test $status -eq 0
                     printf "\n"
@@ -155,8 +157,20 @@ function kit --description 'Toggle kitty.conf theme: kit original/theme'
                     printf "  \033[1;32m║\033[0m\n"
                     printf "  \033[1;32m║\033[0m  \033[2;37mMacTahoe theme restored from tmp\033[0m\n"
                     printf "  \033[1;32m║\033[0m  \033[2;37mRestart Kitty to apply\033[0m\n"
+                    printf "  \033[1;32m║\033[0m\n"
+                    printf "  \033[1;33m║\033[0m  \033[2;37mTip: This is a local backup — may be outdated.\033[0m\n"
+                    printf "  \033[1;33m║\033[0m  \033[2;37mDownload the latest from GitHub? [y/N]: \033[0m"
                     printf "  \033[1;32m╚%s╝\033[0m\n" "$sep"
                     printf "\n"
+                    read -P "  Download latest from GitHub? [y/N]: " -l dl_reply
+                    if test "$dl_reply" = "y" -o "$dl_reply" = "Y" -o "$dl_reply" = "yes"
+                        set -l dl_url "https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/configs/kitty/kitty.conf"
+                        if curl -sfL "$dl_url" -o "$conf" 2>/dev/null
+                            printf "\n  \033[1;32m  ✓  Downloaded latest from GitHub\033[0m\n\n"
+                        else
+                            printf "\n  \033[1;31m  ✗  Download failed — keeping tmp backup\033[0m\n\n"
+                        end
+                    end
                 else
                     printf "\n"
                     printf "  \033[1;31m╔%s╗\033[0m\n" "$sep"
@@ -176,8 +190,7 @@ function kit --description 'Toggle kitty.conf theme: kit original/theme'
             printf "  \033[1;33m║\033[0m  \033[2;37mDownload the default Fedora MacTahoe kitty.conf?\033[0m\n"
             printf "  \033[1;33m╚%s╝\033[0m\n" "$sep"
             printf "\n"
-            printf "  \033[1;37mDownload default theme? [Y/n]: \033[0m"
-            read -l reply
+            read -P "  Download default theme? [Y/n]: " -l reply
             if test "$reply" = "n" -o "$reply" = "N" -o "$reply" = "no"
                 printf "\n  \033[1;31m  ✗ Cancelled.\033[0m\n\n"
                 return 0

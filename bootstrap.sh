@@ -7,7 +7,7 @@ _FED_ID=$(tr -dc 'a-zA-Z0-9' < /dev/urandom 2>/dev/null | head -c 8)
 [ -z "$_FED_ID" ] && _FED_ID="X$(date +%s 2>/dev/null | sha256sum 2>/dev/null | head -c7 || echo "00000001")"
 _FED_DATE_STAMP=$(date '+%Y-%m-%d.%H-%M-%S' 2>/dev/null || echo "unknown")
 _FED_LOG="$HOME/FedoraTahoe_log.${_FED_DATE_STAMP}.${_FED_ID}.txt"
-export _FED_LOG
+export _FED_ID _FED_DATE_STAMP _FED_LOG
 touch "$_FED_LOG" 2>/dev/null || true
 # Preserve original stdout/stderr, then redirect all output to both terminal and log
 exec 5>&1 6>&2
@@ -150,7 +150,8 @@ _print_log_header() {
   echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
   echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
   echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
-  echo -e "  ${CYAN}║${NC}  ${DIM}https://github.com/eprahemi/Fedora-MacTahoe-Eprahemi${NC}               ${CYAN}║${NC}"
+  _repo_url="https://github.com/eprahemi/Fedora-MacTahoe-Eprahemi"
+  echo -e "  ${CYAN}║${NC}  ${DIM}${_repo_url}${NC}$(printf '%*s' $((60 - ${#_repo_url})) '')${CYAN}║${NC}"
   echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
   echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
   echo ""
