@@ -90,6 +90,10 @@ function kit --description 'Toggle kitty.conf theme: kit original/theme'
                 printf "\n"
                 return 1
             end
+            # ── Save backup to /tmp before disabling ──
+            set -l tmp_dir "/tmp/kit-kitty-backup"
+            mkdir -p "$tmp_dir" 2>/dev/null
+            cp "$conf" "$tmp_dir/kitty.conf" 2>/dev/null
             mv "$conf" "$hash"
             if test $status -eq 0
                 printf "\n"
@@ -118,28 +122,81 @@ function kit --description 'Toggle kitty.conf theme: kit original/theme'
                 printf "\n"
                 return 0
             end
-            if not test -f "$hash"
-                printf "\n"
-                printf "  \033[1;31m╔%s╗\033[0m\n" "$sep"
-                printf "  \033[1;31m║\033[0m  \033[1;31m✗\033[0m  #kitty.conf not found — no saved theme to restore\n"
-                printf "  \033[1;31m╚%s╝\033[0m\n" "$sep"
-                printf "\n"
-                return 1
+            # ── Tier 1: restore from #kitty.conf ──
+            if test -f "$hash"
+                mv "$hash" "$conf"
+                if test $status -eq 0
+                    printf "\n"
+                    printf "  \033[1;32m╔%s╗\033[0m\n" "$sep"
+                    printf "  \033[1;32m║\033[0m  \033[1;32m✓\033[0m  #kitty.conf  →  kitty.conf\n"
+                    printf "  \033[1;32m║\033[0m\n"
+                    printf "  \033[1;32m║\033[0m  \033[2;37mMacTahoe theme restored\033[0m\n"
+                    printf "  \033[1;32m║\033[0m  \033[2;37mRestart Kitty to apply\033[0m\n"
+                    printf "  \033[1;32m╚%s╝\033[0m\n" "$sep"
+                    printf "\n"
+                else
+                    printf "\n"
+                    printf "  \033[1;31m╔%s╗\033[0m\n" "$sep"
+                    printf "  \033[1;31m║\033[0m  \033[1;31m✗\033[0m  Failed to rename — check permissions\n"
+                    printf "  \033[1;31m╚%s╝\033[0m\n" "$sep"
+                    printf "\n"
+                    return 1
+                end
+                return 0
             end
-            mv "$hash" "$conf"
-            if test $status -eq 0
+            # ── Tier 2: restore from /tmp backup ──
+            set -l tmp_backup "/tmp/kit-kitty-backup/kitty.conf"
+            if test -f "$tmp_backup"
+                cp "$tmp_backup" "$conf" 2>/dev/null
+                if test $status -eq 0
+                    printf "\n"
+                    printf "  \033[1;32m╔%s╗\033[0m\n" "$sep"
+                    printf "  \033[1;32m║\033[0m  \033[1;32m✓\033[0m  Restored from /tmp backup\n"
+                    printf "  \033[1;32m║\033[0m\n"
+                    printf "  \033[1;32m║\033[0m  \033[2;37mMacTahoe theme restored from tmp\033[0m\n"
+                    printf "  \033[1;32m║\033[0m  \033[2;37mRestart Kitty to apply\033[0m\n"
+                    printf "  \033[1;32m╚%s╝\033[0m\n" "$sep"
+                    printf "\n"
+                else
+                    printf "\n"
+                    printf "  \033[1;31m╔%s╗\033[0m\n" "$sep"
+                    printf "  \033[1;31m║\033[0m  \033[1;31m✗\033[0m  Failed to copy from /tmp backup\n"
+                    printf "  \033[1;31m╚%s╝\033[0m\n" "$sep"
+                    printf "\n"
+                    return 1
+                end
+                return 0
+            end
+            # ── Tier 3: offer to download from GitHub ──
+            printf "\n"
+            printf "  \033[1;33m╔%s╗\033[0m\n" "$sep"
+            printf "  \033[1;33m║\033[0m  \033[1;33m⚠\033[0m  No kitty.conf found\n"
+            printf "  \033[1;33m║\033[0m  \033[2;37m#kitty.conf not found, no /tmp backup available\033[0m\n"
+            printf "  \033[1;33m║\033[0m\n"
+            printf "  \033[1;33m║\033[0m  \033[2;37mDownload the default Fedora MacTahoe kitty.conf?\033[0m\n"
+            printf "  \033[1;33m╚%s╝\033[0m\n" "$sep"
+            printf "\n"
+            printf "  \033[1;37mDownload default theme? [Y/n]: \033[0m"
+            read -l reply
+            if test "$reply" = "n" -o "$reply" = "N" -o "$reply" = "no"
+                printf "\n  \033[1;31m  ✗ Cancelled.\033[0m\n\n"
+                return 0
+            end
+            # ── Download from GitHub ──
+            set -l dl_url "https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/configs/kitty/kitty.conf"
+            mkdir -p "$HOME/.config/kitty" 2>/dev/null
+            if curl -sfL "$dl_url" -o "$conf" 2>/dev/null
                 printf "\n"
                 printf "  \033[1;32m╔%s╗\033[0m\n" "$sep"
-                printf "  \033[1;32m║\033[0m  \033[1;32m✓\033[0m  #kitty.conf  →  kitty.conf\n"
+                printf "  \033[1;32m║\033[0m  \033[1;32m✓\033[0m  Downloaded default Fedora MacTahoe kitty.conf\n"
                 printf "  \033[1;32m║\033[0m\n"
-                printf "  \033[1;32m║\033[0m  \033[2;37mMacTahoe theme restored\033[0m\n"
                 printf "  \033[1;32m║\033[0m  \033[2;37mRestart Kitty to apply\033[0m\n"
                 printf "  \033[1;32m╚%s╝\033[0m\n" "$sep"
                 printf "\n"
             else
                 printf "\n"
                 printf "  \033[1;31m╔%s╗\033[0m\n" "$sep"
-                printf "  \033[1;31m║\033[0m  \033[1;31m✗\033[0m  Failed to rename — check permissions\n"
+                printf "  \033[1;31m║\033[0m  \033[1;31m✗\033[0m  Failed to download — check your internet\n"
                 printf "  \033[1;31m╚%s╝\033[0m\n" "$sep"
                 printf "\n"
                 return 1
