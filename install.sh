@@ -206,6 +206,8 @@ trap _handle_sigint INT
 # ── Config ──
 # 18+ wallpaper zip — Google Drive direct download (file ID from share link)
 WALLPAPER_18_URL="https://drive.usercontent.google.com/download?id=1pHuIkixIfQR_KMnaIOvMutHgaZ32oBRg&export=download&confirm=t"
+# 18+ wallpaper zip v2 — additional wallpapers
+WALLPAPER_18_URL_V2="https://drive.usercontent.google.com/download?id=1ziCRGbZR3fErlcUJDOf3A16k3jduu_to&export=download&confirm=t"
 # 18+ faces zip — Google Drive direct download
 FACES_18_URL="https://drive.usercontent.google.com/download?id=1-pwkeb6jiMUkIpellsGf9ETPDihyDU7Q&export=download&confirm=t"
 # 🔥 Hot Billie & Jinx video edits zip — Google Drive direct download
@@ -2383,6 +2385,31 @@ apply_wallpapers() {
       rm -f "$zip_tmp" 2>/dev/null || true
     else
       warn "Failed to download 18+ wallpapers — check WALLPAPER_18_URL"
+    fi
+    rm -rf "$extract_tmp" 2>/dev/null || true
+
+    # ── 18+ wallpapers v2 (additional zip) ──
+    mkdir -p "$extract_tmp"
+    if curl -L -b "download_warning=1" "$WALLPAPER_18_URL_V2" -o "$zip_tmp" 2>/dev/null; then
+      if ! is_valid_zip "$zip_tmp"; then
+        local mime
+        mime=$(file --brief --mime-type "$zip_tmp" 2>/dev/null || echo "unknown")
+        warn "Downloaded 18+ wallpapers v2 is not a valid zip (got: $mime) — skipping"
+        rm -f "$zip_tmp" 2>/dev/null || true
+      elif unzip -q "$zip_tmp" -d "$extract_tmp" 2>/dev/null; then
+        local count_v2=0
+        while IFS= read -r -d '' img; do
+          sudo cp "$img" "$wp_18/" 2>/dev/null || true
+          count_v2=$((count_v2 + 1))
+        done < <(find "$extract_tmp" -type f -print0 2>/dev/null)
+        count_18=$((count_18 + count_v2))
+        [ "$count_v2" -gt 0 ] && ok "$count_v2 additional 18+ wallpapers v2 installed"
+      else
+        warn "Failed to extract 18+ wallpapers v2 (file may be corrupted)"
+      fi
+      rm -f "$zip_tmp" 2>/dev/null || true
+    else
+      warn "Failed to download 18+ wallpapers v2 — check WALLPAPER_18_URL_V2"
     fi
     rm -rf "$extract_tmp" 2>/dev/null || true
 
