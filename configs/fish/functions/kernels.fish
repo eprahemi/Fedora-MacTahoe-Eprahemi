@@ -248,8 +248,8 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
         printf '  %sWARNING:%s This will reboot immediately. Save your work!\n' $BOLDY $N
         set -l reboot_reply ""
         while true
-            printf '\n  Reboot now? [y/N] '
-            read -l -P "" reboot_reply
+            printf '\n  Reboot now? '
+            read -l -P '[y/N] ' reboot_reply
             if test $status -ne 0
                 printf '\n  %sInterrupted.%s\n' $Y $N
                 return 0
@@ -493,8 +493,8 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
     printf '  %s(~%s MB to free)%s' $D $size_mb $N
     set -l reply1 ""
     while true
-        printf '\n  [Y/n] '
-        read -l -P "" reply1
+        printf '\n  '
+        read -l -P '[Y/n] ' reply1
         if test $status -ne 0
             printf '\n  %sInterrupted.%s\n' $Y $N
             return 0
@@ -516,8 +516,7 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
     printf '  Are you %ssure%s? ' $BOLDY $N
     set -l reply2 ""
     while true
-        printf '[Y/n] '
-        read -l -P "" reply2
+        read -l -P '[Y/n] ' reply2
         if test $status -ne 0
             printf '\n  %sInterrupted.%s\n' $Y $N
             return 0
