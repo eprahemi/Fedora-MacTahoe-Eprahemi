@@ -201,7 +201,7 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
     # ── Nothing to delete? ──
     if test (count $delete_versions) -eq 0; and test (count $orphan_indices) -eq 0
         printf '\n  %sSystem is clean.%s No old kernels to remove.\n' $BOLDG $N
-        printf '  Installed: %skernel-%s' $W $N $latest_ver
+        printf '  Installed: %skernel-%s%s' $W $latest_ver $N
         if test -n "$rescue_ver"
             printf ' + rescue'
         end
@@ -355,8 +355,8 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
     for g in $sorted_grub
         printf '  %ssudo grubby --remove-kernel=%s%s\n' $D $g $N
     end
-    printf '\n  Remove %sold kernel(s) + %sGRUB entry(ies)? [Y/n] ' $R $N $R $N
-    read -l reply1
+    printf '\n  Remove %s%d old kernel(s) + %d GRUB entry(ies)?%s ' $BOLDR (count $delete_versions) (count $delete_grub_indices) $N
+    read -l -P "  [Y/n] " reply1
     if test "$reply1" != "" -a "$reply1" != "y" -a "$reply1" != "Y"
         printf '  %sAborted.%s\n' $D $N
         return 0
@@ -366,8 +366,8 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
     printf '  %sFinal check:%s This will permanently delete:\n' $BOLDY $N
     printf '    %s- %d kernel version(s): %s%s\n' $R (count $delete_versions) (string join ", " $delete_versions) $N
     printf '    %s- %d GRUB boot entry(ies)%s\n' $R (count $delete_grub_indices) $N
-    printf '  Are you %ssure%s? [Y/n] ' $BOLDY $N
-    read -l reply2
+    printf '  Are you %ssure%s? ' $BOLDY $N
+    read -l -P "  [Y/n] " reply2
     if test "$reply2" != "" -a "$reply2" != "y" -a "$reply2" != "Y"
         printf '  %sAborted.%s\n' $D $N
         return 0
