@@ -28,7 +28,7 @@ function func --description 'Function archive: list/search/show all fish command
 
     set -l cat_name[3] "⚙️  System"
     set -l cat_esc[3]  $R
-    set -l cat_func[3] "clean refresh gdm logout reboot shutdown pfp kit update"
+    set -l cat_func[3] "clean refresh gdm logout reboot shutdown pfp kit update kernels"
 
     set -l cat_name[4] "📊  Diagnostics"
     set -l cat_esc[4]  $B
@@ -105,6 +105,7 @@ function func --description 'Function archive: list/search/show all fish command
             case passwd;  echo "passwd [enable|disable|toggle|status]  —  Passwordless sudo"
             case ghlogin; echo "ghlogin [start|status]  —  GitHub CLI login + git config"
             case update;  echo "update  —  Fetch and run latest Fedora MacTahoe update"
+            case kernels; echo "kernels  —  List and clean old Fedora kernels + GRUB entries"
             case '*';     echo "$u"
         end
     end
