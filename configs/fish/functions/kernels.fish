@@ -515,7 +515,7 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
     printf '  %s╚══════════════════════════════════════════════════════════════╝%s\n\n' $BOLD $N
 
     # ── Kernel versions to remove ──
-    printf '  %sKERNEL VERSIONS TO REMOVE:%s (%d)\n' $BOLDY $N (count $delete_versions)
+    printf '  %sKERNEL VERSIONS TO REMOVE:%s (%d)\n' $BOLDR $N (count $delete_versions)
     for dv in $delete_versions
         set -l grub_idx ''
         for entry in $ver_grub_map
@@ -526,7 +526,7 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
                 break
             end
         end
-        printf '    %s- %skernel-%s%s' $R $R $dv $N
+        printf '    %s- kernel-%s' $R $dv
         if test -n "$grub_idx"
             set -l gtitle ""
             for entry in $idx_to_title
@@ -543,12 +543,12 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
                 printf '  %s[GRUB %s]%s' $D $grub_idx $N
             end
         end
-        printf '\n'
+        printf '%s\n' $N
     end
     printf '\n'
 
     # ── GRUB boot entries to remove ──
-    printf '  %sGRUB BOOT ENTRIES TO REMOVE:%s (%d)\n' $BOLDY $N (count $sorted_grub)
+    printf '  %sGRUB BOOT ENTRIES TO REMOVE:%s (%d)\n' $BOLDR $N (count $sorted_grub)
     for g in $sorted_grub
         set -l gtitle ""
         for entry in $idx_to_title
@@ -560,31 +560,22 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
             end
         end
         if test -n "$gtitle"
-            printf '    %s- GRUB index %s%s: %s%s%s\n' $R $g $N $W $gtitle $N
+            printf '    %s- GRUB %s%s: %s%s%s%s\n' $R $g $N $W $gtitle $N $R
         else
-            printf '    %s- GRUB index %s%s\n' $R $g $N
+            printf '    %s- GRUB %s%s\n' $R $g $N
         end
     end
-    printf '\n'
+    printf '%s\n' $N
 
     # ── DNF packages to remove ──
-    printf '  %sDNF PACKAGES TO REMOVE:%s (%d)\n' $BOLDY $N (count $dnf_pkgs)
+    printf '  %sDNF PACKAGES TO REMOVE:%s (%d)\n' $BOLDR $N (count $dnf_pkgs)
     for pkg in $dnf_pkgs
-        printf '    %s- %s%s%s\n' $R $W $pkg $N
+        printf '    %s- %s%s\n' $R $pkg $N
     end
-    printf '\n'
-
-    # ── Commands that will run ──
-    printf '  %sCOMMANDS THAT WILL EXECUTE:%s\n' $BOLDY $N
-    printf '    %s$%s sudo dnf remove --assumeyes %s\n' $D $N (string join " " $dnf_pkgs)
-    for g in $sorted_grub
-        printf '    %s$%s sudo grubby --remove-kernel=%s\n' $D $N $g
-    end
-    printf '    %s$%s sudo grubby --set-default-index=0\n' $D $N
     printf '\n'
 
     # ── Disk space ──
-    printf '  %sDISK SPACE:%s ~%s MB will be freed\n' $BOLDY $N $size_mb
+    printf '  %sDISK SPACE:%s ~%s%s MB%s will be freed\n' $BOLDY $N $BOLDY $size_mb $N
     printf '\n'
 
     # ── Will be kept (safe) ──
@@ -638,7 +629,7 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
     printf '\n'
 
     # ── Summary line ──
-    printf '  %sSUMMARY:%s Remove %s%d kernel(s)%s + %s%d GRUB entries%s → Free ~%s%s MB%s\n' $BOLD $N $R (count $delete_versions) $N $R (count $delete_grub_indices) $N $BOLDY $size_mb $N
+    printf '  %sSUMMARY:%s %sRemove %d kernel(s)%s + %s%d GRUB entries%s → Free ~%s%s MB%s\n' $BOLD $N $R (count $delete_versions) $N $R (count $delete_grub_indices) $N $BOLDY $size_mb $N
     printf '  Are you %ssure%s? ' $BOLDY $N
     set -l reply2 ""
     while true
