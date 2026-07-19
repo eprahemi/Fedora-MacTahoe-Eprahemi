@@ -52,15 +52,16 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
         return 1
     end
 
-    # ── Check sudo access early ──
-    printf '  Checking sudo access... '
+    # ── Check sudo access ──
+    printf '\n'
+    printf '  Checking sudo access...\n'
     if sudo -n true 2>/dev/null
-        printf '%sok%s\n' $G $N
+        printf '  %s[Granted Access]%s\n' $G $N
     else
         if sudo true 2>/dev/null
-            printf '%sok%s\n' $G $N
+            printf '  %s[Granted Access]%s\n' $G $N
         else
-            printf '%sdenied%s\n' $R $N
+            printf '  %s[Access Denied]%s\n' $R $N
             printf '  %serror:%s sudo access required. Aborted.\n' $R $N
             return 1
         end
