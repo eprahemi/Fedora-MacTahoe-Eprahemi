@@ -14,6 +14,31 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
     set -l BOLDR (set_color --bold red)
     set -l BOLDX (set_color --bold brblack)
 
+    # ── Argparse ──
+    argparse 'n/dry-run' 'h/help' -- $argv
+    or return 1
+
+    if set -q _flag_help
+        printf 'kernels - Clean up old Fedora kernels and GRUB entries\n\n'
+        printf 'Usage: kernels [OPTIONS]\n\n'
+        printf 'Options:\n'
+        printf '  -n, --dry-run   Show what would be done without making changes\n'
+        printf '  -h, --help      Show this help message\n\n'
+        printf 'Safety features:\n'
+        printf '  * Running kernel is always protected\n'
+        printf '  * Rescue kernels are always protected\n'
+        printf '  * Latest kernel is always kept\n'
+        printf '  * Double confirmation before any changes\n'
+        printf '  * Reboot prompt if not on latest kernel\n'
+        printf '  * GRUB indices validated before removal\n'
+        return 0
+    end
+
+    set -l dry_run 0
+    if set -q _flag_dry_run
+        set dry_run 1
+    end
+
     # ── Pre-checks ──
     if not command -q rpm
         printf '  %serror:%s rpm not found\n' $R $N
@@ -43,7 +68,7 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
     end
 
     # ── Get running kernel ──
-    set -l running (uname -r)
+    set -l running (uname -r | string trim)
 
     # ── Get all kernel packages and extract unique versions ──
     set -l all_packages (rpm -qa kernel 2>/dev/null)
@@ -53,11 +78,12 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
     end
 
     # Extract unique version strings
+    # Regex: strip "kernel" + any variant suffixes (core, modules, debug, rt, etc.)
     set -l seen
     set -l unique_versions
     for pkg in $all_packages
-        set -l ver (string replace -r '^kernel(-core|-modules|-modules-core|-modules-extra|-devel|-devel-matched|-headers)?-' '' -- $pkg)
-        if not contains -- $ver $seen
+        set -l ver (string replace -r '^kernel(-[a-z]+)*-' '' -- $pkg)
+        if test -n "$ver"; and not contains -- $ver $seen
             set -a seen $ver
             set -a unique_versions $ver
         end
@@ -74,10 +100,15 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
     set -l latest_ver $unique_versions[-1]
     set -l running_ver ""
     for ver in $unique_versions
-        if string match -q -- $ver $running
+        if test "$ver" = "$running"
             set running_ver $ver
             break
         end
+    end
+
+    # Warn if running kernel not found in installed packages
+    if test -z "$running_ver"
+        printf '  %swarning:%s running kernel %s not found in installed packages\n' $Y $N $running
     end
 
     # ── Get GRUB entries ──
@@ -138,20 +169,23 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
         end
     end
 
-    # ── Safety: block rescue from delete list ──
-    for dv in $delete_versions
-        if string match -q "*rescue*" -- $dv
-            set -l new_delete
-            for d in $delete_versions
-                if test "$d" != "$dv"
-                    set -a new_delete $d
-                end
+    # ── Safety: block rescue from delete list (filter, not mutate-during-iterate) ──
+    set -l new_delete
+    for d in $delete_versions
+        if string match -q "*rescue*" -- $d
+            if not contains -- $d $keep_versions
+                set -a keep_versions $d
             end
-            set delete_versions $new_delete
-            if not contains -- $dv $keep_versions
-                set -a keep_versions $dv
-            end
+        else
+            set -a new_delete $d
         end
+    end
+    set delete_versions $new_delete
+
+    # ── Safety: refuse if only 1 kernel total ──
+    if test (count $unique_versions) -le 1
+        printf '\n  %sOnly 1 kernel installed.%s Nothing to clean.\n' $BOLDG $N
+        return 0
     end
 
     # ── Nothing to delete? ──
@@ -192,11 +226,20 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
         end
     end
 
+    # ── Validate GRUB indices (must be numeric) ──
+    for g in $delete_grub_indices
+        if not string match -qr '^[0-9]+$' -- $g
+            printf '  %serror:%s invalid GRUB index %s\n' $R $N $g
+            return 1
+        end
+    end
+
     # ── Reboot prompt if not on latest kernel ──
     if test $blocked_running -eq 1
         printf '\n  %sYou are running kernel %s%s%s but the latest is %s.%s\n' $BOLDY $W $running_ver $N $BOLDG $N
         printf '  %sReboot into the latest kernel first?%s\n' $BOLD $N
         printf '  %sThis will clean up the old kernel after reboot.%s\n' $D $N
+        printf '  %sWARNING:%s This will reboot immediately. Save your work!\n' $BOLDY $N
         printf '\n  Reboot now? [Y/n] '
         read -l -P "" reboot_reply
         if test "$reboot_reply" = "" -o "$reboot_reply" = "y" -o "$reboot_reply" = "Y"
@@ -219,7 +262,6 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
         set -l tag ''
         set -l grub_idx ''
 
-        # find GRUB index
         for entry in $ver_grub_map
             set -l e_ver (string split ':' -- $entry)[1]
             set -l e_idx (string split ':' -- $entry)[2]
@@ -229,7 +271,6 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
             end
         end
 
-        # classify with colors
         set -l ver_color $D
         if string match -q "*rescue*" -- $ver
             set ver_color $M
@@ -309,11 +350,11 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
         printf '\n'
     end
 
-    # ── Build dnf package names ──
+    # ── Build dnf package names (anchored match: version at end of pkg name) ──
     set -l dnf_pkgs
     for dv in $delete_versions
         for pkg in $all_packages
-            if string match -q -- "*$dv*" $pkg
+            if string match -q -- "*$dv" "$pkg"
                 if not contains -- $pkg $dnf_pkgs
                     set -a dnf_pkgs $pkg
                 end
@@ -321,8 +362,36 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
         end
     end
 
-    # Sort GRUB indices descending (remove highest first)
+    # Safety: no matching packages found
+    if test (count $dnf_pkgs) -eq 0
+        printf '  %swarning:%s no matching packages found for removal\n' $Y $N
+        return 1
+    end
+
+    # ── Calculate disk space to be freed ──
+    set -l total_size 0
+    for pkg in $dnf_pkgs
+        set -l size (rpm -q --queryformat '%{SIZE}' "$pkg" 2>/dev/null)
+        if test -n "$size"
+            set total_size (math $total_size + $size)
+        end
+    end
+    set -l size_mb (math --scale=1 "$total_size / 1024 / 1024")
+
+    # Sort GRUB indices descending (remove highest first so indices don't shift)
     set -l sorted_grub (printf '%s\n' $delete_grub_indices | sort -rn)
+
+    # ── Dry-run exit ──
+    if test $dry_run -eq 1
+        printf '\n  %sACTION PLAN%s\n' $BOLD $N
+        printf '  %ssudo dnf remove %s%s\n' $D (string join " " $dnf_pkgs) $N
+        for g in $sorted_grub
+            printf '  %ssudo grubby --remove-kernel=%s%s\n' $D $g $N
+        end
+        printf '\n  %s[DRY RUN]%s Would free ~%s MB\n' $BOLDY $N $size_mb
+        printf '  %sNo changes made.%s\n' $D $N
+        return 0
+    end
 
     # ── Confirmation prompt 1 ──
     printf '\n  %sACTION PLAN%s\n' $BOLD $N
@@ -331,6 +400,7 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
         printf '  %ssudo grubby --remove-kernel=%s%s\n' $D $g $N
     end
     printf '\n  Remove %s%d old kernel(s) + %d GRUB entry(ies)?%s' $BOLDR (count $delete_versions) (count $delete_grub_indices) $N
+    printf '  %s(~%s MB to free)%s' $D $size_mb $N
     read -l -P "  [Y/n] " reply1
     if test "$reply1" != "" -a "$reply1" != "y" -a "$reply1" != "Y"
         printf '  %sAborted.%s\n' $D $N
@@ -350,7 +420,7 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
 
     # ── Execute: remove kernels via dnf ──
     printf '\n  %sRemoving old kernel packages...%s\n' $BOLD $N
-    sudo dnf remove $dnf_pkgs
+    sudo dnf remove --assumeyes $dnf_pkgs
 
     if test $status -ne 0
         printf '\n  %serror:%s dnf remove failed. GRUB entries not touched.\n' $R $N
@@ -359,7 +429,7 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
     end
     printf '  %sKernel packages removed.%s\n' $G $N
 
-    # ── Execute: remove GRUB entries (highest first) ──
+    # ── Execute: remove GRUB entries (highest index first) ──
     printf '\n  %sRemoving old GRUB entries...%s\n' $BOLD $N
     for g in $sorted_grub
         sudo grubby --remove-kernel=$g 2>/dev/null
@@ -370,10 +440,27 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
         end
     end
 
-    # ── Set GRUB default ──
+    # ── Set GRUB default to index 0 (newest after cleanup) ──
     sudo grubby --set-default-index=0 2>/dev/null
     if test $status -eq 0
         printf '  %sGRUB default set to index 0%s\n' $G $N
+    end
+
+    # ── Log cleanup ──
+    set -l log_dir "$HOME/.local/share/mactahoe"
+    set -l log_file "$log_dir/kernels.log"
+    if not test -d "$log_dir"
+        mkdir -p "$log_dir" 2>/dev/null
+    end
+    if test -d "$log_dir"
+        printf '[%s] Removed %d kernel(s): %s | GRUB: %s | Freed: ~%s MB\n' \
+            (date '+%Y-%m-%d %H:%M:%S') \
+            (count $delete_versions) \
+            (string join ", " $delete_versions) \
+            (string join ", " $delete_grub_indices) \
+            $size_mb \
+            >> "$log_file"
+        printf '  %sLogged to %s%s\n' $D $log_file $N
     end
 
     # ── Done ──
