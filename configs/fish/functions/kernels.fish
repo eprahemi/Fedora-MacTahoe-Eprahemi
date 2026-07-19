@@ -137,6 +137,12 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
         return 1
     end
 
+    # ── Build index→title lookup ──
+    set -l idx_to_title
+    for i in (seq 1 (count $grub_indices))
+        set -a idx_to_title "$grub_indices[$i]:$grub_titles[$i]"
+    end
+
     # ── Classify each version ──
     set -l keep_versions
     set -l delete_versions
@@ -240,15 +246,25 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
         printf '  %sReboot into the latest kernel first?%s\n' $BOLD $N
         printf '  %sThis will clean up the old kernel after reboot.%s\n' $D $N
         printf '  %sWARNING:%s This will reboot immediately. Save your work!\n' $BOLDY $N
-        printf '\n  Reboot now? [Y/n] '
-        read -l -P "" reboot_reply
-        if test "$reboot_reply" = "" -o "$reboot_reply" = "y" -o "$reboot_reply" = "Y"
-            printf '  %sRebooting...%s\n' $G $N
-            sudo reboot
-            return 0
-        else
-            printf '  Continuing with cleanup on running kernel.\n'
-            printf '  %sNote:%s The running kernel will be kept safe.\n' $BOLDY $N
+        set -l reboot_reply ""
+        while true
+            printf '\n  Reboot now? [y/N] '
+            read -l -P "" reboot_reply
+            if test $status -ne 0
+                printf '\n  %sInterrupted.%s\n' $Y $N
+                return 0
+            end
+            if test "$reboot_reply" = "" -o "$reboot_reply" = "n" -o "$reboot_reply" = "N"
+                printf '  Continuing with cleanup on running kernel.\n'
+                printf '  %sNote:%s The running kernel will be kept safe.\n' $BOLDY $N
+                break
+            else if test "$reboot_reply" = "y" -o "$reboot_reply" = "Y"
+                printf '  %sRebooting...%s\n' $G $N
+                sudo reboot
+                return 0
+            else
+                printf '  %sInvalid input:%s please type %sy%s, %sY%s, %sn%s, %sN%s, or press Enter.\n' $R $N $G $N $G $N $W $N $W $N
+            end
         end
     end
 
@@ -293,7 +309,20 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
 
         printf '  %s%skernel-%s%s  %-30s' $marker $ver_color $ver $N $tag
         if test -n "$grub_idx"
-            printf '  %s[GRUB %s]%s' $D $grub_idx $N
+            set -l gtitle ""
+            for entry in $idx_to_title
+                set -l e_idx (string split ':' -- $entry)[1]
+                set -l e_title (string split ':' -- $entry)[2..]
+                if test "$e_idx" = "$grub_idx"
+                    set gtitle $e_title
+                    break
+                end
+            end
+            if test -n "$gtitle"
+                printf '  %s[GRUB %s]%s %s(%s)%s' $D $grub_idx $N $D $gtitle $N
+            else
+                printf '  %s[GRUB %s]%s' $D $grub_idx $N
+            end
         end
         printf '\n'
     end
@@ -314,7 +343,20 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
         end
         printf '    %skernel-%s%s' $R $dv $N
         if test -n "$grub_idx"
-            printf '  %s[GRUB %s]%s' $D $grub_idx $N
+            set -l gtitle ""
+            for entry in $idx_to_title
+                set -l e_idx2 (string split ':' -- $entry)[1]
+                set -l e_title (string split ':' -- $entry)[2..]
+                if test "$e_idx2" = "$grub_idx"
+                    set gtitle $e_title
+                    break
+                end
+            end
+            if test -n "$gtitle"
+                printf '  %s[GRUB %s]%s %s(%s)%s' $D $grub_idx $N $D $gtitle $N
+            else
+                printf '  %s[GRUB %s]%s' $D $grub_idx $N
+            end
         end
         printf '\n'
     end
@@ -345,7 +387,20 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
         end
         printf '  %s%skernel-%s%s  %-30s' $marker $BOLDG $kv $N $tag
         if test -n "$grub_idx"
-            printf '  %s[GRUB %s]%s' $D $grub_idx $N
+            set -l gtitle ""
+            for entry in $idx_to_title
+                set -l e_idx3 (string split ':' -- $entry)[1]
+                set -l e_title (string split ':' -- $entry)[2..]
+                if test "$e_idx3" = "$grub_idx"
+                    set gtitle $e_title
+                    break
+                end
+            end
+            if test -n "$gtitle"
+                printf '  %s[GRUB %s]%s %s(%s)%s' $D $grub_idx $N $D $gtitle $N
+            else
+                printf '  %s[GRUB %s]%s' $D $grub_idx $N
+            end
         end
         printf '\n'
     end
@@ -386,7 +441,20 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
         printf '\n  %sACTION PLAN%s\n' $BOLD $N
         printf '  %ssudo dnf remove %s%s\n' $D (string join " " $dnf_pkgs) $N
         for g in $sorted_grub
-            printf '  %ssudo grubby --remove-kernel=%s%s\n' $D $g $N
+            set -l gtitle ""
+            for entry in $idx_to_title
+                set -l e_idx (string split ':' -- $entry)[1]
+                set -l e_title (string split ':' -- $entry)[2..]
+                if test "$e_idx" = "$g"
+                    set gtitle $e_title
+                    break
+                end
+            end
+            if test -n "$gtitle"
+                printf '  %ssudo grubby --remove-kernel=%s  %s(%s)%s\n' $D $g $D $gtitle $N
+            else
+                printf '  %ssudo grubby --remove-kernel=%s%s\n' $D $g $N
+            end
         end
         printf '\n  %s[DRY RUN]%s Would free ~%s MB\n' $BOLDY $N $size_mb
         printf '  %sNo changes made.%s\n' $D $N
@@ -397,25 +465,63 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
     printf '\n  %sACTION PLAN%s\n' $BOLD $N
     printf '  %ssudo dnf remove %s%s\n' $D (string join " " $dnf_pkgs) $N
     for g in $sorted_grub
-        printf '  %ssudo grubby --remove-kernel=%s%s\n' $D $g $N
+        set -l gtitle ""
+        for entry in $idx_to_title
+            set -l e_idx (string split ':' -- $entry)[1]
+            set -l e_title (string split ':' -- $entry)[2..]
+            if test "$e_idx" = "$g"
+                set gtitle $e_title
+                break
+            end
+        end
+        if test -n "$gtitle"
+            printf '  %ssudo grubby --remove-kernel=%s  %s(%s)%s\n' $D $g $D $gtitle $N
+        else
+            printf '  %ssudo grubby --remove-kernel=%s%s\n' $D $g $N
+        end
     end
     printf '\n  Remove %s%d old kernel(s) + %d GRUB entry(ies)?%s' $BOLDR (count $delete_versions) (count $delete_grub_indices) $N
     printf '  %s(~%s MB to free)%s' $D $size_mb $N
-    read -l -P "  [Y/n] " reply1
-    if test "$reply1" != "" -a "$reply1" != "y" -a "$reply1" != "Y"
-        printf '  %sAborted.%s\n' $D $N
-        return 0
+    set -l reply1 ""
+    while true
+        printf '\n  [Y/n] '
+        read -l -P "" reply1
+        if test $status -ne 0
+            printf '\n  %sInterrupted.%s\n' $Y $N
+            return 0
+        end
+        if test "$reply1" = "" -o "$reply1" = "y" -o "$reply1" = "Y"
+            break
+        else if test "$reply1" = "n" -o "$reply1" = "N"
+            printf '  %sAborted.%s\n' $D $N
+            return 0
+        else
+            printf '  %sInvalid input:%s please type %sy%s, %sY%s, %sn%s, %sN%s, or press Enter.\n' $R $N $G $N $G $N $W $N $W $N
+        end
     end
 
     # ── Confirmation prompt 2 ──
     printf '  %sFinal check:%s This will permanently delete:\n' $BOLDY $N
     printf '    %s- %d kernel version(s):%s %s\n' $R (count $delete_versions) $N (string join ", " $delete_versions)
     printf '    %s- %d GRUB boot entry(ies)%s\n' $R (count $delete_grub_indices) $N
-    printf '  Are you %ssure%s?' $BOLDY $N
-    read -l -P "  [Y/n] " reply2
-    if test "$reply2" != "" -a "$reply2" != "y" -a "$reply2" != "Y"
-        printf '  %sAborted.%s\n' $D $N
-        return 0
+    printf '  Are you %ssure%s? ' $BOLDY $N
+    set -l reply2 ""
+    while true
+        printf '[Y/n] '
+        read -l -P "" reply2
+        if test $status -ne 0
+            printf '\n  %sInterrupted.%s\n' $Y $N
+            return 0
+        end
+        if test "$reply2" = "" -o "$reply2" = "y" -o "$reply2" = "Y"
+            break
+        else if test "$reply2" = "n" -o "$reply2" = "N"
+            printf '  %sAborted.%s\n' $D $N
+            return 0
+        else
+            printf '  %sInvalid input:%s please type %sy%s, %sY%s, %sn%s, %sN%s, or press Enter.\n' $R $N $G $N $G $N $W $N $W $N
+            printf '  Are you %ssure%s? ' $BOLDY $N
+        end
     end
 
     # ── Execute: remove kernels via dnf ──
@@ -432,9 +538,22 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
     # ── Execute: remove GRUB entries (highest index first) ──
     printf '\n  %sRemoving old GRUB entries...%s\n' $BOLD $N
     for g in $sorted_grub
+        set -l gtitle ""
+        for entry in $idx_to_title
+            set -l e_idx (string split ':' -- $entry)[1]
+            set -l e_title (string split ':' -- $entry)[2..]
+            if test "$e_idx" = "$g"
+                set gtitle $e_title
+                break
+            end
+        end
         sudo grubby --remove-kernel=$g 2>/dev/null
         if test $status -eq 0
-            printf '  %sRemoved GRUB index %s%s\n' $G $g $N
+            if test -n "$gtitle"
+                printf '  %sRemoved GRUB %s: %s%s\n' $G $g $gtitle $N
+            else
+                printf '  %sRemoved GRUB index %s%s\n' $G $g $N
+            end
         else
             printf '  %swarning:%s GRUB index %s already gone or invalid\n' $Y $N $g
         end
