@@ -366,6 +366,7 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
         set -l marker '  '
         set -l tag ''
         set -l grub_idx ''
+        set -l kv_color $BOLDG
         for entry in $ver_grub_map
             set -l e_ver (string split ':' -- $entry)[1]
             set -l e_idx (string split ':' -- $entry)[2]
@@ -375,17 +376,20 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
             end
         end
         if string match -q "*rescue*" -- $kv
+            set kv_color $M
             set tag (printf '%srescue%s' $M $N)
         else if test "$kv" = "$running_ver"; and test "$kv" = "$latest_ver"
             set marker (printf '%s* %s' $BOLDG $N)
+            set kv_color $W
             set tag (printf '%srunning, latest%s' $BOLDG $N)
         else if test "$kv" = "$running_ver"
             set marker (printf '%s* %s' $BOLDG $N)
+            set kv_color $W
             set tag (printf '%srunning%s' $BOLDY $N)
         else if test "$kv" = "$latest_ver"
             set tag (printf '%slatest%s' $BOLDG $N)
         end
-        printf '  %s%skernel-%s%s  %-30s' $marker $BOLDG $kv $N $tag
+        printf '  %s%skernel-%s%s  %-30s' $marker $kv_color $kv $N $tag
         if test -n "$grub_idx"
             set -l gtitle ""
             for entry in $idx_to_title
@@ -423,12 +427,17 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
         return 1
     end
 
-    # ── Calculate disk space to be freed ──
+    # ── Calculate disk space to be freed (kernel meta-packages = 0 bytes, query kernel-core for real size) ──
     set -l total_size 0
-    for pkg in $dnf_pkgs
-        set -l size (rpm -q --queryformat '%{SIZE}' "$pkg" 2>/dev/null)
-        if test -n "$size"
-            set total_size (math $total_size + $size)
+    set -l core_pkgs (rpm -qa kernel-core 2>/dev/null)
+    for dv in $delete_versions
+        for pkg in $dnf_pkgs $core_pkgs
+            if string match -q -- "*$dv" "$pkg"
+                set -l size (rpm -q --queryformat '%{SIZE}' "$pkg" 2>/dev/null)
+                if test -n "$size"; and string match -qr '^[0-9]+$' -- "$size"
+                    set total_size (math $total_size + $size)
+                end
+            end
         end
     end
     set -l size_mb (math --scale=1 "$total_size / 1024 / 1024")
