@@ -509,10 +509,136 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
         end
     end
 
-    # ── Confirmation prompt 2 ──
-    printf '  %sFinal check:%s This will permanently delete:\n' $BOLDY $N
-    printf '    %s- %d kernel version(s):%s %s\n' $R (count $delete_versions) $N (string join ", " $delete_versions)
-    printf '    %s- %d GRUB boot entry(ies)%s\n' $R (count $delete_grub_indices) $N
+    # ── Confirmation prompt 2 (detailed) ──
+    printf '\n  %s╔══════════════════════════════════════════════════════════════╗%s\n' $BOLD $N
+    printf '  %s║                     FINAL CONFIRMATION                      ║%s\n' $BOLD $N
+    printf '  %s╚══════════════════════════════════════════════════════════════╝%s\n\n' $BOLD $N
+
+    # ── Kernel versions to remove ──
+    printf '  %sKERNEL VERSIONS TO REMOVE:%s (%d)\n' $BOLDY $N (count $delete_versions)
+    for dv in $delete_versions
+        set -l grub_idx ''
+        for entry in $ver_grub_map
+            set -l e_ver (string split ':' -- $entry)[1]
+            set -l e_idx (string split ':' -- $entry)[2]
+            if test "$e_ver" = "$dv"; and test -n "$e_idx"
+                set grub_idx $e_idx
+                break
+            end
+        end
+        printf '    %s- %skernel-%s%s' $R $R $dv $N
+        if test -n "$grub_idx"
+            set -l gtitle ""
+            for entry in $idx_to_title
+                set -l e_idx (string split ':' -- $entry)[1]
+                set -l e_title (string split ':' -- $entry)[2..]
+                if test "$e_idx" = "$grub_idx"
+                    set gtitle $e_title
+                    break
+                end
+            end
+            if test -n "$gtitle"
+                printf '  %s[GRUB %s]%s %s(%s)%s' $D $grub_idx $N $D $gtitle $N
+            else
+                printf '  %s[GRUB %s]%s' $D $grub_idx $N
+            end
+        end
+        printf '\n'
+    end
+    printf '\n'
+
+    # ── GRUB boot entries to remove ──
+    printf '  %sGRUB BOOT ENTRIES TO REMOVE:%s (%d)\n' $BOLDY $N (count $sorted_grub)
+    for g in $sorted_grub
+        set -l gtitle ""
+        for entry in $idx_to_title
+            set -l e_idx (string split ':' -- $entry)[1]
+            set -l e_title (string split ':' -- $entry)[2..]
+            if test "$e_idx" = "$g"
+                set gtitle $e_title
+                break
+            end
+        end
+        if test -n "$gtitle"
+            printf '    %s- GRUB index %s%s: %s%s%s\n' $R $g $N $W $gtitle $N
+        else
+            printf '    %s- GRUB index %s%s\n' $R $g $N
+        end
+    end
+    printf '\n'
+
+    # ── DNF packages to remove ──
+    printf '  %sDNF PACKAGES TO REMOVE:%s (%d)\n' $BOLDY $N (count $dnf_pkgs)
+    for pkg in $dnf_pkgs
+        printf '    %s- %s%s%s\n' $R $W $pkg $N
+    end
+    printf '\n'
+
+    # ── Commands that will run ──
+    printf '  %sCOMMANDS THAT WILL EXECUTE:%s\n' $BOLDY $N
+    printf '    %s$%s sudo dnf remove --assumeyes %s\n' $D $N (string join " " $dnf_pkgs)
+    for g in $sorted_grub
+        printf '    %s$%s sudo grubby --remove-kernel=%s\n' $D $N $g
+    end
+    printf '    %s$%s sudo grubby --set-default-index=0\n' $D $N
+    printf '\n'
+
+    # ── Disk space ──
+    printf '  %sDISK SPACE:%s ~%s MB will be freed\n' $BOLDY $N $size_mb
+    printf '\n'
+
+    # ── Will be kept (safe) ──
+    printf '  %sWILL BE KEPT (safe):%s\n' $BOLDG $N
+    for kv in $keep_versions
+        set -l marker '  '
+        set -l tag ''
+        set -l grub_idx ''
+        set -l kv_color $BOLDG
+        for entry in $ver_grub_map
+            set -l e_ver (string split ':' -- $entry)[1]
+            set -l e_idx (string split ':' -- $entry)[2]
+            if test "$e_ver" = "$kv"; and test -n "$e_idx"
+                set grub_idx $e_idx
+                break
+            end
+        end
+        if string match -q "*rescue*" -- $kv
+            set kv_color $M
+            set tag (printf '%srescue%s' $M $N)
+        else if test "$kv" = "$running_ver"; and test "$kv" = "$latest_ver"
+            set marker (printf '%s* %s' $BOLDG $N)
+            set kv_color $W
+            set tag (printf '%srunning, latest%s' $BOLDG $N)
+        else if test "$kv" = "$running_ver"
+            set marker (printf '%s* %s' $BOLDG $N)
+            set kv_color $W
+            set tag (printf '%srunning%s' $BOLDY $N)
+        else if test "$kv" = "$latest_ver"
+            set tag (printf '%slatest%s' $BOLDG $N)
+        end
+        printf '    %s%skernel-%s%s  %-30s' $marker $kv_color $kv $N $tag
+        if test -n "$grub_idx"
+            set -l gtitle ""
+            for entry in $idx_to_title
+                set -l e_idx4 (string split ':' -- $entry)[1]
+                set -l e_title (string split ':' -- $entry)[2..]
+                if test "$e_idx4" = "$grub_idx"
+                    set gtitle $e_title
+                    break
+                end
+            end
+            if test -n "$gtitle"
+                printf '  %s[GRUB %s]%s %s(%s)%s' $D $grub_idx $N $D $gtitle $N
+            else
+                printf '  %s[GRUB %s]%s' $D $grub_idx $N
+            end
+        end
+        printf '\n'
+    end
+    printf '\n'
+
+    # ── Summary line ──
+    printf '  %sSUMMARY:%s Remove %s%d kernel(s)%s + %s%d GRUB entries%s → Free ~%s%s MB%s\n' $BOLD $N $R (count $delete_versions) $N $R (count $delete_grub_indices) $N $BOLDY $size_mb $N
     printf '  Are you %ssure%s? ' $BOLDY $N
     set -l reply2 ""
     while true
