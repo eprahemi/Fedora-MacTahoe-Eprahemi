@@ -3,7 +3,6 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
     set -l R (set_color red)
     set -l G (set_color green)
     set -l Y (set_color yellow)
-    set -l C (set_color cyan)
     set -l M (set_color magenta)
     set -l W (set_color white)
     set -l D (set_color brblack)
