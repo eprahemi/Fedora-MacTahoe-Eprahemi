@@ -2792,6 +2792,9 @@ configure_nautilus_defaults() {
     done < "$bookmarks_file"
   fi
 
+  # Create XDG Trash directories (required for bookmark to work on first click)
+  mkdir -p "$HOME/.local/share/Trash/files" "$HOME/.local/share/Trash/info"
+
   # Write the new bookmarks file
   {
     for entry in "${xdg_entries[@]}"; do
