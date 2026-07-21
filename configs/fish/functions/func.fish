@@ -3,7 +3,7 @@
 # List, search, and show fish function source files
 # Fedora MacTahoe Eprahemi Edition © 2026 — copyright 100%
 # ══════════════════════════════════════════════════════════════
-function func --description 'Function archive: list/search/show all fish commands'
+function func --description 'Browse all fish functions'
     set -l func_dir "$HOME/.config/fish/functions"
 
     # ── Color palette ──
