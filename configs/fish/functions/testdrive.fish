@@ -3,7 +3,7 @@
 # Eprahemi diagnostics: certified by the streets 🏆
 # Fedora MacTahoe Eprahemi Edition © 2026 — full throttle
 # ══════════════════════════════════════════════════════════════
-function testdrive --description 'Elite diagnostic suite: all/disk/ext/ram/cpu/gpu/heat/net/batt/info/boot/health/updates/top/services/stress'
+function testdrive --description 'System diagnostic and benchmark suite'
     # ── Color Palette ──
     set -l C "\033[0m"        # reset
     set -l B "\033[1m"        # bold
