@@ -359,7 +359,6 @@ function refresh --description 'Deep system refresh: cache, services, extensions
             [ -n "$wp_dark" ] && gsettings set org.gnome.desktop.background picture-uri-dark "$wp_dark";
             rm -f "$black"
         '
-        echo -e "  \033[1;33m💡 Tip: If icons don't update fully, press Alt+F2 then type \033[1;36mr\033[1;33m and press Enter — safe shell reload without logout\033[0m"
     end
 
     set -l end_time (date +%s)
