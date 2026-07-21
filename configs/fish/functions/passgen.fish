@@ -3,7 +3,7 @@
 # Password generation utility with analysis, passphrase mode, and vault
 # Fedora MacTahoe Eprahemi Edition © 2026
 # ══════════════════════════════════════════════════════════════
-function passgen --description '🔑 Password generator and analyzer — 18 options. Try: passgen opts, passgen --help'
+function passgen --description 'Password generator and analyzer'
     set -l length 16
     set -l use_lower yes
     set -l use_upper yes
