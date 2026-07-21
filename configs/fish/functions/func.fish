@@ -99,7 +99,7 @@ function func --description 'Browse all fish functions'
             case l;       echo "l [path]  —  Pretty directory listing"
             case p;       echo "p  —  Fzf file preview"
             case extract; echo "extract <archive> [dest]  —  Extract any archive"
-            case func;    echo "func [search|show]  —  Function archive"
+            case func;    echo "func [search <word>|show <name>]  —  List, search or view fish functions"
             case pfp;     echo "pfp [image|current|info|save|remove]  —  GNOME profile picture manager"
             case passgen; echo "passgen [opts]  —  Password generator"
             case passwd;  echo "passwd [enable|disable|toggle|status]  —  Passwordless sudo"
