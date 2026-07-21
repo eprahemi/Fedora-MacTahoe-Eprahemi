@@ -61,7 +61,7 @@ function func --description 'Function archive: list/search/show all fish command
     # ── Helper: extract description ──
     function __func_desc
         set -l file $argv[1]
-        set -l d (grep -h '^function .* -d ' "$file" 2>/dev/null | head -1 | sed "s/.*-d ['\"]\(.*\)['\"].*/\1/")
+        set -l d (grep -hE '^function .* (--description|-d) ' "$file" 2>/dev/null | head -1 | sed "s/.*--description ['\"]\(.*\)['\"].*/\1/;s/.*-d ['\"]\(.*\)['\"].*/\1/")
         if test -z "$d"
             echo "No description"
         else
