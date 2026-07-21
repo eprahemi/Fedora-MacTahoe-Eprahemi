@@ -264,7 +264,7 @@ function func --description 'Function archive: list/search/show all fish command
     echo ""
     echo -e "  $C╭──────────────────────────────────────────────────────────╮$N"
     echo -e "  $C│                    🗃️  FUNCTION  ARCHIVE                  │$N"
-    echo -e "  $C│             Fedora MacTahoe  ·  Eprahemi Edition          │$N"
+    echo -e "  $C│      Fedora MacTahoe  ·  Eprahemi System Configuration      │$N"
     echo -e "  $C│          $D$tf functions  ·  $tl lines  ·  $cat_cnt categories          $C│$N"
     echo -e "  $C╰──────────────────────────────────────────────────────────╯$N"
     echo ""
