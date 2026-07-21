@@ -2,7 +2,7 @@
 # stayawake — Prevent system sleep/display sleep
 # Fedora MacTahoe Eprahemi Edition © 2026
 # ══════════════════════════════════════════════════════════════
-function stayawake --description 'Prevent sleep/display sleep — usage: stayawake [duration|--display|--stop]'
+function stayawake --description 'Prevent sleep/display sleep'
     if set -q argv[1]
         switch $argv[1]
             case --stop

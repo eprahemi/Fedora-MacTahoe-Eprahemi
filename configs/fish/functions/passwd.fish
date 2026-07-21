@@ -4,7 +4,7 @@
 # /etc/sudoers and comments/uncomments it, or creates it.
 # Fedora MacTahoe Eprahemi Edition © 2026
 # ══════════════════════════════════════════════════════════════
-function passwd --description 'Toggle passwordless sudo for the current user — usage: passwd [enable|disable|toggle|status|--help]'
+function passwd --description 'Toggle passwordless sudo for the current user'
     # ── Color palette ──
     set -l C  "\033[0m"
     set -l B  "\033[1m"
