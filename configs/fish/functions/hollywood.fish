@@ -3,7 +3,7 @@
 # Runs Hollywood typer effect in a container
 # Fedora MacTahoe Eprahemi Edition © 2026 — starring Eprahemi
 # ══════════════════════════════════════════════════════════════
-function hollywood --wraps='podman run -it --rm cgr.dev/chainguard/hollywood' --description 'alias hollywood=podman run -it --rm cgr.dev/chainguard/hollywood'
+function hollywood --wraps='podman run -it --rm cgr.dev/chainguard/hollywood' --description 'Hollywood hacking terminal simulator'
     if set -q argv[1]
         switch $argv[1]
             case --help -h
