@@ -50,7 +50,7 @@ function func --description 'Function archive: list/search/show all fish command
         switch $f
             case c v n weather;           echo 1
             case cat l p mkgif extract;   echo 2
-            case clean refresh gdm logout reboot shutdown pfp kit update; echo 3
+            case clean refresh gdm logout reboot shutdown pfp kit update kernels; echo 3
             case testdrive getdata myip stats calc qr; echo 4
             case matrix hollywood stayawake fish_greeting; echo 5
             case func passgen passwd ghlogin;     echo 6
@@ -61,7 +61,7 @@ function func --description 'Function archive: list/search/show all fish command
     # ── Helper: extract description ──
     function __func_desc
         set -l file $argv[1]
-        set -l d (grep -h -- '--description' "$file" 2>/dev/null | head -1 | sed "s/.*--description ['\"]\(.*\)['\"].*/\1/")
+        set -l d (grep -h '^function .* -d ' "$file" 2>/dev/null | head -1 | sed "s/.*-d ['\"]\(.*\)['\"].*/\1/")
         if test -z "$d"
             echo "No description"
         else
