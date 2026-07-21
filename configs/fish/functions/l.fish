@@ -3,7 +3,7 @@
 # Directory listing with eza, featuring icons and grouping
 # Fedora MacTahoe Eprahemi Edition © 2026 — listing with style
 # ══════════════════════════════════════════════════════════════
-function l --wraps='eza -lh --icons --grid --group-directories-first' --description 'alias l=eza -lh --icons --grid --group-directories-first'
+function l --wraps='eza -lh --icons --grid --group-directories-first' --description 'Pretty directory listing with icons'
     if set -q argv[1]
         switch $argv[1]
             case --help -h

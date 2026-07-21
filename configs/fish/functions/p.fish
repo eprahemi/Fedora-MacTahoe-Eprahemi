@@ -3,7 +3,7 @@
 # Preview files with syntax highlighting via bat
 # Fedora MacTahoe Eprahemi Edition © 2026 — look but don't steal
 # ══════════════════════════════════════════════════════════════
-function p --wraps="fzf --preview 'bat --color=always --style=numbers --line-range=:500 {}'" --description "alias p=fzf --preview 'bat --color=always --style=numbers --line-range=:500 {}'"
+function p --wraps="fzf --preview 'bat --color=always --style=numbers --line-range=:500 {}'" --description 'Interactive file preview with fzf + bat'
     if set -q argv[1]
         switch $argv[1]
             case --help -h
