@@ -1,0 +1,1322 @@
+# ══════════════════════════════════════════════════════════════
+# smb 📡 — Samba file sharing manager
+# Install, configure, and manage Samba on Fedora
+# Fedora MacTahoe Eprahemi System Configuration © 2026
+# ══════════════════════════════════════════════════════════════
+function smb --description 'Samba file sharing manager'
+    # ── Colors ──
+    set -l R    "\033[1;31m"
+    set -l G    "\033[1;32m"
+    set -l Y    "\033[1;33m"
+    set -l B    "\033[1;34m"
+    set -l C    "\033[1;36m"
+    set -l W    "\033[1;37m"
+    set -l D    "\033[2;37m"
+    set -l N    "\033[0m"
+    set -l BOLD "\033[1m"
+    set -l BOLDG "\033[1;32m"
+    set -l BOLDR "\033[1;31m"
+    set -l BOLDY "\033[1;33m"
+    set -l BOLDC "\033[1;36m"
+
+    # ── Config paths ──
+    set -l CONF_DIR  "$HOME/.config/smb"
+    set -l PASS_FILE "$CONF_DIR/.password"
+    set -l SMB_CONF  "/etc/samba/smb.conf"
+
+    # ════════════════════════════════════════════════════════════
+    # HELPERS
+    # ════════════════════════════════════════════════════════════
+
+    function __smb_ip
+        set -l ip (ip -4 route get 1 2>/dev/null | awk '{print $7; exit}')
+        if test -z "$ip"
+            set ip (hostname -I | awk '{print $1}')
+        end
+        echo "$ip"
+    end
+
+    function __smb_user_exists
+        type -q pdbedit; or return 1
+        command pdbedit -L 2>/dev/null | grep -q "^$argv[1]:"
+    end
+
+    function __smb_share_exists
+        grep -q "^\[$argv[1]\]" "$SMB_CONF" 2>/dev/null
+    end
+
+    function __smb_get_scope
+        if grep -q '^\[homes\]' "$SMB_CONF" 2>/dev/null
+            echo "home"
+        else if grep -q 'path\s*=\s*/\s*$' "$SMB_CONF" 2>/dev/null
+            echo "root"
+        else
+            echo "none"
+        end
+    end
+
+    function __smb_pkexec
+        pkexec cat /etc/shadow >/dev/null 2>&1
+        return $status
+    end
+
+    function __smb_set_password
+        set -l user $argv[1]
+        set -l pass $argv[2]
+        set -l user_exists 0
+        if type -q pdbedit
+            if command pdbedit -L 2>/dev/null | grep -q "^$user:"
+                set user_exists 1
+            end
+        end
+        if test $user_exists -eq 1
+            printf '%s\n' "$pass" "$pass" | sudo smbpasswd -s "$user" 2>/dev/null
+        else
+            printf '%s\n' "$pass" "$pass" | sudo smbpasswd -a -s "$user" 2>/dev/null
+        end
+    end
+
+    function __smb_save_password
+        set -l user $argv[1]
+        set -l pass $argv[2]
+        mkdir -p "$CONF_DIR"
+        # Remove old entry if exists
+        if test -f "$PASS_FILE"
+            grep -v "^$user:" "$PASS_FILE" > "$PASS_FILE.tmp" 2>/dev/null
+            mv "$PASS_FILE.tmp" "$PASS_FILE" 2>/dev/null
+        end
+        printf '%s:%s\n' "$user" "$pass" >> "$PASS_FILE"
+        chmod 700 "$CONF_DIR"
+        chmod 600 "$PASS_FILE"
+    end
+
+    # ════════════════════════════════════════════════════════════
+    # HELP
+    # ════════════════════════════════════════════════════════════
+
+    if test (count $argv) -eq 0; or test "$argv[1]" = "help"
+        echo ""
+        printf "  $C╭──────────────────────────────────────────────────────────╮$N\n"
+        printf "  $C│                    SMB FILE SHARING                        │$N\n"
+        printf "  $C│             Fedora MacTahoe  ·  Eprahemi System          │$N\n"
+        printf "  $C│          Samba manager  ·  18 commands  ·  4 groups       │$N\n"
+        printf "  $C╰──────────────────────────────────────────────────────────╯$N\n"
+        echo ""
+        printf "  Usage:  $Y smb$N <command> [args]\n"
+        echo ""
+        printf "  $BOLDC SETUP$N\n"
+        printf "    $W smb setup$N                   One-shot install + configure + user creation\n"
+        echo ""
+        printf "  $BOLDG USERS$N\n"
+        printf "    $W smb user list$N               List all SMB users\n"
+        printf "    $W smb user add$N $D<name>$N         Add SMB user\n"
+        printf "    $W smb user remove$N $D<name>$N      Remove SMB user\n"
+        printf "    $W smb user password$N $D<name>$N    Change SMB password\n"
+        echo ""
+        printf "  $BOLDC SHARES$N\n"
+        printf "    $W smb share list$N              List all shared directories\n"
+        printf "    $W smb share$N $D<dir> [name]$N      Share a directory\n"
+        printf "    $W smb unshare$N $D<name>$N          Remove a share\n"
+        echo ""
+        printf "  $BOLDR SERVICE$N\n"
+        printf "    $W smb on$N                      Start samba\n"
+        printf "    $W smb off$N                     Stop samba\n"
+        printf "    $W smb restart$N                 Restart samba\n"
+        echo ""
+        printf "  $B DATA$N\n"
+        printf "    $W smb data$N                    Export all SMB data to encrypted zip\n"
+        printf "    $W smb data list$N               List all saved exports\n"
+        printf "    $W smb data clean$N              Delete all saved exports\n"
+        echo ""
+        printf "  $C INFO$N\n"
+        printf "    $W smb ip$N                      Show local IP + connection URLs\n"
+        printf "    $W smb password$N                Show SMB password (requires system auth)\n"
+        printf "    $W smb status$N                  Full dashboard\n"
+        printf "    $W smb log$N                     Show samba logs\n"
+        printf "    $W smb help$N                    Show this help\n"
+        echo ""
+        return 0
+    end
+
+    # ════════════════════════════════════════════════════════════
+    # SETUP
+    # ════════════════════════════════════════════════════════════
+
+    if test "$argv[1]" = "setup"
+        echo ""
+        printf "  $C╭──────────────────────────────────────────────────────────╮$N\n"
+        printf "  $C│                    SMB SETUP WIZARD                        │$N\n"
+        printf "  $C╰──────────────────────────────────────────────────────────╯$N\n"
+        echo ""
+
+        # ── Step 1: Install Samba ──
+        printf "  $BOLD Step 1/9$N   Installing Samba...\n"
+        if rpm -q samba >/dev/null 2>&1; then
+            printf "  $G✓$N  Samba already installed\n"
+        else
+            printf "  Installing samba samba-client...\n"
+            sudo dnf install samba samba-client -y 2>/dev/null
+            if test $status -eq 0
+                printf "  $G✓$N  Samba installed successfully\n"
+            else
+                printf "  $R✗$N  Failed to install Samba\n"
+                return 1
+            end
+        end
+        echo ""
+
+        # ── Step 2: Detect username ──
+        printf "  $BOLD Step 2/9$N   Detecting username...\n"
+        set -l detected_user (whoami)
+        printf "  Detected username: $W$detected_user$N\n"
+        read -P "  Use this as your SMB username? [Y/n]: " -l confirm
+        if test "$confirm" = "n"; or test "$confirm" = "N"
+            echo ""
+            read -P "  Enter SMB username: " -l smb_user
+            read -P "  Confirm username: $smb_user [Y/n]: " -l confirm2
+            if test "$confirm2" = "n"; or test "$confirm2" = "N"
+                printf "  $R✗$N  Setup cancelled.\n"
+                return 1
+            end
+        else
+            set -l smb_user $detected_user
+        end
+        echo ""
+        printf "  $G✓$N  Using: $W$smb_user$N\n"
+        echo ""
+
+        # ── Step 3: Set password ──
+        printf "  $BOLD Step 3/9$N   Setting SMB password...\n"
+        set -l pass ""
+        set -l pass2 ""
+        while true
+            printf "  Enter SMB password for '$W$smb_user$N':\n"
+            read -s -P "  > " pass
+            echo ""
+            read -s -P "  Confirm password:\n  > " pass2
+            echo ""
+            if test "$pass" = "$pass2" -a -n "$pass"
+                break
+            end
+            printf "  $R✗$N  Passwords don't match. Try again.\n"
+            echo ""
+        end
+        __smb_set_password "$smb_user" "$pass"
+        __smb_save_password "$smb_user" "$pass"
+        printf "  $G✓$N  Password set for '$W$smb_user$N'\n"
+        printf "  $G✓$N  Password saved to $D$PASS_FILE$N\n"
+        echo ""
+        printf "  $Y⚠$N  WARNING: Do NOT share this password with anyone.\n"
+        printf "     Giving your SMB password to others gives them full access\n"
+        printf "     to your files. This is a security risk.\n"
+        echo ""
+
+        # ── Step 4: Share scope ──
+        printf "  $BOLD Step 4/9$N   Choosing share scope...\n"
+        echo ""
+        printf "    $W[1]$N Home directory (recommended)\n"
+        printf "        Shares: $D$HOME$N\n"
+        printf "        Safe — only your personal files are visible.\n"
+        echo ""
+        printf "    $W[2]$N Root filesystem ($R NOT recommended$N)\n"
+        printf "        Shares: $D/$N\n"
+        printf "        $Y WARNING — gives full access to every file on your laptop.$N\n"
+        printf "        Anyone on your network can read/write system files.\n"
+        echo ""
+        read -P "  Choose [1/2] (default: 1): " -l scope_choice
+        if test "$scope_choice" = "2"
+            echo ""
+            printf "  $Y⚠$N  WARNING: Root sharing gives FULL access to /etc, /boot, /root,\n"
+            printf "     and every system file. This is a security risk.\n"
+            read -P "  Are you sure? [y/N]: " -l root_confirm
+            if test "$root_confirm" != "y" -a "$root_confirm" != "Y"
+                set scope_choice "1"
+                printf "  $G✓$N  Home directory selected\n"
+            else
+                printf "  $G✓$N  Root filesystem selected\n"
+            end
+        else
+            printf "  $G✓$N  Home directory selected\n"
+        end
+        echo ""
+
+        # ── Confirmation ──
+        set -l scope_type "HOME"
+        set -l scope_path "$HOME"
+        if test "$scope_choice" = "2"
+            set scope_type "ROOT"
+            set scope_path "/"
+        end
+        printf "  $C╭──────────────────────────────────────────────────────────╮$N\n"
+        printf "  $C│  Ready to apply:                                         │$N\n"
+        printf "  $C│    $N Username:  $W$smb_user$N$C                                   │$N\n"
+        printf "  $C│    $N Share:     $W$scope_type ($scope_path)$N$C                          │$N\n"
+        printf "  $C│    $N Firewall:  $W samba service$N$C                             │$N\n"
+        printf "  $C│    $N SELinux:   $W home dirs enabled$N$C                         │$N\n"
+        printf "  $C╰──────────────────────────────────────────────────────────╯$N\n"
+        echo ""
+        read -P "  Apply all changes? [Y/n]: " -l apply
+        if test "$apply" = "n"; or test "$apply" = "N"
+            echo ""
+            printf "  $Y Setup cancelled. No changes were made.$N\n"
+            return 0
+        end
+        echo ""
+
+        # ── Step 5: Configure smb.conf ──
+        printf "  $BOLD Step 5/9$N   Configuring smb.conf...\n"
+        if test "$scope_choice" = "2"
+            # Root share
+            if __smb_share_exists "root_share"
+                printf "  $G✓$N  [root_share] section already exists in smb.conf\n"
+            else
+                printf '\n[root_share]\n    comment = Root Filesystem\n    path = /\n    browseable = yes\n    writable = yes\n    valid users = %s\n' "$smb_user" | sudo tee -a "$SMB_CONF" >/dev/null
+                printf "  $G✓$N  [root_share] section added to smb.conf\n"
+            end
+        else
+            # Home share
+            if grep -q '^\[homes\]' "$SMB_CONF" 2>/dev/null
+                printf "  $G✓$N  [homes] section already exists in smb.conf\n"
+            else
+                printf '\n[homes]\n    comment = Home Directories\n    browseable = yes\n    writable = yes\n    valid users = %%S\n    create mask = 0700\n    directory mask = 0700\n' | sudo tee -a "$SMB_CONF" >/dev/null
+                printf "  $G✓$N  [homes] section added to smb.conf\n"
+            end
+        end
+        echo ""
+
+        # ── Step 6: Start service ──
+        printf "  $BOLD Step 6/9$N   Starting Samba service...\n"
+        sudo systemctl enable smb --now 2>/dev/null
+        printf "  $G✓$N  smb.service enabled and started\n"
+        echo ""
+
+        # ── Step 7: Firewall ──
+        printf "  $BOLD Step 7/9$N   Configuring firewall...\n"
+        if sudo systemctl is-active firewalld >/dev/null 2>&1
+            sudo firewall-cmd --add-service=samba --permanent 2>/dev/null
+            sudo firewall-cmd --reload 2>/dev/null
+            printf "  $G✓$N  samba service added to firewall\n"
+        else
+            printf "  $D firewall not active — skipping$N\n"
+        end
+        echo ""
+
+        # ── Step 8: SELinux ──
+        printf "  $BOLD Step 8/9$N   Setting SELinux permissions...\n"
+        if test "$scope_choice" = "2"
+            sudo setsebool -P samba_enable_home_dirs on 2>/dev/null
+            sudo setsebool -P samba_export_all_rw on 2>/dev/null
+            printf "  $G✓$N  samba_enable_home_dirs + samba_export_all_rw enabled\n"
+        else
+            sudo setsebool -P samba_enable_home_dirs on 2>/dev/null
+            printf "  $G✓$N  samba_enable_home_dirs enabled\n"
+        end
+        echo ""
+
+        # ── Step 9: Final checks ──
+        printf "  $BOLD Step 9/9$N   Final checks...\n"
+        set -l samba_ver ""
+        if type -q smbd
+            set samba_ver (command smbd --version 2>/dev/null | head -1 | awk '{print $2}')
+        end
+        printf "  $G✓$N  Samba version: $W$samba_ver$N\n"
+        if type -q testparm
+            command testparm -s 2>/dev/null | head -1 | read -l tp_out
+        end
+        printf "  $G✓$N  Config test: OK\n"
+        printf "  $G✓$N  Service: $BOLDG active$N\n"
+        echo ""
+
+        # ── Complete ──
+        set -l local_ip (__smb_ip)
+        set -l smb_hostname (hostname)
+        printf "  $C╭──────────────────────────────────────────────────────────╮$N\n"
+        printf "  $C│                  SETUP COMPLETE                           │$N\n"
+        printf "  $C╠══════════════════════════════════════════════════════════╣$N\n"
+        printf "  $C║$N                                                          $C║$N\n"
+        printf "  $C║$N  Service:     $BOLDG active$N                                 $C║$N\n"
+        printf "  $C║$N  IP:          $W$local_ip$N                              $C║$N\n"
+        printf "  $C║$N  Hostname:    $W$smb_hostname$N                                      $C║$N\n"
+        printf "  $C║$N                                                          $C║$N\n"
+        printf "  $C╠══════════════════════════════════════════════════════════╣$N\n"
+        printf "  $C║$N  SMB USERS                                                $C║$N\n"
+        printf "  $C║$N    $W$smb_user$N      ••••••••••••                            $C║$N\n"
+        printf "  $C╠══════════════════════════════════════════════════════════╣$N\n"
+        printf "  $C║$N  SHARED DIRECTORIES                                       $C║$N\n"
+        printf "  $C║$N    Scope:  $W$scope_type$N  ($scope_path$D)                        $C║$N\n"
+        printf "  $C╠══════════════════════════════════════════════════════════╣$N\n"
+        printf "  $C║$N                                                          $C║$N\n"
+        printf "  $C║$N  SAMSUNG / ANDROID:                                       $C║$N\n"
+        printf "  $C║$N    Open My Files > Network > Add network storage          $C║$N\n"
+        printf "  $C║$N    Address:  $B smb://$local_ip/$smb_user$N                         $C║$N\n"
+        printf "  $C║$N                                                          $C║$N\n"
+        printf "  $C║$N  WINDOWS:                                                $C║$N\n"
+        printf "  $C║$N    File Explorer address bar > paste:                     $C║$N\n"
+        printf "  $C║$N    $B \\\\$local_ip\\\\$smb_user$N                                  $C║$N\n"
+        printf "  $C║$N                                                          $C║$N\n"
+        printf "  $C║$N  NAUTILUS (Fedora):                                       $C║$N\n"
+        printf "  $C║$N    Files > Other Locations > Connect to Server            $C║$N\n"
+        printf "  $C║$N    Address:  $B smb://$local_ip/$smb_user$N                         $C║$N\n"
+        printf "  $C║$N                                                          $C║$N\n"
+        printf "  $C║$N  iPHONE / MAC:                                            $C║$N\n"
+        printf "  $C║$N    Finder > Go > Connect to Server                        $C║$N\n"
+        printf "  $C║$N    Address:  $B smb://$local_ip/$smb_user$N                         $C║$N\n"
+        printf "  $C║$N                                                          $C║$N\n"
+        printf "  $C╚══════════════════════════════════════════════════════════╝$N\n"
+        echo ""
+        printf "  Done. Try connecting from your phone now.\n"
+        printf "  Run 'smb password' to reveal your password.\n"
+        echo ""
+        return 0
+    end
+
+    # ════════════════════════════════════════════════════════════
+    # USER
+    # ════════════════════════════════════════════════════════════
+
+    if test "$argv[1]" = "user"
+        set -l subcmd "list"
+        set -l extra ""
+        if test (count $argv) -ge 2
+            set subcmd $argv[2]
+        end
+        if test (count $argv) -ge 3
+            set extra $argv[3]
+        end
+
+        switch $subcmd
+            # ── smb user list ──
+            case list
+                set -l users ()
+                if type -q pdbedit
+                    set users (command pdbedit -L 2>/dev/null)
+                end
+                if test (count $users) -eq 0
+                    printf "  No SMB users found.\n"
+                    printf "  Run 'smb setup' or 'smb user add' to create one.\n"
+                    return 0
+                end
+                echo ""
+                printf "  SMB Users:\n"
+                for u in $users
+                    set -l uname (echo $u | cut -d: -f1)
+                    set -l uid (echo $u | cut -d: -f2)
+                    printf "    $W%-16s$N (uid=$uid)\n" "$uname"
+                end
+                echo ""
+
+            # ── smb user add ──
+            case add
+                set -l newuser ""
+                if test -n "$extra"
+                    set newuser $extra
+                else
+                    read -P "  Enter new SMB username: " -l newuser
+                end
+                if test -z "$newuser"
+                    printf "  $R✗$N  Username cannot be empty.\n"
+                    return 1
+                end
+                read -P "  Confirm username: $newuser [Y/n]: " -l uc
+                if test "$uc" = "n"; or test "$uc" = "N"
+                    printf "  Cancelled.\n"
+                    return 0
+                end
+                if __smb_user_exists "$newuser"
+                    printf "  $R✗$N  User '$W$newuser$N' already exists in Samba\n"
+                    printf "  Run 'smb user password $newuser' to change password.\n"
+                    return 1
+                end
+                echo ""
+                set -l pass ""
+                set -l pass2 ""
+                while true
+                    printf "  Enter password for '$W$newuser$N':\n"
+                    read -s -P "  > " pass
+                    echo ""
+                    read -s -P "  Confirm password:\n  > " pass2
+                    echo ""
+                    if test "$pass" = "$pass2" -a -n "$pass"
+                        break
+                    end
+                    printf "  $R✗$N  Passwords don't match. Try again.\n"
+                    echo ""
+                end
+                __smb_set_password "$newuser" "$pass"
+                __smb_save_password "$newuser" "$pass"
+                printf "  $G✓$N  User '$W$newuser$N' created\n"
+                printf "  $G✓$N  Password saved to $D$PASS_FILE$N\n"
+                echo ""
+                printf "  $Y⚠$N  WARNING: Do NOT share this password with anyone.\n"
+                printf "     Giving your SMB password to others gives them full access\n"
+                printf "     to your files. This is a security risk.\n"
+                echo ""
+
+            # ── smb user remove ──
+            case remove
+                if test -z "$extra"
+                    printf "  $R✗$N  Usage: smb user remove <username>\n"
+                    return 1
+                end
+                if not __smb_user_exists "$extra"
+                    printf "  $R✗$N  User '$W$extra$N' not found in Samba\n"
+                    return 1
+                end
+                echo ""
+                printf "  Remove SMB user '$W$extra$N'\n"
+                set -l attempts 0
+                while true
+                    set attempts (math $attempts + 1)
+                    if test $attempts -gt 3
+                        printf "  $R✗$N  3 failed attempts.\n"
+                        echo ""
+                        printf "  Authentication failed — opening system authentication dialog...\n"
+                        if __smb_pkexec
+                            printf "  $G✓$N  System authentication successful\n"
+                            sudo smbpasswd -x "$extra" 2>/dev/null
+                            printf "  $G✓$N  User '$W$extra$N' removed\n"
+                            # Remove from password file
+                            if test -f "$PASS_FILE"
+                                grep -v "^$extra:" "$PASS_FILE" > "$PASS_FILE.tmp" 2>/dev/null
+                                mv "$PASS_FILE.tmp" "$PASS_FILE" 2>/dev/null
+                            end
+                            return 0
+                        else
+                            printf "  $R✗$N  System authentication failed.\n"
+                            printf "  User '$extra' was NOT removed. Try again later.\n"
+                            return 1
+                        end
+                    end
+                    read -s -P "  Enter SMB password for '$extra' to confirm:\n  > " -l try_pass
+                    echo ""
+                    echo "$try_pass" | smbclient -L localhost -U "$extra%$try_pass" >/dev/null 2>&1
+                    if test $status -eq 0
+                        sudo smbpasswd -x "$extra" 2>/dev/null
+                        printf "  $G✓$N  User '$W$extra$N' removed\n"
+                        printf "  $G✓$N  Password removed from $D$PASS_FILE$N\n"
+                        echo ""
+                        printf "  $Y⚠$N  Note: The user can no longer access your files via SMB.\n"
+                        printf "     Make sure this was intentional.\n"
+                        # Remove from password file
+                        if test -f "$PASS_FILE"
+                            grep -v "^$extra:" "$PASS_FILE" > "$PASS_FILE.tmp" 2>/dev/null
+                            mv "$PASS_FILE.tmp" "$PASS_FILE" 2>/dev/null
+                        end
+                        return 0
+                    end
+                    set -l left (math 3 - $attempts)
+                    printf "  $R✗$N  Wrong password. $left attempt(s) left.\n"
+                    echo ""
+                end
+
+            # ── smb user password ──
+            case password
+                if test -z "$extra"
+                    # No username — list users
+                    set -l users ()
+                    if type -q pdbedit
+                        set users (command pdbedit -L 2>/dev/null)
+                    end
+                    if test (count $users) -eq 0
+                        printf "  No SMB users found.\n"
+                        printf "  Run 'smb setup' or 'smb user add' to create one.\n"
+                        return 0
+                    end
+                    echo ""
+                    printf "  SMB Users:\n"
+                    for u in $users
+                        set -l uname (echo $u | cut -d: -f1)
+                        set -l uid (echo $u | cut -d: -f2)
+                        printf "    $W%-16s$N (uid=$uid)\n" "$uname"
+                    end
+                    echo ""
+                    printf "  Usage: smb user password <username>\n"
+                    printf "  Example: smb user password eprahemi\n"
+                    echo ""
+                    return 0
+                end
+                if not __smb_user_exists "$extra"
+                    printf "  $R✗$N  User '$W$extra$N' not found in Samba\n"
+                    printf "  Run 'smb user list' to see available users.\n"
+                    return 1
+                end
+                read -P "  Change SMB password for '$W$extra$N'? [Y/n]: " -l confirm
+                if test "$confirm" = "n"; or test "$confirm" = "N"
+                    echo ""
+                    printf "  Cancelled. Password not changed.\n"
+                    return 0
+                end
+                echo ""
+                set -l pass ""
+                set -l pass2 ""
+                while true
+                    printf "  Enter new password for '$W$extra$N':\n"
+                    read -s -P "  > " pass
+                    echo ""
+                    read -s -P "  Confirm password:\n  > " pass2
+                    echo ""
+                    if test "$pass" = "$pass2" -a -n "$pass"
+                        break
+                    end
+                    printf "  $R✗$N  Passwords don't match. Try again.\n"
+                    echo ""
+                end
+                __smb_set_password "$extra" "$pass"
+                __smb_save_password "$extra" "$pass"
+                printf "  $G✓$N  Password changed for '$W$extra$N'\n"
+                printf "  $G✓$N  Password updated in $D$PASS_FILE$N\n"
+                echo ""
+                printf "  $Y⚠$N  WARNING: Do NOT share this password with anyone.\n"
+                printf "     Giving your SMB password to others gives them full access\n"
+                printf "     to your files. This is a security risk.\n"
+                echo ""
+
+            case '*'
+                printf "  $R✗$N  Unknown user command: '$subcmd'\n"
+                printf "  Usage: smb user [list|add|remove|password]\n"
+                return 1
+        end
+        return 0
+    end
+
+    # ════════════════════════════════════════════════════════════
+    # SHARE
+    # ════════════════════════════════════════════════════════════
+
+    if test "$argv[1]" = "share"
+        set -l subcmd ""
+        set -l dir ""
+        set -l name ""
+        if test (count $argv) -ge 2
+            set subcmd $argv[2]
+        end
+        if test (count $argv) -ge 3
+            set dir $argv[3]
+        end
+        if test (count $argv) -ge 4
+            set name $argv[4]
+        end
+
+        # ── smb share list ──
+        if test "$subcmd" = "list"
+            echo ""
+            printf "  Shared directories:\n"
+            # Home share
+            set -l scope (__smb_get_scope)
+            if test "$scope" = "home"
+                printf "    $W%-16s$N $D%-30s$N (home — default)\n" "(homes)" "$HOME"
+            else if test "$scope" = "root"
+                printf "    $Y%-16s$N $D%-30s$N (root — NOT recommended)\n" "(root_share)" "/"
+            end
+            # Custom shares — parse from smb.conf
+            if test -f "$SMB_CONF"
+                set -l in_share 0
+                while read -l line
+                    if string match -qr '^\[(\w+)\]' "$line"
+                        set -l sec (string match -r '^\[(\w+)\]' "$line" | tail -1)
+                        if test "$sec" != "global" -a "$sec" != "homes" -a "$sec" != "root_share" -a "$sec" != "printers" -a "$sec" != "print\$" -a "$sec" != "printers" -a "$sec" != "print\$"
+                            set in_share 1
+                            set -l share_name $sec
+                            set -l share_path ""
+                        end
+                    else if test $in_share -eq 1
+                        if string match -qr 'path\s*=' "$line"
+                            set share_path (string replace -r '.*path\s*=\s*' '' "$line" | string trim)
+                        end
+                        if test -z "$line"; or string match -qr '^\[' "$line"
+                            if test $in_share -eq 1 -a -n "$share_path"
+                                printf "    $W%-16s$N $D%-30s$N (custom)\n" "$share_name" "$share_path"
+                            end
+                            set in_share 0
+                        end
+                    end
+                end < "$SMB_CONF"
+                # Handle last section
+                if test $in_share -eq 1 -a -n "$share_path"
+                    printf "    $W%-16s$N $D%-30s$N (custom)\n" "$share_name" "$share_path"
+                end
+            end
+            echo ""
+
+        # ── smb share (no args) or smb share <dir> [name] ──
+        else if test -z "$subcmd"; or string match -qr '^/' "$subcmd"
+            # Determine dir and name from args
+            if test -n "$subcmd"
+                set dir $subcmd
+                if test -n "$argv[3]"
+                    set name $argv[3]
+                end
+            end
+            if test -z "$dir"
+                read -P "  Enter directory path to share: " -l dir
+            end
+            if not test -d "$dir"
+                printf "  $R✗$N  Directory not found: $W$dir$N\n"
+                printf "  Check the path and try again.\n"
+                return 1
+            end
+            printf "  $G✓$N  Directory exists: $W$dir$N\n"
+            echo ""
+            if test -z "$name"
+                set -l default_name (basename "$dir")
+                read -P "  Enter share name (or press Enter for '$W$default_name$N'): " -l name
+                if test -z "$name"
+                    set name $default_name
+                end
+            end
+            if __smb_share_exists "$name"
+                printf "  $R✗$N  Share '$W$name$N' already exists.\n"
+                printf "  Run 'smb share list' to see current shares.\n"
+                return 1
+            end
+            echo ""
+            read -P "  Share '$W$dir$N' as '$W$name$N'? [Y/n]: " -l confirm
+            if test "$confirm" = "n"; or test "$confirm" = "N"
+                printf "  Cancelled.\n"
+                return 0
+            end
+            # Add share to smb.conf
+            printf '\n[%s]\n    comment = %s\n    path = %s\n    browseable = yes\n    writable = yes\n    valid users = %s\n' "$name" "$name" "$dir" (whoami) | sudo tee -a "$SMB_CONF" >/dev/null
+            printf "  $G✓$N  Share '$W$name$N' added → $D$dir$N\n"
+            sudo systemctl restart smb 2>/dev/null
+            printf "  $G✓$N  Samba service restarted\n"
+            echo ""
+
+        # ── smb unshare ──
+        else if test "$subcmd" = "unshare"
+            set -l target $dir
+            if test -z "$target"
+                # Show list of custom shares
+                set -l shares ()
+                if test -f "$SMB_CONF"
+                    while read -l line
+                        if string match -qr '^\[(\w+)\]' "$line"
+                            set -l sec (string match -r '^\[(\w+)\]' "$line" | tail -1)
+                            if test "$sec" != "global" -a "$sec" != "homes" -a "$sec" != "printers" -a "$sec" != "print\$"
+                                set -a shares $sec
+                            end
+                        end
+                    end < "$SMB_CONF"
+                end
+                if test (count $shares) -eq 0
+                    printf "  No custom shares to remove.\n"
+                    printf "  Home directory share cannot be removed via unshare.\n"
+                    return 0
+                end
+                echo ""
+                printf "  Shared directories:\n"
+                set -l idx 1
+                for s in $shares
+                    printf "    $W%d)$N  %s\n" $idx $s
+                    set idx (math $idx + 1)
+                end
+                echo ""
+                read -P "  Enter number or share name to remove: " -l choice
+                # Check if numeric
+                if string match -qr '^\d+$' "$choice"
+                    set -l num (math "$choice")
+                    if test $num -ge 1 -a $num -le (count $shares)
+                        set target $shares[$num]
+                    else
+                        printf "  $R✗$N  Invalid number.\n"
+                        return 1
+                    end
+                else
+                    set target $choice
+                end
+            end
+            if not __smb_share_exists "$target"
+                printf "  $R✗$N  Share '$W$target$N' not found.\n"
+                printf "  Run 'smb share list' to see current shares.\n"
+                return 1
+            end
+            read -P "  Remove share '$W$target$N'? [Y/n]: " -l confirm
+            if test "$confirm" = "n"; or test "$confirm" = "N"
+                printf "  Cancelled.\n"
+                return 0
+            end
+            # Remove share section from smb.conf
+            # Remove share section from smb.conf using awk
+            sudo awk -v sec="[$target]" '
+                BEGIN { skip=0 }
+                /^\[/ { if ($0 == sec) { skip=1; next } else { skip=0 } }
+                skip && /^$/ { skip=0; next }
+                !skip { print }
+            ' "$SMB_CONF" | sudo tee "$SMB_CONF.tmp" >/dev/null
+            sudo mv "$SMB_CONF.tmp" "$SMB_CONF"
+            sudo systemctl restart smb 2>/dev/null
+            printf "  $G✓$N  Share '$W$target$N' removed\n"
+            printf "  $G✓$N  Samba service restarted\n"
+            echo ""
+
+        else
+            printf "  $R✗$N  Unknown share command: '$subcmd'\n"
+            printf "  Usage: smb share (list|unshare|<dir> <name>)\n"
+            return 1
+        end
+        return 0
+    end
+
+    # ════════════════════════════════════════════════════════════
+    # SERVICE: on / off / restart
+    # ════════════════════════════════════════════════════════════
+
+    if test "$argv[1]" = "on"
+        if systemctl is-active smb >/dev/null 2>&1
+            printf "  $G✓$N  Samba service is already running\n"
+            printf "  $G✓$N  Status: $BOLDG active$N\n"
+        else
+            printf "  Starting Samba service...\n"
+            sudo systemctl start smb 2>/dev/null
+            printf "  $G✓$N  smb.service started\n"
+            printf "  $G✓$N  Status: $BOLDG active$N\n"
+        end
+        return 0
+    end
+
+    if test "$argv[1]" = "off"
+        if not systemctl is-active smb >/dev/null 2>&1
+            printf "  $G✓$N  Samba service is already stopped\n"
+            return 0
+        end
+        read -P "  Stop Samba service? [Y/n]: " -l confirm
+        if test "$confirm" = "n"; or test "$confirm" = "N"
+            printf "  Cancelled.\n"
+            return 0
+        end
+        sudo systemctl stop smb 2>/dev/null
+        printf "  $G✓$N  smb.service stopped\n"
+        printf "  $G✓$N  Status: $BOLDR inactive$N\n"
+        return 0
+    end
+
+    if test "$argv[1]" = "restart"
+        read -P "  Restart Samba service? Active connections will be disconnected. [Y/n]: " -l confirm
+        if test "$confirm" = "n"; or test "$confirm" = "N"
+            echo ""
+            printf "  Cancelled. Service not restarted.\n"
+            return 0
+        end
+        echo ""
+        printf "  Restarting Samba service...\n"
+        sudo systemctl restart smb 2>/dev/null
+        printf "  $G✓$N  smb.service restarted\n"
+        printf "  $G✓$N  Status: $BOLDG active$N\n"
+        return 0
+    end
+
+    # ════════════════════════════════════════════════════════════
+    # IP
+    # ════════════════════════════════════════════════════════════
+
+    if test "$argv[1]" = "ip"
+        set -l local_ip (__smb_ip)
+        set -l smb_user (whoami)
+        set -l smb_hostname (hostname)
+        echo ""
+        printf "  Local IP:    $B$local_ip$N\n"
+        printf "  Username:    $W$smb_user$N\n"
+        printf "  Hostname:    $W$smb_hostname$N\n"
+        echo ""
+        printf "  Phone:    $B smb://$local_ip/$smb_user$N\n"
+        printf "  Windows:  $B \\\\$local_ip\\\\$smb_user$N\n"
+        printf "  Nautilus: $B smb://$local_ip/$smb_user$N\n"
+        printf "  Mac:      $B smb://$local_ip/$smb_user$N\n"
+        echo ""
+        return 0
+    end
+
+    # ════════════════════════════════════════════════════════════
+    # PASSWORD
+    # ════════════════════════════════════════════════════════════
+
+    if test "$argv[1]" = "password"
+        printf "  $D Authenticating...$N\n"
+        if not __smb_pkexec
+            printf "  $R✗$N  System authentication failed.\n"
+            printf "  Try again with 'smb password'.\n"
+            return 1
+        end
+        printf "  $G✓$N  Authentication successful\n"
+        echo ""
+        if not test -f "$PASS_FILE"
+            printf "  No SMB users found.\n"
+            printf "  Run 'smb setup' or 'smb user add' to create one.\n"
+            return 0
+        end
+        set -l entries (cat "$PASS_FILE" 2>/dev/null | grep -v '^#' | grep -v '^\s*$')
+        if test (count $entries) -eq 0
+            printf "  No SMB users found.\n"
+            printf "  Run 'smb setup' or 'smb user add' to create one.\n"
+            return 0
+        end
+        if test (count $entries) -eq 1
+            set -l parts (string split ':' -- $entries[1])
+            printf "  SMB User: $W$parts[1]$N\n"
+            printf "  Password: $W$parts[2]$N\n"
+            echo ""
+            printf "  To change your password:\n"
+            printf "    smb user password $parts[1]\n"
+            echo ""
+            printf "  To see all commands:\n"
+            printf "    smb help\n"
+        else
+            printf "  SMB Users and Passwords:\n"
+            for entry in $entries
+                set -l parts (string split ':' -- $entry)
+                printf "    $W%-16s$N %s\n" "$parts[1]" "$parts[2]"
+            end
+        end
+        echo ""
+        printf "  $Y⚠$N  WARNING: Do NOT share these passwords with anyone.\n"
+        printf "     Giving your SMB password to others gives them full access\n"
+        printf "     to your files. This is a security risk.\n"
+        echo ""
+        printf "  To change a password:\n"
+        printf "    smb user password <username>\n"
+        echo ""
+        printf "  To add a new user:\n"
+        printf "    smb user add\n"
+        echo ""
+        printf "  To see all commands:\n"
+        printf "    smb help\n"
+        echo ""
+        return 0
+    end
+
+    # ════════════════════════════════════════════════════════════
+    # STATUS
+    # ════════════════════════════════════════════════════════════
+
+    if test "$argv[1]" = "status"
+        set -l show_pass 0
+        if test (count $argv) -ge 2
+            if test "$argv[2]" = "--show"
+                set show_pass 1
+            end
+        end
+
+        # ── Auth for --show ──
+        if test $show_pass -eq 1
+            printf "  $D Authenticating...$N\n"
+            if not __smb_pkexec
+                printf "  $R✗$N  System authentication failed.\n"
+                printf "  Password hidden. Run 'smb status --show' again with correct password.\n"
+                return 1
+            end
+            printf "  $G✓$N  Authentication successful\n"
+            echo ""
+        end
+
+        # ── Gather info ──
+        set -l local_ip (__smb_ip)
+        set -l smb_hostname (hostname)
+        set -l smb_ver ""
+        if type -q smbd
+            set smb_ver (command smbd --version 2>/dev/null | head -1 | awk '{print $2}')
+        end
+        set -l svc_active "active"
+        if not systemctl is-active smb >/dev/null 2>&1
+            set svc_active "INACTIVE"
+        end
+        set -l fw_status "inactive"
+        if sudo systemctl is-active firewalld >/dev/null 2>&1
+            if sudo firewall-cmd --query-service=samba >/dev/null 2>&1
+                set fw_status "active (samba allowed)"
+            else
+                set fw_status "active (samba NOT allowed)"
+            end
+        end
+        set -l selinux_status "Disabled"
+        if command -q getenforce
+            set selinux_status (getenforce 2>/dev/null)
+        end
+        set -l home_dirs "disabled"
+        if getsebool samba_enable_home_dirs 2>/dev/null | grep -q 'on$'
+            set home_dirs "enabled"
+        end
+
+        # ── Render ──
+        echo ""
+        printf "  $C╔══════════════════════════════════════════════════════════╗$N\n"
+        printf "  $C║$N                    $BOLDG SMB STATUS$N                            $C║$N\n"
+        printf "  $C╠══════════════════════════════════════════════════════════╣$N\n"
+        printf "  $C║$N                                                          $C║$N\n"
+        if test "$svc_active" = "active"
+            printf "  $C║$N  Service:     $BOLDG active$N                                 $C║$N\n"
+        else
+            printf "  $C║$N  Service:     $BOLDR INACTIVE$N                                $C║$N\n"
+        end
+        printf "  $C║$N  IP:          $W$local_ip$N                              $C║$N\n"
+        printf "  $C║$N  Hostname:    $W$smb_hostname$N                                      $C║$N\n"
+        printf "  $C║$N  Samba:       $W$smb_ver$N                                      $C║$N\n"
+        printf "  $C║$N  Firewall:    $W$fw_status$N$C   ║$N\n"
+        printf "  $C║$N  SELinux:     $W$selinux_status$N ($home_dirs)               $C║$N\n"
+        printf "  $C║$N                                                          $C║$N\n"
+
+        # ── Users ──
+        printf "  $C╠══════════════════════════════════════════════════════════╣$N\n"
+        printf "  $C║$N  $BOLDG SMB USERS$N                                                $C║$N\n"
+        set -l users ()
+        if type -q pdbedit
+            set users (command pdbedit -L 2>/dev/null)
+        end
+        if test (count $users) -gt 0
+            for u in $users
+                set -l uname (echo $u | cut -d: -f1)
+                set -l uid (echo $u | cut -d: -f2)
+                if test $show_pass -eq 1
+                    # Show actual password
+                    set -l pass ""
+                    if test -f "$PASS_FILE"
+                        set pass (grep "^$uname:" "$PASS_FILE" 2>/dev/null | head -1 | cut -d: -f2)
+                    end
+                    printf "  $C║$N    $W%-16s$N $W%-24s$N (uid=$uid)  $C║$N\n" "$uname" "$pass"
+                else
+                    printf "  $C║$N    $W%-16s$N ••••••••••••              (uid=$uid)  $C║$N\n" "$uname"
+                end
+            end
+        else
+            printf "  $C║$N    $D No users found$N                                      $C║$N\n"
+        end
+
+        # ── Share scope ──
+        printf "  $C╠══════════════════════════════════════════════════════════╣$N\n"
+        printf "  $C║$N  $BOLDG SHARE SCOPE$N                                              $C║$N\n"
+        set -l scope (__smb_get_scope)
+        if test "$scope" = "home"
+            printf "  $C║$N    Type:    $W HOME$N  ($HOME)                         $C║$N\n"
+        else if test "$scope" = "root"
+            printf "  $C║$N    Type:    $Y ROOT$N  (/)  ← NOT RECOMMENDED                  $C║$N\n"
+        else
+            printf "  $C║$N    Type:    $D none$N                                           $C║$N\n"
+        end
+        printf "  $C║$N    Status:  $BOLDG active$N                                     $C║$N\n"
+
+        # ── Shared directories ──
+        printf "  $C╠══════════════════════════════════════════════════════════╣$N\n"
+        printf "  $C║$N  $BOLDG SHARED DIRECTORIES$N                                       $C║$N\n"
+        if test "$scope" = "home"
+            printf "  $C║$N    $W$HOME$N                    (home — default)     $C║$N\n"
+        else if test "$scope" = "root"
+            printf "  $C║$N    $Y/$N                                     (root — default)  $C║$N\n"
+        end
+        # Parse custom shares
+        if test -f "$SMB_CONF"
+            set -l in_share 0
+            set -l share_name ""
+            set -l share_path ""
+            while read -l line
+                if string match -qr '^\[(\w+)\]' "$line"
+                    if test $in_share -eq 1 -a -n "$share_path"
+                        printf "  $C║$N    $W%-41s$N (custom)     $C║$N\n" "$share_path"
+                    end
+                    set -l sec (string match -r '^\[(\w+)\]' "$line" | tail -1)
+                    if test "$sec" != "global" -a "$sec" != "homes" -a "$sec" != "root_share" -a "$sec" != "printers" -a "$sec" != "print\$"
+                        set in_share 1
+                        set share_name $sec
+                        set share_path ""
+                    else
+                        set in_share 0
+                    end
+                else if test $in_share -eq 1
+                    if string match -qr 'path\s*=' "$line"
+                        set share_path (string replace -r '.*path\s*=\s*' '' "$line" | string trim)
+                    end
+                    if test -z "$line"; or string match -qr '^\[' "$line"
+                        if test $in_share -eq 1 -a -n "$share_path"
+                            printf "  $C║$N    $W%-41s$N (custom)     $C║$N\n" "$share_path"
+                        end
+                        set in_share 0
+                    end
+                end
+            end < "$SMB_CONF"
+            if test $in_share -eq 1 -a -n "$share_path"
+                printf "  $C║$N    $W%-41s$N (custom)     $C║$N\n" "$share_path"
+            end
+        end
+
+        # ── Connection URLs ──
+        printf "  $C╠══════════════════════════════════════════════════════════╣$N\n"
+        printf "  $C║$N                                                          $C║$N\n"
+        printf "  $C║$N  SAMSUNG / ANDROID:                                       $C║$N\n"
+        printf "  $C║$N    Open My Files > Network > Add network storage          $C║$N\n"
+        printf "  $C║$N    Address:  $B smb://$local_ip/$(whoami)$N                         $C║$N\n"
+        printf "  $C║$N                                                          $C║$N\n"
+        printf "  $C║$N  WINDOWS:                                                $C║$N\n"
+        printf "  $C║$N    File Explorer address bar > paste:                     $C║$N\n"
+        printf "  $C║$N    $B \\\\$local_ip\\\\$(whoami)$N                                  $C║$N\n"
+        printf "  $C║$N                                                          $C║$N\n"
+        printf "  $C║$N  NAUTILUS (Fedora):                                       $C║$N\n"
+        printf "  $C║$N    Files > Other Locations > Connect to Server            $C║$N\n"
+        printf "  $C║$N    Address:  $B smb://$local_ip/$(whoami)$N                         $C║$N\n"
+        printf "  $C║$N                                                          $C║$N\n"
+        printf "  $C║$N  iPHONE / MAC:                                            $C║$N\n"
+        printf "  $C║$N    Finder > Go > Connect to Server                        $C║$N\n"
+        printf "  $C║$N    Address:  $B smb://$local_ip/$(whoami)$N                         $C║$N\n"
+        printf "  $C║$N                                                          $C║$N\n"
+        printf "  $C╚══════════════════════════════════════════════════════════╝$N\n"
+        echo ""
+        if test $show_pass -eq 0
+            printf "  $D Tip: Run 'smb status --show' or 'smb password' to reveal passwords.$N\n"
+        else
+            printf "  $Y⚠$N  WARNING: Do NOT share these passwords with anyone.\n"
+            printf "     Giving your SMB password to others gives them full access\n"
+            printf "     to your files. This is a security risk.\n"
+        end
+        echo ""
+        return 0
+    end
+
+    # ════════════════════════════════════════════════════════════
+    # DATA
+    # ════════════════════════════════════════════════════════════
+
+    if test "$argv[1]" = "data"
+        set -l data_subcmd "export"
+        if test (count $argv) -ge 2
+            set data_subcmd $argv[2]
+        end
+
+        switch $data_subcmd
+            # ── smb data list ──
+            case list
+                echo ""
+                set -l exports (ls "$HOME/Documents/smb-data-"*.zip 2>/dev/null)
+                if test (count $exports) -eq 0
+                    printf "  No saved exports found.\n"
+                    printf "  Run 'smb data' to create your first export.\n"
+                    return 0
+                end
+                printf "  Saved SMB exports:\n"
+                set -l idx 1
+                for f in $exports
+                    set -l sz (du -h "$f" 2>/dev/null | awk '{print $1}')
+                    set -l dt (stat -c '%y' "$f" 2>/dev/null | cut -d. -f1)
+                    printf "    $W%d)$N  %-42s  ($sz)    %s\n" $idx (basename "$f") "$dt"
+                    set idx (math $idx + 1)
+                end
+                echo ""
+                printf "  $D Location: ~/Documents/$N\n"
+                echo ""
+
+            # ── smb data clean ──
+            case clean
+                set -l exports (ls "$HOME/Documents/smb-data-"*.zip 2>/dev/null)
+                if test (count $exports) -eq 0
+                    printf "  No saved exports to delete.\n"
+                    return 0
+                end
+                read -P "  Delete all SMB exports? [Y/n]: " -l confirm
+                if test "$confirm" = "n"; or test "$confirm" = "N"
+                    echo ""
+                    printf "  Cancelled. Exports not deleted.\n"
+                    return 0
+                end
+                echo ""
+                printf "  Found %d exports:\n" (count $exports)
+                for f in $exports
+                    printf "    %s\n" (basename "$f")
+                end
+                echo ""
+                read -P "  Delete all? [Y/n]: " -l confirm2
+                if test "$confirm2" = "n"; or test "$confirm2" = "N"
+                    printf "  Cancelled.\n"
+                    return 0
+                end
+                rm -f "$HOME/Documents/smb-data-"*.zip
+                printf "  $G✓$N  Deleted %d exports\n" (count $exports)
+                printf "  $G✓$N  $D~/Documents/$N cleaned\n"
+                echo ""
+
+            # ── smb data (export) ──
+            case '*'
+                printf "  $D Authenticating...$N\n"
+                if not __smb_pkexec
+                    printf "  $R✗$N  System authentication failed.\n"
+                    printf "  Try again with 'smb data'.\n"
+                    return 1
+                end
+                printf "  $G✓$N  Authentication successful\n"
+                echo ""
+
+                printf "  Generating SMB data export...\n"
+
+                # Create temp directory
+                set -l tmpdir (mktemp -d)
+
+                # Gather info
+                set -l local_ip (__smb_ip)
+                set -l smb_user (whoami)
+                set -l smb_hostname (hostname)
+                set -l smb_ver ""
+                if type -q smbd
+                    set smb_ver (command smbd --version 2>/dev/null | head -1 | awk '{print $2}')
+                end
+                set -l now (date '+%Y-%m-%d %H:%M:%S')
+                set -l scope (__smb_get_scope)
+
+                # Create report
+                set -l report "$tmpdir/smb-data.txt"
+                printf "╔══════════════════════════════════════════════════════════════╗\n" > "$report"
+                printf "║              SMB DATA EXPORT — Fedora MacTahoe               ║\n" >> "$report"
+                printf "║              Generated: %-37s ║\n" "$now" >> "$report"
+                printf "╚══════════════════════════════════════════════════════════════╝\n\n" >> "$report"
+
+                printf "┌──────────────────────────────────────────────────────────────┐\n" >> "$report"
+                printf "│  SYSTEM INFO                                                 │\n" >> "$report"
+                printf "├──────────────────────────────────────────────────────────────┤\n" >> "$report"
+                printf "│  IP:          %-47s │\n" "$local_ip" >> "$report"
+                printf "│  Username:    %-47s │\n" "$smb_user" >> "$report"
+                printf "│  Hostname:    %-47s │\n" "$smb_hostname" >> "$report"
+                printf "│  Samba:       %-47s │\n" "$smb_ver" >> "$report"
+                printf "└──────────────────────────────────────────────────────────────┘\n\n" >> "$report"
+
+                printf "┌──────────────────────────────────────────────────────────────┐\n" >> "$report"
+                printf "│  SMB USERS                                                   │\n" >> "$report"
+                printf "├──────────────────────────────────────────────────────────────┤\n" >> "$report"
+                if test -f "$PASS_FILE"
+                    while read -l line
+                        set -l parts (string split ':' -- $line)
+                        if test (count $parts) -ge 2
+                            printf "│  %-16s %-30s │\n" "$parts[1]" "$parts[2]" >> "$report"
+                        end
+                    end < "$PASS_FILE"
+                end
+                printf "└──────────────────────────────────────────────────────────────┘\n\n" >> "$report"
+
+                printf "┌──────────────────────────────────────────────────────────────┐\n" >> "$report"
+                printf "│  SHARES                                                      │\n" >> "$report"
+                printf "├──────────────────────────────────────────────────────────────┤\n" >> "$report"
+                if test "$scope" = "home"
+                    printf "│  Scope:        HOME (%-38s │\n" "$HOME)" >> "$report"
+                else if test "$scope" = "root"
+                    printf "│  Scope:        ROOT (/)                                       │\n" >> "$report"
+                end
+                if test -f "$SMB_CONF"
+                    set -l in_share 0
+                    while read -l line
+                        if string match -qr '^\[(\w+)\]' "$line"
+                            if test $in_share -eq 1 -a -n "$share_path"
+                                printf "│  [%-12s] %-44s │\n" "$share_name" "$share_path" >> "$report"
+                            end
+                            set -l sec (string match -r '^\[(\w+)\]' "$line" | tail -1)
+                            if test "$sec" != "global"
+                                set in_share 1
+                                set share_name $sec
+                                set share_path ""
+                            else
+                                set in_share 0
+                            end
+                        else if test $in_share -eq 1
+                            if string match -qr 'path\s*=' "$line"
+                                set share_path (string replace -r '.*path\s*=\s*' '' "$line" | string trim)
+                            end
+                            if test -z "$line"; or string match -qr '^\[' "$line"
+                                if test $in_share -eq 1 -a -n "$share_path"
+                                    printf "│  [%-12s] %-44s │\n" "$share_name" "$share_path" >> "$report"
+                                end
+                                set in_share 0
+                            end
+                        end
+                    end < "$SMB_CONF"
+                    if test $in_share -eq 1 -a -n "$share_path"
+                        printf "│  [%-12s] %-44s │\n" "$share_name" "$share_path" >> "$report"
+                    end
+                end
+                printf "└──────────────────────────────────────────────────────────────┘\n\n" >> "$report"
+
+                printf "┌──────────────────────────────────────────────────────────────┐\n" >> "$report"
+                printf "│  CONNECTION URLS                                              │\n" >> "$report"
+                printf "├──────────────────────────────────────────────────────────────┤\n" >> "$report"
+                printf "│  Samsung:      smb://%-38s │\n" "$local_ip/$smb_user" >> "$report"
+                printf "│  Windows:      \\\\%-38s│\n" "$local_ip\\$smb_user" >> "$report"
+                printf "│  Nautilus:     smb://%-38s │\n" "$local_ip/$smb_user" >> "$report"
+                printf "│  Mac:          smb://%-38s │\n" "$local_ip/$smb_user" >> "$report"
+                printf "└──────────────────────────────────────────────────────────────┘\n\n" >> "$report"
+
+                printf "┌──────────────────────────────────────────────────────────────┐\n" >> "$report"
+                printf "│  SMB.CONF                                                    │\n" >> "$report"
+                printf "├──────────────────────────────────────────────────────────────┤\n" >> "$report"
+                if test -f "$SMB_CONF"
+                    while read -l line
+                        printf "│  %-60s │\n" "$line" >> "$report"
+                    end < "$SMB_CONF"
+                end
+                printf "└──────────────────────────────────────────────────────────────┘\n\n" >> "$report"
+
+                printf "╔══════════════════════════════════════════════════════════════╗\n" >> "$report"
+                printf "║  WARNING: This file contains your SMB passwords.            ║\n" >> "$report"
+                printf "║  Do NOT share this file with anyone.                         ║\n" >> "$report"
+                printf "║  Delete it when you no longer need it.                       ║\n" >> "$report"
+                printf "╚══════════════════════════════════════════════════════════════╝\n" >> "$report"
+
+                printf "  $G✓$N  Creating styled report...\n"
+
+                # Generate one-time zip password
+                set -l zip_pass (openssl rand -base64 16 | head -c 20)
+
+                # Create encrypted zip
+                set -l zipname "smb-data-"(date +%Y-%m-%d-%H%M%S)".zip"
+                set -l zippath "$HOME/Documents/$zipname"
+                printf "  $G✓$N  Wrapping in encrypted zip...\n"
+                cd "$tmpdir"
+                zip -P "$zip_pass" "$zippath" smb-data.txt >/dev/null 2>&1
+                cd "$HOME"
+                chmod 600 "$zippath"
+                rm -rf "$tmpdir"
+
+                printf "  $G✓$N  Export saved: $W$zippath$N\n"
+                echo ""
+                printf "  $C┌──────────────────────────────────────────────────────────┐$N\n"
+                printf "  $C│$N                    $BOLDG ZIP PASSWORD$N                           $C│$N\n"
+                printf "  $C├──────────────────────────────────────────────────────────┤$N\n"
+                printf "  $C│$N                                                          $C│$N\n"
+                printf "  $C│$N  Password:  $W$zip_pass$N                            $C│$N\n"
+                printf "  $C│$N                                                          $C│$N\n"
+                printf "  $C│$N  $Y⚠$N  WARNING: If you close this terminal, the password    $C│$N\n"
+                printf "  $C│$N     is gone forever. You will need to generate a new     $C│$N\n"
+                printf "  $C│$N     export with 'smb data' again.                        $C│$N\n"
+                printf "  $C│$N                                                          $C│$N\n"
+                printf "  $C│$N  To extract:                                              $C│$N\n"
+                printf "  $C│$N    $W unzip $zipname$N                             $C│$N\n"
+                printf "  $C│$N    Enter password when prompted                           $C│$N\n"
+                printf "  $C│$N                                                          $C│$N\n"
+                printf "  $C└──────────────────────────────────────────────────────────┘$N\n"
+                echo ""
+                printf "  $Y⚠$N  WARNING: The zip contains your SMB passwords.\n"
+                printf "     Do NOT share this file with anyone.\n"
+                printf "     Delete it when you no longer need it.\n"
+                echo ""
+        end
+        return 0
+    end
+
+    # ════════════════════════════════════════════════════════════
+    # LOG
+    # ════════════════════════════════════════════════════════════
+
+    if test "$argv[1]" = "log"
+        echo ""
+        printf "  $BOLD samba logs (last 20 lines):$N\n"
+        echo ""
+        set -l log_output (journalctl -u smb --no-pager -n 20 2>/dev/null)
+        if test -z "$log_output"
+            printf "  $D No samba logs found.$N\n"
+            printf "  $D Service may have just started.$N\n"
+        else
+            printf "  %s\n" "$log_output"
+        end
+        echo ""
+        return 0
+    end
+
+    # ════════════════════════════════════════════════════════════
+    # UNKNOWN
+    # ════════════════════════════════════════════════════════════
+
+    printf "  $R✗$N  Unknown command: '$W$argv[1]$N'\n"
+    printf "  Run '$Y smb help$N' to see all commands.\n"
+    echo ""
+    return 1
+end

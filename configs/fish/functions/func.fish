@@ -28,7 +28,7 @@ function func --description 'Browse all fish functions'
 
     set -l cat_name[3] "⚙️  System"
     set -l cat_esc[3]  $R
-    set -l cat_func[3] "clean refresh gdm logout reboot shutdown pfp kit update kernels"
+    set -l cat_func[3] "clean refresh gdm logout reboot shutdown pfp kit update kernels smb"
 
     set -l cat_name[4] "📊  Diagnostics"
     set -l cat_esc[4]  $B
@@ -50,7 +50,7 @@ function func --description 'Browse all fish functions'
         switch $f
             case c v n weather;           echo 1
             case cat l p mkgif extract;   echo 2
-            case clean refresh gdm logout reboot shutdown pfp kit update kernels; echo 3
+            case clean refresh gdm logout reboot shutdown pfp kit update kernels smb; echo 3
             case testdrive getdata myip stats calc qr; echo 4
             case matrix hollywood stayawake fish_greeting; echo 5
             case func passgen passwd ghlogin;     echo 6
@@ -106,6 +106,7 @@ function func --description 'Browse all fish functions'
             case ghlogin; echo "ghlogin [start|status]  —  GitHub CLI login + git config"
             case update;  echo "update  —  Fetch and run latest Fedora MacTahoe update"
             case kernels; echo "kernels  —  List and clean old Fedora kernels + GRUB entries"
+            case smb;     echo "smb [setup|status|user|share|...]  —  Samba file sharing manager"
             case '*';     echo "$u"
         end
     end
