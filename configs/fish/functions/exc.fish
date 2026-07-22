@@ -100,7 +100,7 @@ function exc --description 'Auto-chmod and run/open executables'
     # ════════════════════════════════════════════════════════════
 
     if test "$argv[1]" = "list"
-        echo ""
+        printf "\n"
         set -l found 0
         for f in *
             if test -f "$f"; and test -x "$f"
@@ -112,10 +112,10 @@ function exc --description 'Auto-chmod and run/open executables'
         if test $found -eq 0
             printf "  $D No executable files in current directory.$N\n"
         else
-            echo ""
+            printf "\n"
             printf "  $D%d executable(s) found.$N\n" "$found"
         end
-        echo ""
+        printf "\n"
         return 0
     end
 
@@ -124,7 +124,7 @@ function exc --description 'Auto-chmod and run/open executables'
     # ════════════════════════════════════════════════════════════
 
     if test "$argv[1]" = "recent"
-        echo ""
+        printf "\n"
         set -l dl_dir "$HOME/Downloads"
         if not test -d "$dl_dir"
             printf "  $R✗$N  Downloads directory not found.\n"
@@ -134,11 +134,11 @@ function exc --description 'Auto-chmod and run/open executables'
         set -l files (find "$dl_dir" -maxdepth 1 -type f -mtime -7 2>/dev/null | sort -t/ -k5 | tail -20)
         if test (count $files) -eq 0
             printf "  $D No recent downloads (last 7 days).$N\n"
-            echo ""
+            printf "\n"
             return 0
         end
         printf "  $BOLDG RECENT DOWNLOADS$N (last 7 days)\n"
-        echo ""
+        printf "\n"
         set -l idx 1
         for f in $files
             set -l name (basename "$f")
@@ -153,9 +153,9 @@ function exc --description 'Auto-chmod and run/open executables'
             printf "  %s  $W%-3s$N  %-35s  $D%-8s$N  %s\n" "$mark" "$idx" "$name" "$sz" "$dt"
             set idx (math $idx + 1)
         end
-        echo ""
+        printf "\n"
         printf "  $D✓ = executable  Run 'exc <file>' to make executable and run$N\n"
-        echo ""
+        printf "\n"
         return 0
     end
 
@@ -170,9 +170,9 @@ function exc --description 'Auto-chmod and run/open executables'
             return 1
         end
         set -l query "$argv[2]"
-        echo ""
+        printf "\n"
         printf "  $BOLDG SEARCHING$N for '$W$query$N'...\n"
-        echo ""
+        printf "\n"
 
         set -l results
 
@@ -208,7 +208,7 @@ function exc --description 'Auto-chmod and run/open executables'
 
         if test $found -eq 0
             printf "  $D No executables found matching '$query'.$N\n"
-            echo ""
+            printf "\n"
             return 0
         end
 
@@ -227,19 +227,18 @@ function exc --description 'Auto-chmod and run/open executables'
             set idx (math $idx + 1)
         end
 
-        echo ""
+        printf "\n"
         printf "  $D%d result(s) found.$N\n" "$found"
 
         # If only 1 result, auto-select it
         if test $found -eq 1
             set -l file $results[1]
             set -l name (basename "$file")
-            echo ""
-            printf "  Run '$W$name$N'? [Y/n]: "
-            read -l confirm -P ""
+            printf "\n"
+            read -l confirm -P "  Run '$name'? [Y/n]: "
             if test "$confirm" = "n"; or test "$confirm" = "N"
                 printf "  $D Cancelled.$N\n"
-                echo ""
+                printf "\n"
                 return 0
             end
             # chmod if needed and run
@@ -248,33 +247,32 @@ function exc --description 'Auto-chmod and run/open executables'
                 chmod +x "$file"
             end
             printf "  $G✓$N  Running: %s\n" "$name"
-            echo ""
+            printf "\n"
             command $file
             return $status
         end
 
         # Multiple results — ask which one to run
-        echo ""
-        printf "  $BOLDY Pick a number to run (or Enter to skip):$N "
-        read -l choice -P ""
+        printf "\n"
+        read -l choice -P "  Pick a number to run (or Enter to skip): "
 
         # Empty = skip
         if test -z "$choice"
             printf "  $D Skipped.$N\n"
-            echo ""
+            printf "\n"
             return 0
         end
 
         # Validate number
         if not string match -qr '^[0-9]+$' "$choice"
             printf "  $R✗$N  Invalid input: %s\n" "$choice"
-            echo ""
+            printf "\n"
             return 1
         end
 
         if test "$choice" -lt 1; or test "$choice" -gt $found
             printf "  $R✗$N  Number out of range (1-%d)\n" "$found"
-            echo ""
+            printf "\n"
             return 1
         end
 
@@ -287,7 +285,7 @@ function exc --description 'Auto-chmod and run/open executables'
             chmod +x "$file"
         end
         printf "  $G✓$N  Running: %s\n" "$name"
-        echo ""
+        printf "\n"
         command $file
         return $status
     end
@@ -314,9 +312,9 @@ function exc --description 'Auto-chmod and run/open executables'
             return 1
         end
 
-        echo ""
+        printf "\n"
         printf "  $BOLDG FILE INFO$N\n"
-        echo ""
+        printf "\n"
 
         # Basic info
         set -l name (basename "$file")
@@ -364,7 +362,7 @@ function exc --description 'Auto-chmod and run/open executables'
             printf "  $W Lines:$N    %s\n" "$lines"
         end
 
-        echo ""
+        printf "\n"
         return 0
     end
 
@@ -390,9 +388,9 @@ function exc --description 'Auto-chmod and run/open executables'
             return 1
         end
 
-        echo ""
+        printf "\n"
         printf "  $BOLDY DRY RUN$N — would do the following:\n"
-        echo ""
+        printf "\n"
 
         if test -x "$file"
             printf "  $G✓$N  Already executable: %s\n" (basename "$file")
@@ -404,7 +402,7 @@ function exc --description 'Auto-chmod and run/open executables'
         if test (count $argv) -gt 2
             printf "  $D   With args: %s$N\n" (string join ' ' $argv[3..-1])
         end
-        echo ""
+        printf "\n"
         return 0
     end
 
@@ -468,15 +466,14 @@ function exc --description 'Auto-chmod and run/open executables'
     end
 
     # File was just made executable — ask for confirmation
-    echo ""
+    printf "\n"
     printf "  $BOLDY RUN FILE$N\n"
     printf "  File:  $W%s$N\n" (basename "$file")
     printf "  Type:  %s\n" "$ftype"
     printf "  Size:  %s\n" (du -h "$file" 2>/dev/null | awk '{print $1}')
-    echo ""
-    printf "  Run this file? [Y/n]: "
-    read -l confirm -P ""
-    echo ""
+    printf "\n"
+    read -l confirm -P "  Run this file? [Y/n]: "
+    printf "\n"
 
     if test "$confirm" = "n"; or test "$confirm" = "N"
         printf "  $D Cancelled.$N\n"
@@ -484,7 +481,7 @@ function exc --description 'Auto-chmod and run/open executables'
     end
 
     printf "  $G✓$N  Running: %s\n" (basename "$file")
-    echo ""
+    printf "\n"
     command $file $rest
     return $status
 end
