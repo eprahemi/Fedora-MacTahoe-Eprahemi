@@ -151,7 +151,7 @@ function smb --description 'Samba file sharing manager'
 
         # ── Step 1: Install Samba ──
         printf "  $BOLD Step 1/9$N   Installing Samba...\n"
-        if rpm -q samba >/dev/null 2>&1; then
+        if rpm -q samba >/dev/null 2>&1
             printf "  $G✓$N  Samba already installed\n"
         else
             printf "  Installing samba samba-client...\n"
@@ -170,6 +170,7 @@ function smb --description 'Samba file sharing manager'
         set -l detected_user (whoami)
         printf "  Detected username: $W$detected_user$N\n"
         read -P "  Use this as your SMB username? [Y/n]: " -l confirm
+        set -l smb_user ""
         if test "$confirm" = "n"; or test "$confirm" = "N"
             echo ""
             read -P "  Enter SMB username: " -l smb_user
@@ -179,7 +180,7 @@ function smb --description 'Samba file sharing manager'
                 return 1
             end
         else
-            set -l smb_user $detected_user
+            set smb_user $detected_user
         end
         echo ""
         printf "  $G✓$N  Using: $W$smb_user$N\n"
@@ -540,7 +541,7 @@ function smb --description 'Samba file sharing manager'
                     printf "  Run 'smb user list' to see available users.\n"
                     return 1
                 end
-                read -P "  Change SMB password for '$W$extra$N'? [Y/n]: " -l confirm
+                read -P "  Change SMB password for '$extra'? [Y/n]: " -l confirm
                 if test "$confirm" = "n"; or test "$confirm" = "N"
                     echo ""
                     printf "  Cancelled. Password not changed.\n"
@@ -614,7 +615,7 @@ function smb --description 'Samba file sharing manager'
                 while read -l line
                     if string match -qr '^\[(\w+)\]' "$line"
                         set -l sec (string match -r '^\[(\w+)\]' "$line" | tail -1)
-                        if test "$sec" != "global" -a "$sec" != "homes" -a "$sec" != "root_share" -a "$sec" != "printers" -a "$sec" != "print\$" -a "$sec" != "printers" -a "$sec" != "print\$"
+                        if test "$sec" != "global" -a "$sec" != "homes" -a "$sec" != "root_share" -a "$sec" != "printers" -a "$sec" != "print\$"
                             set in_share 1
                             set -l share_name $sec
                             set -l share_path ""
@@ -659,7 +660,7 @@ function smb --description 'Samba file sharing manager'
             echo ""
             if test -z "$name"
                 set -l default_name (basename "$dir")
-                read -P "  Enter share name (or press Enter for '$W$default_name$N'): " -l name
+                read -P "  Enter share name (or press Enter for '$default_name'): " -l name
                 if test -z "$name"
                     set name $default_name
                 end
@@ -670,7 +671,7 @@ function smb --description 'Samba file sharing manager'
                 return 1
             end
             echo ""
-            read -P "  Share '$W$dir$N' as '$W$name$N'? [Y/n]: " -l confirm
+            read -P "  Share '$dir' as '$name'? [Y/n]: " -l confirm
             if test "$confirm" = "n"; or test "$confirm" = "N"
                 printf "  Cancelled.\n"
                 return 0
@@ -730,7 +731,7 @@ function smb --description 'Samba file sharing manager'
                 printf "  Run 'smb share list' to see current shares.\n"
                 return 1
             end
-            read -P "  Remove share '$W$target$N'? [Y/n]: " -l confirm
+            read -P "  Remove share '$target'? [Y/n]: " -l confirm
             if test "$confirm" = "n"; or test "$confirm" = "N"
                 printf "  Cancelled.\n"
                 return 0
@@ -928,7 +929,7 @@ function smb --description 'Samba file sharing manager'
             end
         end
         set -l selinux_status "Disabled"
-        if command -q getenforce
+        if type -q getenforce
             set selinux_status (getenforce 2>/dev/null)
         end
         set -l home_dirs "disabled"
@@ -1195,13 +1196,15 @@ function smb --description 'Samba file sharing manager'
                 end
                 if test -f "$SMB_CONF"
                     set -l in_share 0
+                    set -l share_name ""
+                    set -l share_path ""
                     while read -l line
                         if string match -qr '^\[(\w+)\]' "$line"
                             if test $in_share -eq 1 -a -n "$share_path"
                                 printf "│  [%-12s] %-44s │\n" "$share_name" "$share_path" >> "$report"
                             end
                             set -l sec (string match -r '^\[(\w+)\]' "$line" | tail -1)
-                            if test "$sec" != "global"
+                            if test "$sec" != "global" -a "$sec" != "homes" -a "$sec" != "root_share" -a "$sec" != "printers" -a "$sec" != "print\$"
                                 set in_share 1
                                 set share_name $sec
                                 set share_path ""
@@ -1260,9 +1263,7 @@ function smb --description 'Samba file sharing manager'
                 set -l zipname "smb-data-"(date +%Y-%m-%d-%H%M%S)".zip"
                 set -l zippath "$HOME/Documents/$zipname"
                 printf "  $G✓$N  Wrapping in encrypted zip...\n"
-                cd "$tmpdir"
-                zip -P "$zip_pass" "$zippath" smb-data.txt >/dev/null 2>&1
-                cd "$HOME"
+                (cd "$tmpdir"; and zip -P "$zip_pass" "$zippath" smb-data.txt) >/dev/null 2>&1
                 chmod 600 "$zippath"
                 rm -rf "$tmpdir"
 
