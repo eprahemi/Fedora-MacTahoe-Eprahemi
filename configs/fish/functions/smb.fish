@@ -147,7 +147,7 @@ function smb --description 'Samba file sharing manager'
         end
         # Fallback: file
         if test -f "$PASS_FILE"
-            grep "^$user:" "$PASS_FILE" 2>/dev/null | head -1 | cut -d: -f2
+            grep "^$user:" "$PASS_FILE" 2>/dev/null | head -1 | cut -d: -f2-
             return 0
         end
         return 1
@@ -170,41 +170,28 @@ function smb --description 'Samba file sharing manager'
     end
 
     function __smb_ctrl_c
-        if not set -q __smb_ctrl_c
-            return 0
-        end
-        set -g __smb_ctrl_c (math $__smb_ctrl_c + 1)
+        # Intentionally empty — __smb_stop_check handles all logic via $status
     end
 
     function __smb_stop_check
         set -l _st $status
-        # Double Ctrl+C: counter >= 2 means stop
-        if test $__smb_ctrl_c -ge 2
-            set -g __smb_ctrl_c 0
-            trap - SIGINT
-            set -e __smb_ctrl_c
-            printf "\n  Stopped.\n"
-            return 1
-        end
-        # Read returned 130 (SIGINT from Ctrl+C during read)
+        # Ctrl+C: status 130 = SIGINT. Counter tracks "warned" state.
         if test $_st -eq 130
-            if test $__smb_ctrl_c -ge 1
-                # Second press — stop
+            if test $__smb_ctrl_c -eq 1
+                # Already warned → second press → stop
                 set -g __smb_ctrl_c 0
                 trap - SIGINT
                 set -e __smb_ctrl_c
                 printf "\n  Stopped.\n"
                 return 1
             else
-                # First press — warn
+                # First press → warn
                 set -g __smb_ctrl_c 1
                 printf "\n  Press Ctrl+C again to stop.\n"
             end
         else
-            # Not SIGINT — reset counter
-            if test $__smb_ctrl_c -eq 1
-                set -g __smb_ctrl_c 0
-            end
+            # Not SIGINT — reset warn flag
+            set -g __smb_ctrl_c 0
         end
         return 0
     end
@@ -586,7 +573,7 @@ function smb --description 'Samba file sharing manager'
                 echo ""
                 printf "  SMB Users:\n"
                 for u in $users
-                    set -l uname (echo $u | cut -d: -f1)
+                    set -l uname (printf '%s\n' "$u" | cut -d: -f1)
                     set -l uid (echo $u | cut -d: -f2)
                     printf "    $W%-16s$N (uid=$uid)\n" "$uname"
                 end
@@ -637,7 +624,7 @@ function smb --description 'Samba file sharing manager'
                 __smb_set_password "$newuser" "$pass"
                 __smb_save_password "$newuser" "$pass"
                 printf "  $G✓$N  User '$W$newuser$N' created\n"
-        printf "  $G✓$N  Password saved securely.\n"
+                printf "  $G✓$N  Password saved securely.\n"
                 echo ""
                 printf "  $Y⚠$N  WARNING: Do NOT share this password with anyone.\n"
                 printf "     Giving your SMB password to others gives them full access\n"
@@ -779,7 +766,7 @@ function smb --description 'Samba file sharing manager'
                     echo ""
                     printf "  SMB Users:\n"
                     for u in $users
-                        set -l uname (echo $u | cut -d: -f1)
+                        set -l uname (printf '%s\n' "$u" | cut -d: -f1)
                         set -l uid (echo $u | cut -d: -f2)
                         printf "    $W%-16s$N (uid=$uid)\n" "$uname"
                     end
@@ -872,12 +859,12 @@ function smb --description 'Samba file sharing manager'
                 set -l share_name ""
                 set -l share_path ""
                 while read -l line
-                    if string match -qr '^\[(\w+)\]' "$line"
+                    if string match -qr '^\[([^\]]+)\]' "$line"
                         # Output previous section before starting new one
                         if test $in_share -eq 1 -a -n "$share_path"
                             printf "    $W%-16s$N $D%-30s$N (custom)\n" "$share_name" "$share_path"
                         end
-                        set -l sec (string match -r '^\[(\w+)\]' "$line" | tail -1)
+                        set -l sec (string match -r '^\[([^\]]+)\]' "$line" | tail -1)
                         if test "$sec" != "global" -a "$sec" != "homes" -a "$sec" != "root_share" -a "$sec" != "printers" -a "$sec" != "print\$"
                             set in_share 1
                             set share_name $sec
@@ -959,8 +946,8 @@ function smb --description 'Samba file sharing manager'
                 set -l shares ()
                 if test -f "$SMB_CONF"
                     while read -l line
-                        if string match -qr '^\[(\w+)\]' "$line"
-                            set -l sec (string match -r '^\[(\w+)\]' "$line" | tail -1)
+                        if string match -qr '^\[([^\]]+)\]' "$line"
+                            set -l sec (string match -r '^\[([^\]]+)\]' "$line" | tail -1)
                             if test "$sec" != "global" -a "$sec" != "homes" -a "$sec" != "printers" -a "$sec" != "print\$"
                                 set -a shares $sec
                             end
@@ -1231,7 +1218,7 @@ function smb --description 'Samba file sharing manager'
         end
         if test (count $users) -gt 0
             for u in $users
-                set -l uname (echo $u | cut -d: -f1)
+                set -l uname (printf '%s\n' "$u" | cut -d: -f1)
                 set -l uid (echo $u | cut -d: -f2)
                 if test $show_pass -eq 1
                     # Show actual password
@@ -1277,11 +1264,11 @@ function smb --description 'Samba file sharing manager'
             set -l share_name ""
             set -l share_path ""
             while read -l line
-                if string match -qr '^\[(\w+)\]' "$line"
+                if string match -qr '^\[([^\]]+)\]' "$line"
                     if test $in_share -eq 1 -a -n "$share_path"
                         printf "  $C║$N    $W%-41s$N (custom)     $C║$N\n" "$share_path"
                     end
-                    set -l sec (string match -r '^\[(\w+)\]' "$line" | tail -1)
+                    set -l sec (string match -r '^\[([^\]]+)\]' "$line" | tail -1)
                     if test "$sec" != "global" -a "$sec" != "homes" -a "$sec" != "root_share" -a "$sec" != "printers" -a "$sec" != "print\$"
                         set in_share 1
                         set share_name $sec
@@ -1479,11 +1466,11 @@ function smb --description 'Samba file sharing manager'
                     set -l share_name ""
                     set -l share_path ""
                     while read -l line
-                        if string match -qr '^\[(\w+)\]' "$line"
+                        if string match -qr '^\[([^\]]+)\]' "$line"
                             if test $in_share -eq 1 -a -n "$share_path"
                                 printf "│  [%-12s] %-44s │\n" "$share_name" "$share_path" >> "$report"
                             end
-                            set -l sec (string match -r '^\[(\w+)\]' "$line" | tail -1)
+                            set -l sec (string match -r '^\[([^\]]+)\]' "$line" | tail -1)
                             if test "$sec" != "global" -a "$sec" != "homes" -a "$sec" != "root_share" -a "$sec" != "printers" -a "$sec" != "print\$"
                                 set in_share 1
                                 set share_name $sec
@@ -1649,5 +1636,6 @@ function smb --description 'Samba file sharing manager'
     echo ""
     trap - SIGINT
     set -e __smb_ctrl_c
+    set -e CONF_DIR PASS_FILE SMB_CONF __smb_keyring_available
     return 1
 end
