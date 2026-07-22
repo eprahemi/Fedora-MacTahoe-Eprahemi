@@ -81,7 +81,7 @@ function getdata --description 'Data science toolkit: install or list packages'
     else
         echo -e "  \033[1;32m🔒 Virtual env locked in: \033[1;36m$VIRTUAL_ENV\033[0m"
     end
-    echo ""
+    printf "\n"
 
     echo -n "  \033[1;37m⚡ Upgrading pip...\033[0m "
     pip install --upgrade pip 2>/dev/null
@@ -91,7 +91,7 @@ function getdata --description 'Data science toolkit: install or list packages'
     pip install pandas numpy matplotlib seaborn scikit-learn jupyter openpyxl 2>/dev/null
     echo -e "\033[1;32m✅\033[0m"
 
-    echo ""
+    printf "\n"
     echo -e "  \033[1;34m── COMPLETE ──\033[0m"
     echo -e "  \033[1;32m✅ Data science toolkit installed. Ready for data analysis 📊\033[0m"
     echo -e "  \033[1;33m💡 Type \033[1;36mjupyter notebook\033[1;33m to begin\033[0m"

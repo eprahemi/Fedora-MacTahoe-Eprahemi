@@ -184,7 +184,7 @@ function pfp --description 'Manage your GNOME profile picture (avatar) — githu
                 # ── Preview in Kitty if available ──
                 if test -n "$KITTY_PID"
                     kitty +kitten icat --align left "$icon_file" 2>/dev/null
-                    echo ""
+                    printf "\n"
                 end
 
                 # ── Show info box with encrypted path ──
@@ -386,7 +386,7 @@ end
 function __pfp_b36 --description 'Convert Unix timestamp to base36'
     set -l n $argv[1]
     if test -z "$n"; or not string match -qr '^[0-9]+$' "$n"
-        echo ""
+        printf "\n"
         return 1
     end
     python3 -c "
@@ -741,7 +741,7 @@ function __pfp_apply --description 'Internal: apply image as profile picture'
                 echo -e "  $CY║$C  $YE$prompt$C$(printf '%*s' (math "60 - "(string length "$prompt")) '')$CY║$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                 echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
-                echo ""
+                printf "\n"
 
                 set -l chosen 0
                 set -l __cc 0

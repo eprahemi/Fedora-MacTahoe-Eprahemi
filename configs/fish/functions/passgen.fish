@@ -863,7 +863,7 @@ function __passgen_branding --description 'Print eprahemi copyright footer with 
     set -l C  '\033[0m'
 
     echo -e "\n  $D━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$C"
-    echo ""
+    printf "\n"
 
     if command -v figlet &>/dev/null
         set -l fig_lines (figlet -f small "eprahemi" | string split "\n")
@@ -881,7 +881,7 @@ function __passgen_branding --description 'Print eprahemi copyright footer with 
         echo -e "  $YE  ╚══════╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝╚═╝$C"
     end
 
-    echo ""
+    printf "\n"
     echo -e "  $D━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$C"
     echo -e "  \033[38;5;245m  eprahemi  •  github.com/eprahemi$C"
 end
@@ -1113,7 +1113,7 @@ function __passgen_vault_save --description 'Save a password to encrypted vault'
 
     echo -e "\033[1;33mEnter vault master password:\033[0m"
     set -l mp (read -s -P "> ")
-    echo ""
+    printf "\n"
     if test -z "$mp"
         echo -e "\033[1;31m❌ Master password cannot be empty\033[0m"
         return 1
@@ -1163,7 +1163,7 @@ function __passgen_vault_get --description 'Retrieve a password from encrypted v
 
     echo -e "\033[1;33mEnter vault master password:\033[0m"
     set -l mp (read -s -P "> ")
-    echo ""
+    printf "\n"
 
     set -l decrypt (openssl enc -aes-256-cbc -d -base64 -in "$vault" -pass pass:"$mp" 2>/dev/null)
     if test $status -ne 0
@@ -1198,7 +1198,7 @@ function __passgen_vault_list --description 'List saved vault entries'
 
     echo -e "\033[1;33mEnter vault master password:\033[0m"
     set -l mp (read -s -P "> ")
-    echo ""
+    printf "\n"
 
     set -l decrypt (openssl enc -aes-256-cbc -d -base64 -in "$vault" -pass pass:"$mp" 2>/dev/null)
     if test $status -ne 0

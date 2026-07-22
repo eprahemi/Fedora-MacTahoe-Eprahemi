@@ -42,7 +42,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
                 end
             end
 
-            echo ""
+            printf "\n"
             if test -n "$suggestion"
                 # Known command — suggest the correct form
                 echo -e "  $RE┌────────────────────────────────────────────────────────────┐$C"
@@ -76,7 +76,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
 
     # ── Arg check (no args → show all usages in a box) ──
     if not set -q argv[1]
-        echo ""
+        printf "\n"
         echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         set -l n1 "  🖼️  GDM WALLPAPER SWITCHER"
@@ -121,12 +121,12 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         set -l br "  eprahemi  •  github.com/eprahemi"
         echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
         echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
-        echo ""
+        printf "\n"
         return 1
     end
 
     if contains -- "$argv[1]" "-h" "--help"
-        echo ""
+        printf "\n"
         echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         set -l t1 "  🖼️  GDM WALLPAPER SWITCHER"
@@ -257,7 +257,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         set -l br "  eprahemi  •  github.com/eprahemi"
         echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
         echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
-        echo ""
+        printf "\n"
         return 0
     end
 
@@ -310,7 +310,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         end
 
         # ── Show confirm box ──
-        echo ""
+        printf "\n"
         echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         set -l cc1 "  🖼️  CURRENT DESKTOP WALLPAPER"
@@ -325,12 +325,12 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
         echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
-        echo ""
+        printf "\n"
 
         # ── Preview in Kitty ──
         if test -n "$KITTY_PID"
             kitty +kitten icat --align left "$bg_path" 2>/dev/null
-            echo ""
+            printf "\n"
         end
 
         set -l __cc 0
@@ -410,7 +410,7 @@ except: sys.exit(1)
                 end
             end
             if test $dl_ok -eq 0
-                echo ""
+                printf "\n"
                 echo -e "  $RE┌────────────────────────────────────────────────────────────┐$C"
                 echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
                 set -l ni1 "  DEFAULT WALLPAPER — NOT AVAILABLE"
@@ -427,7 +427,7 @@ except: sys.exit(1)
                 echo -e "  $RE│$C       $CY  gdm /path/to/your/image.jpg$C$RE               │$C"
                 echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
                 echo -e "  $RE└────────────────────────────────────────────────────────────┘$C"
-                echo ""
+                printf "\n"
                 return 1
             end
             gdm --yes "$wp_repo"
@@ -441,7 +441,7 @@ except: sys.exit(1)
         set -l repo_dir "$HOME/.local/share/mactahoe-gdm"
         set -l last_file "$repo_dir/.gdm-undo-copy.jpg"
         if not test -f "$last_file"
-            echo ""
+            printf "\n"
             echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
             set -l sv_e1 "  ✘  NO WALLPAPER TO SAVE"
@@ -459,7 +459,7 @@ except: sys.exit(1)
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
             echo -e "  $RE║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
             echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
-            echo ""
+            printf "\n"
             return 1
         end
         # File exists — now check if it's empty (corrupt / 0 bytes)
@@ -468,7 +468,7 @@ except: sys.exit(1)
             if test -z "$zero_size"
                 set zero_size "0"
             end
-            echo ""
+            printf "\n"
             echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
             set -l sv_c1 "  ⚠️  WALLPAPER FILE IS EMPTY"
@@ -486,7 +486,7 @@ except: sys.exit(1)
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
             echo -e "  $RE║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
             echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
-            echo ""
+            printf "\n"
             return 1
         end
 
@@ -555,7 +555,7 @@ print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in rang
         cp "$last_file" "$dest_file"
 
         # Show beautiful save confirmation box
-        echo ""
+        printf "\n"
         echo -e "  $GR╔══════════════════════════════════════════════════════════════╗$C"
         echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
         set -l sv1 "  💾  WALLPAPER SAVED"
@@ -621,7 +621,7 @@ except:
 
         echo -e "  $GR║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$GR║$C"
         echo -e "  $GR╚══════════════════════════════════════════════════════════════╝$C"
-        echo ""
+        printf "\n"
         return 0
     end
 
@@ -707,17 +707,17 @@ except:
 
         # ─── Kitty image preview ───
         if test -n "$KITTY_PID"
-            echo ""
+            printf "\n"
             echo -e "  $CY┌── $WH🖼️  WALLPAPER PREVIEW $D(Kitty)$C$(printf '%*s' 25 '')$CY──┐$C"
             kitty +kitten icat --align left "$last_file" 2>/dev/null
             echo -e "  $CY└$(printf '%*s' 58 '')┘$C"
-            echo ""
+            printf "\n"
         end
 
         # ═══════════════════════════════════════════════════════════════
         # INFO BOX — TWO SECTIONS: FILE DETAILS + IMAGE INFORMATION
         # ═══════════════════════════════════════════════════════════════
-        echo ""
+        printf "\n"
         echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         set -l i_title "  🖼️  LAST APPLIED GDM WALLPAPER"
@@ -840,7 +840,7 @@ except Exception:
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
         echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
-        echo ""
+        printf "\n"
         return 0
     end
 
@@ -864,7 +864,7 @@ except Exception:
                 end
             end
             if test $is_known -eq 0
-                echo ""
+                printf "\n"
                 echo -e "  $RE┌────────────────────────────────────────────────────────────┐$C"
                 echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
                 echo -e "  $RE│$C     $WH✘  Unknown option: $CY$first$C$(printf '%*s' (math "55 - "(string length -- "$first")) '')$RE│$C"
@@ -902,7 +902,7 @@ except Exception:
     if test -n "$ext_match"
         set -l ext_lower (string lower -- "$ext_match[2]" 2>/dev/null)
         if not contains -- "$ext_lower" $img_exts
-            echo ""
+            printf "\n"
             echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
             set -l ie1 "  ✘  UNSUPPORTED FORMAT"
@@ -928,7 +928,7 @@ except Exception:
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
             echo -e "  $RE║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
             echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
-            echo ""
+            printf "\n"
             return 1
         end
     end
@@ -961,7 +961,7 @@ except Exception:
             end
         end
         if test -z "$is_path"; and test $has_img_ext -eq 0; and test (string length -- "$stem") -lt 3
-            echo ""
+            printf "\n"
             echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
             set -l se1 "  ✘  SEARCH TERM TOO SHORT"
@@ -986,7 +986,7 @@ except Exception:
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
             echo -e "  $RE║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
             echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
-            echo ""
+            printf "\n"
             return 1
         end
 
@@ -1110,7 +1110,7 @@ except Exception:
             set image "$results[1]"
             # 🛡️  GUARD: Reject empty/null images before any prompt
             if not test -s "$image"
-                echo ""
+                printf "\n"
                 echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
                 echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
                 set -l ee1 "  ✘  EMPTY OR NULL IMAGE"
@@ -1128,7 +1128,7 @@ except Exception:
                 echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
                 echo -e "  $RE║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
                 echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
-                echo ""
+                printf "\n"
                 return 1
             end
             if test $skip_confirm -eq 0; and test $skip_double_confirm -eq 0
@@ -1147,7 +1147,7 @@ except Exception:
                 if test $previewed -eq 0
                     echo -e "  $GY  (no terminal image previewer found)$C"
                 end
-                echo ""
+                printf "\n"
                 echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                 set -l c1 "  🖼️  DO YOU MEAN THIS?"
@@ -1172,7 +1172,7 @@ except Exception:
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                 echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
                 echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
-                echo ""
+                printf "\n"
                 set -l __cc 0
                 while true
                     read -P "  [Y/n]: " confirm
@@ -1195,14 +1195,14 @@ except Exception:
 
                 # ── Preview image in Kitty terminal (interactive only) ──
                 if test -n "$KITTY_PID"
-                    echo ""
+                    printf "\n"
                     kitty +kitten icat --align left "$image" 2>/dev/null
-                    echo ""
+                    printf "\n"
                 end
             end
 
         case '*'
-            echo ""
+            printf "\n"
             echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
             echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
             set -l m1 "  🖼️  MULTIPLE MATCHES"
@@ -1278,7 +1278,7 @@ except Exception:
             echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
             echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
             echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
-            echo ""
+            printf "\n"
 
             set -l __cc 0
             while true
@@ -1303,7 +1303,7 @@ except Exception:
                         set image "$results[$num]"
                         # 🛡️  GUARD: Reject empty/null images before proceeding
                         if not test -s "$image"
-                            echo ""
+                            printf "\n"
                             echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
                             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
                             set -l ee1 "  ✘  EMPTY OR NULL IMAGE"
@@ -1318,7 +1318,7 @@ except Exception:
                             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
                             echo -e "  $RE║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
                             echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
-                            echo ""
+                            printf "\n"
                             return 1
                         end
 
@@ -1406,7 +1406,7 @@ except Exception:
             mkdir -p /tmp
 
             while test $blur_done -eq 0
-                echo ""
+                printf "\n"
                 echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                 set -l b1 "  🎨  BLUR BACKGROUND?"
@@ -1428,7 +1428,7 @@ except Exception:
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                 echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
                 echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
-                echo ""
+                printf "\n"
                 set -l __cc 0
                 while true
                     read -P "  [n/Y/c/0]: " blur_choice
@@ -1459,7 +1459,7 @@ except Exception:
                     set blur_done 1
 
                 else if string match -qir '^c' "$blur_choice"
-                    echo ""
+                    printf "\n"
                     echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
                     echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                     set -l cu1 "  🎨  CUSTOM BLUR"
@@ -1475,7 +1475,7 @@ except Exception:
                     echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                     echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
                     echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
-                    echo ""
+                    printf "\n"
                     set -l __cc 0
                     while true
                         read -P "    Blur sigma [30]: " blur_sigma
@@ -1518,13 +1518,13 @@ except Exception:
                     if magick "$image" -blur "0x$blur_sigma" -fill black -colorize "$colorize_pct%" "$blurred_file" 2>/dev/null
                         # ── Preview blurred result in Kitty ──
                         if test -n "$KITTY_PID"
-                            echo ""
+                            printf "\n"
                             kitty +kitten icat --align left "$blurred_file" 2>/dev/null
-                            echo ""
+                            printf "\n"
                         end
                         # ── Ask if user likes it (only in Kitty) ──
                         if test -n "$KITTY_PID"
-                            echo ""
+                            printf "\n"
                             echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
                             echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                             set -l l1 "  👍  LIKE THE RESULT?"
@@ -1539,7 +1539,7 @@ except Exception:
                             echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                             echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
                             echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
-                            echo ""
+                            printf "\n"
                             set -l __cc 0
                             while true
                                 read -P "  [y/N]: " like_it
@@ -1567,7 +1567,7 @@ except Exception:
                             echo "Blur 0x$blur_sigma + black $colorize_pct%" > /tmp/.gdm-info/blur-settings.txt
                             echo -e "  $D  💻  Preview requires Kitty terminal — blur applied without preview.$C"
                             echo -e "  $GR✅  Custom blur applied$C"
-                            echo ""
+                            printf "\n"
                             set -l __cc 0
                             while true
                                 read -P "  [Y] Continue  [N] Try again: " non_kitty_ok
@@ -1605,9 +1605,9 @@ except Exception:
                     if magick "$image" -blur 0x40 -fill black -colorize 40% "$blurred_file" 2>/dev/null
                         # ── Preview blurred result in Kitty ──
                         if test -n "$KITTY_PID"
-                            echo ""
+                            printf "\n"
                             kitty +kitten icat --align left "$blurred_file" 2>/dev/null
-                            echo ""
+                            printf "\n"
                         else
                             echo -e "  $D  💻  Preview requires Kitty terminal — blur applied without preview.$C"
                         end
@@ -1638,7 +1638,7 @@ except Exception:
     else
         # ── ImageMagick not installed prompt ──
         if test $skip_confirm -eq 0
-            echo ""
+            printf "\n"
             echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
             echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
             set -l mi1 "  ⚠️  IMAGEMAGICK NOT INSTALLED"
@@ -1658,7 +1658,7 @@ except Exception:
             echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
             echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
             echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
-            echo ""
+            printf "\n"
             set -l __cc 0
             while true
                 read -P "  [y/N]: " install_magick
@@ -1713,7 +1713,7 @@ except Exception:
     end
 
     if test $need_clone -eq 1
-        echo ""
+        printf "\n"
         echo -e "  $CY┌────────────────────────────────────────────────────────────┐$C"
         echo -e "  $CY│$C$(printf '%*s' 60 '')$CY│$C"
         set -l i1 "  WALLPAPER ENGINE — SETUP REQUIRED"
@@ -1728,7 +1728,7 @@ except Exception:
         echo -e "  $CY│$C     $YE  Checking internet connection...$C$CY              │$C"
         echo -e "  $CY│$C$(printf '%*s' 60 '')$CY│$C"
         echo -e "  $CY└────────────────────────────────────────────────────────────┘$C"
-        echo ""
+        printf "\n"
 
         # ── Check internet connectivity before clone ──
         set -l has_net 0
@@ -1740,7 +1740,7 @@ except Exception:
             and set has_net 1
         end
         if test $has_net -eq 0
-            echo ""
+            printf "\n"
             echo -e "  $RE┌────────────────────────────────────────────────────────────┐$C"
             echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
             set -l ni1 "  CONNECTION REQUIRED"
@@ -1755,7 +1755,7 @@ except Exception:
             echo -e "  $RE│$C     $YE  Connect to the internet and try again.$C$RE       │$C"
             echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
             echo -e "  $RE└────────────────────────────────────────────────────────────┘$C"
-            echo ""
+            printf "\n"
             return 1
         end
 
@@ -1775,7 +1775,7 @@ except Exception:
 
         # ── Guard: git must be installed ──
         if not command -v git &>/dev/null
-            echo ""
+            printf "\n"
             echo -e "  $CY┌────────────────────────────────────────────────────────────┐$C"
             echo -e "  $CY│$C$(printf '%*s' 60 '')$CY│$C"
             set -l gi1 "  GIT NOT INSTALLED"
@@ -1791,7 +1791,7 @@ except Exception:
             echo -e "  $CY│$C     $RE  [N]  Cancel$C$CY                                 │$C"
             echo -e "  $CY│$C$(printf '%*s' 60 '')$CY│$C"
             echo -e "  $CY└────────────────────────────────────────────────────────────┘$C"
-            echo ""
+            printf "\n"
             set -l __cc 0
             while true
                 read -P "  [y/N]: " install_git
@@ -1821,7 +1821,7 @@ except Exception:
         end
 
         if not git clone --depth 1 https://github.com/eprahemi/FedoraTahoe-GDM.git "$repo" 2>/dev/null
-            echo ""
+            printf "\n"
             echo -e "  $RE┌────────────────────────────────────────────────────────────┐$C"
             echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
             set -l cf1 "  DOWNLOAD FAILED"
@@ -1832,7 +1832,7 @@ except Exception:
             echo -e "  $RE│$C  $D  again.$C$RE                                          │$C"
             echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
             echo -e "  $RE└────────────────────────────────────────────────────────────┘$C"
-            echo ""
+            printf "\n"
             return 1
         end
         # Remove .git && .gitignore — not needed at runtime, saves ~500 KB
@@ -1906,7 +1906,7 @@ except Exception:
                 echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
                 echo -e "  $RE║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
                 echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
-                echo ""
+                printf "\n"
                 return 1
             end
         else
@@ -1928,7 +1928,7 @@ except Exception:
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
             echo -e "  $RE║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$RE║$C"
             echo -e "  $RE╚══════════════════════════════════════════════════════════════╝$C"
-            echo ""
+            printf "\n"
             return 1
         end
     end
@@ -2193,7 +2193,7 @@ except Exception:
         printf "  $GY│$C  $D•$C $CY%-20s$C $D%-26s$C$GY│$C\n" "gdm info" "view image details"
         printf "  $GY│$C  $D•$C $CY%-20s$C $D%-26s$C$GY│$C\n" "gdm save" "save to ~/Pictures/"
         echo -e "  $GY└────────────────────────────────────────────────────┘$C"
-        echo ""
+        printf "\n"
         # Forever rainbow cycle at the bottom
         set -l r 255 255 255 255 200 100  50  50  50  50 100 200
         set -l g 50  100 180 220 255 220 200 100  50  50  50  50

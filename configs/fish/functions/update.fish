@@ -63,7 +63,7 @@ except Exception:
     else
         printf "  \e[1;37mAvailable:\e[0m \e[1;31mcould not fetch\e[0m\n"
     end
-    echo ""
+    printf "\n"
 
     # ── Compare versions ──
     set -l needs_update 0
@@ -85,7 +85,7 @@ except Exception:
     read -l confirm -P "  Proceed with update? [y/N]: "
     if test $status -ne 0
         # Ctrl+C or error during read
-        echo ""
+        printf "\n"
         printf "  \e[1;31m✘ Cancelled.\e[0m\n"
         return 1
     end
@@ -99,7 +99,7 @@ except Exception:
     end
 
     # ── Run the installer ──
-    echo ""
+    printf "\n"
     printf "  \e[1;37mFetching latest installer from GitHub...\e[0m\n"
 
     set -l url "https://raw.githubusercontent.com/$repo/main/bootstrap.sh"

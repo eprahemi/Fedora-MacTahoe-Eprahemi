@@ -31,7 +31,7 @@ function testdrive --description 'System diagnostic and benchmark suite'
     echo "  ███████║██║     ██║  ██║██║  ██║██║  ██║███████║██║ ╚═╝ ██║██║"
     echo "  ╚══════╝╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝╚═╝"
     echo -e "         "$D"[ $CY EPRAHEMI ELITE DIAGNOSTIC SUITE $D]$C"
-    echo ""
+    printf "\n"
 
     # ── Show Command List (defined early — called by --help and no-args) ──
     function __td_show_commands --no-scope-shadowing
@@ -57,7 +57,7 @@ function testdrive --description 'System diagnostic and benchmark suite'
         echo -e "  $B$WH│$C  $CY security   $C$D •$C  SELinux, firewall, ports, auth"
         echo -e "  $B$WH│$C  $CY stress     $C$D •$C  CPU/RAM/I/O saturation test"
         echo -e "  $B$WH╰──────────────────────────────────────────────────────╯$C"
-        echo ""
+        printf "\n"
     end
 
     if not set -q argv[1]
@@ -92,7 +92,7 @@ function testdrive --description 'System diagnostic and benchmark suite'
         set -l icon $argv[1]
         set -l title $argv[2]
         set -l sub $argv[3]
-        echo ""
+        printf "\n"
         echo -e "  $GY╭──$C $icon $B$WH$title$C $GY─────────────────────────────────╮$C"
         if set -q argv[3]
             echo -e "  $GY│$C  $D$sub$C"
@@ -113,7 +113,7 @@ function testdrive --description 'System diagnostic and benchmark suite'
         if set -q argv[3]
             echo -e "  $__row_sym$C"
         else
-            echo ""
+            printf "\n"
         end
     end
 
@@ -150,7 +150,7 @@ function testdrive --description 'System diagnostic and benchmark suite'
     function __td_show_footer --no-scope-shadowing
         echo -e "  $GY━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━$C"
         echo -e "  $B$WH🏁 TESTDRIVE SUCCESS$C  $GY•$C  $D$(date "+%H:%M:%S")$C"
-        echo ""
+        printf "\n"
         __td_show_commands
     end
 
@@ -223,7 +223,7 @@ function testdrive --description 'System diagnostic and benchmark suite'
         end
 
         # Draw the scoreboard
-        echo ""
+        printf "\n"
         echo -e "  $B$WH╔══════════════════════════════════════════════════════════╗$C"
         echo -e "  $B$WH║$C           $CY🏆$C  $B$WH EPRAHEMI SYSTEM HEALTH SCOREBOARD$C  $CY🏆$C           $B$WH║$C"
         echo -e "  $B$WH╠══════════════════════════════════════════════════════════╣$C"
@@ -757,7 +757,7 @@ function testdrive --description 'System diagnostic and benchmark suite'
                         set test_file (echo $target_raw | awk '{print $1}')"/"(whoami)"_test_bin"
                         set -l dev_mp (echo $target_raw | awk '{print $1}')
                         set -l dev_label (basename $dev_mp)
-                        echo ""; echo -e "  $GY│$C  $WH═══ Drive: $dev_label ═══$C"
+                        printf "\n"; echo -e "  $GY│$C  $WH═══ Drive: $dev_label ═══$C"
                         __td_benchmark_one_disk
                     end
                 else if test "$choice" -ge 1 -a "$choice" -le "$drive_count"
@@ -1137,13 +1137,13 @@ function testdrive --description 'System diagnostic and benchmark suite'
 
     function __td_report_top_block --no-scope-shadowing
         echo -e "  $GY│$C  \033[2mTotal processes: $(ps aux | wc -l)$C"
-        echo ""
+        printf "\n"
         echo -e "  $GY│$C  \033[1;37mTop 5 by CPU:$C"
         ps aux --sort=-%cpu 2>/dev/null | head -6 | tail -5 | while read -l line
             echo -e "  $GY│$C    $D$line$C"
         end
 
-        echo ""
+        printf "\n"
         echo -e "  $GY│$C  \033[1;37mTop 5 by Memory:$C"
         ps aux --sort=-%mem 2>/dev/null | head -6 | tail -5 | while read -l line
             echo -e "  $GY│$C    $D$line$C"
@@ -1223,7 +1223,7 @@ function testdrive --description 'System diagnostic and benchmark suite'
         echo -e "  $B$WH╔══════════════════════════════════════════════════════════╗$C"
         echo -e "  $B$WH║$C  $CY🔬$C  $B\033[1;37mCOMPLETE SYSTEM AUTOPSY — RUNNING ALL MODULES$C  $B$WH║$C"
         echo -e "  $B$WH╚══════════════════════════════════════════════════════════╝$C"
-        echo ""
+        printf "\n"
 
         # Cache sudo upfront for the whole suite
         if not sudo -n true 2>/dev/null
@@ -1365,7 +1365,7 @@ function testdrive --description 'System diagnostic and benchmark suite'
         __td_section "🖥️" "SYSTEM BLUEPRINT" "$B$WH Complete hardware, software & network inventory$C"
         __td_report_info_block
         __td_section_end
-        echo ""
+        printf "\n"
         __td_show_footer
         return 0
     end
@@ -1378,7 +1378,7 @@ function testdrive --description 'System diagnostic and benchmark suite'
         __td_section "🖥️" "CPU ARCHITECTURE & PERFORMANCE" "$B$WH Processor topology, frequencies, features & throttling$C"
         __td_report_cpu_block
         __td_section_end
-        echo ""
+        printf "\n"
         __td_show_footer
         return 0
     end
@@ -1391,7 +1391,7 @@ function testdrive --description 'System diagnostic and benchmark suite'
         __td_section "🧠" "MEMORY & SWAP ANALYSIS" "$B$WH RAM throughput, swap pressure & ZRAM$C"
         __td_report_ram_block
         __td_section_end
-        echo ""
+        printf "\n"
         __td_show_footer
         return 0
     end
@@ -1408,7 +1408,7 @@ function testdrive --description 'System diagnostic and benchmark suite'
         end
         __td_report_disk_block
         __td_section_end
-        echo ""
+        printf "\n"
         __td_show_footer
         return 0
     end
@@ -1421,7 +1421,7 @@ function testdrive --description 'System diagnostic and benchmark suite'
         __td_section "🎮" "GRAPHICS ENGINE" "$B$WH GPU detection, VRAM, driver, clocks & temperature$C"
         __td_report_gpu_block
         __td_section_end
-        echo ""
+        printf "\n"
         __td_show_footer
         return 0
     end
@@ -1434,7 +1434,7 @@ function testdrive --description 'System diagnostic and benchmark suite'
         __td_section "🌡️" "THERMAL SENSORS" "$B$WH CPU cores, GPU, NVMe, fans & throttling status$C"
         __td_report_heat_block
         __td_section_end
-        echo ""
+        printf "\n"
         __td_show_footer
         return 0
     end
@@ -1447,7 +1447,7 @@ function testdrive --description 'System diagnostic and benchmark suite'
         __td_section "🌐" "NETWORK UPLINK" "$B$WH Speed test, latency, interfaces & DNS$C"
         __td_report_net_block
         __td_section_end
-        echo ""
+        printf "\n"
         __td_show_footer
         return 0
     end
@@ -1460,7 +1460,7 @@ function testdrive --description 'System diagnostic and benchmark suite'
         __td_section "🔋" "POWER STATUS" "$B$WH Battery health, capacity, drain rate & AC status$C"
         __td_report_batt_block
         __td_section_end
-        echo ""
+        printf "\n"
         __td_show_footer
         return 0
     end
@@ -1473,7 +1473,7 @@ function testdrive --description 'System diagnostic and benchmark suite'
         __td_section "🚀" "BOOT ANALYSIS" "$B$WH systemd-analyze breakdown & bootloader info$C"
         __td_report_boot_block
         __td_section_end
-        echo ""
+        printf "\n"
         __td_show_footer
         return 0
     end
@@ -1486,7 +1486,7 @@ function testdrive --description 'System diagnostic and benchmark suite'
         __td_section "⚙️" "SERVICE HEALTH" "$B$WH Systemd unit status & failures$C"
         __td_report_services_block
         __td_section_end
-        echo ""
+        printf "\n"
         __td_show_footer
         return 0
     end
@@ -1499,7 +1499,7 @@ function testdrive --description 'System diagnostic and benchmark suite'
         __td_section "📦" "PENDING UPDATES" "$B$WH DNF, Flatpak & firmware updates$C"
         __td_report_updates_block
         __td_section_end
-        echo ""
+        printf "\n"
         __td_show_footer
         return 0
     end
@@ -1512,7 +1512,7 @@ function testdrive --description 'System diagnostic and benchmark suite'
         __td_section "📊" "PROCESS LANDSCAPE" "$B$WH Top consumers: CPU, memory & I/O$C"
         __td_report_top_block
         __td_section_end
-        echo ""
+        printf "\n"
         __td_show_footer
         return 0
     end
@@ -1525,7 +1525,7 @@ function testdrive --description 'System diagnostic and benchmark suite'
         __td_section "🔒" "SECURITY POSTURE" "$B$WH SELinux, firewall, open ports & auth failures$C"
         __td_report_security_block
         __td_section_end
-        echo ""
+        printf "\n"
         __td_show_footer
         return 0
     end
@@ -1538,7 +1538,7 @@ function testdrive --description 'System diagnostic and benchmark suite'
         __td_section "🧨" "SYSTEM SATURATION TEST" "$B$WH Multi-core CPU, memory & I/O stress (10s each)$C"
         __td_report_stress_block
         __td_section_end
-        echo ""
+        printf "\n"
         __td_show_footer
         return 0
     end
@@ -1550,7 +1550,7 @@ function testdrive --description 'System diagnostic and benchmark suite'
     if test "$module" = "health"
         __td_section "🏥" "SYSTEM HEALTH SCORE" "$B$WH Quick overall assessment: disk, memory, thermal, security$C"
         __td_show_scoreboard
-        echo ""
+        printf "\n"
         __td_show_footer
         return 0
     end

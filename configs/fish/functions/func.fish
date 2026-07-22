@@ -133,9 +133,9 @@ function func --description 'Browse all fish functions'
                 echo -e "  $Y func search <kw>$N — Find functions matching keyword"
                 echo -e "  $Y func show <name>$N — Show full source of a function"
                 echo -e "  $Y func --help$N      — This help"
-                echo ""
+                printf "\n"
                 echo -e "  $D Every function supports $Y--help$N $D— try e.g. $C c --help$N $D or $C testdrive --help$N"
-                echo ""
+                printf "\n"
                 echo -e "  $D╭─ Categories ──────────────────────────────────────╮$N"
                 for ci in (seq $cat_cnt)
                     set -l fl (string split ' ' -- $cat_func[$ci])
@@ -152,7 +152,7 @@ function func --description 'Browse all fish functions'
                 set -l kw $argv[2]
                 set -l sf (ls "$func_dir"/*.fish 2>/dev/null)
 
-                echo ""
+                printf "\n"
                 echo -e "  $Y╭─ SEARCH RESULTS ─────────────────────────────────╮$N"
                 echo -e "  $Y│   $W\"$kw\"$N"
                 echo -e "  $Y╰────────────────────────────────────────────────────╯$N"
@@ -184,9 +184,9 @@ function func --description 'Browse all fish functions'
                     return 1
                 end
                 if functions -q $argv[2]
-                    echo ""
+                    printf "\n"
                     functions $argv[2]
-                    echo ""
+                    printf "\n"
                 else
                     echo -e "$R❌ No function named '$argv[2]'$N"
                     return 1
@@ -263,13 +263,15 @@ function func --description 'Browse all fish functions'
     # ══════════════════════════════════════════════════════════════
     # RENDER — Header
     # ══════════════════════════════════════════════════════════════
-    echo ""
+    printf "
+"
     echo -e "  $C╭──────────────────────────────────────────────────────────╮$N"
     echo -e "  $C│                    🗃️  FUNCTION  ARCHIVE                  │$N"
     echo -e "  $C│      Fedora MacTahoe  ·  Eprahemi System Configuration      │$N"
     echo -e "  $C│          $D$tf functions  ·  $tl lines  ·  $cat_cnt categories          $C│$N"
     echo -e "  $C╰──────────────────────────────────────────────────────────╯$N"
-    echo ""
+    printf "
+"
 
     # ══════════════════════════════════════════════════════════════
     # RENDER — Category Cards
@@ -312,7 +314,8 @@ function func --description 'Browse all fish functions'
         end
 
         echo -e "  $esc╰────────────────────────────────────────────────────╯$N"
-        echo ""
+        printf "
+"
     end
 
     # ── Uncategorized functions ──
@@ -330,7 +333,8 @@ function func --description 'Browse all fish functions'
             end
         end
         echo -e "  $D╰────────────────────────────────────────────────────╯$N"
-        echo ""
+        printf "
+"
     end
 
     # ══════════════════════════════════════════════════════════════
@@ -345,11 +349,13 @@ function func --description 'Browse all fish functions'
     echo -e "  $D│$N  $Yfunc show$N $W<name>$N      $D— View full source code$N         $D│$N"
     echo -e "  $D│$N  $Ytype$N $W<name>$N             $D— Quick source peek$N             $D│$N"
     echo -e "  $D╰────────────────────────────────────────────────────╯$N"
-    echo ""
+    printf "
+"
     echo -e "  $GY  ╭──────────────────────────────────────────────────────╮$N"
     echo -e "  $GY  │$N  $D↑  Scroll up to see all functions above$N               $GY│$N"
     echo -e "  $GY  ╰──────────────────────────────────────────────────────╯$N"
-    echo ""
+    printf "
+"
 
     # ── Cleanup ──
     functions -e __func_desc __func_usage __func_bytes __func_lines __func_cat_idx

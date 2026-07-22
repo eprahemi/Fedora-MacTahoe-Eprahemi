@@ -85,7 +85,7 @@ function passwd --description 'Toggle passwordless sudo for the current user'
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY║$C  $D  eprahemi  •  github.com/eprahemi$(printf '%*s' (math "60 - 33") '')$CY║$C"
         echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
-        echo ""
+        printf "\n"
         return 0
     end
 
@@ -218,7 +218,7 @@ function passwd --description 'Toggle passwordless sudo for the current user'
         if test $brand_pad -lt 0; set brand_pad 0; end
         echo -e "  $CY║$C    $D$brand$C$(printf '%*s' $brand_pad '')$CY║$C"
         echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
-        echo ""
+        printf "\n"
 
         # ─── Prompt to add if missing ───
         if test "$ro_uncommented" -eq 0 -a "$ro_commented" -eq 0
@@ -244,7 +244,7 @@ function passwd --description 'Toggle passwordless sudo for the current user'
                     return 1
                 end
             else
-                echo ""
+                printf "\n"
             end
         end
         return 0
