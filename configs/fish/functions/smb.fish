@@ -392,12 +392,20 @@ function smb --description 'Samba file sharing manager'
                 end
             end
             if test $is_weak -eq 1
-                printf "  $R✗$N  Weak password detected.\n"
+                echo ""
+                printf "  $R⚠$N  Weak password detected.\n"
                 printf "     '%s' is one of the most commonly used passwords.\n" "$pass"
                 printf "     Choose a stronger password with 8+ characters,\n"
                 printf "     mixing letters, numbers, and symbols.\n"
                 echo ""
-                continue
+                printf "  Use this password anyway? [y/N]: "
+                read -l confirm2 -P ""
+                if test "$confirm2" != "y"; and test "$confirm2" != "Y"
+                    printf "  $D Re-entering password...$N\n"
+                    echo ""
+                    continue
+                end
+                echo ""
             end
 
             break
