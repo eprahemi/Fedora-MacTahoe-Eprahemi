@@ -106,6 +106,12 @@ function smb --description 'Samba file sharing manager'
     function __smb_set_password
         set -l user $argv[1]
         set -l pass $argv[2]
+        # Check Linux user exists — smbpasswd requires it
+        if not id "$user" >/dev/null 2>&1
+            printf "  $R✗$N  Linux user '$W$user$N' does not exist.\n"
+            printf "  Create it first: sudo useradd -m -s /bin/bash $user\n"
+            return 1
+        end
         set -l user_exists 0
         if type -q pdbedit
             if sudo pdbedit -L 2>/dev/null | grep -q "^$user:"
@@ -697,6 +703,11 @@ function smb --description 'Samba file sharing manager'
                     printf "  Run 'smb user password $newuser' to change password.\n"
                     return 1
                 end
+                if not id "$newuser" >/dev/null 2>&1
+                    printf "  $R✗$N  Linux user '$W$newuser$N' does not exist.\n"
+                    printf "  Create it first: sudo useradd -m -s /bin/bash $newuser\n"
+                    return 1
+                end
                 printf "\n"
                 set -l pass ""
                 set -l pass2 ""
@@ -819,6 +830,12 @@ function smb --description 'Samba file sharing manager'
                 if test -z "$old_pass"
                     printf "  $R✗$N  No password found for '$W$old_name$N'.\n"
                     printf "  Run 'smb user password $old_name' to set one first.\n"
+                    return 1
+                end
+                # Check new Linux user exists BEFORE deleting old
+                if not id "$new_name" >/dev/null 2>&1
+                    printf "  $R✗$N  Linux user '$W$new_name$N' does not exist.\n"
+                    printf "  Create it first: sudo useradd -m -s /bin/bash $new_name\n"
                     return 1
                 end
                 printf "\n"
