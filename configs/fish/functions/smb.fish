@@ -533,6 +533,43 @@ function smb --description 'Samba file sharing manager'
                     printf "  $D$d — not found, skipping$N\n"
                 end
             end
+            # Add custom path
+            printf "\n"
+            if __confirm_yn "  Add a custom path? [y/N]: " n
+                while true
+                    read -g -P "  Enter full path: " custom_path
+                    __smb_stop_check; or break
+                    if test -z "$custom_path"
+                        printf "  Path cannot be empty.\n"
+                        continue
+                    end
+                    if not test -d "$custom_path"
+                        printf "  $R✗$N  '$custom_path' does not exist.\n"
+                        if __confirm_yn "  Try again? [Y/n]: " y
+                            continue
+                        else
+                            break
+                        end
+                    end
+                    # Check not already added
+                    set -l already 0
+                    for existing in $__smb_custom_folders
+                        if test "$existing" = "$custom_path"
+                            set already 1
+                            break
+                        end
+                    end
+                    if test $already -eq 1
+                        printf "  Already added.\n"
+                    else
+                        set -a __smb_custom_folders "$custom_path"
+                        printf "  $G✓$N  Added: $W$custom_path$N\n"
+                    end
+                    if not __confirm_yn "  Add another? [y/N]: " n
+                        break
+                    end
+                end
+            end
             if test (count $__smb_custom_folders) -eq 0
                 printf "\n  $R✗$N  No folders selected. Falling back to home directory.\n"
                 set scope_choice "1"
