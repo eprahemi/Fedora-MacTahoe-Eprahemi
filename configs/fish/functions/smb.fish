@@ -202,22 +202,22 @@ function smb --description 'Samba file sharing manager'
     # ════════════════════════════════════════════════════════════
 
     if test (count $argv) -eq 0; or test "$argv[1]" = "help"; or test "$argv[1]" = "-help"; or test "$argv[1]" = "--help"
-        echo ""
+        printf "\n"
         printf "  $C╭──────────────────────────────────────────────────────────────╮$N\n"
         printf "  $C│                      SMB FILE SHARING                        │$N\n"
         printf "  $C│              Fedora MacTahoe  ·  Eprahemi System            │$N\n"
         printf "  $C│           Samba manager  ·  19 commands  ·  4 groups        │$N\n"
         printf "  $C╰──────────────────────────────────────────────────────────────╯$N\n"
-        echo ""
+        printf "\n"
         printf "  Usage:  $Y smb$N <command> [args]\n"
-        echo ""
+        printf "\n"
         printf "  ────────────────────────────────────────────────────────────────\n"
         printf "  $BOLDC SETUP$N\n"
         printf "  ────────────────────────────────────────────────────────────────\n"
         printf "    $W smb setup$N                   Full guided setup (installs samba,\n"
         printf "                                     configures firewall, creates user,\n"
         printf "                                     enables service). Run this first.\n"
-        echo ""
+        printf "\n"
         printf "  ────────────────────────────────────────────────────────────────\n"
         printf "  $BOLDG USERS$N\n"
         printf "  ────────────────────────────────────────────────────────────────\n"
@@ -229,7 +229,7 @@ function smb --description 'Samba file sharing manager'
         printf "                                     Example: smb user rename alice bob\n"
         printf "    $W smb user password$N $D<name>$N    Change a user's SMB password\n"
         printf "                                     You must know the current password.\n"
-        echo ""
+        printf "\n"
         printf "  ────────────────────────────────────────────────────────────────\n"
         printf "  $BOLDC SHARES$N\n"
         printf "  ────────────────────────────────────────────────────────────────\n"
@@ -237,14 +237,14 @@ function smb --description 'Samba file sharing manager'
         printf "                                     Example: smb share ~/Documents docs\n"
         printf "    $W smb unshare$N $D<name>$N          Remove a share by name\n"
         printf "    $W smb share list$N              List all active shares with paths\n"
-        echo ""
+        printf "\n"
         printf "  ────────────────────────────────────────────────────────────────\n"
         printf "  $BOLDR SERVICE$N\n"
         printf "  ────────────────────────────────────────────────────────────────\n"
         printf "    $W smb on$N                      Start the Samba service\n"
         printf "    $W smb off$N                     Stop the Samba service\n"
         printf "    $W smb restart$N                 Restart Samba (apply config changes)\n"
-        echo ""
+        printf "\n"
         printf "  ────────────────────────────────────────────────────────────────\n"
         printf "  $B DATA$N\n"
         printf "  ────────────────────────────────────────────────────────────────\n"
@@ -252,7 +252,7 @@ function smb --description 'Samba file sharing manager'
         printf "                                     password-protected zip in ~/Desktop\n"
         printf "    $W smb data list$N               List all saved export zips\n"
         printf "    $W smb data clean$N              Delete all saved exports\n"
-        echo ""
+        printf "\n"
         printf "  ────────────────────────────────────────────────────────────────\n"
         printf "  $C INFO$N\n"
         printf "  ────────────────────────────────────────────────────────────────\n"
@@ -264,7 +264,7 @@ function smb --description 'Samba file sharing manager'
         printf "                                     shares, firewall, config status\n"
         printf "    $W smb log$N                     Show recent Samba log entries\n"
         printf "    $W smb help$N                    Show this help message\n"
-        echo ""
+        printf "\n"
         printf "  ────────────────────────────────────────────────────────────────\n"
         printf "  $C TIPS$N\n"
         printf "  ────────────────────────────────────────────────────────────────\n"
@@ -275,7 +275,7 @@ function smb --description 'Samba file sharing manager'
         printf "       No plaintext files on disk.\n"
         printf "    4. Run $W'smb status'$N to check everything at a glance.\n"
         printf "    5. Run $W'smb restart'$N after editing smb.conf manually.\n"
-        echo ""
+        printf "\n"
         return 0
     end
 
@@ -284,11 +284,11 @@ function smb --description 'Samba file sharing manager'
     # ════════════════════════════════════════════════════════════
 
     if test "$argv[1]" = "setup"
-        echo ""
+        printf "\n"
         printf "  $C╭──────────────────────────────────────────────────────────╮$N\n"
         printf "  $C│                    SMB SETUP WIZARD                        │$N\n"
         printf "  $C╰──────────────────────────────────────────────────────────╯$N\n"
-        echo ""
+        printf "\n"
 
         # ── Step 1: Install Samba ──
         printf "  $BOLD Step 1/9$N   Installing Samba...\n"
@@ -314,7 +314,7 @@ function smb --description 'Samba file sharing manager'
                 printf "  $Y⚠$N  libsecret not installed — using file storage instead\n"
             end
         end
-        echo ""
+        printf "\n"
 
         # ── Step 2: Detect username ──
         printf "  $BOLD Step 2/9$N   Detecting username...\n"
@@ -324,7 +324,7 @@ function smb --description 'Samba file sharing manager'
         __smb_stop_check; or return 1
         set -l smb_user ""
         if test "$confirm" = "n"; or test "$confirm" = "N"
-            echo ""
+            printf "\n"
             read -P "  Enter SMB username: " -l smb_user
             __smb_stop_check; or return 1
             if test -z "$smb_user"
@@ -340,9 +340,9 @@ function smb --description 'Samba file sharing manager'
         else
             set smb_user $detected_user
         end
-        echo ""
+        printf "\n"
         printf "  $G✓$N  Using: $W$smb_user$N\n"
-        echo ""
+        printf "\n"
 
         # ── Step 3: Set password ──
         printf "  $BOLD Step 3/9$N   Setting SMB password...\n"
@@ -374,16 +374,16 @@ function smb --description 'Samba file sharing manager'
             printf "  Enter SMB password for '$W$smb_user$N':\n"
             read -s -P "  > " pass
             __smb_stop_check; or return 1
-            echo ""
+            printf "\n"
             printf "  Confirm password:\n  > "
             read -s -P "" pass2
             __smb_stop_check; or return 1
-            echo ""
+            printf "\n"
 
             # Check passwords match
             if not test "$pass" = "$pass2" -a -n "$pass"
                 printf "  $R✗$N  Passwords don't match. Try again.\n"
-                echo ""
+                printf "\n"
                 continue
             end
 
@@ -392,20 +392,20 @@ function smb --description 'Samba file sharing manager'
                 set -l pw_result (printf "%s" "$pass" | pwscore 2>&1)
                 set -l pw_rc $status
                 if test $pw_rc -ne 0
-                    echo ""
+                    printf "\n"
                     printf "  $R⚠$N  Weak password:\n"
                     for line in $pw_result
                         printf "     %s\n" "$line"
                     end
-                    echo ""
+                    printf "\n"
                     printf "  Use this password anyway? [y/N]: "
                     read -l confirm -P ""
                     if test "$confirm" != "y"; and test "$confirm" != "Y"
                         printf "  $D Re-entering password...$N\n"
-                        echo ""
+                        printf "\n"
                         continue
                     end
-                    echo ""
+                    printf "\n"
                 end
             else
                 # Fallback: check common weak passwords manually
@@ -444,18 +444,18 @@ function smb --description 'Samba file sharing manager'
                     end
                 end
                 if test $is_weak -eq 1
-                    echo ""
+                    printf "\n"
                     printf "  $R⚠$N  Weak password detected.\n"
                     printf "     '%s' is one of the most commonly used passwords.\n" "$pass"
-                    echo ""
+                    printf "\n"
                     printf "  Use this password anyway? [y/N]: "
                     read -l confirm -P ""
                     if test "$confirm" != "y"; and test "$confirm" != "Y"
                         printf "  $D Re-entering password...$N\n"
-                        echo ""
+                        printf "\n"
                         continue
                     end
-                    echo ""
+                    printf "\n"
                 end
             end
 
@@ -465,28 +465,28 @@ function smb --description 'Samba file sharing manager'
         __smb_save_password "$smb_user" "$pass"
         printf "  $G✓$N  Password set for '$W$smb_user$N'\n"
         printf "  $G✓$N  Password saved securely.\n"
-        echo ""
+        printf "\n"
         printf "  $Y⚠$N  WARNING: Do NOT share this password with anyone.\n"
         printf "     Giving your SMB password to others gives them full access\n"
         printf "     to your files. This is a security risk.\n"
-        echo ""
+        printf "\n"
 
         # ── Step 4: Share scope ──
         printf "  $BOLD Step 4/9$N   Choosing share scope...\n"
-        echo ""
+        printf "\n"
         printf "    $W[1]$N Home directory (recommended)\n"
         printf "        Shares: $D$HOME$N\n"
         printf "        Safe — only your personal files are visible.\n"
-        echo ""
+        printf "\n"
         printf "    $W[2]$N Root filesystem ($R NOT recommended$N)\n"
         printf "        Shares: $D/$N\n"
         printf "        $Y WARNING — gives full access to every file on your laptop.$N\n"
         printf "        Anyone on your network can read/write system files.\n"
-        echo ""
+        printf "\n"
         read -P "  Choose [1/2] (default: 1): " -l scope_choice
         __smb_stop_check; or return 1
         if test "$scope_choice" = "2"
-            echo ""
+            printf "\n"
             printf "  $Y⚠$N  WARNING: Root sharing gives FULL access to /etc, /boot, /root,\n"
             printf "     and every system file. This is a security risk.\n"
             read -P "  Are you sure? [y/N]: " -l root_confirm
@@ -500,7 +500,7 @@ function smb --description 'Samba file sharing manager'
         else
             printf "  $G✓$N  Home directory selected\n"
         end
-        echo ""
+        printf "\n"
 
         # ── Confirmation ──
         set -l scope_type "HOME"
@@ -516,15 +516,15 @@ function smb --description 'Samba file sharing manager'
         printf "  $C│    $N Firewall:  $W samba service$N$C                             │$N\n"
         printf "  $C│    $N SELinux:   $W home dirs enabled$N$C                         │$N\n"
         printf "  $C╰──────────────────────────────────────────────────────────╯$N\n"
-        echo ""
+        printf "\n"
         read -P "  Apply all changes? [Y/n]: " -l apply
         __smb_stop_check; or return 1
         if test "$apply" = "n"; or test "$apply" = "N"
-            echo ""
+            printf "\n"
             printf "  $Y Setup cancelled. No changes were made.$N\n"
             return 0
         end
-        echo ""
+        printf "\n"
 
         # ── Step 5: Configure smb.conf ──
         printf "  $BOLD Step 5/9$N   Configuring smb.conf...\n"
@@ -545,13 +545,13 @@ function smb --description 'Samba file sharing manager'
                 printf "  $G✓$N  [homes] section added to smb.conf\n"
             end
         end
-        echo ""
+        printf "\n"
 
         # ── Step 6: Start service ──
         printf "  $BOLD Step 6/9$N   Starting Samba service...\n"
         sudo systemctl enable smb --now 2>/dev/null
         printf "  $G✓$N  smb.service enabled and started\n"
-        echo ""
+        printf "\n"
 
         # ── Step 7: Firewall ──
         printf "  $BOLD Step 7/9$N   Configuring firewall...\n"
@@ -562,7 +562,7 @@ function smb --description 'Samba file sharing manager'
         else
             printf "  $D firewall not active — skipping$N\n"
         end
-        echo ""
+        printf "\n"
 
         # ── Step 8: SELinux ──
         printf "  $BOLD Step 8/9$N   Setting SELinux permissions...\n"
@@ -574,7 +574,7 @@ function smb --description 'Samba file sharing manager'
             sudo setsebool -P samba_enable_home_dirs on 2>/dev/null
             printf "  $G✓$N  samba_enable_home_dirs enabled\n"
         end
-        echo ""
+        printf "\n"
 
         # ── Step 9: Final checks ──
         printf "  $BOLD Step 9/9$N   Final checks...\n"
@@ -593,7 +593,7 @@ function smb --description 'Samba file sharing manager'
             printf "  $D  Config test: skipped (testparm not installed)$N\n"
         end
         printf "  $G✓$N  Service: $BOLDG active$N\n"
-        echo ""
+        printf "\n"
 
         # ── Complete ──
         set -l local_ip (__smb_ip)
@@ -659,10 +659,10 @@ function smb --description 'Samba file sharing manager'
         __smb_box_line "    When prompted, use your SMB password."
         __smb_box_line ""
         printf "  $C╚$(printf '%*s' 62 '')╝$N\n"
-        echo ""
+        printf "\n"
         printf "  Done. Try connecting from your phone now.\n"
         printf "  Run 'smb password' to reveal your password.\n"
-        echo ""
+        printf "\n"
         return 0
     end
 
@@ -692,14 +692,14 @@ function smb --description 'Samba file sharing manager'
                     printf "  Run 'smb setup' or 'smb user add' to create one.\n"
                     return 0
                 end
-                echo ""
+                printf "\n"
                 printf "  SMB Users:\n"
                 for u in $users
                     set -l uname (printf '%s\n' "$u" | cut -d: -f1)
                     set -l uid (printf '%s\n' "$u" | cut -d: -f2)
                     printf "    $W%-16s$N (uid=$uid)\n" "$uname"
                 end
-                echo ""
+                printf "\n"
 
             # ── smb user add ──
             case add
@@ -725,33 +725,33 @@ function smb --description 'Samba file sharing manager'
                     printf "  Run 'smb user password $newuser' to change password.\n"
                     return 1
                 end
-                echo ""
+                printf "\n"
                 set -l pass ""
                 set -l pass2 ""
                 while true
                     printf "  Enter password for '$W$newuser$N':\n"
                     read -s -P "  > " pass
                     __smb_stop_check; or return 1
-                    echo ""
+                    printf "\n"
                     printf "  Confirm password:\n  > "
                     read -s -P "" pass2
                     __smb_stop_check; or return 1
-                    echo ""
+                    printf "\n"
                     if test "$pass" = "$pass2" -a -n "$pass"
                         break
                     end
                     printf "  $R✗$N  Passwords don't match. Try again.\n"
-                    echo ""
+                    printf "\n"
                 end
                 __smb_set_password "$newuser" "$pass"
                 __smb_save_password "$newuser" "$pass"
                 printf "  $G✓$N  User '$W$newuser$N' created\n"
                 printf "  $G✓$N  Password saved securely.\n"
-                echo ""
+                printf "\n"
                 printf "  $Y⚠$N  WARNING: Do NOT share this password with anyone.\n"
                 printf "     Giving your SMB password to others gives them full access\n"
                 printf "     to your files. This is a security risk.\n"
-                echo ""
+                printf "\n"
 
             # ── smb user remove ──
             case remove
@@ -763,14 +763,14 @@ function smb --description 'Samba file sharing manager'
                     printf "  $R✗$N  User '$W$extra$N' not found in Samba\n"
                     return 1
                 end
-                echo ""
+                printf "\n"
                 printf "  Remove SMB user '$W$extra$N'\n"
                 set -l attempts 0
                 while true
                     set attempts (math $attempts + 1)
                     if test $attempts -gt 3
                         printf "  $R✗$N  3 failed attempts.\n"
-                        echo ""
+                        printf "\n"
                         printf "  Authentication failed — opening system authentication dialog...\n"
                         if __smb_pkexec
                             printf "  $G✓$N  System authentication successful\n"
@@ -787,13 +787,13 @@ function smb --description 'Samba file sharing manager'
                     printf "  Enter SMB password for '$extra' to confirm:\n  > "
                     read -s -P "" -l try_pass
                     __smb_stop_check; or return 1
-                    echo ""
+                    printf "\n"
                     echo "$try_pass" | smbclient -L localhost -U "$extra%$try_pass" >/dev/null 2>&1
                     if test $status -eq 0
                         sudo smbpasswd -x "$extra" 2>/dev/null
                         printf "  $G✓$N  User '$W$extra$N' removed\n"
                         printf "  $G✓$N  Password removed securely.\n"
-                        echo ""
+                        printf "\n"
                         printf "  $Y⚠$N  Note: The user can no longer access your files via SMB.\n"
                         printf "     Make sure this was intentional.\n"
                         __smb_delete_password "$extra"
@@ -801,7 +801,7 @@ function smb --description 'Samba file sharing manager'
                     end
                     set -l left (math 3 - $attempts)
                     printf "  $R✗$N  Wrong password. $left attempt(s) left.\n"
-                    echo ""
+                    printf "\n"
                 end
 
             # ── smb user rename ──
@@ -849,7 +849,7 @@ function smb --description 'Samba file sharing manager'
                     printf "  Run 'smb user password $old_name' to set one first.\n"
                     return 1
                 end
-                echo ""
+                printf "\n"
                 if __smb_pkexec
                     printf "  $G✓$N  System authentication successful\n"
                     # Remove old user
@@ -860,7 +860,7 @@ function smb --description 'Samba file sharing manager'
                     __smb_save_password "$new_name" "$old_pass"
                     # Remove old keyring entry
                     __smb_delete_password "$old_name"
-                    echo ""
+                    printf "\n"
                     printf "  $G✓$N  User renamed: $W$old_name$N → $W$new_name$N\n"
                     printf "  $G✓$N  Password preserved.\n"
                     printf "  $Y⚠$N  Shares still reference the old username. Update if needed:\n"
@@ -885,17 +885,17 @@ function smb --description 'Samba file sharing manager'
                         printf "  Run 'smb setup' or 'smb user add' to create one.\n"
                         return 0
                     end
-                    echo ""
+                    printf "\n"
                     printf "  SMB Users:\n"
                     for u in $users
                         set -l uname (printf '%s\n' "$u" | cut -d: -f1)
                         set -l uid (printf '%s\n' "$u" | cut -d: -f2)
                         printf "    $W%-16s$N (uid=$uid)\n" "$uname"
                     end
-                    echo ""
+                    printf "\n"
                     printf "  Usage: smb user password <username>\n"
                     printf "  Example: smb user password eprahemi\n"
-                    echo ""
+                    printf "\n"
                     return 0
                 end
                 if not __smb_user_exists "$extra"
@@ -906,37 +906,37 @@ function smb --description 'Samba file sharing manager'
                 read -P "  Change SMB password for '$extra'? [Y/n]: " -l confirm
                 __smb_stop_check; or return 1
                 if test "$confirm" = "n"; or test "$confirm" = "N"
-                    echo ""
+                    printf "\n"
                     printf "  Cancelled. Password not changed.\n"
                     return 0
                 end
-                echo ""
+                printf "\n"
                 set -l pass ""
                 set -l pass2 ""
                 while true
                     printf "  Enter new password for '$W$extra$N':\n"
                     read -s -P "  > " pass
                     __smb_stop_check; or return 1
-                    echo ""
+                    printf "\n"
                     printf "  Confirm password:\n  > "
                     read -s -P "" pass2
                     __smb_stop_check; or return 1
-                    echo ""
+                    printf "\n"
                     if test "$pass" = "$pass2" -a -n "$pass"
                         break
                     end
                     printf "  $R✗$N  Passwords don't match. Try again.\n"
-                    echo ""
+                    printf "\n"
                 end
                 __smb_set_password "$extra" "$pass"
                 __smb_save_password "$extra" "$pass"
                 printf "  $G✓$N  Password changed for '$W$extra$N'\n"
                 printf "  $G✓$N  Password updated.\n"
-                echo ""
+                printf "\n"
                 printf "  $Y⚠$N  WARNING: Do NOT share this password with anyone.\n"
                 printf "     Giving your SMB password to others gives them full access\n"
                 printf "     to your files. This is a security risk.\n"
-                echo ""
+                printf "\n"
 
             case '*'
                 printf "  $R✗$N  Unknown user command: '$subcmd'\n"
@@ -966,7 +966,7 @@ function smb --description 'Samba file sharing manager'
 
         # ── smb share list ──
         if test "$subcmd" = "list"
-            echo ""
+            printf "\n"
             printf "  Shared directories:\n"
             # Home share
             set -l scope (__smb_get_scope)
@@ -1011,7 +1011,7 @@ function smb --description 'Samba file sharing manager'
                     printf "    $W%-16s$N $D%-30s$N (custom)\n" "$share_name" "$share_path"
                 end
             end
-            echo ""
+            printf "\n"
 
         # ── smb share (no args) or smb share <dir> [name] ──
         else if test -z "$subcmd"; or string match -qr '^/' "$subcmd"
@@ -1032,7 +1032,7 @@ function smb --description 'Samba file sharing manager'
                 return 1
             end
             printf "  $G✓$N  Directory exists: $W$dir$N\n"
-            echo ""
+            printf "\n"
             if test -z "$name"
                 set -l default_name (basename "$dir")
                 read -P "  Enter share name (or press Enter for '$default_name'): " -l name
@@ -1046,7 +1046,7 @@ function smb --description 'Samba file sharing manager'
                 printf "  Run 'smb share list' to see current shares.\n"
                 return 1
             end
-            echo ""
+            printf "\n"
             read -P "  Share '$dir' as '$name'? [Y/n]: " -l confirm
             __smb_stop_check; or return 1
             if test "$confirm" = "n"; or test "$confirm" = "N"
@@ -1058,7 +1058,7 @@ function smb --description 'Samba file sharing manager'
             printf "  $G✓$N  Share '$W$name$N' added → $D$dir$N\n"
             sudo systemctl restart smb 2>/dev/null
             printf "  $G✓$N  Samba service restarted\n"
-            echo ""
+            printf "\n"
 
         # ── smb unshare ──
         else if test "$subcmd" = "unshare"
@@ -1081,14 +1081,14 @@ function smb --description 'Samba file sharing manager'
                     printf "  Home directory share cannot be removed via unshare.\n"
                     return 0
                 end
-                echo ""
+                printf "\n"
                 printf "  Shared directories:\n"
                 set -l idx 1
                 for s in $shares
                     printf "    $W%d)$N  %s\n" $idx $s
                     set idx (math $idx + 1)
                 end
-                echo ""
+                printf "\n"
                 read -P "  Enter number or share name to remove: " -l choice
                 __smb_stop_check; or return 1
                 # Check if numeric
@@ -1127,7 +1127,7 @@ function smb --description 'Samba file sharing manager'
             sudo systemctl restart smb 2>/dev/null
             printf "  $G✓$N  Share '$W$target$N' removed\n"
             printf "  $G✓$N  Samba service restarted\n"
-            echo ""
+            printf "\n"
 
         else
             printf "  $R✗$N  Unknown share command: '$subcmd'\n"
@@ -1175,11 +1175,11 @@ function smb --description 'Samba file sharing manager'
         read -P "  Restart Samba service? Active connections will be disconnected. [Y/n]: " -l confirm
         __smb_stop_check; or return 1
         if test "$confirm" = "n"; or test "$confirm" = "N"
-            echo ""
+            printf "\n"
             printf "  Cancelled. Service not restarted.\n"
             return 0
         end
-        echo ""
+        printf "\n"
         printf "  Restarting Samba service...\n"
         sudo systemctl restart smb 2>/dev/null
         printf "  $G✓$N  smb.service restarted\n"
@@ -1195,16 +1195,16 @@ function smb --description 'Samba file sharing manager'
         set -l local_ip (__smb_ip)
         set -l smb_user (whoami)
         set -l smb_hostname (hostname)
-        echo ""
+        printf "\n"
         printf "  Local IP:    $B$local_ip$N\n"
         printf "  Username:    $W$smb_user$N\n"
         printf "  Hostname:    $W$smb_hostname$N\n"
-        echo ""
+        printf "\n"
         printf "  Phone:    $B smb://$local_ip/$smb_user$N\n"
         printf "  Windows:  $B \\\\$local_ip\\\\$smb_user$N\n"
         printf "  Nautilus: $B smb://$local_ip/$smb_user$N\n"
         printf "  Mac:      $B smb://$local_ip/$smb_user$N\n"
-        echo ""
+        printf "\n"
         return 0
     end
 
@@ -1220,7 +1220,7 @@ function smb --description 'Samba file sharing manager'
             return 1
         end
         printf "  $G✓$N  Authentication successful\n"
-        echo ""
+        printf "\n"
         set -l users ()
         if type -q pdbedit
             set users (command pdbedit -L 2>/dev/null | cut -d: -f1)
@@ -1234,7 +1234,7 @@ function smb --description 'Samba file sharing manager'
             set -l upass (__smb_get_password "$users[1]")
             printf "  SMB User: $W$users[1]$N\n"
             printf "  Password: $W$upass$N\n"
-            echo ""
+            printf "\n"
             printf "  To change your password:\n"
             printf "    smb user password $users[1]\n"
         else
@@ -1244,20 +1244,20 @@ function smb --description 'Samba file sharing manager'
                 printf "    $W%-16s$N %s\n" "$u" "$upass"
             end
         end
-        echo ""
+        printf "\n"
         printf "  $Y⚠$N  WARNING: Do NOT share these passwords with anyone.\n"
         printf "     Giving your SMB password to others gives them full access\n"
         printf "     to your files. This is a security risk.\n"
-        echo ""
+        printf "\n"
         printf "  To change a password:\n"
         printf "    smb user password <username>\n"
-        echo ""
+        printf "\n"
         printf "  To add a new user:\n"
         printf "    smb user add\n"
-        echo ""
+        printf "\n"
         printf "  To see all commands:\n"
         printf "    smb help\n"
-        echo ""
+        printf "\n"
         return 0
     end
 
@@ -1282,7 +1282,7 @@ function smb --description 'Samba file sharing manager'
                 return 1
             end
             printf "  $G✓$N  Authentication successful\n"
-            echo ""
+            printf "\n"
         end
 
         # ── Gather info ──
@@ -1314,7 +1314,7 @@ function smb --description 'Samba file sharing manager'
         end
 
         # ── Render ──
-        echo ""
+        printf "\n"
         printf "  $C╔══════════════════════════════════════════════════════════╗$N\n"
         printf "  $C║$N                    $BOLDG SMB STATUS$N                            $C║$N\n"
         printf "  $C╠══════════════════════════════════════════════════════════╣$N\n"
@@ -1435,7 +1435,7 @@ function smb --description 'Samba file sharing manager'
         printf "  $C║$N    Address:  $B smb://$local_ip/(whoami)$N                         $C║$N\n"
         printf "  $C║$N                                                          $C║$N\n"
         printf "  $C╚══════════════════════════════════════════════════════════╝$N\n"
-        echo ""
+        printf "\n"
         if test $show_pass -eq 0
             printf "  $D Tip: Run 'smb status --show' or 'smb password' to reveal passwords.$N\n"
         else
@@ -1443,7 +1443,7 @@ function smb --description 'Samba file sharing manager'
             printf "     Giving your SMB password to others gives them full access\n"
             printf "     to your files. This is a security risk.\n"
         end
-        echo ""
+        printf "\n"
         return 0
     end
 
@@ -1460,7 +1460,7 @@ function smb --description 'Samba file sharing manager'
         switch $data_subcmd
             # ── smb data list ──
             case list
-                echo ""
+                printf "\n"
                 set -l exports $HOME/Documents/smb-data-*.zip
                 if test (count $exports) -eq 0; or not test -f "$exports[1]" 2>/dev/null
                     set exports ()
@@ -1478,9 +1478,9 @@ function smb --description 'Samba file sharing manager'
                     printf "    $W%d)$N  %-42s  ($sz)    %s\n" $idx (basename "$f") "$dt"
                     set idx (math $idx + 1)
                 end
-                echo ""
+                printf "\n"
                 printf "  $D Location: ~/Documents/$N\n"
-                echo ""
+                printf "\n"
 
             # ── smb data clean ──
             case clean
@@ -1495,16 +1495,16 @@ function smb --description 'Samba file sharing manager'
                 read -P "  Delete all SMB exports? [Y/n]: " -l confirm
                 __smb_stop_check; or return 1
                 if test "$confirm" = "n"; or test "$confirm" = "N"
-                    echo ""
+                    printf "\n"
                     printf "  Cancelled. Exports not deleted.\n"
                     return 0
                 end
-                echo ""
+                printf "\n"
                 printf "  Found %d exports:\n" (count $exports)
                 for f in $exports
                     printf "    %s\n" (basename "$f")
                 end
-                echo ""
+                printf "\n"
                 read -P "  Delete all? [Y/n]: " -l confirm2
                 __smb_stop_check; or return 1
                 if test "$confirm2" = "n"; or test "$confirm2" = "N"
@@ -1514,7 +1514,7 @@ function smb --description 'Samba file sharing manager'
                 rm -f "$HOME/Documents/smb-data-"*.zip
                 printf "  $G✓$N  Deleted %d exports\n" (count $exports)
                 printf "  $G✓$N  $D~/Documents/$N cleaned\n"
-                echo ""
+                printf "\n"
 
             # ── smb data (export) ──
             case '*'
@@ -1525,7 +1525,7 @@ function smb --description 'Samba file sharing manager'
                     return 1
                 end
                 printf "  $G✓$N  Authentication successful\n"
-                echo ""
+                printf "\n"
 
                 printf "  Generating SMB data export...\n"
 
@@ -1659,7 +1659,7 @@ function smb --description 'Samba file sharing manager'
                 rm -rf "$tmpdir"
 
                 printf "  $G✓$N  Export saved: $W$zippath$N\n"
-                echo ""
+                printf "\n"
                 printf "  $C┌──────────────────────────────────────────────────────────┐$N\n"
                 printf "  $C│$N                    $BOLDG ZIP PASSWORD$N                           $C│$N\n"
                 printf "  $C├──────────────────────────────────────────────────────────┤$N\n"
@@ -1675,11 +1675,11 @@ function smb --description 'Samba file sharing manager'
                 printf "  $C│$N    Enter password when prompted                           $C│$N\n"
                 printf "  $C│$N                                                          $C│$N\n"
                 printf "  $C└──────────────────────────────────────────────────────────┘$N\n"
-                echo ""
+                printf "\n"
                 printf "  $Y⚠$N  WARNING: The zip contains your SMB passwords.\n"
                 printf "     Do NOT share this file with anyone.\n"
                 printf "     Delete it when you no longer need it.\n"
-                echo ""
+                printf "\n"
         end
         return 0
     end
@@ -1689,9 +1689,9 @@ function smb --description 'Samba file sharing manager'
     # ════════════════════════════════════════════════════════════
 
     if test "$argv[1]" = "log"
-        echo ""
+        printf "\n"
         printf "  $BOLD samba logs (last 20 lines):$N\n"
-        echo ""
+        printf "\n"
         set -l log_output (journalctl -u smb --no-pager -n 20 2>/dev/null)
         if test -z "$log_output"
             printf "  $D No samba logs found.$N\n"
@@ -1699,7 +1699,7 @@ function smb --description 'Samba file sharing manager'
         else
             printf "  %s\n" "$log_output"
         end
-        echo ""
+        printf "\n"
         return 0
     end
 
@@ -1708,7 +1708,7 @@ function smb --description 'Samba file sharing manager'
     # ════════════════════════════════════════════════════════════
 
     printf "  $R✗$N  Unknown command: '$W$argv[1]$N'\n"
-    echo ""
+    printf "\n"
 
     # Try to suggest the closest match
     set -l cmd "$argv[1]"
@@ -1751,11 +1751,11 @@ function smb --description 'Samba file sharing manager'
         for s in $suggestions
             printf "    $Y smb $s$N\n"
         end
-        echo ""
+        printf "\n"
     end
 
     printf "  Run '$Y smb help$N' to see all commands.\n"
-    echo ""
+    printf "\n"
     trap - SIGINT
     set -e __smb_ctrl_c
     set -e CONF_DIR PASS_FILE SMB_CONF __smb_keyring_available
