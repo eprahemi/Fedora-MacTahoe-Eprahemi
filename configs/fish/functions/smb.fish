@@ -69,7 +69,8 @@ function smb --description 'Samba file sharing manager'
     function __smb_has_keyring
         # Cache result for this session
         if set -q __smb_keyring_available
-            return $__smb_keyring_available
+            test $__smb_keyring_available -eq 1
+            return
         end
         type -q secret-tool; or begin; set -g __smb_keyring_available 0; return 1; end
         # Verify keyring is actually unlocked
@@ -574,7 +575,7 @@ function smb --description 'Samba file sharing manager'
                 printf "  SMB Users:\n"
                 for u in $users
                     set -l uname (printf '%s\n' "$u" | cut -d: -f1)
-                    set -l uid (echo $u | cut -d: -f2)
+                    set -l uid (printf '%s\n' "$u" | cut -d: -f2)
                     printf "    $W%-16s$N (uid=$uid)\n" "$uname"
                 end
                 echo ""
@@ -767,7 +768,7 @@ function smb --description 'Samba file sharing manager'
                     printf "  SMB Users:\n"
                     for u in $users
                         set -l uname (printf '%s\n' "$u" | cut -d: -f1)
-                        set -l uid (echo $u | cut -d: -f2)
+                        set -l uid (printf '%s\n' "$u" | cut -d: -f2)
                         printf "    $W%-16s$N (uid=$uid)\n" "$uname"
                     end
                     echo ""
@@ -1219,7 +1220,7 @@ function smb --description 'Samba file sharing manager'
         if test (count $users) -gt 0
             for u in $users
                 set -l uname (printf '%s\n' "$u" | cut -d: -f1)
-                set -l uid (echo $u | cut -d: -f2)
+                set -l uid (printf '%s\n' "$u" | cut -d: -f2)
                 if test $show_pass -eq 1
                     # Show actual password
                     set -l pass (__smb_get_password "$uname")
