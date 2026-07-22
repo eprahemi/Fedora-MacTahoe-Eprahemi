@@ -500,9 +500,12 @@ function smb --description 'Samba file sharing manager'
         printf "\n"
         printf "    $W[3]$N Custom folders\n"
         printf "        Pick specific folders: Downloads, Pictures, Videos,\n"
-        printf "        Music, Documents, Desktop — combined in one share.\n"
+        printf "        Music, Documents, Desktop.\n"
         printf "\n"
-        read -P "  Choose [1/2/3] (default: 1): " -l scope_choice
+        printf "    $W[4]$N Custom path\n"
+        printf "        Enter any folder path you want to share.\n"
+        printf "\n"
+        read -P "  Choose [1/2/3/4] (default: 1): " -l scope_choice
         __smb_stop_check; or return 1
         if test "$scope_choice" = "2"
             printf "\n"
@@ -533,48 +536,54 @@ function smb --description 'Samba file sharing manager'
                     printf "  $D$d — not found, skipping$N\n"
                 end
             end
-            # Add custom path
-            printf "\n"
-            if __confirm_yn "  Add a custom path? [y/N]: " n
-                while true
-                    read -g -P "  Enter full path: " custom_path
-                    __smb_stop_check; or break
-                    if test -z "$custom_path"
-                        printf "  Path cannot be empty.\n"
-                        continue
-                    end
-                    if not test -d "$custom_path"
-                        printf "  $R✗$N  '$custom_path' does not exist.\n"
-                        if __confirm_yn "  Try again? [Y/n]: " y
-                            continue
-                        else
-                            break
-                        end
-                    end
-                    # Check not already added
-                    set -l already 0
-                    for existing in $__smb_custom_folders
-                        if test "$existing" = "$custom_path"
-                            set already 1
-                            break
-                        end
-                    end
-                    if test $already -eq 1
-                        printf "  Already added.\n"
-                    else
-                        set -a __smb_custom_folders "$custom_path"
-                        printf "  $G✓$N  Added: $W$custom_path$N\n"
-                    end
-                    if not __confirm_yn "  Add another? [y/N]: " n
-                        break
-                    end
-                end
-            end
             if test (count $__smb_custom_folders) -eq 0
                 printf "\n  $R✗$N  No folders selected. Falling back to home directory.\n"
                 set scope_choice "1"
             else
                 printf "\n  $G✓$N  Selected $(count $__smb_custom_folders) folder(s)\n"
+            end
+        else if test "$scope_choice" = "4"
+            # Custom path input
+            set -g __smb_custom_folders ()
+            printf "\n"
+            while true
+                read -g -P "  Enter full path: " custom_path
+                __smb_stop_check; or break
+                if test -z "$custom_path"
+                    printf "  Path cannot be empty.\n"
+                    continue
+                end
+                if not test -d "$custom_path"
+                    printf "  $R✗$N  '$custom_path' does not exist.\n"
+                    if __confirm_yn "  Try again? [Y/n]: " y
+                        continue
+                    else
+                        break
+                    end
+                end
+                # Check not already added
+                set -l already 0
+                for existing in $__smb_custom_folders
+                    if test "$existing" = "$custom_path"
+                        set already 1
+                        break
+                    end
+                end
+                if test $already -eq 1
+                    printf "  Already added.\n"
+                else
+                    set -a __smb_custom_folders "$custom_path"
+                    printf "  $G✓$N  Added: $W$custom_path$N\n"
+                end
+                if not __confirm_yn "  Add another? [y/N]: " n
+                    break
+                end
+            end
+            if test (count $__smb_custom_folders) -eq 0
+                printf "\n  $R✗$N  No paths selected. Falling back to home directory.\n"
+                set scope_choice "1"
+            else
+                printf "\n  $G✓$N  Selected $(count $__smb_custom_folders) path(s)\n"
             end
         else
             printf "  $G✓$N  Home directory selected\n"
@@ -587,7 +596,7 @@ function smb --description 'Samba file sharing manager'
         if test "$scope_choice" = "2"
             set scope_type "ROOT"
             set scope_path "/"
-        else if test "$scope_choice" = "3"
+        else if test "$scope_choice" = "3"; or test "$scope_choice" = "4"
             set scope_type "CUSTOM"
             set scope_path (printf '%s, ' $__smb_custom_folders | string trim -s -r -c ', ')
         end
@@ -616,8 +625,7 @@ function smb --description 'Samba file sharing manager'
                 printf '\n[root_share]\n    comment = Root Filesystem\n    path = /\n    browseable = yes\n    writable = yes\n    valid users = %s\n' "$smb_user" | sudo tee -a "$SMB_CONF" >/dev/null
                 printf "  $G✓$N  [root_share] section added to smb.conf\n"
             end
-        else if test "$scope_choice" = "3"
-            # Custom folder shares
+        else if test "$scope_choice" = "3"; or test "$scope_choice" = "4"
             for dp in $__smb_custom_folders
                 set -l share_name (basename "$dp")
                 if __smb_share_exists "$share_name"
@@ -710,7 +718,7 @@ function smb --description 'Samba file sharing manager'
         end
         printf "  $C╠$sep╣$N\n"
         printf "  $C║$N  SHARED DIRECTORIES\n"
-        if test "$scope_choice" = "3"
+        if test "$scope_choice" = "3"; or test "$scope_choice" = "4"
             for dp in $__smb_custom_folders
                 set -l share_name (basename "$dp")
                 printf "  $C║$N    $W$share_name$N  →  $D$dp$N\n"
@@ -720,7 +728,7 @@ function smb --description 'Samba file sharing manager'
         end
         printf "  $C╠$sep╣$N\n"
         printf "  $C║$N\n"
-        if test "$scope_choice" = "3"
+        if test "$scope_choice" = "3"; or test "$scope_choice" = "4"
             # Custom folder connection URLs
             printf "  $C║$N  SAMSUNG / ANDROID:\n"
             printf "  $C║$N    Open My Files > Network > Add network storage\n"
