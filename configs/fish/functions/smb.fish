@@ -1719,41 +1719,50 @@ function smb --description 'Samba file sharing manager'
 
     for k in $known
         # Exact prefix match (e.g. "he" matches "help")
-        set -l matched (string match -r "^$cmd" "$k" 2>/dev/null)
-        if test -n "$matched"
+        if string match -q -r "^$cmd" "$k" 2>/dev/null
             set -a suggestions "$k"
             continue
         end
         # Contains match (e.g. "hel" matches "help")
-        set -l contained (string match -q "*$cmd*" "$k" 2>/dev/null; and echo 1)
-        if test -n "$contained"
+        if string match -q "*$cmd*" "$k" 2>/dev/null
             set -a suggestions "$k"
             continue
         end
-        # Simple length + char diff check (one char off)
+        # Same length with 1 char different
         set -l len_cmd (string length -- "$cmd")
         set -l len_k (string length -- "$k")
-        set -l diff 0
-        if test $len_cmd -gt $len_k
-            set diff (math $len_cmd - $len_k)
-        else
-            set diff (math $len_k - $len_cmd)
-        end
-        if test $diff -le 1
+        if test $len_cmd -eq $len_k
             set -l mismatches 0
-            set -l max_len $len_cmd
-            if test $len_k -gt $max_len
-                set max_len $len_k
-            end
-            for i in (seq 1 $max_len)
-                set -l c1 (string sub -s $i -l 1 -- "$cmd" 2>/dev/null)
-                set -l c2 (string sub -s $i -l 1 -- "$k" 2>/dev/null)
+            for i in (seq 1 $len_cmd)
+                set -l c1 (string sub -s $i -l 1 -- "$cmd" 2>/dev/null; or echo "")
+                set -l c2 (string sub -s $i -l 1 -- "$k" 2>/dev/null; or echo "")
                 if test "$c1" != "$c2"
                     set mismatches (math $mismatches + 1)
                 end
             end
             if test $mismatches -le 1
                 set -a suggestions "$k"
+                continue
+            end
+        end
+        # 1 char longer: removing one char from cmd matches k (e.g. "daata" → "data")
+        if test (math $len_cmd - $len_k) -eq 1
+            for i in (seq 1 $len_cmd)
+                set -l shortened (string sub -s 1 -l (math $i - 1) -- "$cmd"; or echo "")(string sub -s (math $i + 1) -- "$cmd" 2>/dev/null; or echo "")
+                if test "$shortened" = "$k"
+                    set -a suggestions "$k"
+                    break
+                end
+            end
+        end
+        # 1 char shorter: removing one char from k matches cmd (e.g. "dat" → "data" won't match, but "dat" has no good match)
+        if test (math $len_k - $len_cmd) -eq 1
+            for i in (seq 1 $len_k)
+                set -l shortened (string sub -s 1 -l (math $i - 1) -- "$k"; or echo "")(string sub -s (math $i + 1) -- "$k" 2>/dev/null; or echo "")
+                if test "$shortened" = "$cmd"
+                    set -a suggestions "$k"
+                    break
+                end
             end
         end
     end
