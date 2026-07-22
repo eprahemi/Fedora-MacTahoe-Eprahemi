@@ -254,16 +254,17 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
                 printf '\n  %sInterrupted.%s\n' $Y $N
                 return 0
             end
-            if test "$reboot_reply" = "" -o "$reboot_reply" = "n" -o "$reboot_reply" = "N"
+            set -l _lc (string lower -- "$reboot_reply" | string trim)
+            if test -z "$_lc"; or test "$_lc" = "n"; or test "$_lc" = "no"
                 printf '  Continuing with cleanup on running kernel.\n'
                 printf '  %sNote:%s The running kernel will be kept safe.\n' $BOLDY $N
                 break
-            else if test "$reboot_reply" = "y" -o "$reboot_reply" = "Y"
+            else if test "$_lc" = "y"; or test "$_lc" = "yes"
                 printf '  %sRebooting...%s\n' $G $N
                 sudo reboot
                 return 0
             else
-                printf '  %sInvalid input:%s please type %sy%s, %sY%s, %sn%s, %sN%s, or press Enter.\n' $R $N $G $N $G $N $W $N $W $N
+                printf '  %sInvalid input:%s type y/yes/n/no or press Enter.\n' $R $N
             end
         end
     end
@@ -499,13 +500,14 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
             printf '\n  %sInterrupted.%s\n' $Y $N
             return 0
         end
-        if test "$reply1" = "" -o "$reply1" = "y" -o "$reply1" = "Y"
+        set -l _lc (string lower -- "$reply1" | string trim)
+        if test -z "$_lc"; or test "$_lc" = "y"; or test "$_lc" = "yes"
             break
-        else if test "$reply1" = "n" -o "$reply1" = "N"
+        else if test "$_lc" = "n"; or test "$_lc" = "no"
             printf '  %sAborted.%s\n' $D $N
             return 0
         else
-            printf '  %sInvalid input:%s please type %sy%s, %sY%s, %sn%s, %sN%s, or press Enter.\n' $R $N $G $N $G $N $W $N $W $N
+            printf '  %sInvalid input:%s type y/yes/n/no or press Enter.\n' $R $N
         end
     end
 
@@ -638,13 +640,14 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
             printf '\n  %sInterrupted.%s\n' $Y $N
             return 0
         end
-        if test "$reply2" = "" -o "$reply2" = "y" -o "$reply2" = "Y"
+        set -l _lc (string lower -- "$reply2" | string trim)
+        if test -z "$_lc"; or test "$_lc" = "y"; or test "$_lc" = "yes"
             break
-        else if test "$reply2" = "n" -o "$reply2" = "N"
+        else if test "$_lc" = "n"; or test "$_lc" = "no"
             printf '  %sAborted.%s\n' $D $N
             return 0
         else
-            printf '  %sInvalid input:%s please type %sy%s, %sY%s, %sn%s, %sN%s, or press Enter.\n' $R $N $G $N $G $N $W $N $W $N
+            printf '  %sInvalid input:%s type y/yes/n/no or press Enter.\n' $R $N
             printf '  Are you %ssure%s? ' $BOLDY $N
         end
     end

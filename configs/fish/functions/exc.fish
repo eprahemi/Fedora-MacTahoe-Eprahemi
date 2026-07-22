@@ -235,8 +235,7 @@ function exc --description 'Auto-chmod and run/open executables'
             set -l file $results[1]
             set -l name (basename "$file")
             printf "\n"
-            read -l confirm -P "  Run '$name'? [Y/n]: "
-            if test "$confirm" = "n"; or test "$confirm" = "N"
+            if not __confirm_yn "  Run '$name'? [Y/n]: " y
                 printf "  $D Cancelled.$N\n"
                 printf "\n"
                 return 0
@@ -472,13 +471,11 @@ function exc --description 'Auto-chmod and run/open executables'
     printf "  Type:  %s\n" "$ftype"
     printf "  Size:  %s\n" (du -h "$file" 2>/dev/null | awk '{print $1}')
     printf "\n"
-    read -l confirm -P "  Run this file? [Y/n]: "
-    printf "\n"
-
-    if test "$confirm" = "n"; or test "$confirm" = "N"
+    if not __confirm_yn "  Run this file? [Y/n]: " y
         printf "  $D Cancelled.$N\n"
         return 0
     end
+    printf "\n"
 
     printf "  $G✓$N  Running: %s\n" (basename "$file")
     printf "\n"

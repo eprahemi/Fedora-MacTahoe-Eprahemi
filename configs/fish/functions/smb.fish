@@ -320,10 +320,7 @@ function smb --description 'Samba file sharing manager'
         printf "  $BOLD Step 2/9$N   Detecting username...\n"
         set -l detected_user (whoami)
         printf "  Detected username: $W$detected_user$N\n"
-        read -P "  Use this as your SMB username? [Y/n]: " -l confirm
-        __smb_stop_check; or return 1
-        set -l smb_user ""
-        if test "$confirm" = "n"; or test "$confirm" = "N"
+        if not __confirm_yn "  Use this as your SMB username? [Y/n]: " y
             printf "\n"
             read -P "  Enter SMB username: " -l smb_user
             __smb_stop_check; or return 1
@@ -331,9 +328,7 @@ function smb --description 'Samba file sharing manager'
                 printf "  $R✗$N  Username cannot be empty.\n"
                 return 1
             end
-            read -P "  Confirm username: $smb_user [Y/n]: " -l confirm2
-            __smb_stop_check; or return 1
-            if test "$confirm2" = "n"; or test "$confirm2" = "N"
+            if not __confirm_yn "  Confirm username: $smb_user [Y/n]: " y
                 printf "  $R✗$N  Setup cancelled.\n"
                 return 1
             end
@@ -398,8 +393,7 @@ function smb --description 'Samba file sharing manager'
                         printf "     %s\n" "$line"
                     end
                     printf "\n"
-                    read -l confirm -P "  Use this password anyway? [y/N]: "
-                    if test "$confirm" != "y"; and test "$confirm" != "Y"
+                    if not __confirm_yn "  Use this password anyway? [y/N]: " n
                         printf "\n"
                         printf "  $D Re-entering password...$N\n"
                         printf "\n"
@@ -448,8 +442,7 @@ function smb --description 'Samba file sharing manager'
                     printf "  $R⚠$N  Weak password detected.\n"
                     printf "     '%s' is one of the most commonly used passwords.\n" "$pass"
                     printf "\n"
-                    read -l confirm -P "  Use this password anyway? [y/N]: "
-                    if test "$confirm" != "y"; and test "$confirm" != "Y"
+                    if not __confirm_yn "  Use this password anyway? [y/N]: " n
                         printf "\n"
                         printf "  $D Re-entering password...$N\n"
                         printf "\n"
@@ -489,9 +482,7 @@ function smb --description 'Samba file sharing manager'
             printf "\n"
             printf "  $Y⚠$N  WARNING: Root sharing gives FULL access to /etc, /boot, /root,\n"
             printf "     and every system file. This is a security risk.\n"
-            read -P "  Are you sure? [y/N]: " -l root_confirm
-            __smb_stop_check; or return 1
-            if test "$root_confirm" != "y" -a "$root_confirm" != "Y"
+            if not __confirm_yn "  Are you sure? [y/N]: " n
                 set scope_choice "1"
                 printf "  $G✓$N  Home directory selected\n"
             else
@@ -517,9 +508,7 @@ function smb --description 'Samba file sharing manager'
         printf "  $C│    $N SELinux:   $W home dirs enabled$N$C                         │$N\n"
         printf "  $C╰──────────────────────────────────────────────────────────╯$N\n"
         printf "\n"
-        read -P "  Apply all changes? [Y/n]: " -l apply
-        __smb_stop_check; or return 1
-        if test "$apply" = "n"; or test "$apply" = "N"
+        if not __confirm_yn "  Apply all changes? [Y/n]: " y
             printf "\n"
             printf "  $Y Setup cancelled. No changes were made.$N\n"
             return 0
@@ -701,9 +690,7 @@ function smb --description 'Samba file sharing manager'
                     printf "  $R✗$N  Username cannot be empty.\n"
                     return 1
                 end
-                read -P "  Confirm username: $newuser [Y/n]: " -l uc
-                __smb_stop_check; or return 1
-                if test "$uc" = "n"; or test "$uc" = "N"
+                if not __confirm_yn "  Confirm username: $newuser [Y/n]: " y
                     printf "  Cancelled.\n"
                     return 0
                 end
@@ -890,9 +877,7 @@ function smb --description 'Samba file sharing manager'
                     printf "  Run 'smb user list' to see available users.\n"
                     return 1
                 end
-                read -P "  Change SMB password for '$extra'? [Y/n]: " -l confirm
-                __smb_stop_check; or return 1
-                if test "$confirm" = "n"; or test "$confirm" = "N"
+                if not __confirm_yn "  Change SMB password for '$extra'? [Y/n]: " y
                     printf "\n"
                     printf "  Cancelled. Password not changed.\n"
                     return 0
@@ -1034,9 +1019,7 @@ function smb --description 'Samba file sharing manager'
                 return 1
             end
             printf "\n"
-            read -P "  Share '$dir' as '$name'? [Y/n]: " -l confirm
-            __smb_stop_check; or return 1
-            if test "$confirm" = "n"; or test "$confirm" = "N"
+            if not __confirm_yn "  Share '$dir' as '$name'? [Y/n]: " y
                 printf "  Cancelled.\n"
                 return 0
             end
@@ -1096,9 +1079,7 @@ function smb --description 'Samba file sharing manager'
                 printf "  Run 'smb share list' to see current shares.\n"
                 return 1
             end
-            read -P "  Remove share '$target'? [Y/n]: " -l confirm
-            __smb_stop_check; or return 1
-            if test "$confirm" = "n"; or test "$confirm" = "N"
+            if not __confirm_yn "  Remove share '$target'? [Y/n]: " y
                 printf "  Cancelled.\n"
                 return 0
             end
@@ -1146,9 +1127,7 @@ function smb --description 'Samba file sharing manager'
             printf "  $G✓$N  Samba service is already stopped\n"
             return 0
         end
-        read -P "  Stop Samba service? [Y/n]: " -l confirm
-        __smb_stop_check; or return 1
-        if test "$confirm" = "n"; or test "$confirm" = "N"
+        if not __confirm_yn "  Stop Samba service? [Y/n]: " y
             printf "  Cancelled.\n"
             return 0
         end
@@ -1159,9 +1138,7 @@ function smb --description 'Samba file sharing manager'
     end
 
     if test "$argv[1]" = "restart"
-        read -P "  Restart Samba service? Active connections will be disconnected. [Y/n]: " -l confirm
-        __smb_stop_check; or return 1
-        if test "$confirm" = "n"; or test "$confirm" = "N"
+        if not __confirm_yn "  Restart Samba service? Active connections will be disconnected. [Y/n]: " y
             printf "\n"
             printf "  Cancelled. Service not restarted.\n"
             return 0
@@ -1485,9 +1462,7 @@ function smb --description 'Samba file sharing manager'
                     printf "  No saved exports to delete.\n"
                     return 0
                 end
-                read -P "  Delete all SMB exports? [Y/n]: " -l confirm
-                __smb_stop_check; or return 1
-                if test "$confirm" = "n"; or test "$confirm" = "N"
+                if not __confirm_yn "  Delete all SMB exports? [Y/n]: " y
                     printf "\n"
                     printf "  Cancelled. Exports not deleted.\n"
                     return 0
@@ -1498,9 +1473,7 @@ function smb --description 'Samba file sharing manager'
                     printf "    %s\n" (basename "$f")
                 end
                 printf "\n"
-                read -P "  Delete all? [Y/n]: " -l confirm2
-                __smb_stop_check; or return 1
-                if test "$confirm2" = "n"; or test "$confirm2" = "N"
+                if not __confirm_yn "  Delete all? [Y/n]: " y
                     printf "  Cancelled.\n"
                     return 0
                 end

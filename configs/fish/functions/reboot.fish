@@ -66,20 +66,13 @@ function reboot --description 'ﾉｼ(>_<)ﾉ  Restart the system with style'
     end
     echo -e "  $GY│$C$(printf '%*s' 62 '')$GY│$C"
     echo -e "  $GY└──────────────────────────────────────────────────────────────┘$C"
-    read -l -P '  ❯ ' answer
-    if test $status -ne 0
-        echo -e "  $GY  ✧  Cancelled.$C"
-        return 0
-    end
     if test $has_now -eq 1
-        # Y is default — only n/N cancels
-        if test "$answer" = "n"; or test "$answer" = "N"
+        if not __confirm_yn '  ❯ ' y
             echo -e "  $GY  ✧  Reboot cancelled. Stay awhile.$C"
             return 0
         end
     else
-        # N is default — only y/Y confirms
-        if test "$answer" != "y"; and test "$answer" != "Y"
+        if not __confirm_yn '  ❯ ' n
             echo -e "  $GY  ✧  Reboot cancelled. Stay awhile.$C"
             return 0
         end

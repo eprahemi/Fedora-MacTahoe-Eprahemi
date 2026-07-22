@@ -190,8 +190,7 @@ function kit --description 'Toggle kitty.conf theme: kit original/theme'
             printf "  \033[1;33m║\033[0m  \033[2;37mDownload the default Fedora MacTahoe kitty.conf?\033[0m\n"
             printf "  \033[1;33m╚%s╝\033[0m\n" "$sep"
             printf "\n"
-            read -P "  Download default theme? [Y/n]: " -l reply
-            if test "$reply" = "n" -o "$reply" = "N" -o "$reply" = "no"
+            if not __confirm_yn "  Download default theme? [Y/n]: " y
                 printf "\n  \033[1;31m  ✗ Cancelled.\033[0m\n\n"
                 return 0
             end
