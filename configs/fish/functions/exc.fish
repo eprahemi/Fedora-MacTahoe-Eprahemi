@@ -236,7 +236,7 @@ function exc --description 'Auto-chmod and run/open executables'
             set -l name (basename "$file")
             echo ""
             printf "  Run '$W$name$N'? [Y/n]: "
-            read -l confirm
+            read -l confirm -P ""
             if test "$confirm" = "n"; or test "$confirm" = "N"
                 printf "  $D Cancelled.$N\n"
                 echo ""
@@ -256,7 +256,7 @@ function exc --description 'Auto-chmod and run/open executables'
         # Multiple results — ask which one to run
         echo ""
         printf "  $BOLDY Pick a number to run (or Enter to skip):$N "
-        read -l choice
+        read -l choice -P ""
 
         # Empty = skip
         if test -z "$choice"
@@ -475,7 +475,7 @@ function exc --description 'Auto-chmod and run/open executables'
     printf "  Size:  %s\n" (du -h "$file" 2>/dev/null | awk '{print $1}')
     echo ""
     printf "  Run this file? [Y/n]: "
-    read -l confirm
+    read -l confirm -P ""
     echo ""
 
     if test "$confirm" = "n"; or test "$confirm" = "N"
