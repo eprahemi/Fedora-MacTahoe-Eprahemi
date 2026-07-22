@@ -152,6 +152,7 @@ function smb --description 'Samba file sharing manager'
         printf "    $W smb user list$N               List all SMB users\n"
         printf "    $W smb user add$N $D<name>$N         Add SMB user\n"
         printf "    $W smb user remove$N $D<name>$N      Remove SMB user\n"
+        printf "    $W smb user rename$N $D<old> <new>$N  Rename SMB user\n"
         printf "    $W smb user password$N $D<name>$N    Change SMB password\n"
         echo ""
         printf "  $BOLDC SHARES$N\n"
@@ -571,6 +572,79 @@ function smb --description 'Samba file sharing manager'
                     echo ""
                 end
 
+            # ── smb user rename ──
+            case rename
+                if test -z "$extra"
+                    printf "  Usage: smb user rename $D<old-name> <new-name>$N\n"
+                    printf "  Example: smb user rename alice bob\n"
+                    return 1
+                end
+                if not set -q argv[4]; or test -z "$argv[4]"
+                    printf "  $R✗$N  Missing new username.\n"
+                    printf "  Usage: smb user rename $D<old-name> <new-name>$N\n"
+                    return 1
+                end
+                set -l old_name "$extra"
+                set -l new_name "$argv[4]"
+                # Check old user exists
+                set -l users ()
+                if type -q pdbedit
+                    set users (command pdbedit -L 2>/dev/null | cut -d: -f1)
+                end
+                set -l found 0
+                for u in $users
+                    if test "$u" = "$old_name"
+                        set found 1
+                        break
+                    end
+                end
+                if test $found -eq 0
+                    printf "  $R✗$N  User '$W$old_name$N' not found.\n"
+                    return 1
+                end
+                # Check new name doesn't already exist
+                for u in $users
+                    if test "$u" = "$new_name"
+                        printf "  $R✗$N  User '$W$new_name$N' already exists.\n"
+                        return 1
+                    end
+                end
+                # Get password for old user from password file
+                set -l old_pass ""
+                if test -f "$PASS_FILE"
+                    set old_pass (grep "^$old_name:" "$PASS_FILE" 2>/dev/null | head -1 | cut -d: -f2)
+                end
+                if test -z "$old_pass"
+                    printf "  $R✗$N  No password found for '$W$old_name$N' in $D$PASS_FILE$N\n"
+                    printf "  Run 'smb user password $old_name' to set one first.\n"
+                    return 1
+                end
+                echo ""
+                if __smb_pkexec
+                    printf "  $G✓$N  System authentication successful\n"
+                    # Remove old user
+                    sudo smbpasswd -x "$old_name" 2>/dev/null
+                    printf "  $G✓$N  Removed old user '$W$old_name$N'\n"
+                    # Add new user with same password
+                    __smb_set_password "$new_name" "$old_pass"
+                    __smb_save_password "$new_name" "$old_pass"
+                    # Remove old entry from password file
+                    if test -f "$PASS_FILE"
+                        grep -v "^$old_name:" "$PASS_FILE" > "$PASS_FILE.tmp" 2>/dev/null
+                        mv "$PASS_FILE.tmp" "$PASS_FILE" 2>/dev/null
+                    end
+                    echo ""
+                    printf "  $G✓$N  User renamed: $W$old_name$N → $W$new_name$N\n"
+                    printf "  $G✓$N  Password preserved in $D$PASS_FILE$N\n"
+                    printf "  $Y⚠$N  Shares still reference the old username. Update if needed:\n"
+                    printf "    smb share list → check 'allowed users' in smb.conf\n"
+                    return 0
+                else
+                    printf "  $R✗$N  System authentication failed.\n"
+                    printf "  User was NOT renamed. Try again later.\n"
+                    return 1
+                end
+
             # ── smb user password ──
             case password
                 if test -z "$extra"
@@ -639,7 +713,7 @@ function smb --description 'Samba file sharing manager'
 
             case '*'
                 printf "  $R✗$N  Unknown user command: '$subcmd'\n"
-                printf "  Usage: smb user [list|add|remove|password]\n"
+                printf "  Usage: smb user [list|add|remove|rename|password]\n"
                 return 1
         end
         return 0
