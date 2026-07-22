@@ -3,9 +3,6 @@ function __confirm_yn --description 'Prompt for y/n confirmation'
     # Returns: 0 = yes, 1 = no
     # Requires explicit y or n input. Enter does nothing, loops.
     set -l prompt "$argv[1]"
-    if test (count $argv) -ge 2
-        set prompt "$argv[1] [$argv[2]]: "
-    end
     while true
         read -l _reply -P "$prompt"
         set -l _lc (string lower -- "$_reply" | string trim)
