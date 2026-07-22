@@ -51,7 +51,7 @@ function func --description 'Browse all fish functions'
             case c v n weather;           echo 1
             case cat l p mkgif extract;   echo 2
             case clean refresh gdm logout reboot shutdown pfp kit update kernels smb; echo 3
-            case testdrive getdata myip stats calc qr; echo 4
+            case testdrive getdata myip stats calc qr exc; echo 4
             case matrix hollywood stayawake fish_greeting; echo 5
             case func passgen passwd ghlogin;     echo 6
             case '*';                     echo 0
@@ -96,6 +96,7 @@ function func --description 'Browse all fish functions'
             case stats;   echo "stats  —  System dashboard"
             case calc;    echo "calc <expr>  —  Quick math in terminal"
             case qr;      echo "qr <text-or-url>  —  Generate QR code"
+            case exc;     echo "exc <file> [args]  —  Auto-chmod and run executables"
             case l;       echo "l [path]  —  Pretty directory listing"
             case p;       echo "p  —  Fzf file preview"
             case extract; echo "extract <archive> [dest]  —  Extract any archive"
