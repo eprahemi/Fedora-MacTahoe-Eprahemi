@@ -586,7 +586,6 @@ function smb --description 'Samba file sharing manager'
 
         # ── Complete ──
         set -l local_ip (__smb_ip)
-        set -l smb_hostname (hostname)
         set -l smb_url "smb://$local_ip/$smb_user"
         set -l win_url "\\\\$local_ip\\\\$smb_user"
         set -l smb_server "smb://$local_ip"
@@ -598,7 +597,6 @@ function smb --description 'Samba file sharing manager'
         printf "  $C║$N\n"
         printf "  $C║$N  Service:  $BOLDG active$N\n"
         printf "  $C║$N  IP:  $W$local_ip$N\n"
-        printf "  $C║$N  Hostname:  $W$smb_hostname$N\n"
         printf "  $C║$N\n"
         printf "  $C╠$sep╣$N\n"
         printf "  $C║$N  SMB USERS\n"
@@ -1158,11 +1156,9 @@ function smb --description 'Samba file sharing manager'
     if test "$argv[1]" = "ip"
         set -l local_ip (__smb_ip)
         set -l smb_user (whoami)
-        set -l smb_hostname (hostname)
         printf "\n"
         printf "  Local IP:    $B$local_ip$N\n"
         printf "  Username:    $W$smb_user$N\n"
-        printf "  Hostname:    $W$smb_hostname$N\n"
         printf "\n"
         printf "  Phone:    $B smb://$local_ip/$smb_user$N\n"
         printf "  Windows:  $B \\\\$local_ip\\\\$smb_user$N\n"
@@ -1251,12 +1247,7 @@ function smb --description 'Samba file sharing manager'
 
         # ── Gather info ──
         set -l local_ip (__smb_ip)
-        set -l smb_hostname (hostname)
         set -l smb_user (whoami)
-        set -l smb_ver ""
-        if type -q smbd
-            set smb_ver (command smbd --version 2>/dev/null | head -1 | awk '{print $2}')
-        end
         set -l svc_active "active"
         if not systemctl is-active smb >/dev/null 2>&1
             set svc_active "INACTIVE"
@@ -1291,8 +1282,6 @@ function smb --description 'Samba file sharing manager'
             printf "  $C║$N  Service:     $BOLDR INACTIVE$N\n"
         end
         printf "  $C║$N  IP:          $W$local_ip$N\n"
-        printf "  $C║$N  Hostname:    $W$smb_hostname$N\n"
-        printf "  $C║$N  Samba:       $W$smb_ver$N\n"
         printf "  $C║$N  Firewall:    $W$fw_status$N\n"
         printf "  $C║$N  SELinux:     $W$selinux_status$N ($home_dirs)\n"
         printf "  $C║$N\n"
@@ -1501,11 +1490,6 @@ function smb --description 'Samba file sharing manager'
                 # Gather info
                 set -l local_ip (__smb_ip)
                 set -l smb_user (whoami)
-                set -l smb_hostname (hostname)
-                set -l smb_ver ""
-                if type -q smbd
-                    set smb_ver (command smbd --version 2>/dev/null | head -1 | awk '{print $2}')
-                end
                 set -l now (date '+%Y-%m-%d %H:%M:%S')
                 set -l scope (__smb_get_scope)
 
@@ -1521,8 +1505,6 @@ function smb --description 'Samba file sharing manager'
                 printf "├──────────────────────────────────────────────────────────────┤\n" >> "$report"
                 printf "│  IP:          %-47s │\n" "$local_ip" >> "$report"
                 printf "│  Username:    %-47s │\n" "$smb_user" >> "$report"
-                printf "│  Hostname:    %-47s │\n" "$smb_hostname" >> "$report"
-                printf "│  Samba:       %-47s │\n" "$smb_ver" >> "$report"
                 printf "└──────────────────────────────────────────────────────────────┘\n\n" >> "$report"
 
                 printf "┌──────────────────────────────────────────────────────────────┐\n" >> "$report"
@@ -1533,9 +1515,11 @@ function smb --description 'Samba file sharing manager'
                     for u in $all_users
                         set -l upass (__smb_get_password "$u")
                         if test -n "$upass"
-                            printf "│  %-16s %-30s │\n" "$u" "$upass" >> "$report"
+                            printf "│  Username:  %-44s │\n" "$u" >> "$report"
+                            printf "│  Password:  %-44s │\n" "$upass" >> "$report"
                         else
-                            printf "│  %-16s %-30s │\n" "$u" "(no password stored)" >> "$report"
+                            printf "│  Username:  %-44s │\n" "$u" >> "$report"
+                            printf "│  Password:  %-44s │\n" "(no password stored)" >> "$report"
                         end
                     end
                 end
