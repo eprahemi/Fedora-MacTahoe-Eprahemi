@@ -208,7 +208,7 @@ trap _handle_sigint INT
 # 18+ wallpaper zip — Google Drive direct download (file ID from share link)
 WALLPAPER_18_URL="https://drive.usercontent.google.com/download?id=1pHuIkixIfQR_KMnaIOvMutHgaZ32oBRg&export=download&confirm=t"
 # 18+ wallpaper zip v2 — additional wallpapers
-WALLPAPER_18_URL_V2="https://drive.usercontent.google.com/download?id=1ziCRGbZR3fErlcUJDOf3A16k3jduu_to&export=download&confirm=t"
+WALLPAPER_18_URL_V2="https://drive.usercontent.google.com/download?id=1DhJTu6xR6WbmbnjSh5sKVX22hB7cVYEM&export=download&confirm=t"
 # 18+ faces zip — Google Drive direct download
 FACES_18_URL="https://drive.usercontent.google.com/download?id=1-pwkeb6jiMUkIpellsGf9ETPDihyDU7Q&export=download&confirm=t"
 # 🔥 Hot Billie & Jinx video edits zip — Google Drive direct download
