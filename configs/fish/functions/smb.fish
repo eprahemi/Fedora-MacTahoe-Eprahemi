@@ -20,9 +20,9 @@ function smb --description 'Samba file sharing manager'
     set -l BOLDC "\033[1;36m"
 
     # ── Config paths ──
-    set -l CONF_DIR  "$HOME/.config/smb"
-    set -l PASS_FILE "$CONF_DIR/.password"
-    set -l SMB_CONF  "/etc/samba/smb.conf"
+    set -g CONF_DIR  "$HOME/.config/smb"
+    set -g PASS_FILE "$CONF_DIR/.password"
+    set -g SMB_CONF  "/etc/samba/smb.conf"
 
     # ── Ctrl+C handling ──
     set -g __smb_ctrl_c 0
