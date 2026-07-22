@@ -1719,25 +1719,35 @@ function smb --description 'Samba file sharing manager'
 
     for k in $known
         # Exact prefix match (e.g. "he" matches "help")
-        if test "$k" = (string match -r "^$cmd" "$k" 2>/dev/null)
+        set -l matched (string match -r "^$cmd" "$k" 2>/dev/null)
+        if test -n "$matched"
             set -a suggestions "$k"
             continue
         end
         # Contains match (e.g. "hel" matches "help")
-        if string match -q "*$cmd*" "$k" 2>/dev/null
+        set -l contained (string match -q "*$cmd*" "$k" 2>/dev/null; and echo 1)
+        if test -n "$contained"
             set -a suggestions "$k"
             continue
         end
-        # Levenshtein distance <= 1 (one char off)
-        set -l len_cmd (string length "$cmd")
-        set -l len_k (string length "$k")
-        set -l diff (math abs($len_cmd - $len_k))
+        # Simple length + char diff check (one char off)
+        set -l len_cmd (string length -- "$cmd")
+        set -l len_k (string length -- "$k")
+        set -l diff 0
+        if test $len_cmd -gt $len_k
+            set diff (math $len_cmd - $len_k)
+        else
+            set diff (math $len_k - $len_cmd)
+        end
         if test $diff -le 1
             set -l mismatches 0
-            set -l max_len (math max($len_cmd, $len_k))
+            set -l max_len $len_cmd
+            if test $len_k -gt $max_len
+                set max_len $len_k
+            end
             for i in (seq 1 $max_len)
-                set -l c1 (string sub -s $i -l 1 "$cmd" 2>/dev/null)
-                set -l c2 (string sub -s $i -l 1 "$k" 2>/dev/null)
+                set -l c1 (string sub -s $i -l 1 -- "$cmd" 2>/dev/null)
+                set -l c2 (string sub -s $i -l 1 -- "$k" 2>/dev/null)
                 if test "$c1" != "$c2"
                     set mismatches (math $mismatches + 1)
                 end
