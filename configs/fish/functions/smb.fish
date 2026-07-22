@@ -1501,6 +1501,52 @@ function smb --description 'Samba file sharing manager'
     # ════════════════════════════════════════════════════════════
 
     printf "  $R✗$N  Unknown command: '$W$argv[1]$N'\n"
+    echo ""
+
+    # Try to suggest the closest match
+    set -l cmd "$argv[1]"
+    set -l suggestions ()
+    set -l known setup user share unshare on off restart data ip password status log help
+
+    for k in $known
+        # Exact prefix match (e.g. "he" matches "help")
+        if test "$k" = (string match -r "^$cmd" "$k" 2>/dev/null)
+            set -a suggestions "$k"
+            continue
+        end
+        # Contains match (e.g. "hel" matches "help")
+        if string match -q "*$cmd*" "$k" 2>/dev/null
+            set -a suggestions "$k"
+            continue
+        end
+        # Levenshtein distance <= 1 (one char off)
+        set -l len_cmd (string length "$cmd")
+        set -l len_k (string length "$k")
+        set -l diff (math abs($len_cmd - $len_k))
+        if test $diff -le 1
+            set -l mismatches 0
+            set -l max_len (math max($len_cmd, $len_k))
+            for i in (seq 1 $max_len)
+                set -l c1 (string sub -s $i -l 1 "$cmd" 2>/dev/null)
+                set -l c2 (string sub -s $i -l 1 "$k" 2>/dev/null)
+                if test "$c1" != "$c2"
+                    set mismatches (math $mismatches + 1)
+                end
+            end
+            if test $mismatches -le 1
+                set -a suggestions "$k"
+            end
+        end
+    end
+
+    if test (count $suggestions) -gt 0
+        printf "  Did you mean:\n"
+        for s in $suggestions
+            printf "    $Y smb $s$N\n"
+        end
+        echo ""
+    end
+
     printf "  Run '$Y smb help$N' to see all commands.\n"
     echo ""
     trap - SIGINT
