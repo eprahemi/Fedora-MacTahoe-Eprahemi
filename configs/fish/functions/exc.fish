@@ -160,7 +160,7 @@ function exc --description 'Auto-chmod and run/open executables'
     end
 
     # ════════════════════════════════════════════════════════════
-    # FIND — search for executables
+    # FIND — search for executables (interactive picker)
     # ════════════════════════════════════════════════════════════
 
     if test "$argv[1]" = "find"
@@ -174,16 +174,14 @@ function exc --description 'Auto-chmod and run/open executables'
         printf "  $BOLDG SEARCHING$N for '$W$query$N'...\n"
         echo ""
 
-        set -l found 0
+        set -l results
 
         # Search PATH
         for dir in (string split ':' $PATH)
             if test -d "$dir"
                 for f in "$dir"/*$query*
                     if test -f "$f"; and test -x "$f"
-                        set -l name (basename "$f")
-                        printf "  $G✓$N  $W%-20s$N  $D%s$N\n" "$name" "$f"
-                        set found (math $found + 1)
+                        set -a results "$f"
                     end
                 end
             end
@@ -194,15 +192,7 @@ function exc --description 'Auto-chmod and run/open executables'
         if test -d "$dl_dir"
             for f in "$dl_dir"/*$query*
                 if test -f "$f"
-                    set -l name (basename "$f")
-                    set -l mark ""
-                    if test -x "$f"
-                        set mark "$G✓$N"
-                    else
-                        set mark "$Y*$N"
-                    end
-                    printf "  %s  $W%-20s$N  $D%s$N\n" "$mark" "$name" "$f"
-                    set found (math $found + 1)
+                    set -a results "$f"
                 end
             end
         end
@@ -210,20 +200,96 @@ function exc --description 'Auto-chmod and run/open executables'
         # Search current dir
         for f in ./*$query*
             if test -f "$f"; and test -x "$f"
-                set -l name (basename "$f")
-                printf "  $G✓$N  $W%-20s$N  $D./%s$N\n" "$name" "$name"
-                set found (math $found + 1)
+                set -a results "$f"
             end
         end
 
+        set -l found (count $results)
+
         if test $found -eq 0
             printf "  $D No executables found matching '$query'.$N\n"
-        else
             echo ""
-            printf "  $D%d result(s) found.$N\n" "$found"
+            return 0
         end
+
+        # Print numbered list
+        set -l idx 1
+        for f in $results
+            set -l name (basename "$f")
+            set -l sz (du -h "$f" 2>/dev/null | awk '{print $1}')
+            set -l mark ""
+            if test -x "$f"
+                set mark "$G✓$N"
+            else
+                set mark "$Y*$N"
+            end
+            printf "  %s  $W%s$N  $W%-25s$N  $D%-8s$N  %s\n" "$mark" "$idx" "$name" "$sz" "$f"
+            set idx (math $idx + 1)
+        end
+
         echo ""
-        return 0
+        printf "  $D%d result(s) found.$N\n" "$found"
+
+        # If only 1 result, auto-select it
+        if test $found -eq 1
+            set -l file $results[1]
+            set -l name (basename "$file")
+            echo ""
+            printf "  Run '$W$name$N'? [Y/n]: "
+            read -l confirm
+            if test "$confirm" = "n"; or test "$confirm" = "N"
+                printf "  $D Cancelled.$N\n"
+                echo ""
+                return 0
+            end
+            # chmod if needed and run
+            if not test -x "$file"
+                printf "  $Y*$N  Making executable: %s\n" "$name"
+                chmod +x "$file"
+            end
+            printf "  $G✓$N  Running: %s\n" "$name"
+            echo ""
+            command $file
+            return $status
+        end
+
+        # Multiple results — ask which one to run
+        echo ""
+        printf "  $BOLDY Pick a number to run (or Enter to skip):$N "
+        read -l choice
+
+        # Empty = skip
+        if test -z "$choice"
+            printf "  $D Skipped.$N\n"
+            echo ""
+            return 0
+        end
+
+        # Validate number
+        if not string match -qr '^[0-9]+$' "$choice"
+            printf "  $R✗$N  Invalid input: %s\n" "$choice"
+            echo ""
+            return 1
+        end
+
+        if test "$choice" -lt 1; or test "$choice" -gt $found
+            printf "  $R✗$N  Number out of range (1-%d)\n" "$found"
+            echo ""
+            return 1
+        end
+
+        set -l file $results[$choice]
+        set -l name (basename "$file")
+
+        # chmod if needed and run
+        if not test -x "$file"
+            printf "  $Y*$N  Making executable: %s\n" "$name"
+            chmod +x "$file"
+        end
+        printf "  $G✓$N  Running: %s\n" "$name"
+        echo ""
+        command $file
+        return $status
     end
 
     # ════════════════════════════════════════════════════════════
