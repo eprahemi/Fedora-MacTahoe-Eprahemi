@@ -42,7 +42,7 @@ function smb --description 'Samba file sharing manager'
 
     function __smb_user_exists
         type -q pdbedit; or return 1
-        command pdbedit -L 2>/dev/null | grep -q "^$argv[1]:"
+        sudo pdbedit -L 2>/dev/null | grep -q "^$argv[1]:"
     end
 
     function __smb_share_exists
@@ -108,7 +108,7 @@ function smb --description 'Samba file sharing manager'
         set -l pass $argv[2]
         set -l user_exists 0
         if type -q pdbedit
-            if command pdbedit -L 2>/dev/null | grep -q "^$user:"
+            if sudo pdbedit -L 2>/dev/null | grep -q "^$user:"
                 set user_exists 1
             end
         end
@@ -661,7 +661,7 @@ function smb --description 'Samba file sharing manager'
             case list
                 set -l users ()
                 if type -q pdbedit
-                    set users (command pdbedit -L 2>/dev/null)
+                    set users (sudo pdbedit -L 2>/dev/null)
                 end
                 if test (count $users) -eq 0
                     printf "  No SMB users found.\n"
@@ -795,7 +795,7 @@ function smb --description 'Samba file sharing manager'
                 # Check old user exists
                 set -l users ()
                 if type -q pdbedit
-                    set users (command pdbedit -L 2>/dev/null | cut -d: -f1)
+                    set users (sudo pdbedit -L 2>/dev/null | cut -d: -f1)
                 end
                 set -l found 0
                 for u in $users
@@ -852,7 +852,7 @@ function smb --description 'Samba file sharing manager'
                     # No username — list users
                     set -l users ()
                     if type -q pdbedit
-                        set users (command pdbedit -L 2>/dev/null)
+                        set users (sudo pdbedit -L 2>/dev/null)
                     end
                     if test (count $users) -eq 0
                         printf "  No SMB users found.\n"
@@ -1187,7 +1187,7 @@ function smb --description 'Samba file sharing manager'
         printf "\n"
         set -l users ()
         if type -q pdbedit
-            set users (command pdbedit -L 2>/dev/null | cut -d: -f1)
+            set users (sudo pdbedit -L 2>/dev/null | cut -d: -f1)
         end
         if test (count $users) -eq 0
             printf "  No SMB users found.\n"
@@ -1302,7 +1302,7 @@ function smb --description 'Samba file sharing manager'
         printf "  $C║$N  $BOLDG SMB USERS$N\n"
         set -l users ()
         if type -q pdbedit
-            set users (command pdbedit -L 2>/dev/null)
+            set users (sudo pdbedit -L 2>/dev/null)
         end
         if test (count $users) -gt 0
             for u in $users
@@ -1529,7 +1529,7 @@ function smb --description 'Samba file sharing manager'
                 printf "│  SMB USERS                                                   │\n" >> "$report"
                 printf "├──────────────────────────────────────────────────────────────┤\n" >> "$report"
                 if type -q pdbedit
-                    set -l all_users (command pdbedit -L 2>/dev/null | cut -d: -f1)
+                    set -l all_users (sudo pdbedit -L 2>/dev/null | cut -d: -f1)
                     for u in $all_users
                         set -l upass (__smb_get_password "$u")
                         if test -n "$upass"
