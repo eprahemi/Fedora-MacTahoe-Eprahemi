@@ -599,13 +599,14 @@ function smb --description 'Samba file sharing manager'
                     end
                 end
                 if test $found -eq 0
-                    printf "  $R✗$N  User '$W$old_name$N' not found.\n"
+                    printf "  $R✗$N  User '$W$old_name$N' not found. Did you mistype the username?\n"
+                    printf "  Run 'smb user list' to see available users.\n"
                     return 1
                 end
                 # Check new name doesn't already exist
                 for u in $users
                     if test "$u" = "$new_name"
-                        printf "  $R✗$N  User '$W$new_name$N' already exists.\n"
+                        printf "  $R✗$N  User '$W$new_name$N' already exists. Pick a different name.\n"
                         return 1
                     end
                 end
