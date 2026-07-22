@@ -603,15 +603,15 @@ function smb --description 'Samba file sharing manager'
         set -l smb_server "smb://$local_ip"
         set -l sep (printf '%*s' 62 '' | tr ' ' '─')
 
-        printf "  $C╭${sep}╮$N\n"
+        printf "  $C╭$sep╮$N\n"
         printf "  $C║$N                  SETUP COMPLETE\n"
-        printf "  $C╠${sep}╣$N\n"
+        printf "  $C╠$sep╣$N\n"
         printf "  $C║$N\n"
         printf "  $C║$N  Service:  $BOLDG active$N\n"
         printf "  $C║$N  IP:  $W$local_ip$N\n"
         printf "  $C║$N  Hostname:  $W$smb_hostname$N\n"
         printf "  $C║$N\n"
-        printf "  $C╠${sep}╣$N\n"
+        printf "  $C╠$sep╣$N\n"
         printf "  $C║$N  SMB USERS\n"
         printf "  $C║$N    $W$smb_user$N      ••••••••••••\n"
         if __smb_has_keyring
@@ -619,10 +619,10 @@ function smb --description 'Samba file sharing manager'
         else
             printf "  $C║$N    Storage:  $BOLDY file fallback$N (chmod 600)\n"
         end
-        printf "  $C╠${sep}╣$N\n"
+        printf "  $C╠$sep╣$N\n"
         printf "  $C║$N  SHARED DIRECTORIES\n"
         printf "  $C║$N    Scope:  $W$scope_type$N  ($D$scope_path$N)\n"
-        printf "  $C╠${sep}╣$N\n"
+        printf "  $C╠$sep╣$N\n"
         printf "  $C║$N\n"
         printf "  $C║$N  SAMSUNG / ANDROID:\n"
         printf "  $C║$N    Open My Files > Network > Add network storage\n"
@@ -645,7 +645,7 @@ function smb --description 'Samba file sharing manager'
         printf "  $C║$N    Address:   $B$smb_url$N\n"
         printf "  $C║$N    When prompted, use your SMB password.\n"
         printf "  $C║$N\n"
-        printf "  $C╚${sep}╝$N\n"
+        printf "  $C╚$sep╝$N\n"
         printf "\n"
         printf "  Done. Try connecting from your phone now.\n"
         printf "  Run 'smb password' to reveal your password.\n"
@@ -1304,9 +1304,9 @@ function smb --description 'Samba file sharing manager'
         # ── Render ──
         set -l sep (printf '%*s' 62 '' | tr ' ' '─')
         printf "\n"
-        printf "  $C╔${sep}╗$N\n"
+        printf "  $C╔$sep╗$N\n"
         printf "  $C║$N                    $BOLDG SMB STATUS$N\n"
-        printf "  $C╠${sep}╣$N\n"
+        printf "  $C╠$sep╣$N\n"
         printf "  $C║$N\n"
         if test "$svc_active" = "active"
             printf "  $C║$N  Service:     $BOLDG active$N\n"
@@ -1321,7 +1321,7 @@ function smb --description 'Samba file sharing manager'
         printf "  $C║$N\n"
 
         # ── Users ──
-        printf "  $C╠${sep}╣$N\n"
+        printf "  $C╠$sep╣$N\n"
         printf "  $C║$N  $BOLDG SMB USERS$N\n"
         set -l users ()
         if type -q pdbedit
@@ -1348,7 +1348,7 @@ function smb --description 'Samba file sharing manager'
         end
 
         # ── Share scope ──
-        printf "  $C╠${sep}╣$N\n"
+        printf "  $C╠$sep╣$N\n"
         printf "  $C║$N  $BOLDG SHARE SCOPE$N\n"
         set -l scope (__smb_get_scope)
         if test "$scope" = "home"
@@ -1361,7 +1361,7 @@ function smb --description 'Samba file sharing manager'
         printf "  $C║$N    Status:  $BOLDG active$N\n"
 
         # ── Shared directories ──
-        printf "  $C╠${sep}╣$N\n"
+        printf "  $C╠$sep╣$N\n"
         printf "  $C║$N  $BOLDG SHARED DIRECTORIES$N\n"
         if test "$scope" = "home"
             printf "  $C║$N    $W$HOME$N  (home — default)\n"
@@ -1404,7 +1404,7 @@ function smb --description 'Samba file sharing manager'
         end
 
         # ── Connection URLs ──
-        printf "  $C╠${sep}╣$N\n"
+        printf "  $C╠$sep╣$N\n"
         printf "  $C║$N\n"
         printf "  $C║$N  SAMSUNG / ANDROID:\n"
         printf "  $C║$N    Open My Files > Network > Add network storage\n"
@@ -1427,7 +1427,7 @@ function smb --description 'Samba file sharing manager'
         printf "  $C║$N    Address:   $B smb://$local_ip/$smb_user$N\n"
         printf "  $C║$N    When prompted, use your SMB password.\n"
         printf "  $C║$N\n"
-        printf "  $C╚${sep}╝$N\n"
+        printf "  $C╚$sep╝$N\n"
         printf "\n"
         if test $show_pass -eq 0
             printf "  $D Tip: Run 'smb status --show' or 'smb password' to reveal passwords.$N\n"
