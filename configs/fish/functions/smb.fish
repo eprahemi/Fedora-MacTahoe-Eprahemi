@@ -108,11 +108,25 @@ function smb --description 'Samba file sharing manager'
     end
 
     function __smb_stop_check
+        set -l _st $status
         if test $__smb_ctrl_c -ge 2
             set -g __smb_ctrl_c 0
             trap - SIGINT
             set -e __smb_ctrl_c
+            printf "\n  Stopped.\n"
             return 1
+        end
+        if test $_st -eq 130
+            if test $__smb_ctrl_c -eq 0
+                set -g __smb_ctrl_c 1
+                printf "\n  Press Ctrl+C again to stop.\n"
+            else
+                set -g __smb_ctrl_c 0
+                trap - SIGINT
+                set -e __smb_ctrl_c
+                printf "\n  Stopped.\n"
+                return 1
+            end
         end
         return 0
     end
@@ -203,6 +217,10 @@ function smb --description 'Samba file sharing manager'
             echo ""
             read -P "  Enter SMB username: " -l smb_user
             __smb_stop_check; or return 1
+            if test -z "$smb_user"
+                printf "  $R✗$N  Username cannot be empty.\n"
+                return 1
+            end
             read -P "  Confirm username: $smb_user [Y/n]: " -l confirm2
             __smb_stop_check; or return 1
             if test "$confirm2" = "n"; or test "$confirm2" = "N"
