@@ -4,14 +4,14 @@
 # Fedora MacTahoe Eprahemi Edition © 2026
 # ══════════════════════════════════════════════════════════════
 function clean --description 'DNF + pip + Flatpak cleanup. Flags: --all, --reset, --pip, --dry-run'
-    set -l R "\e[1;31m"
-    set -l G "\e[1;32m"
-    set -l Y "\e[1;33m"
-    set -l B "\e[1;34m"
-    set -l C "\e[1;36m"
-    set -l W "\e[1;37m"
-    set -l D "\e[2;37m"
-    set -l N "\e[0m"
+    set -l R (printf "\e[1;31m")
+    set -l G (printf "\e[1;32m")
+    set -l Y (printf "\e[1;33m")
+    set -l B (printf "\e[1;34m")
+    set -l C (printf "\e[1;36m")
+    set -l W (printf "\e[1;37m")
+    set -l D (printf "\e[2;37m")
+    set -l N (printf "\e[0m")
 
     if set -q argv[1]
         switch $argv[1]

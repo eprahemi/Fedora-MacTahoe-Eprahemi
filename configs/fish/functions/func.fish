@@ -7,15 +7,15 @@ function func --description 'Browse all fish functions'
     set -l func_dir "$HOME/.config/fish/functions"
 
     # ── Color palette ──
-    set -l R   "\033[1;31m"
-    set -l G   "\033[1;32m"
-    set -l Y   "\033[1;33m"
-    set -l B   "\033[1;34m"
-    set -l M   "\033[1;35m"
-    set -l C   "\033[1;36m"
-    set -l W   "\033[1;37m"
-    set -l D   "\033[2;37m"
-    set -l N   "\033[0m"
+    set -l R   (printf "\e[1;31m")
+    set -l G   (printf "\e[1;32m")
+    set -l Y   (printf "\e[1;33m")
+    set -l B   (printf "\e[1;34m")
+    set -l M   (printf "\e[1;35m")
+    set -l C   (printf "\e[1;36m")
+    set -l W   (printf "\e[1;37m")
+    set -l D   (printf "\e[2;37m")
+    set -l N   (printf "\e[0m")
 
     # ── Category arrays (indexed 1..6) ──
     set -l cat_name[1] "🎬  Media"

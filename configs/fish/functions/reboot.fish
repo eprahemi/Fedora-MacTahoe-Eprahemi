@@ -5,15 +5,15 @@
 # ══════════════════════════════════════════════════════════════
 function reboot --description 'ﾉｼ(>_<)ﾉ  Restart the system with style'
     # ── Colors ──
-    set -l C  "\033[0m"
-    set -l CY "\033[1;36m"
-    set -l GR "\033[1;32m"
-    set -l YE "\033[1;33m"
-    set -l RE "\033[1;31m"
-    set -l WH "\033[1;37m"
-    set -l GY "\033[38;5;248m"
-    set -l D  "\033[2m"
-    set -l B  "\033[1m"
+    set -l C  (printf "\e[0m")
+    set -l CY (printf "\e[1;36m")
+    set -l GR (printf "\e[1;32m")
+    set -l YE (printf "\e[1;33m")
+    set -l RE (printf "\e[1;31m")
+    set -l WH (printf "\e[1;37m")
+    set -l GY (printf "\e[38;5;248m")
+    set -l D  (printf "\e[2m")
+    set -l B  (printf "\e[1m")
 
     # ── Check for the reboot command ──
     if not command -v reboot &>/dev/null

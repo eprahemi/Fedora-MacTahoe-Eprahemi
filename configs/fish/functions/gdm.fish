@@ -5,15 +5,15 @@
 # ══════════════════════════════════════════════════════════════
 function gdm --description 'Change GDM login screen wallpaper — needs internet only the first time — github.com/eprahemi/FedoraTahoe-GDM'
     # ── Colors ──
-    set -l C  "\033[0m"
-    set -l CY "\033[1;36m"
-    set -l GR "\033[1;32m"
-    set -l YE "\033[1;33m"
-    set -l RE "\033[1;31m"
-    set -l WH "\033[1;37m"
-    set -l GY "\033[38;5;248m"
-    set -l D  "\033[2m"
-    set -l B  "\033[1m"
+    set -l C  (printf "\e[0m")
+    set -l CY (printf "\e[1;36m")
+    set -l GR (printf "\e[1;32m")
+    set -l YE (printf "\e[1;33m")
+    set -l RE (printf "\e[1;31m")
+    set -l WH (printf "\e[1;37m")
+    set -l GY (printf "\e[38;5;248m")
+    set -l D  (printf "\e[2m")
+    set -l B  (printf "\e[1m")
 
     # ── Flags ──
     set -l skip_confirm 0
@@ -276,14 +276,14 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
     # ── "current" subcommand: use current desktop wallpaper ──
     if set -q argv[1]; and contains -- "$argv[1]" "current" "--current"
         set -e argv[1]
-        set -l C  "\033[0m"
-        set -l CY "\033[1;36m"
-        set -l GR "\033[1;32m"
-        set -l YE "\033[1;33m"
-        set -l RE "\033[1;31m"
-        set -l GY "\033[38;5;248m"
-        set -l WH "\033[1;37m"
-        set -l D  "\033[2m"
+        set -l C  (printf "\e[0m")
+        set -l CY (printf "\e[1;36m")
+        set -l GR (printf "\e[1;32m")
+        set -l YE (printf "\e[1;33m")
+        set -l RE (printf "\e[1;31m")
+        set -l GY (printf "\e[38;5;248m")
+        set -l WH (printf "\e[1;37m")
+        set -l D  (printf "\e[2m")
 
         # Get current desktop wallpaper URI from GNOME gsettings
         set -l bg_uri (gsettings get org.gnome.desktop.background picture-uri 2>/dev/null)
@@ -384,13 +384,13 @@ except: sys.exit(1)
     # ── "default" subcommand: restore Himeno login wallpaper ──
     if set -q argv[1]; and contains -- "$argv[1]" "default" "--default"
         set -e argv[1]
-        set -l C  "\033[0m"
-        set -l CY "\033[1;36m"
-        set -l GR "\033[1;32m"
-        set -l YE "\033[1;33m"
-        set -l RE "\033[1;31m"
-        set -l GY "\033[38;5;248m"
-        set -l D  "\033[2m"
+        set -l C  (printf "\e[0m")
+        set -l CY (printf "\e[1;36m")
+        set -l GR (printf "\e[1;32m")
+        set -l YE (printf "\e[1;33m")
+        set -l RE (printf "\e[1;31m")
+        set -l GY (printf "\e[38;5;248m")
+        set -l D  (printf "\e[2m")
         set -l wp_repo "$HOME/.local/share/mactahoe-gdm/himeno-login.jpg"
         set -l wp_url "https://raw.githubusercontent.com/eprahemi/FedoraTahoe-GDM/main/himeno-login.jpg"
 

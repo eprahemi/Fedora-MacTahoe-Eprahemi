@@ -6,15 +6,15 @@
 # ══════════════════════════════════════════════════════════════
 function pfp --description 'Manage your GNOME profile picture (avatar) — github.com/eprahemi/Fedora-MacTahoe-Eprahemi'
     # ── Colors ──
-    set -l C  "\033[0m"
-    set -l CY "\033[1;36m"
-    set -l GR "\033[1;32m"
-    set -l YE "\033[1;33m"
-    set -l RE "\033[1;31m"
-    set -l WH "\033[1;37m"
-    set -l GY "\033[38;5;248m"
-    set -l D  "\033[2m"
-    set -l B  "\033[1m"
+    set -l C  (printf "\e[0m")
+    set -l CY (printf "\e[1;36m")
+    set -l GR (printf "\e[1;32m")
+    set -l YE (printf "\e[1;33m")
+    set -l RE (printf "\e[1;31m")
+    set -l WH (printf "\e[1;37m")
+    set -l GY (printf "\e[38;5;248m")
+    set -l D  (printf "\e[2m")
+    set -l B  (printf "\e[1m")
 
     # ── Branding footer (default empty, overridden in help box) ──
     set -l br ""
@@ -478,9 +478,9 @@ function __pfp_search --description 'Search for image across XDG dirs'
     end
 
     # ── Colors ──
-    set -l C  "\033[0m"
-    set -l GY "\033[38;5;248m"
-    set -l D  "\033[2m"
+    set -l C  (printf "\e[0m")
+    set -l GY (printf "\e[38;5;248m")
+    set -l D  (printf "\e[2m")
 
     # ── Search 8 XDG directories ──
     set -l search_dirs \
@@ -578,15 +578,15 @@ end
 # ──────────────────────────────────────────────────────────────
 function __pfp_apply --description 'Internal: apply image as profile picture'
     # ── Colors (reuse from parent) ──
-    set -l C  "\033[0m"
-    set -l CY "\033[1;36m"
-    set -l GR "\033[1;32m"
-    set -l YE "\033[1;33m"
-    set -l RE "\033[1;31m"
-    set -l WH "\033[1;37m"
-    set -l GY "\033[38;5;248m"
-    set -l D  "\033[2m"
-    set -l B  "\033[1m"
+    set -l C  (printf "\e[0m")
+    set -l CY (printf "\e[1;36m")
+    set -l GR (printf "\e[1;32m")
+    set -l YE (printf "\e[1;33m")
+    set -l RE (printf "\e[1;31m")
+    set -l WH (printf "\e[1;37m")
+    set -l GY (printf "\e[38;5;248m")
+    set -l D  (printf "\e[2m")
+    set -l B  (printf "\e[1m")
 
     set -l user (whoami)
     set -l icon_file "/var/lib/AccountsService/icons/$user"

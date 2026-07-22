@@ -5,22 +5,22 @@
 # ══════════════════════════════════════════════════════════════
 function testdrive --description 'System diagnostic and benchmark suite'
     # ── Color Palette ──
-    set -l C "\033[0m"        # reset
-    set -l B "\033[1m"        # bold
-    set -l D "\033[2m"        # dim
-    set -l I "\033[3m"        # italic
-    set -l CY "\033[1;36m"    # bright cyan
-    set -l BL "\033[1;34m"    # bright blue
-    set -l GR "\033[1;32m"    # bright green
-    set -l YE "\033[1;33m"    # bright yellow
-    set -l RE "\033[1;31m"    # bright red
-    set -l MA "\033[1;35m"    # bright magenta
-    set -l WH "\033[1;37m"    # bright white
-    set -l GY "\033[1;30m"    # bright black (gray)
-    set -l CY2 "\033[36m"     # regular cyan
-    set -l GR2 "\033[32m"     # regular green
-    set -l RE2 "\033[31m"     # regular red
-    set -l YE2 "\033[33m"     # regular yellow
+    set -l C (printf "\e[0m")        # reset
+    set -l B (printf "\e[1m")        # bold
+    set -l D (printf "\e[2m")        # dim
+    set -l I (printf "\e[3m")        # italic
+    set -l CY (printf "\e[1;36m")    # bright cyan
+    set -l BL (printf "\e[1;34m")    # bright blue
+    set -l GR (printf "\e[1;32m")    # bright green
+    set -l YE (printf "\e[1;33m")    # bright yellow
+    set -l RE (printf "\e[1;31m")    # bright red
+    set -l MA (printf "\e[1;35m")    # bright magenta
+    set -l WH (printf "\e[1;37m")    # bright white
+    set -l GY (printf "\e[1;30m")    # bright black (gray)
+    set -l CY2 (printf "\e[36m")     # regular cyan
+    set -l GR2 (printf "\e[32m")     # regular green
+    set -l RE2 (printf "\e[31m")     # regular red
+    set -l YE2 (printf "\e[33m")     # regular yellow
 
     # ── ASCII Banner ──
     echo -e "$CY"
