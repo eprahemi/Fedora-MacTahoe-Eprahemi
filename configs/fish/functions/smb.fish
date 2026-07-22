@@ -348,6 +348,7 @@ function smb --description 'Samba file sharing manager'
         printf "  $BOLD Step 3/9$N   Setting SMB password...\n"
         set -l pass ""
         set -l pass2 ""
+        set -l weak_passwords "1234" "12345" "123456" "1234567" "12345678" "123456789" "password" "passwd" "admin" "root" "samba" "pass" "qwerty" "abc123" "letmein" "welcome" "monkey" "dragon" "master" "login"
         while true
             printf "  Enter SMB password for '$W$smb_user$N':\n"
             read -s -P "  > " pass
@@ -357,11 +358,49 @@ function smb --description 'Samba file sharing manager'
             read -s -P "" pass2
             __smb_stop_check; or return 1
             echo ""
-            if test "$pass" = "$pass2" -a -n "$pass"
-                break
+
+            # Check passwords match
+            if not test "$pass" = "$pass2" -a -n "$pass"
+                printf "  $R✗$N  Passwords don't match. Try again.\n"
+                echo ""
+                continue
             end
-            printf "  $R✗$N  Passwords don't match. Try again.\n"
-            echo ""
+
+            # Check: username == password
+            if test "$pass" = "$smb_user"
+                echo ""
+                printf "  $R⚠$N  RISK: Your password is the same as your username.\n"
+                printf "     This is extremely easy to guess. Anyone on your\n"
+                printf "     network can access your files.\n"
+                echo ""
+                printf "  Use this password anyway? [y/N]: "
+                read -l confirm -P ""
+                if test "$confirm" != "y"; and test "$confirm" != "Y"
+                    printf "  $D Re-entering password...$N\n"
+                    echo ""
+                    continue
+                end
+                echo ""
+            end
+
+            # Check: weak password
+            set -l is_weak 0
+            for wp in $weak_passwords
+                if test "$pass" = "$wp"
+                    set is_weak 1
+                    break
+                end
+            end
+            if test $is_weak -eq 1
+                printf "  $R✗$N  Weak password detected.\n"
+                printf "     '%s' is one of the most commonly used passwords.\n" "$pass"
+                printf "     Choose a stronger password with 8+ characters,\n"
+                printf "     mixing letters, numbers, and symbols.\n"
+                echo ""
+                continue
+            end
+
+            break
         end
         __smb_set_password "$smb_user" "$pass"
         __smb_save_password "$smb_user" "$pass"
