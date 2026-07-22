@@ -64,6 +64,44 @@ function smb --description 'Samba file sharing manager'
         return $status
     end
 
+    # ── Keyring helpers (gnome-keyring via libsecret) ──
+
+    function __smb_has_keyring
+        # Cache result for this session
+        if set -q __smb_keyring_available
+            return $__smb_keyring_available
+        end
+        type -q secret-tool; or begin; set -g __smb_keyring_available 0; return 1; end
+        # Verify keyring is actually unlocked
+        echo "test" | secret-tool store --label="SMB test" smb-test probe >/dev/null 2>&1
+        if test $status -eq 0
+            secret-tool clear smb-test probe >/dev/null 2>&1
+            set -g __smb_keyring_available 1
+            return 0
+        end
+        set -g __smb_keyring_available 0
+        return 1
+    end
+
+    function __smb_keyring_save
+        set -l user $argv[1]
+        set -l pass $argv[2]
+        printf '%s' "$pass" | secret-tool store --label="SMB: $user" smb-user "$user" >/dev/null 2>&1
+        return $status
+    end
+
+    function __smb_keyring_get
+        set -l user $argv[1]
+        secret-tool lookup smb-user "$user" 2>/dev/null
+        return $status
+    end
+
+    function __smb_keyring_delete
+        set -l user $argv[1]
+        secret-tool clear smb-user "$user" >/dev/null 2>&1
+        return $status
+    end
+
     function __smb_set_password
         set -l user $argv[1]
         set -l pass $argv[2]
@@ -83,8 +121,14 @@ function smb --description 'Samba file sharing manager'
     function __smb_save_password
         set -l user $argv[1]
         set -l pass $argv[2]
+        # Primary: gnome-keyring (encrypted at rest, unlocked on login)
+        if __smb_has_keyring
+            __smb_keyring_delete "$user" 2>/dev/null
+            __smb_keyring_save "$user" "$pass"
+            return 0
+        end
+        # Fallback: encrypted file
         mkdir -p "$CONF_DIR"
-        # Remove old entry if exists
         if test -f "$PASS_FILE"
             grep -v "^$user:" "$PASS_FILE" > "$PASS_FILE.tmp" 2>/dev/null
             mv "$PASS_FILE.tmp" "$PASS_FILE" 2>/dev/null
@@ -92,6 +136,37 @@ function smb --description 'Samba file sharing manager'
         printf '%s:%s\n' "$user" "$pass" >> "$PASS_FILE"
         chmod 700 "$CONF_DIR"
         chmod 600 "$PASS_FILE"
+    end
+
+    function __smb_get_password
+        set -l user $argv[1]
+        # Primary: gnome-keyring
+        if __smb_has_keyring
+            __smb_keyring_get "$user"
+            return $status
+        end
+        # Fallback: file
+        if test -f "$PASS_FILE"
+            grep "^$user:" "$PASS_FILE" 2>/dev/null | head -1 | cut -d: -f2
+            return 0
+        end
+        return 1
+    end
+
+    function __smb_delete_password
+        set -l user $argv[1]
+        # Primary: gnome-keyring
+        if __smb_has_keyring
+            __smb_keyring_delete "$user"
+            return $status
+        end
+        # Fallback: file
+        if test -f "$PASS_FILE"
+            grep -v "^$user:" "$PASS_FILE" > "$PASS_FILE.tmp" 2>/dev/null
+            mv "$PASS_FILE.tmp" "$PASS_FILE" 2>/dev/null
+            return 0
+        end
+        return 1
     end
 
     function __smb_ctrl_c
@@ -430,6 +505,11 @@ function smb --description 'Samba file sharing manager'
         printf "  $C╠══════════════════════════════════════════════════════════╣$N\n"
         printf "  $C║$N  SMB USERS                                                $C║$N\n"
         printf "  $C║$N    $W$smb_user$N      ••••••••••••                            $C║$N\n"
+        if __smb_has_keyring
+            printf "  $C║$N    Storage:  $BOLDG gnome-keyring$N (encrypted)              $C║$N\n"
+        else
+            printf "  $C║$N    Storage:  $BOLDY file fallback$N (chmod 600)              $C║$N\n"
+        end
         printf "  $C╠══════════════════════════════════════════════════════════╣$N\n"
         printf "  $C║$N  SHARED DIRECTORIES                                       $C║$N\n"
         printf "  $C║$N    Scope:  $W$scope_type$N  ($scope_path$D)                        $C║$N\n"
@@ -569,11 +649,7 @@ function smb --description 'Samba file sharing manager'
                             printf "  $G✓$N  System authentication successful\n"
                             sudo smbpasswd -x "$extra" 2>/dev/null
                             printf "  $G✓$N  User '$W$extra$N' removed\n"
-                            # Remove from password file
-                            if test -f "$PASS_FILE"
-                                grep -v "^$extra:" "$PASS_FILE" > "$PASS_FILE.tmp" 2>/dev/null
-                                mv "$PASS_FILE.tmp" "$PASS_FILE" 2>/dev/null
-                            end
+                            __smb_delete_password "$extra"
                             return 0
                         else
                             printf "  $R✗$N  System authentication failed.\n"
@@ -593,11 +669,7 @@ function smb --description 'Samba file sharing manager'
                         echo ""
                         printf "  $Y⚠$N  Note: The user can no longer access your files via SMB.\n"
                         printf "     Make sure this was intentional.\n"
-                        # Remove from password file
-                        if test -f "$PASS_FILE"
-                            grep -v "^$extra:" "$PASS_FILE" > "$PASS_FILE.tmp" 2>/dev/null
-                            mv "$PASS_FILE.tmp" "$PASS_FILE" 2>/dev/null
-                        end
+                        __smb_delete_password "$extra"
                         return 0
                     end
                     set -l left (math 3 - $attempts)
@@ -643,11 +715,8 @@ function smb --description 'Samba file sharing manager'
                         return 1
                     end
                 end
-                # Get password for old user from password file
-                set -l old_pass ""
-                if test -f "$PASS_FILE"
-                    set old_pass (grep "^$old_name:" "$PASS_FILE" 2>/dev/null | head -1 | cut -d: -f2)
-                end
+                # Get password for old user
+                set -l old_pass (__smb_get_password "$old_name")
                 if test -z "$old_pass"
                     printf "  $R✗$N  No password found for '$W$old_name$N'.\n"
                     printf "  Run 'smb user password $old_name' to set one first.\n"
@@ -662,11 +731,8 @@ function smb --description 'Samba file sharing manager'
                     # Add new user with same password
                     __smb_set_password "$new_name" "$old_pass"
                     __smb_save_password "$new_name" "$old_pass"
-                    # Remove old entry from password file
-                    if test -f "$PASS_FILE"
-                        grep -v "^$old_name:" "$PASS_FILE" > "$PASS_FILE.tmp" 2>/dev/null
-                        mv "$PASS_FILE.tmp" "$PASS_FILE" 2>/dev/null
-                    end
+                    # Remove old keyring entry
+                    __smb_delete_password "$old_name"
                     echo ""
                     printf "  $G✓$N  User renamed: $W$old_name$N → $W$new_name$N\n"
                     printf "  $G✓$N  Password preserved.\n"
@@ -1020,32 +1086,27 @@ function smb --description 'Samba file sharing manager'
         end
         printf "  $G✓$N  Authentication successful\n"
         echo ""
-        if not test -f "$PASS_FILE"
+        set -l users ()
+        if type -q pdbedit
+            set users (command pdbedit -L 2>/dev/null | cut -d: -f1)
+        end
+        if test (count $users) -eq 0
             printf "  No SMB users found.\n"
             printf "  Run 'smb setup' or 'smb user add' to create one.\n"
             return 0
         end
-        set -l entries (cat "$PASS_FILE" 2>/dev/null | grep -v '^#' | grep -v '^\s*$')
-        if test (count $entries) -eq 0
-            printf "  No SMB users found.\n"
-            printf "  Run 'smb setup' or 'smb user add' to create one.\n"
-            return 0
-        end
-        if test (count $entries) -eq 1
-            set -l parts (string split ':' -- $entries[1])
-            printf "  SMB User: $W$parts[1]$N\n"
-            printf "  Password: $W$parts[2]$N\n"
+        if test (count $users) -eq 1
+            set -l upass (__smb_get_password "$users[1]")
+            printf "  SMB User: $W$users[1]$N\n"
+            printf "  Password: $W$upass$N\n"
             echo ""
             printf "  To change your password:\n"
-            printf "    smb user password $parts[1]\n"
-            echo ""
-            printf "  To see all commands:\n"
-            printf "    smb help\n"
+            printf "    smb user password $users[1]\n"
         else
             printf "  SMB Users and Passwords:\n"
-            for entry in $entries
-                set -l parts (string split ':' -- $entry)
-                printf "    $W%-16s$N %s\n" "$parts[1]" "$parts[2]"
+            for u in $users
+                set -l upass (__smb_get_password "$u")
+                printf "    $W%-16s$N %s\n" "$u" "$upass"
             end
         end
         echo ""
@@ -1148,10 +1209,7 @@ function smb --description 'Samba file sharing manager'
                 set -l uid (echo $u | cut -d: -f2)
                 if test $show_pass -eq 1
                     # Show actual password
-                    set -l pass ""
-                    if test -f "$PASS_FILE"
-                        set pass (grep "^$uname:" "$PASS_FILE" 2>/dev/null | head -1 | cut -d: -f2)
-                    end
+                    set -l pass (__smb_get_password "$uname")
                     printf "  $C║$N    $W%-16s$N $W%-24s$N (uid=$uid)  $C║$N\n" "$uname" "$pass"
                 else
                     printf "  $C║$N    $W%-16s$N ••••••••••••              (uid=$uid)  $C║$N\n" "$uname"
@@ -1159,6 +1217,11 @@ function smb --description 'Samba file sharing manager'
             end
         else
             printf "  $C║$N    $D No users found$N                                      $C║$N\n"
+        end
+        if __smb_has_keyring
+            printf "  $C║$N  Storage:     $BOLDG gnome-keyring$N (encrypted at rest)     $C║$N\n"
+        else
+            printf "  $C║$N  Storage:     $BOLDY file fallback$N (chmod 600)             $C║$N\n"
         end
 
         # ── Share scope ──
@@ -1358,13 +1421,16 @@ function smb --description 'Samba file sharing manager'
                 printf "┌──────────────────────────────────────────────────────────────┐\n" >> "$report"
                 printf "│  SMB USERS                                                   │\n" >> "$report"
                 printf "├──────────────────────────────────────────────────────────────┤\n" >> "$report"
-                if test -f "$PASS_FILE"
-                    while read -l line
-                        set -l parts (string split ':' -- $line)
-                        if test (count $parts) -ge 2
-                            printf "│  %-16s %-30s │\n" "$parts[1]" "$parts[2]" >> "$report"
+                if type -q pdbedit
+                    set -l all_users (command pdbedit -L 2>/dev/null | cut -d: -f1)
+                    for u in $all_users
+                        set -l upass (__smb_get_password "$u")
+                        if test -n "$upass"
+                            printf "│  %-16s %-30s │\n" "$u" "$upass" >> "$report"
+                        else
+                            printf "│  %-16s %-30s │\n" "$u" "(no password stored)" >> "$report"
                         end
-                    end < "$PASS_FILE"
+                    end
                 end
                 printf "└──────────────────────────────────────────────────────────────┘\n\n" >> "$report"
 
