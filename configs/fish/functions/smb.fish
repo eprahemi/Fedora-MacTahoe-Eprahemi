@@ -409,7 +409,33 @@ function smb --description 'Samba file sharing manager'
                 end
             else
                 # Fallback: check common weak passwords manually
-                set -l weak_passwords "1234" "12345" "123456" "1234567" "12345678" "123456789" "password" "passwd" "admin" "root" "samba" "pass" "qwerty" "abc123" "letmein" "welcome" "monkey" "dragon" "master" "login"
+                set -l weak_passwords \
+                    "1234" "12345" "123456" "1234567" "12345678" "123456789" "1234567890" \
+                    "000000" "111111" "222222" "333333" "444444" "555555" "666666" \
+                    "777777" "888888" "999999" "112233" "121212" "101010" "202020" \
+                    "password" "passwd" "passw0rd" "Password1" "Password123" \
+                    "admin" "admin123" " Administrator" "root" "root123" \
+                    "samba" "samba123" "user" "user123" "guest" "guest123" \
+                    "pass" "pass123" "test" "test123" "demo" "demo123" \
+                    "qwerty" "qwerty123" "qwertz" "asdfgh" "asdfghjkl" \
+                    "zxcvbn" "zxcvbnm" "abc123" "abcdef" "abcdefgh" \
+                    "letmein" "letmein123" "welcome" "welcome123" \
+                    "monkey" "dragon" "master" "login" "princess" \
+                    "football" "baseball" "soccer" "hockey" "batman" \
+                    "trustno1" "iloveyou" "sunshine" "prince" "charlie" \
+                    "donald" "access" "hello" "freedom" "whatever" \
+                    "shadow" "hunter" "hunter2" "mustang" "michael" \
+                    "ashley" "jessica" "loveme" "golf" "coffee" \
+                    "buster" "thomas" "robert" "daniel" "jordan" \
+                    "andrew" "joshua" "matthew" "jackson" "taylor" \
+                    "killer" "pepper" "hammer" "yankees" "ranger" \
+                    "samsung" "samsung1" "iphone" "android" "windows" \
+                    "computer" "internet" "system" "server" "backup" \
+                    "changeme" "changeme1" "p@ssword" "p@ssw0rd" \
+                    "pass1234" "pass12345" "pass123456" "password1" \
+                    "password12" "password123" "qwerty1234" "abcdefg" \
+                    "abcd1234" "abcdef123" "password!" "pass!" \
+                    "1q2w3e4r" "qazwsx" "1qaz2wsx" "zaq1xsw2"
                 set -l is_weak 0
                 for wp in $weak_passwords
                     if test "$pass" = "$wp"
