@@ -498,7 +498,11 @@ function smb --description 'Samba file sharing manager'
         printf "        $Y WARNING — gives full access to every file on your laptop.$N\n"
         printf "        Anyone on your network can read/write system files.\n"
         printf "\n"
-        read -P "  Choose [1/2] (default: 1): " -l scope_choice
+        printf "    $W[3]$N Custom folders\n"
+        printf "        Pick specific folders: Downloads, Pictures, Videos,\n"
+        printf "        Music, Documents, Desktop — combined in one share.\n"
+        printf "\n"
+        read -P "  Choose [1/2/3] (default: 1): " -l scope_choice
         __smb_stop_check; or return 1
         if test "$scope_choice" = "2"
             printf "\n"
@@ -509,6 +513,31 @@ function smb --description 'Samba file sharing manager'
                 printf "  $G✓$N  Home directory selected\n"
             else
                 printf "  $G✓$N  Root filesystem selected\n"
+            end
+        else if test "$scope_choice" = "3"
+            # Custom folder selection
+            set -g __smb_custom_folders ()
+            printf "\n"
+            printf "  Toggle folders to share (y/n for each):\n"
+            printf "\n"
+            set -l dirs Downloads Pictures Videos Music Documents Desktop
+            set -l dir_paths "$HOME/Downloads" "$HOME/Pictures" "$HOME/Videos" "$HOME/Music" "$HOME/Documents" "$HOME/Desktop"
+            for i in (seq 1 (count $dirs))
+                set -l d $dirs[$i]
+                set -l dp $dir_paths[$i]
+                if test -d "$dp"
+                    if __confirm_yn "  $d? [Y/n]: " y
+                        set -a __smb_custom_folders "$dp"
+                    end
+                else
+                    printf "  $D$d — not found, skipping$N\n"
+                end
+            end
+            if test (count $__smb_custom_folders) -eq 0
+                printf "\n  $R✗$N  No folders selected. Falling back to home directory.\n"
+                set scope_choice "1"
+            else
+                printf "\n  $G✓$N  Selected $(count $__smb_custom_folders) folder(s)\n"
             end
         else
             printf "  $G✓$N  Home directory selected\n"
@@ -521,6 +550,9 @@ function smb --description 'Samba file sharing manager'
         if test "$scope_choice" = "2"
             set scope_type "ROOT"
             set scope_path "/"
+        else if test "$scope_choice" = "3"
+            set scope_type "CUSTOM"
+            set scope_path (printf '%s, ' $__smb_custom_folders | string trim -s -r -c ', ')
         end
         printf "  $C╭──────────────────────────────────────────────────────────╮$N\n"
         printf "  $C│$N  Ready to apply:                                         \n"
@@ -546,6 +578,17 @@ function smb --description 'Samba file sharing manager'
             else
                 printf '\n[root_share]\n    comment = Root Filesystem\n    path = /\n    browseable = yes\n    writable = yes\n    valid users = %s\n' "$smb_user" | sudo tee -a "$SMB_CONF" >/dev/null
                 printf "  $G✓$N  [root_share] section added to smb.conf\n"
+            end
+        else if test "$scope_choice" = "3"
+            # Custom folder shares
+            for dp in $__smb_custom_folders
+                set -l share_name (basename "$dp")
+                if __smb_share_exists "$share_name"
+                    printf "  $G✓$N  [$share_name] section already exists in smb.conf\n"
+                else
+                    printf '\n[%s]\n    comment = %s\n    path = %s\n    browseable = yes\n    writable = yes\n    valid users = %s\n    create mask = 0700\n    directory mask = 0700\n' "$share_name" "$share_name" "$dp" "$smb_user" | sudo tee -a "$SMB_CONF" >/dev/null
+                    printf "  $G✓$N  [$share_name] section added to smb.conf\n"
+                end
             end
         else
             # Home share
@@ -630,29 +673,70 @@ function smb --description 'Samba file sharing manager'
         end
         printf "  $C╠$sep╣$N\n"
         printf "  $C║$N  SHARED DIRECTORIES\n"
-        printf "  $C║$N    Scope:  $W$scope_type$N  ($D$scope_path$N)\n"
+        if test "$scope_choice" = "3"
+            for dp in $__smb_custom_folders
+                set -l share_name (basename "$dp")
+                printf "  $C║$N    $W$share_name$N  →  $D$dp$N\n"
+            end
+        else
+            printf "  $C║$N    Scope:  $W$scope_type$N  ($D$scope_path$N)\n"
+        end
         printf "  $C╠$sep╣$N\n"
         printf "  $C║$N\n"
-        printf "  $C║$N  SAMSUNG / ANDROID:\n"
-        printf "  $C║$N    Open My Files > Network > Add network storage\n"
-        printf "  $C║$N    Address:   $B$smb_server$N\n"
-        printf "  $C║$N    Username:  $W$smb_user$N\n"
-        printf "  $C║$N    Password:  (your SMB password)\n"
-        printf "  $C║$N\n"
-        printf "  $C║$N  WINDOWS:\n"
-        printf "  $C║$N    File Explorer address bar > paste:\n"
-        printf "  $C║$N    $B$win_url$N\n"
-        printf "  $C║$N    When prompted, use your SMB password.\n"
-        printf "  $C║$N\n"
-        printf "  $C║$N  NAUTILUS (Fedora):\n"
-        printf "  $C║$N    Files > Other Locations > Connect to Server\n"
-        printf "  $C║$N    Address:   $B$smb_url$N\n"
-        printf "  $C║$N    When prompted, use your SMB password.\n"
-        printf "  $C║$N\n"
-        printf "  $C║$N  iPHONE / MAC:\n"
-        printf "  $C║$N    Finder > Go > Connect to Server\n"
-        printf "  $C║$N    Address:   $B$smb_url$N\n"
-        printf "  $C║$N    When prompted, use your SMB password.\n"
+        if test "$scope_choice" = "3"
+            # Custom folder connection URLs
+            printf "  $C║$N  SAMSUNG / ANDROID:\n"
+            printf "  $C║$N    Open My Files > Network > Add network storage\n"
+            printf "  $C║$N    Address:   $B$smb_server$N\n"
+            printf "  $C║$N    Username:  $W$smb_user$N\n"
+            printf "  $C║$N    Password:  (your SMB password)\n"
+            printf "  $C║$N    Shares:    $(printf '%s ' (for dp in $__smb_custom_folders; basename "$dp"; end))\n"
+            printf "  $C║$N\n"
+            printf "  $C║$N  WINDOWS:\n"
+            printf "  $C║$N    File Explorer address bar > paste:\n"
+            for dp in $__smb_custom_folders
+                set -l share_name (basename "$dp")
+                printf "  $C║$N    $B\\\\$local_ip\\$share_name$N\n"
+            end
+            printf "  $C║$N    When prompted, use your SMB password.\n"
+            printf "  $C║$N\n"
+            printf "  $C║$N  NAUTILUS (Fedora):\n"
+            printf "  $C║$N    Files > Other Locations > Connect to Server\n"
+            for dp in $__smb_custom_folders
+                set -l share_name (basename "$dp")
+                printf "  $C║$N    $B smb://$local_ip/$share_name$N\n"
+            end
+            printf "  $C║$N    When prompted, use your SMB password.\n"
+            printf "  $C║$N\n"
+            printf "  $C║$N  iPHONE / MAC:\n"
+            printf "  $C║$N    Finder > Go > Connect to Server\n"
+            for dp in $__smb_custom_folders
+                set -l share_name (basename "$dp")
+                printf "  $C║$N    $B smb://$local_ip/$share_name$N\n"
+            end
+            printf "  $C║$N    When prompted, use your SMB password.\n"
+        else
+            printf "  $C║$N  SAMSUNG / ANDROID:\n"
+            printf "  $C║$N    Open My Files > Network > Add network storage\n"
+            printf "  $C║$N    Address:   $B$smb_server$N\n"
+            printf "  $C║$N    Username:  $W$smb_user$N\n"
+            printf "  $C║$N    Password:  (your SMB password)\n"
+            printf "  $C║$N\n"
+            printf "  $C║$N  WINDOWS:\n"
+            printf "  $C║$N    File Explorer address bar > paste:\n"
+            printf "  $C║$N    $B$win_url$N\n"
+            printf "  $C║$N    When prompted, use your SMB password.\n"
+            printf "  $C║$N\n"
+            printf "  $C║$N  NAUTILUS (Fedora):\n"
+            printf "  $C║$N    Files > Other Locations > Connect to Server\n"
+            printf "  $C║$N    Address:   $B$smb_url$N\n"
+            printf "  $C║$N    When prompted, use your SMB password.\n"
+            printf "  $C║$N\n"
+            printf "  $C║$N  iPHONE / MAC:\n"
+            printf "  $C║$N    Finder > Go > Connect to Server\n"
+            printf "  $C║$N    Address:   $B$smb_url$N\n"
+            printf "  $C║$N    When prompted, use your SMB password.\n"
+        end
         printf "  $C║$N\n"
         printf "  $C╚$sep╝$N\n"
         printf "\n"
