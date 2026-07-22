@@ -1315,7 +1315,9 @@ function smb --description 'Samba file sharing manager'
                 set -l zipname "smb-data-"(date +%Y-%m-%d-%H%M%S)".zip"
                 set -l zippath "$HOME/Documents/$zipname"
                 printf "  $G✓$N  Wrapping in encrypted zip...\n"
-                (cd "$tmpdir"; and zip -P "$zip_pass" "$zippath" smb-data.txt) >/dev/null 2>&1
+                pushd "$tmpdir" >/dev/null 2>&1
+                zip -P "$zip_pass" "$zippath" smb-data.txt >/dev/null 2>&1
+                popd >/dev/null 2>&1
                 chmod 600 "$zippath"
                 rm -rf "$tmpdir"
 
