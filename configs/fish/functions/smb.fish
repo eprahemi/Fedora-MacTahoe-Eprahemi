@@ -1617,7 +1617,17 @@ function smb --description 'Samba file sharing manager'
                 if test (count $exports) -eq 0; or not test -f "$exports[1]" 2>/dev/null
                     set exports ()
                 end
-                if test (count $exports) -eq 0
+                # Also find extracted folders matching the zip name
+                set -l folders ()
+                for f in $exports
+                    set -l folder (string replace -r '\.zip$' '' "$f")
+                    if test -d "$folder"
+                        set -a folders "$folder"
+                    end
+                end
+                set -l total (count $exports)
+                set -l ftotal (count $folders)
+                if test $total -eq 0; and test $ftotal -eq 0
                     printf "  No saved exports to delete.\n"
                     return 0
                 end
@@ -1627,9 +1637,17 @@ function smb --description 'Samba file sharing manager'
                     return 0
                 end
                 printf "\n"
-                printf "  Found %d exports:\n" (count $exports)
-                for f in $exports
-                    printf "    %s\n" (basename "$f")
+                if test $total -gt 0
+                    printf "  Found %d zip(s):\n" $total
+                    for f in $exports
+                        printf "    %s\n" (basename "$f")
+                    end
+                end
+                if test $ftotal -gt 0
+                    printf "  Found %d folder(s):\n" $ftotal
+                    for f in $folders
+                        printf "    %s/\n" (basename "$f")
+                    end
                 end
                 printf "\n"
                 if not __confirm_yn "  Delete all? [Y/n]: " y
@@ -1637,7 +1655,10 @@ function smb --description 'Samba file sharing manager'
                     return 0
                 end
                 rm -f "$HOME/Documents/smb-data-"*.zip
-                printf "  $G✓$N  Deleted %d exports\n" (count $exports)
+                for f in $folders
+                    rm -rf "$f"
+                end
+                printf "  $G✓$N  Deleted %d zip(s) and %d folder(s)\n" $total $ftotal
                 printf "  $G✓$N  $D~/Documents/$N cleaned\n"
                 printf "\n"
 
