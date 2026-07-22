@@ -178,7 +178,7 @@ function smb --description 'Samba file sharing manager'
 
     function __smb_stop_check
         set -l _st $status
-        # Trap incremented counter (from non-read commands like sudo)
+        # Double Ctrl+C: counter >= 2 means stop
         if test $__smb_ctrl_c -ge 2
             set -g __smb_ctrl_c 0
             trap - SIGINT
@@ -186,21 +186,24 @@ function smb --description 'Samba file sharing manager'
             printf "\n  Stopped.\n"
             return 1
         end
-        if test $__smb_ctrl_c -eq 1
-            set -g __smb_ctrl_c 0
-            printf "\n  Press Ctrl+C again to stop.\n"
-        end
-        # Read returned 130 (SIGINT) — also counts as a press
+        # Read returned 130 (SIGINT from Ctrl+C during read)
         if test $_st -eq 130
-            if test $__smb_ctrl_c -eq 0
-                set -g __smb_ctrl_c 1
-                printf "\n  Press Ctrl+C again to stop.\n"
-            else
+            if test $__smb_ctrl_c -ge 1
+                # Second press — stop
                 set -g __smb_ctrl_c 0
                 trap - SIGINT
                 set -e __smb_ctrl_c
                 printf "\n  Stopped.\n"
                 return 1
+            else
+                # First press — warn
+                set -g __smb_ctrl_c 1
+                printf "\n  Press Ctrl+C again to stop.\n"
+            end
+        else
+            # Not SIGINT — reset counter
+            if test $__smb_ctrl_c -eq 1
+                set -g __smb_ctrl_c 0
             end
         end
         return 0
@@ -280,8 +283,8 @@ function smb --description 'Samba file sharing manager'
         printf "    1. Run $W'smb setup'$N first — it does everything in one shot.\n"
         printf "    2. After sharing, connect from other devices using:\n"
         printf "       $D smb://<your-ip>/<share-name>$N\n"
-        printf "    3. Passwords are stored in $D~/.config/smb/.password$N\n"
-        printf "       This file is chmod 600 (owner-only read/write).\n"
+        printf "    3. Passwords are stored securely in gnome-keyring.\n"
+        printf "       No plaintext files on disk.\n"
         printf "    4. Run $W'smb status'$N to check everything at a glance.\n"
         printf "    5. Run $W'smb restart'$N after editing smb.conf manually.\n"
         echo ""
@@ -495,9 +498,14 @@ function smb --description 'Samba file sharing manager'
         end
         printf "  $G✓$N  Samba version: $W$samba_ver$N\n"
         if type -q testparm
-            command testparm -s 2>/dev/null | head -1 | read -l tp_out
+            if command testparm -s 2>/dev/null | head -1 | read -l tp_out
+                printf "  $G✓$N  Config test: OK\n"
+            else
+                printf "  $Y⚠$N  Config test: failed\n"
+            end
+        else
+            printf "  $D  Config test: skipped (testparm not installed)$N\n"
         end
-        printf "  $G✓$N  Config test: OK\n"
         printf "  $G✓$N  Service: $BOLDG active$N\n"
         echo ""
 
@@ -861,13 +869,21 @@ function smb --description 'Samba file sharing manager'
             # Custom shares — parse from smb.conf
             if test -f "$SMB_CONF"
                 set -l in_share 0
+                set -l share_name ""
+                set -l share_path ""
                 while read -l line
                     if string match -qr '^\[(\w+)\]' "$line"
+                        # Output previous section before starting new one
+                        if test $in_share -eq 1 -a -n "$share_path"
+                            printf "    $W%-16s$N $D%-30s$N (custom)\n" "$share_name" "$share_path"
+                        end
                         set -l sec (string match -r '^\[(\w+)\]' "$line" | tail -1)
                         if test "$sec" != "global" -a "$sec" != "homes" -a "$sec" != "root_share" -a "$sec" != "printers" -a "$sec" != "print\$"
                             set in_share 1
-                            set -l share_name $sec
-                            set -l share_path ""
+                            set share_name $sec
+                            set share_path ""
+                        else
+                            set in_share 0
                         end
                     else if test $in_share -eq 1
                         if string match -qr 'path\s*=' "$line"
@@ -1295,19 +1311,19 @@ function smb --description 'Samba file sharing manager'
         printf "  $C║$N                                                          $C║$N\n"
         printf "  $C║$N  SAMSUNG / ANDROID:                                       $C║$N\n"
         printf "  $C║$N    Open My Files > Network > Add network storage          $C║$N\n"
-        printf "  $C║$N    Address:  $B smb://$local_ip/$(whoami)$N                         $C║$N\n"
+        printf "  $C║$N    Address:  $B smb://$local_ip/(whoami)$N                         $C║$N\n"
         printf "  $C║$N                                                          $C║$N\n"
         printf "  $C║$N  WINDOWS:                                                $C║$N\n"
         printf "  $C║$N    File Explorer address bar > paste:                     $C║$N\n"
-        printf "  $C║$N    $B \\\\$local_ip\\\\$(whoami)$N                                  $C║$N\n"
+        printf "  $C║$N    $B \\\\$local_ip\\\\(whoami)$N                                  $C║$N\n"
         printf "  $C║$N                                                          $C║$N\n"
         printf "  $C║$N  NAUTILUS (Fedora):                                       $C║$N\n"
         printf "  $C║$N    Files > Other Locations > Connect to Server            $C║$N\n"
-        printf "  $C║$N    Address:  $B smb://$local_ip/$(whoami)$N                         $C║$N\n"
+        printf "  $C║$N    Address:  $B smb://$local_ip/(whoami)$N                         $C║$N\n"
         printf "  $C║$N                                                          $C║$N\n"
         printf "  $C║$N  iPHONE / MAC:                                            $C║$N\n"
         printf "  $C║$N    Finder > Go > Connect to Server                        $C║$N\n"
-        printf "  $C║$N    Address:  $B smb://$local_ip/$(whoami)$N                         $C║$N\n"
+        printf "  $C║$N    Address:  $B smb://$local_ip/(whoami)$N                         $C║$N\n"
         printf "  $C║$N                                                          $C║$N\n"
         printf "  $C╚══════════════════════════════════════════════════════════╝$N\n"
         echo ""
@@ -1336,7 +1352,10 @@ function smb --description 'Samba file sharing manager'
             # ── smb data list ──
             case list
                 echo ""
-                set -l exports (ls "$HOME/Documents/smb-data-"*.zip 2>/dev/null)
+                set -l exports $HOME/Documents/smb-data-*.zip
+                if test (count $exports) -eq 0; or not test -f "$exports[1]" 2>/dev/null
+                    set exports ()
+                end
                 if test (count $exports) -eq 0
                     printf "  No saved exports found.\n"
                     printf "  Run 'smb data' to create your first export.\n"
@@ -1356,7 +1375,10 @@ function smb --description 'Samba file sharing manager'
 
             # ── smb data clean ──
             case clean
-                set -l exports (ls "$HOME/Documents/smb-data-"*.zip 2>/dev/null)
+                set -l exports $HOME/Documents/smb-data-*.zip
+                if test (count $exports) -eq 0; or not test -f "$exports[1]" 2>/dev/null
+                    set exports ()
+                end
                 if test (count $exports) -eq 0
                     printf "  No saved exports to delete.\n"
                     return 0
