@@ -328,7 +328,7 @@ function smb --description 'Samba file sharing manager'
         printf "  Detected username: $W$detected_user$N\n"
         if not __confirm_yn "  Use this as your SMB username? [Y/n]: " y
             printf "\n"
-            read -P "  Enter SMB username: " -l smb_user
+            read -P "  Enter SMB username: " -g smb_user
             __smb_stop_check; or return 1
             if test -z "$smb_user"
                 printf "  $R✗$N  Username cannot be empty.\n"
@@ -687,7 +687,7 @@ function smb --description 'Samba file sharing manager'
                 if test -n "$extra"
                     set newuser $extra
                 else
-                    read -P "  Enter new SMB username: " -l newuser
+                    read -P "  Enter new SMB username: " -g newuser
                     __smb_stop_check; or return 1
                 end
                 if test -z "$newuser"
@@ -1010,7 +1010,7 @@ function smb --description 'Samba file sharing manager'
                 end
             end
             if test -z "$dir"
-                read -P "  Enter directory path to share: " -l dir
+                read -P "  Enter directory path to share: " -g dir
                 __smb_stop_check; or return 1
             end
             if not test -d "$dir"
@@ -1022,7 +1022,7 @@ function smb --description 'Samba file sharing manager'
             printf "\n"
             if test -z "$name"
                 set -l default_name (basename "$dir")
-                read -P "  Enter share name (or press Enter for '$default_name'): " -l name
+                read -P "  Enter share name (or press Enter for '$default_name'): " -g name
                 __smb_stop_check; or return 1
                 if test -z "$name"
                     set name $default_name
