@@ -461,9 +461,23 @@ function smb --description 'Samba file sharing manager'
             break
         end
         if not __smb_set_password "$smb_user" "$pass"
-            return 1
+            if test "$smb_user" != "$detected_user"
+                printf "\n"
+                if __confirm_yn "  Continue with '$W$detected_user$N' instead? [Y/n]: " y
+                    set smb_user "$detected_user"
+                    if not __smb_set_password "$smb_user" "$pass"
+                        return 1
+                    end
+                    __smb_save_password "$smb_user" "$pass"
+                else
+                    return 1
+                end
+            else
+                return 1
+            end
+        else
+            __smb_save_password "$smb_user" "$pass"
         end
-        __smb_save_password "$smb_user" "$pass"
         printf "  $G✓$N  Password set for '$W$smb_user$N'\n"
         printf "  $G✓$N  Password saved securely.\n"
         printf "\n"
