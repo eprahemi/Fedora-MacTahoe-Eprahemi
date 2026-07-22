@@ -5,19 +5,19 @@
 # ══════════════════════════════════════════════════════════════
 function smb --description 'Samba file sharing manager'
     # ── Colors ──
-    set -l R    "\033[1;31m"
-    set -l G    "\033[1;32m"
-    set -l Y    "\033[1;33m"
-    set -l B    "\033[1;34m"
-    set -l C    "\033[1;36m"
-    set -l W    "\033[1;37m"
-    set -l D    "\033[2;37m"
-    set -l N    "\033[0m"
-    set -l BOLD "\033[1m"
-    set -l BOLDG "\033[1;32m"
-    set -l BOLDR "\033[1;31m"
-    set -l BOLDY "\033[1;33m"
-    set -l BOLDC "\033[1;36m"
+    set -l R    "\e[1;31m"
+    set -l G    "\e[1;32m"
+    set -l Y    "\e[1;33m"
+    set -l B    "\e[1;34m"
+    set -l C    "\e[1;36m"
+    set -l W    "\e[1;37m"
+    set -l D    "\e[2;37m"
+    set -l N    "\e[0m"
+    set -l BOLD "\e[1m"
+    set -l BOLDG "\e[1;32m"
+    set -l BOLDR "\e[1;31m"
+    set -l BOLDY "\e[1;33m"
+    set -l BOLDC "\e[1;36m"
 
     # ── Config paths ──
     set -g CONF_DIR  "$HOME/.config/smb"
