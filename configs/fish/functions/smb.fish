@@ -1842,9 +1842,9 @@ function smb --description 'Samba file sharing manager'
 
     if test "$argv[1]" = "log"
         printf "\n"
-        printf "  $BOLD samba logs (last 20 lines):$N\n"
+        printf "  $BOLD samba logs (last 100 lines):$N\n"
         printf "\n"
-        set -l log_output (journalctl -u smb --no-pager -n 20 2>/dev/null)
+        set -l log_output (journalctl -u smb --no-pager -n 100 2>/dev/null)
         if test -z "$log_output"
             printf "  $D No samba logs found.$N\n"
             printf "  $D Service may have just started.$N\n"
