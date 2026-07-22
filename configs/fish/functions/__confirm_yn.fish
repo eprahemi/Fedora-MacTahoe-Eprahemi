@@ -1,10 +1,21 @@
-function __confirm_yn --description 'Prompt for y/n confirmation'
+function __confirm_yn --description 'Prompt for y/n confirmation with Ctrl+C'
     # Usage: __confirm_yn "  Apply changes? [y/n]: "
     # Returns: 0 = yes, 1 = no
-    # Requires explicit y or n input. Enter does nothing, loops.
+    # Ctrl+C once = re-prompt, twice = cancel
     set -l prompt "$argv[1]"
+    set -l __cc 0
     while true
-        read -l _reply -P "$prompt"
+        read -P "$prompt" _reply
+        set -l __rs $status
+        if test $__rs -ne 0
+            set __cc (math $__cc + 1)
+            if test $__cc -ge 2
+                printf "\n"
+                return 1
+            end
+            printf "  (Ctrl+C again to cancel)\n"
+            continue
+        end
         set -l _lc (string lower -- "$_reply" | string trim)
         if test "$_lc" = "y"; or test "$_lc" = "yes"; or test "$_lc" = "yeah"; or test "$_lc" = "yep"; or test "$_lc" = "yup"; or test "$_lc" = "ya"; or test "$_lc" = "sure"; or test "$_lc" = "ok"; or test "$_lc" = "okay"
             return 0
