@@ -348,7 +348,6 @@ function smb --description 'Samba file sharing manager'
         printf "  $BOLD Step 3/9$N   Setting SMB password...\n"
         set -l pass ""
         set -l pass2 ""
-        set -l weak_passwords "1234" "12345" "123456" "1234567" "12345678" "123456789" "password" "passwd" "admin" "root" "samba" "pass" "qwerty" "abc123" "letmein" "welcome" "monkey" "dragon" "master" "login"
         while true
             printf "  Enter SMB password for '$W$smb_user$N':\n"
             read -s -P "  > " pass
@@ -366,46 +365,50 @@ function smb --description 'Samba file sharing manager'
                 continue
             end
 
-            # Check: username == password
-            if test "$pass" = "$smb_user"
-                echo ""
-                printf "  $R⚠$N  RISK: Your password is the same as your username.\n"
-                printf "     This is extremely easy to guess. Anyone on your\n"
-                printf "     network can access your files.\n"
-                echo ""
-                printf "  Use this password anyway? [y/N]: "
-                read -l confirm -P ""
-                if test "$confirm" != "y"; and test "$confirm" != "Y"
-                    printf "  $D Re-entering password...$N\n"
+            # Check password strength with pwscore (if available)
+            if type -q pwscore
+                set -l pw_result (printf "%s" "$pass" | pwscore 2>&1)
+                set -l pw_rc $status
+                if test $pw_rc -ne 0
                     echo ""
-                    continue
-                end
-                echo ""
-            end
-
-            # Check: weak password
-            set -l is_weak 0
-            for wp in $weak_passwords
-                if test "$pass" = "$wp"
-                    set is_weak 1
-                    break
-                end
-            end
-            if test $is_weak -eq 1
-                echo ""
-                printf "  $R⚠$N  Weak password detected.\n"
-                printf "     '%s' is one of the most commonly used passwords.\n" "$pass"
-                printf "     Choose a stronger password with 8+ characters,\n"
-                printf "     mixing letters, numbers, and symbols.\n"
-                echo ""
-                printf "  Use this password anyway? [y/N]: "
-                read -l confirm2 -P ""
-                if test "$confirm2" != "y"; and test "$confirm2" != "Y"
-                    printf "  $D Re-entering password...$N\n"
+                    printf "  $R⚠$N  Weak password:\n"
+                    for line in $pw_result
+                        printf "     %s\n" "$line"
+                    end
                     echo ""
-                    continue
+                    printf "  Use this password anyway? [y/N]: "
+                    read -l confirm -P ""
+                    if test "$confirm" != "y"; and test "$confirm" != "Y"
+                        printf "  $D Re-entering password...$N\n"
+                        echo ""
+                        continue
+                    end
+                    echo ""
                 end
-                echo ""
+            else
+                # Fallback: check common weak passwords manually
+                set -l weak_passwords "1234" "12345" "123456" "1234567" "12345678" "123456789" "password" "passwd" "admin" "root" "samba" "pass" "qwerty" "abc123" "letmein" "welcome" "monkey" "dragon" "master" "login"
+                set -l is_weak 0
+                for wp in $weak_passwords
+                    if test "$pass" = "$wp"
+                        set is_weak 1
+                        break
+                    end
+                end
+                if test $is_weak -eq 1
+                    echo ""
+                    printf "  $R⚠$N  Weak password detected.\n"
+                    printf "     '%s' is one of the most commonly used passwords.\n" "$pass"
+                    echo ""
+                    printf "  Use this password anyway? [y/N]: "
+                    read -l confirm -P ""
+                    if test "$confirm" != "y"; and test "$confirm" != "Y"
+                        printf "  $D Re-entering password...$N\n"
+                        echo ""
+                        continue
+                    end
+                    echo ""
+                end
             end
 
             break
