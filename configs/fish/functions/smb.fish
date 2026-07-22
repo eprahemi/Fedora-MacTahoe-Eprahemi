@@ -600,65 +600,52 @@ function smb --description 'Samba file sharing manager'
         set -l smb_hostname (hostname)
         set -l smb_url "smb://$local_ip/$smb_user"
         set -l win_url "\\\\$local_ip\\\\$smb_user"
-
-        # Helper: pad plain text to 62 visible chars between ║ ║
-        function __smb_box_line
-            set -l text "$argv[1]"
-            set -l vis (string length -- "$text")
-            set -l pad (printf '%*s' (math 62 - $vis) '')
-            printf "  $C║$N%s$C║$N\n" "$text$pad"
-        end
-
-        # Build variable lines
-        set -l svc_line "  Service:  $BOLDG active$N"
-        set -l ip_line  "  IP:  $W$local_ip$N"
-        set -l hst_line "  Hostname:  $W$smb_hostname$N"
-        set -l url_line "    Address:  $B$smb_url$N"
-
-        printf "  $C╭$(printf '%*s' 62 '')╮$N\n"
-        __smb_box_line "                  SETUP COMPLETE"
-        printf "  $C╠$(printf '%*s' 62 '')╣$N\n"
-        __smb_box_line ""
-        printf "  $C║$N  Service:  $BOLDG active$N$(printf '%*s' (math 62 - 20) '')$C║$N\n"
-        printf "  $C║$N  IP:  $W$local_ip$N$(printf '%*s' (math 62 - 7 - (string length "$local_ip")) '')$C║$N\n"
-        printf "  $C║$N  Hostname:  $W$smb_hostname$N$(printf '%*s' (math 62 - 13 - (string length "$smb_hostname")) '')$C║$N\n"
-        __smb_box_line ""
-        printf "  $C╠$(printf '%*s' 62 '')╣$N\n"
-        __smb_box_line "  SMB USERS"
-        __smb_box_line "    $W$smb_user$N      ••••••••••••"
-        if __smb_has_keyring
-            __smb_box_line "    Storage:  $BOLDG gnome-keyring$N (encrypted)"
-        else
-            __smb_box_line "    Storage:  $BOLDY file fallback$N (chmod 600)"
-        end
-        printf "  $C╠$(printf '%*s' 62 '')╣$N\n"
-        __smb_box_line "  SHARED DIRECTORIES"
-        __smb_box_line "    Scope:  $W$scope_type$N  ($D$scope_path$N)"
-        printf "  $C╠$(printf '%*s' 62 '')╣$N\n"
-        __smb_box_line ""
-        __smb_box_line "  SAMSUNG / ANDROID:"
-        __smb_box_line "    Open My Files > Network > Add network storage"
         set -l smb_server "smb://$local_ip"
-        printf "  $C║$N    Address:   $B$smb_server$N$(printf '%*s' (math 62 - 15 - (string length "$smb_server")) '')$C║$N\n"
-        printf "  $C║$N    Username:  $W$smb_user$N$(printf '%*s' (math 62 - 15 - (string length "$smb_user")) '')$C║$N\n"
-        __smb_box_line "    Password:  (your SMB password)"
-        __smb_box_line ""
-        __smb_box_line "  WINDOWS:"
-        __smb_box_line "    File Explorer address bar > paste:"
-        printf "  $C║$N    $B$win_url$N$(printf '%*s' (math 62 - 4 - (string length "$win_url")) '')$C║$N\n"
-        __smb_box_line "    When prompted, use your SMB password."
-        __smb_box_line ""
-        __smb_box_line "  NAUTILUS (Fedora):"
-        __smb_box_line "    Files > Other Locations > Connect to Server"
-        printf "  $C║$N    Address:   $B$smb_url$N$(printf '%*s' (math 62 - 15 - (string length "$smb_url")) '')$C║$N\n"
-        __smb_box_line "    When prompted, use your SMB password."
-        __smb_box_line ""
-        __smb_box_line "  iPHONE / MAC:"
-        __smb_box_line "    Finder > Go > Connect to Server"
-        printf "  $C║$N    Address:   $B$smb_url$N$(printf '%*s' (math 62 - 15 - (string length "$smb_url")) '')$C║$N\n"
-        __smb_box_line "    When prompted, use your SMB password."
-        __smb_box_line ""
-        printf "  $C╚$(printf '%*s' 62 '')╝$N\n"
+        set -l sep (printf '%*s' 62 '' | tr ' ' '─')
+
+        printf "  $C╭${sep}╮$N\n"
+        printf "  $C║$N                  SETUP COMPLETE\n"
+        printf "  $C╠${sep}╣$N\n"
+        printf "  $C║$N\n"
+        printf "  $C║$N  Service:  $BOLDG active$N\n"
+        printf "  $C║$N  IP:  $W$local_ip$N\n"
+        printf "  $C║$N  Hostname:  $W$smb_hostname$N\n"
+        printf "  $C║$N\n"
+        printf "  $C╠${sep}╣$N\n"
+        printf "  $C║$N  SMB USERS\n"
+        printf "  $C║$N    $W$smb_user$N      ••••••••••••\n"
+        if __smb_has_keyring
+            printf "  $C║$N    Storage:  $BOLDG gnome-keyring$N (encrypted)\n"
+        else
+            printf "  $C║$N    Storage:  $BOLDY file fallback$N (chmod 600)\n"
+        end
+        printf "  $C╠${sep}╣$N\n"
+        printf "  $C║$N  SHARED DIRECTORIES\n"
+        printf "  $C║$N    Scope:  $W$scope_type$N  ($D$scope_path$N)\n"
+        printf "  $C╠${sep}╣$N\n"
+        printf "  $C║$N\n"
+        printf "  $C║$N  SAMSUNG / ANDROID:\n"
+        printf "  $C║$N    Open My Files > Network > Add network storage\n"
+        printf "  $C║$N    Address:   $B$smb_server$N\n"
+        printf "  $C║$N    Username:  $W$smb_user$N\n"
+        printf "  $C║$N    Password:  (your SMB password)\n"
+        printf "  $C║$N\n"
+        printf "  $C║$N  WINDOWS:\n"
+        printf "  $C║$N    File Explorer address bar > paste:\n"
+        printf "  $C║$N    $B$win_url$N\n"
+        printf "  $C║$N    When prompted, use your SMB password.\n"
+        printf "  $C║$N\n"
+        printf "  $C║$N  NAUTILUS (Fedora):\n"
+        printf "  $C║$N    Files > Other Locations > Connect to Server\n"
+        printf "  $C║$N    Address:   $B$smb_url$N\n"
+        printf "  $C║$N    When prompted, use your SMB password.\n"
+        printf "  $C║$N\n"
+        printf "  $C║$N  iPHONE / MAC:\n"
+        printf "  $C║$N    Finder > Go > Connect to Server\n"
+        printf "  $C║$N    Address:   $B$smb_url$N\n"
+        printf "  $C║$N    When prompted, use your SMB password.\n"
+        printf "  $C║$N\n"
+        printf "  $C╚${sep}╝$N\n"
         printf "\n"
         printf "  Done. Try connecting from your phone now.\n"
         printf "  Run 'smb password' to reveal your password.\n"
@@ -1288,6 +1275,7 @@ function smb --description 'Samba file sharing manager'
         # ── Gather info ──
         set -l local_ip (__smb_ip)
         set -l smb_hostname (hostname)
+        set -l smb_user (whoami)
         set -l smb_ver ""
         if type -q smbd
             set smb_ver (command smbd --version 2>/dev/null | head -1 | awk '{print $2}')
@@ -1314,26 +1302,27 @@ function smb --description 'Samba file sharing manager'
         end
 
         # ── Render ──
+        set -l sep (printf '%*s' 62 '' | tr ' ' '─')
         printf "\n"
-        printf "  $C╔══════════════════════════════════════════════════════════╗$N\n"
-        printf "  $C║$N                    $BOLDG SMB STATUS$N                            $C║$N\n"
-        printf "  $C╠══════════════════════════════════════════════════════════╣$N\n"
-        printf "  $C║$N                                                          $C║$N\n"
+        printf "  $C╔${sep}╗$N\n"
+        printf "  $C║$N                    $BOLDG SMB STATUS$N\n"
+        printf "  $C╠${sep}╣$N\n"
+        printf "  $C║$N\n"
         if test "$svc_active" = "active"
-            printf "  $C║$N  Service:     $BOLDG active$N                                 $C║$N\n"
+            printf "  $C║$N  Service:     $BOLDG active$N\n"
         else
-            printf "  $C║$N  Service:     $BOLDR INACTIVE$N                                $C║$N\n"
+            printf "  $C║$N  Service:     $BOLDR INACTIVE$N\n"
         end
-        printf "  $C║$N  IP:          $W$local_ip$N                              $C║$N\n"
-        printf "  $C║$N  Hostname:    $W$smb_hostname$N                                      $C║$N\n"
-        printf "  $C║$N  Samba:       $W$smb_ver$N                                      $C║$N\n"
-        printf "  $C║$N  Firewall:    $W$fw_status$N$C   ║$N\n"
-        printf "  $C║$N  SELinux:     $W$selinux_status$N ($home_dirs)               $C║$N\n"
-        printf "  $C║$N                                                          $C║$N\n"
+        printf "  $C║$N  IP:          $W$local_ip$N\n"
+        printf "  $C║$N  Hostname:    $W$smb_hostname$N\n"
+        printf "  $C║$N  Samba:       $W$smb_ver$N\n"
+        printf "  $C║$N  Firewall:    $W$fw_status$N\n"
+        printf "  $C║$N  SELinux:     $W$selinux_status$N ($home_dirs)\n"
+        printf "  $C║$N\n"
 
         # ── Users ──
-        printf "  $C╠══════════════════════════════════════════════════════════╣$N\n"
-        printf "  $C║$N  $BOLDG SMB USERS$N                                                $C║$N\n"
+        printf "  $C╠${sep}╣$N\n"
+        printf "  $C║$N  $BOLDG SMB USERS$N\n"
         set -l users ()
         if type -q pdbedit
             set users (command pdbedit -L 2>/dev/null)
@@ -1343,42 +1332,41 @@ function smb --description 'Samba file sharing manager'
                 set -l uname (printf '%s\n' "$u" | cut -d: -f1)
                 set -l uid (printf '%s\n' "$u" | cut -d: -f2)
                 if test $show_pass -eq 1
-                    # Show actual password
                     set -l pass (__smb_get_password "$uname")
-                    printf "  $C║$N    $W%-16s$N $W%-24s$N (uid=$uid)  $C║$N\n" "$uname" "$pass"
+                    printf "  $C║$N    $W$smb_user$N  (uid=$uid)\n"
                 else
-                    printf "  $C║$N    $W%-16s$N ••••••••••••              (uid=$uid)  $C║$N\n" "$uname"
+                    printf "  $C║$N    $W$uname$N  ••••••••••••  (uid=$uid)\n"
                 end
             end
         else
-            printf "  $C║$N    $D No users found$N                                      $C║$N\n"
+            printf "  $C║$N    $D No users found$N\n"
         end
         if __smb_has_keyring
-            printf "  $C║$N  Storage:     $BOLDG gnome-keyring$N (encrypted at rest)     $C║$N\n"
+            printf "  $C║$N  Storage:     $BOLDG gnome-keyring$N (encrypted at rest)\n"
         else
-            printf "  $C║$N  Storage:     $BOLDY file fallback$N (chmod 600)             $C║$N\n"
+            printf "  $C║$N  Storage:     $BOLDY file fallback$N (chmod 600)\n"
         end
 
         # ── Share scope ──
-        printf "  $C╠══════════════════════════════════════════════════════════╣$N\n"
-        printf "  $C║$N  $BOLDG SHARE SCOPE$N                                              $C║$N\n"
+        printf "  $C╠${sep}╣$N\n"
+        printf "  $C║$N  $BOLDG SHARE SCOPE$N\n"
         set -l scope (__smb_get_scope)
         if test "$scope" = "home"
-            printf "  $C║$N    Type:    $W HOME$N  ($HOME)                         $C║$N\n"
+            printf "  $C║$N    Type:    $W HOME$N  ($D$HOME$N)\n"
         else if test "$scope" = "root"
-            printf "  $C║$N    Type:    $Y ROOT$N  (/)  ← NOT RECOMMENDED                  $C║$N\n"
+            printf "  $C║$N    Type:    $Y ROOT$N  ($D/$N)  ← NOT RECOMMENDED\n"
         else
-            printf "  $C║$N    Type:    $D none$N                                           $C║$N\n"
+            printf "  $C║$N    Type:    $D none$N\n"
         end
-        printf "  $C║$N    Status:  $BOLDG active$N                                     $C║$N\n"
+        printf "  $C║$N    Status:  $BOLDG active$N\n"
 
         # ── Shared directories ──
-        printf "  $C╠══════════════════════════════════════════════════════════╣$N\n"
-        printf "  $C║$N  $BOLDG SHARED DIRECTORIES$N                                       $C║$N\n"
+        printf "  $C╠${sep}╣$N\n"
+        printf "  $C║$N  $BOLDG SHARED DIRECTORIES$N\n"
         if test "$scope" = "home"
-            printf "  $C║$N    $W$HOME$N                    (home — default)     $C║$N\n"
+            printf "  $C║$N    $W$HOME$N  (home — default)\n"
         else if test "$scope" = "root"
-            printf "  $C║$N    $Y/$N                                     (root — default)  $C║$N\n"
+            printf "  $C║$N    $Y/$N  (root — default)\n"
         end
         # Parse custom shares
         if test -f "$SMB_CONF"
@@ -1388,7 +1376,7 @@ function smb --description 'Samba file sharing manager'
             while read -l line
                 if string match -qr '^\[([^\]]+)\]' "$line"
                     if test $in_share -eq 1 -a -n "$share_path"
-                        printf "  $C║$N    $W%-41s$N (custom)     $C║$N\n" "$share_path"
+                        printf "  $C║$N    $W$share_path$N  (custom)\n"
                     end
                     set -l sec (string match -r '^\[([^\]]+)\]' "$line" | tail -1)
                     if test "$sec" != "global" -a "$sec" != "homes" -a "$sec" != "root_share" -a "$sec" != "printers" -a "$sec" != "print\$"
@@ -1404,37 +1392,42 @@ function smb --description 'Samba file sharing manager'
                     end
                     if test -z "$line"; or string match -qr '^\[' "$line"
                         if test $in_share -eq 1 -a -n "$share_path"
-                            printf "  $C║$N    $W%-41s$N (custom)     $C║$N\n" "$share_path"
+                            printf "  $C║$N    $W$share_path$N  (custom)\n"
                         end
                         set in_share 0
                     end
                 end
             end < "$SMB_CONF"
             if test $in_share -eq 1 -a -n "$share_path"
-                printf "  $C║$N    $W%-41s$N (custom)     $C║$N\n" "$share_path"
+                printf "  $C║$N    $W$share_path$N  (custom)\n"
             end
         end
 
         # ── Connection URLs ──
-        printf "  $C╠══════════════════════════════════════════════════════════╣$N\n"
-        printf "  $C║$N                                                          $C║$N\n"
-        printf "  $C║$N  SAMSUNG / ANDROID:                                       $C║$N\n"
-        printf "  $C║$N    Open My Files > Network > Add network storage          $C║$N\n"
-        printf "  $C║$N    Address:  $B smb://$local_ip/(whoami)$N                         $C║$N\n"
-        printf "  $C║$N                                                          $C║$N\n"
-        printf "  $C║$N  WINDOWS:                                                $C║$N\n"
-        printf "  $C║$N    File Explorer address bar > paste:                     $C║$N\n"
-        printf "  $C║$N    $B \\\\$local_ip\\\\(whoami)$N                                  $C║$N\n"
-        printf "  $C║$N                                                          $C║$N\n"
-        printf "  $C║$N  NAUTILUS (Fedora):                                       $C║$N\n"
-        printf "  $C║$N    Files > Other Locations > Connect to Server            $C║$N\n"
-        printf "  $C║$N    Address:  $B smb://$local_ip/(whoami)$N                         $C║$N\n"
-        printf "  $C║$N                                                          $C║$N\n"
-        printf "  $C║$N  iPHONE / MAC:                                            $C║$N\n"
-        printf "  $C║$N    Finder > Go > Connect to Server                        $C║$N\n"
-        printf "  $C║$N    Address:  $B smb://$local_ip/(whoami)$N                         $C║$N\n"
-        printf "  $C║$N                                                          $C║$N\n"
-        printf "  $C╚══════════════════════════════════════════════════════════╝$N\n"
+        printf "  $C╠${sep}╣$N\n"
+        printf "  $C║$N\n"
+        printf "  $C║$N  SAMSUNG / ANDROID:\n"
+        printf "  $C║$N    Open My Files > Network > Add network storage\n"
+        printf "  $C║$N    Address:   $B smb://$local_ip/$smb_user$N\n"
+        printf "  $C║$N    Username:  $W$smb_user$N\n"
+        printf "  $C║$N    Password:  (your SMB password)\n"
+        printf "  $C║$N\n"
+        printf "  $C║$N  WINDOWS:\n"
+        printf "  $C║$N    File Explorer address bar > paste:\n"
+        printf "  $C║$N    $B \\\\$local_ip\\\\$smb_user$N\n"
+        printf "  $C║$N    When prompted, use your SMB password.\n"
+        printf "  $C║$N\n"
+        printf "  $C║$N  NAUTILUS (Fedora):\n"
+        printf "  $C║$N    Files > Other Locations > Connect to Server\n"
+        printf "  $C║$N    Address:   $B smb://$local_ip/$smb_user$N\n"
+        printf "  $C║$N    When prompted, use your SMB password.\n"
+        printf "  $C║$N\n"
+        printf "  $C║$N  iPHONE / MAC:\n"
+        printf "  $C║$N    Finder > Go > Connect to Server\n"
+        printf "  $C║$N    Address:   $B smb://$local_ip/$smb_user$N\n"
+        printf "  $C║$N    When prompted, use your SMB password.\n"
+        printf "  $C║$N\n"
+        printf "  $C╚${sep}╝$N\n"
         printf "\n"
         if test $show_pass -eq 0
             printf "  $D Tip: Run 'smb status --show' or 'smb password' to reveal passwords.$N\n"
