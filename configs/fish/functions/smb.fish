@@ -1672,10 +1672,10 @@ function smb --description 'Samba file sharing manager'
                 # Copy password to clipboard
                 if type -q wl-copy
                     printf '%s' "$zip_pass" | wl-copy 2>/dev/null
-                    printf "  $G✓$N  Password copied to clipboard.\n"
+                    printf "  $BOLDG✓$N  $BOLDG Password copied to clipboard.$N\n"
                 else if type -q xclip
                     printf '%s' "$zip_pass" | xclip -selection clipboard 2>/dev/null
-                    printf "  $G✓$N  Password copied to clipboard.\n"
+                    printf "  $BOLDG✓$N  $BOLDG Password copied to clipboard.$N\n"
                 end
                 printf "\n"
                 printf "  $Y⚠$N  WARNING: The zip contains your SMB passwords.\n"
