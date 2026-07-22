@@ -460,7 +460,9 @@ function smb --description 'Samba file sharing manager'
 
             break
         end
-        __smb_set_password "$smb_user" "$pass"
+        if not __smb_set_password "$smb_user" "$pass"
+            return 1
+        end
         __smb_save_password "$smb_user" "$pass"
         printf "  $G✓$N  Password set for '$W$smb_user$N'\n"
         printf "  $G✓$N  Password saved securely.\n"
@@ -726,7 +728,9 @@ function smb --description 'Samba file sharing manager'
                     printf "  $R✗$N  Passwords don't match. Try again.\n"
                     printf "\n"
                 end
-                __smb_set_password "$newuser" "$pass"
+                if not __smb_set_password "$newuser" "$pass"
+                    return 1
+                end
                 __smb_save_password "$newuser" "$pass"
                 printf "  $G✓$N  User '$W$newuser$N' created\n"
                 printf "  $G✓$N  Password saved securely.\n"
@@ -845,7 +849,11 @@ function smb --description 'Samba file sharing manager'
                     sudo smbpasswd -x "$old_name" 2>/dev/null
                     printf "  $G✓$N  Removed old user '$W$old_name$N'\n"
                     # Add new user with same password
-                    __smb_set_password "$new_name" "$old_pass"
+                    if not __smb_set_password "$new_name" "$old_pass"
+                        printf "  $R✗$N  Failed to create new user. Old user was already deleted.\n"
+                        printf "  Run 'smb user add $new_name' to recreate.\n"
+                        return 1
+                    end
                     __smb_save_password "$new_name" "$old_pass"
                     # Remove old keyring entry
                     __smb_delete_password "$old_name"
@@ -915,7 +923,9 @@ function smb --description 'Samba file sharing manager'
                     printf "  $R✗$N  Passwords don't match. Try again.\n"
                     printf "\n"
                 end
-                __smb_set_password "$extra" "$pass"
+                if not __smb_set_password "$extra" "$pass"
+                    return 1
+                end
                 __smb_save_password "$extra" "$pass"
                 printf "  $G✓$N  Password changed for '$W$extra$N'\n"
                 printf "  $G✓$N  Password updated.\n"
