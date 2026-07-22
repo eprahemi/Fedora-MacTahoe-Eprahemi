@@ -313,6 +313,16 @@ function smb --description 'Samba file sharing manager'
                 return 1
             end
         end
+        # Install libsecret for keyring password storage
+        if not type -q secret-tool
+            printf "  Installing libsecret (password keyring)...\n"
+            sudo dnf install libsecret -y 2>/dev/null
+            if test $status -eq 0
+                printf "  $G✓$N  libsecret installed\n"
+            else
+                printf "  $Y⚠$N  libsecret not installed — using file storage instead\n"
+            end
+        end
         echo ""
 
         # ── Step 2: Detect username ──
