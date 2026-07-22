@@ -290,7 +290,7 @@ function smb --description 'Samba file sharing manager'
         __smb_set_password "$smb_user" "$pass"
         __smb_save_password "$smb_user" "$pass"
         printf "  $G✓$N  Password set for '$W$smb_user$N'\n"
-        printf "  $G✓$N  Password saved to $D$PASS_FILE$N\n"
+        printf "  $G✓$N  Password saved securely.\n"
         echo ""
         printf "  $Y⚠$N  WARNING: Do NOT share this password with anyone.\n"
         printf "     Giving your SMB password to others gives them full access\n"
@@ -539,7 +539,7 @@ function smb --description 'Samba file sharing manager'
                 __smb_set_password "$newuser" "$pass"
                 __smb_save_password "$newuser" "$pass"
                 printf "  $G✓$N  User '$W$newuser$N' created\n"
-                printf "  $G✓$N  Password saved to $D$PASS_FILE$N\n"
+        printf "  $G✓$N  Password saved securely.\n"
                 echo ""
                 printf "  $Y⚠$N  WARNING: Do NOT share this password with anyone.\n"
                 printf "     Giving your SMB password to others gives them full access\n"
@@ -589,7 +589,7 @@ function smb --description 'Samba file sharing manager'
                     if test $status -eq 0
                         sudo smbpasswd -x "$extra" 2>/dev/null
                         printf "  $G✓$N  User '$W$extra$N' removed\n"
-                        printf "  $G✓$N  Password removed from $D$PASS_FILE$N\n"
+                        printf "  $G✓$N  Password removed securely.\n"
                         echo ""
                         printf "  $Y⚠$N  Note: The user can no longer access your files via SMB.\n"
                         printf "     Make sure this was intentional.\n"
@@ -649,7 +649,7 @@ function smb --description 'Samba file sharing manager'
                     set old_pass (grep "^$old_name:" "$PASS_FILE" 2>/dev/null | head -1 | cut -d: -f2)
                 end
                 if test -z "$old_pass"
-                    printf "  $R✗$N  No password found for '$W$old_name$N' in $D$PASS_FILE$N\n"
+                    printf "  $R✗$N  No password found for '$W$old_name$N'.\n"
                     printf "  Run 'smb user password $old_name' to set one first.\n"
                     return 1
                 end
@@ -669,7 +669,7 @@ function smb --description 'Samba file sharing manager'
                     end
                     echo ""
                     printf "  $G✓$N  User renamed: $W$old_name$N → $W$new_name$N\n"
-                    printf "  $G✓$N  Password preserved in $D$PASS_FILE$N\n"
+                    printf "  $G✓$N  Password preserved.\n"
                     printf "  $Y⚠$N  Shares still reference the old username. Update if needed:\n"
                     printf "    smb share list → check 'allowed users' in smb.conf\n"
                     return 0
@@ -738,7 +738,7 @@ function smb --description 'Samba file sharing manager'
                 __smb_set_password "$extra" "$pass"
                 __smb_save_password "$extra" "$pass"
                 printf "  $G✓$N  Password changed for '$W$extra$N'\n"
-                printf "  $G✓$N  Password updated in $D$PASS_FILE$N\n"
+                printf "  $G✓$N  Password updated.\n"
                 echo ""
                 printf "  $Y⚠$N  WARNING: Do NOT share this password with anyone.\n"
                 printf "     Giving your SMB password to others gives them full access\n"
