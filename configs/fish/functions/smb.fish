@@ -346,6 +346,28 @@ function smb --description 'Samba file sharing manager'
 
         # ── Step 3: Set password ──
         printf "  $BOLD Step 3/9$N   Setting SMB password...\n"
+
+        # ── Ensure pwscore is available for password strength checking ──
+        set -l has_pwscore 0
+        if type -q pwscore
+            set has_pwscore 1
+        else
+            # Try to install libpwquality silently (up to 3 attempts)
+            set -l installed 0
+            for attempt in 1 2 3
+                if sudo dnf install -y libpwquality 2>/dev/null
+                    if type -q pwscore
+                        set installed 1
+                        break
+                    end
+                end
+                sleep 1
+            end
+            if test $installed -eq 1
+                set has_pwscore 1
+            end
+        end
+
         set -l pass ""
         set -l pass2 ""
         while true
@@ -365,8 +387,8 @@ function smb --description 'Samba file sharing manager'
                 continue
             end
 
-            # Check password strength with pwscore (if available)
-            if type -q pwscore
+            # Check password strength
+            if test $has_pwscore -eq 1
                 set -l pw_result (printf "%s" "$pass" | pwscore 2>&1)
                 set -l pw_rc $status
                 if test $pw_rc -ne 0
