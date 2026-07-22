@@ -1,6 +1,13 @@
 {
-  "latest_version": "1.7",
+  "latest_version": "1.8",
   "changelog": [
+    {
+      "version": "1.8",
+      "changes": [
+        "New Fish function: smb — full Samba file sharing manager (setup, users, shares, passwords, data export, service control)",
+        "Updated 18+ wallpaper pack with new backgrounds"
+      ]
+    },
     {
       "version": "1.7",
       "changes": [
@@ -90,10 +97,10 @@
     "apply_desktop_entries": "1.0",
     "ensure_celluloid_default": "1.0",
     "configure_nautilus_defaults": "1.0",
-    "apply_configs": "1.7",
+    "apply_configs": "1.8",
     "apply_dconf": "1.0",
     "optimize_system_resources": "1.0",
-    "apply_wallpapers": "1.0",
+    "apply_wallpapers": "1.1",
     "install_custom_avatars": "1.0",
     "download_optional_videos": "1.0",
     "setup_gdm": "1.0",
