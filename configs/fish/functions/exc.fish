@@ -2,9 +2,6 @@
 # Fedora MacTahoe Eprahemi System Configuration (c) 2026
 function exc --description 'Auto-chmod and run/open executables'
 
-    # ── Config ──
-    set -l EXC_HISTORY "$HOME/.local/share/exc/history.log"
-
     # ── Colors ──
     set -l R    "\033[1;31m"
     set -l G    "\033[1;32m"
@@ -34,7 +31,6 @@ function exc --description 'Auto-chmod and run/open executables'
         printf "    $W exc find <name>$N           Search for executables\n"
         printf "    $W exc info <file>$N           Show file details\n"
         printf "    $W exc --dry-run <file>$N      Preview without running\n"
-        printf "    $W exc history$N               Show last 20 executed files\n"
         printf "\n"
         printf "  $BOLDG EXAMPLES$N\n"
         printf "    $W exc ./Equilotl$N            Make executable and run\n"
@@ -47,7 +43,6 @@ function exc --description 'Auto-chmod and run/open executables'
         printf "  $BOLDY SAFETY$N\n"
         printf "    Unknown files ask for confirmation before running.\n"
         printf "    Files in PATH or already executable run directly.\n"
-        printf "    History is saved to $D~/.local/share/exc/history.log$N\n"
         printf "\n"
         return 0
     end
@@ -93,10 +88,6 @@ function exc --description 'Auto-chmod and run/open executables'
             printf "  $Y*$N  Making executable: %s\n" (basename "$file")
             chmod +x "$file"
         end
-
-        # Log to history
-        mkdir -p (dirname "$EXC_HISTORY")
-        printf "%s  open  %s\n" (date '+%Y-%m-%d %H:%M:%S') "$file" >> "$EXC_HISTORY"
 
         # Open with default app
         printf "  $G✓$N  Opening: %s\n" (basename "$file")
@@ -347,35 +338,6 @@ function exc --description 'Auto-chmod and run/open executables'
         if test (count $argv) -gt 2
             printf "  $D   With args: %s$N\n" (string join ' ' $argv[3..-1])
         end
-
-        printf "  $D   Logging to: %s$N\n" "$EXC_HISTORY"
-        echo ""
-        return 0
-    end
-
-    # ════════════════════════════════════════════════════════════
-    # HISTORY — show last 20 executed files
-    # ════════════════════════════════════════════════════════════
-
-    if test "$argv[1]" = "history"
-        echo ""
-        if not test -f "$EXC_HISTORY"
-            printf "  $D No history yet.$N\n"
-            printf "  Run 'exc <file>' to start tracking.\n"
-            echo ""
-            return 0
-        end
-        set -l entries (tail -20 "$EXC_HISTORY" 2>/dev/null)
-        if test (count $entries) -eq 0
-            printf "  $D No history yet.$N\n"
-            echo ""
-            return 0
-        end
-        printf "  $BOLDG EXECUTION HISTORY$N (last 20)\n"
-        echo ""
-        for line in $entries
-            printf "  %s\n" "$line"
-        end
         echo ""
         return 0
     end
@@ -435,9 +397,6 @@ function exc --description 'Auto-chmod and run/open executables'
     if test $was_exec -eq 1
         # Already executable — run directly
         printf "  $G✓$N  Running: %s\n" (basename "$file")
-        # Log
-        mkdir -p (dirname "$EXC_HISTORY")
-        printf "%s  run   %s %s\n" (date '+%Y-%m-%d %H:%M:%S') "$file" (string join ' ' $rest) >> "$EXC_HISTORY"
         command $file $rest
         return $status
     end
@@ -457,10 +416,6 @@ function exc --description 'Auto-chmod and run/open executables'
         printf "  $D Cancelled.$N\n"
         return 0
     end
-
-    # Log
-    mkdir -p (dirname "$EXC_HISTORY")
-    printf "%s  run   %s %s\n" (date '+%Y-%m-%d %H:%M:%S') "$file" (string join ' ' $rest) >> "$EXC_HISTORY"
 
     printf "  $G✓$N  Running: %s\n" (basename "$file")
     echo ""

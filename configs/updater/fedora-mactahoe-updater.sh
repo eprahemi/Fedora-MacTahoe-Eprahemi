@@ -76,46 +76,21 @@ if [ -f "$DISMISSED_FILE" ]; then
   [ "$LATEST_VER" = "$DISMISSED" ] && exit 0
 fi
 
-# ── Notify with action buttons ──
-# -u critical -t 0 → stays on screen until user clicks a button
+# ── Notify with action button ──
+# -u critical -t 0 → stays on screen until user clicks Later or X
 RESULT=$(notify-send -u critical -t 0 \
   -a "Fedora MacTahoe" \
   -i software-update-available \
   -h "string:sound-name:message-attention" \
-  -A "update=Update Now" \
   -A "later=Later" \
   "Fedora MacTahoe — Update v${LATEST_VER}" \
-  "A new version is available. Click Update Now to upgrade.\nType 'update' in your terminal to update anytime." 2>/dev/null)
+  "A new version is available.\nType 'update' in your terminal to upgrade." 2>/dev/null)
 
 # ── Handle user action ──
-if [ "$RESULT" = "update" ]; then
-  # Save permanently — never notify for this version again
-  echo "$LATEST_VER" > "$NOTIFIED_FILE"
-
-  # Kitty is the only supported terminal for updates
-  if command -v kitty &>/dev/null; then
-    # Write a temp launcher script to avoid quoting issues and keep window open
-    LAUNCHER="/tmp/.mct-update-$(date +%s).sh"
-    cat > "$LAUNCHER" << 'LAUNCHER_EOF'
-#!/usr/bin/env bash
-UPDATE_MODE=incremental bash <(curl -fsSL 'https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/bootstrap.sh')
-echo ""
-read -rp "Press Enter to close this window..."
-LAUNCHER_EOF
-    chmod +x "$LAUNCHER"
-    # setsid fully detaches Kitty from this process so systemd won't kill it
-    setsid kitty --title "Fedora MacTahoe Update" "$LAUNCHER" </dev/null &>/dev/null &
-    sleep 2
-    rm -f "$LAUNCHER" 2>/dev/null || true
-  else
-    # Kitty not installed — show error notification
-    notify-send -u critical -t 10000 \
-      -a "Fedora MacTahoe" \
-      -i dialog-error \
-      "Kitty terminal not found" \
-      "Kitty is required for updates. Install it with: sudo dnf install kitty" 2>/dev/null || true
-  fi
+if [ "$RESULT" = "later" ]; then
+  # Dismiss until next boot only
+  echo "$LATEST_VER" > "$DISMISSED_FILE"
 else
-  # "Later" or X / Esc — dismiss until next boot only
+  # X / Esc / timeout — also dismiss until next boot
   echo "$LATEST_VER" > "$DISMISSED_FILE"
 fi
