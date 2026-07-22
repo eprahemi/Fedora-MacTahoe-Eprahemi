@@ -135,7 +135,7 @@ function smb --description 'Samba file sharing manager'
     # HELP
     # ════════════════════════════════════════════════════════════
 
-    if test (count $argv) -eq 0; or test "$argv[1]" = "help"
+    if test (count $argv) -eq 0; or test "$argv[1]" = "help"; or test "$argv[1]" = "-help"; or test "$argv[1]" = "--help"
         echo ""
         printf "  $C╭──────────────────────────────────────────────────────────────╮$N\n"
         printf "  $C│                      SMB FILE SHARING                        │$N\n"
