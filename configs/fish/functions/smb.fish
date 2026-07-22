@@ -98,17 +98,12 @@ function smb --description 'Samba file sharing manager'
         if not set -q __smb_ctrl_c
             return 0
         end
-        if test $__smb_ctrl_c -eq 0
-            set -g __smb_ctrl_c 1
-            printf "\n  Press Ctrl+C again to stop.\n"
-        else
-            set -g __smb_ctrl_c 2
-            printf "\n  Stopped.\n"
-        end
+        set -g __smb_ctrl_c (math $__smb_ctrl_c + 1)
     end
 
     function __smb_stop_check
         set -l _st $status
+        # Trap incremented counter (from non-read commands like sudo)
         if test $__smb_ctrl_c -ge 2
             set -g __smb_ctrl_c 0
             trap - SIGINT
@@ -116,6 +111,11 @@ function smb --description 'Samba file sharing manager'
             printf "\n  Stopped.\n"
             return 1
         end
+        if test $__smb_ctrl_c -eq 1
+            set -g __smb_ctrl_c 0
+            printf "\n  Press Ctrl+C again to stop.\n"
+        end
+        # Read returned 130 (SIGINT) — also counts as a press
         if test $_st -eq 130
             if test $__smb_ctrl_c -eq 0
                 set -g __smb_ctrl_c 1
@@ -243,7 +243,8 @@ function smb --description 'Samba file sharing manager'
             read -s -P "  > " pass
             __smb_stop_check; or return 1
             echo ""
-            read -s -P "  Confirm password:\n  > " pass2
+            printf "  Confirm password:\n  > "
+            read -s -P "" pass2
             __smb_stop_check; or return 1
             echo ""
             if test "$pass" = "$pass2" -a -n "$pass"
@@ -491,7 +492,8 @@ function smb --description 'Samba file sharing manager'
                     read -s -P "  > " pass
                     __smb_stop_check; or return 1
                     echo ""
-                    read -s -P "  Confirm password:\n  > " pass2
+                    printf "  Confirm password:\n  > "
+                    read -s -P "" pass2
                     __smb_stop_check; or return 1
                     echo ""
                     if test "$pass" = "$pass2" -a -n "$pass"
@@ -545,7 +547,8 @@ function smb --description 'Samba file sharing manager'
                             return 1
                         end
                     end
-                    read -s -P "  Enter SMB password for '$extra' to confirm:\n  > " -l try_pass
+                    printf "  Enter SMB password for '$extra' to confirm:\n  > "
+                    read -s -P "" -l try_pass
                     __smb_stop_check; or return 1
                     echo ""
                     echo "$try_pass" | smbclient -L localhost -U "$extra%$try_pass" >/dev/null 2>&1
@@ -614,7 +617,8 @@ function smb --description 'Samba file sharing manager'
                     read -s -P "  > " pass
                     __smb_stop_check; or return 1
                     echo ""
-                    read -s -P "  Confirm password:\n  > " pass2
+                    printf "  Confirm password:\n  > "
+                    read -s -P "" pass2
                     __smb_stop_check; or return 1
                     echo ""
                     if test "$pass" = "$pass2" -a -n "$pass"
