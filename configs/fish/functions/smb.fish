@@ -137,11 +137,20 @@ function smb --description 'Samba file sharing manager'
                 set user_exists 1
             end
         end
+        set -l _smb_err ""
         if test $user_exists -eq 1
-            printf '%s\n' "$pass" "$pass" | sudo smbpasswd -s "$user" 2>/dev/null
+            set _smb_err (printf '%s\n' "$pass" "$pass" | sudo smbpasswd -s "$user" 2>&1)
         else
-            printf '%s\n' "$pass" "$pass" | sudo smbpasswd -a -s "$user" 2>/dev/null
+            set _smb_err (printf '%s\n' "$pass" "$pass" | sudo smbpasswd -a -s "$user" 2>&1)
         end
+        if test $status -ne 0
+            printf "  $R✗$N  smbpasswd failed:\n"
+            if test -n "$_smb_err"
+                printf "     %s\n" "$_smb_err"
+            end
+            return 1
+        end
+        return 0
     end
 
     function __smb_save_password
@@ -505,6 +514,7 @@ function smb --description 'Samba file sharing manager'
                 if __confirm_yn "  Continue with '$W$detected_user$N' instead? [Y/n]: " y
                     set smb_user "$detected_user"
                     if not __smb_set_password "$smb_user" "$pass"
+                        printf "  $R✗$N  Password setup failed for '$W$smb_user$N'.\n"
                         return 1
                     end
                     __smb_save_password "$smb_user" "$pass"
@@ -512,6 +522,7 @@ function smb --description 'Samba file sharing manager'
                     return 1
                 end
             else
+                printf "  $R✗$N  Password setup failed. Is samba installed and running?\n"
                 return 1
             end
         else
