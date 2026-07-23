@@ -24,6 +24,7 @@ function smb --description 'Samba file sharing manager'
     set -l NUM4 (printf "\e[1;36m[4]\e[0m")
 
     # ── Config paths ──
+    set -e CONF_DIR PASS_FILE SMB_CONF __smb_keyring_available
     set -g CONF_DIR  "$HOME/.config/smb"
     set -g PASS_FILE "$CONF_DIR/.password"
     set -g SMB_CONF  "/etc/samba/smb.conf"
@@ -275,8 +276,8 @@ function smb --description 'Samba file sharing manager'
         printf "  ────────────────────────────────────────────────────────────────\n"
         printf "  $B DATA$N\n"
         printf "  ────────────────────────────────────────────────────────────────\n"
-        printf "    $W smb data$N                    Export smb.conf + passwords to a\n"
-        printf "                                     password-protected zip in ~/Desktop\n"
+                printf "    $W smb data$N                    Export smb.conf + passwords to a\n"
+                printf "                                     password-protected zip in ~/Documents\n"
         printf "    $W smb data list$N               List all saved export zips\n"
         printf "    $W smb data clean$N              Delete all saved exports\n"
         printf "\n"
@@ -518,20 +519,15 @@ function smb --description 'Samba file sharing manager'
         printf "      Shares: $D/$N\n"
         printf "      $Y WARNING — full access to every file on your laptop.$N\n"
         printf "\n"
-        printf "  $NUM3  $BOLD Custom folders$N\n"
-        printf "      Pick specific folders: Downloads, Pictures, Videos,\n"
-        printf "      Music, Documents, Desktop.\n"
-        printf "\n"
-        printf "  $NUM4  $BOLD Custom path$N\n"
-        printf "      Enter any folder path you want to share.\n"
+        printf "  $D You can add more shares later with: smb share <dir> [name]$N\n"
         printf "\n"
         while true
-            read -P "  Choose [1/2/3/4] (default: 1): " -l scope_choice
+            read -P "  Choose [1/2] (default: 1): " -l scope_choice
             __smb_stop_check; or return 1
-            if test -z "$scope_choice"; or test "$scope_choice" = "1"; or test "$scope_choice" = "2"; or test "$scope_choice" = "3"; or test "$scope_choice" = "4"
+            if test -z "$scope_choice"; or test "$scope_choice" = "1"; or test "$scope_choice" = "2"
                 break
             end
-            printf "  $R✗$N  Invalid choice. Enter 1, 2, 3, or 4: "
+            printf "  $R✗$N  Invalid choice. Enter 1 or 2: "
         end
         if test "$scope_choice" = "2"
             printf "\n"
@@ -542,74 +538,6 @@ function smb --description 'Samba file sharing manager'
                 printf "  $G✓$N  Home directory selected\n"
             else
                 printf "  $G✓$N  Root filesystem selected\n"
-            end
-        else if test "$scope_choice" = "3"
-            # Custom folder selection
-            set -g __smb_custom_folders ()
-            printf "\n"
-            printf "  Toggle folders to share (y/n for each):\n"
-            printf "\n"
-            set -l dirs Downloads Pictures Videos Music Documents Desktop
-            set -l dir_paths "$HOME/Downloads" "$HOME/Pictures" "$HOME/Videos" "$HOME/Music" "$HOME/Documents" "$HOME/Desktop"
-            for i in (seq 1 (count $dirs))
-                set -l d $dirs[$i]
-                set -l dp $dir_paths[$i]
-                if test -d "$dp"
-                    if __confirm_yn "  $d? [Y/n]: " y
-                        set -a __smb_custom_folders "$dp"
-                    end
-                else
-                    printf "  $D$d — not found, skipping$N\n"
-                end
-            end
-            if test (count $__smb_custom_folders) -eq 0
-                printf "\n  $R✗$N  No folders selected. Falling back to home directory.\n"
-                set scope_choice "1"
-            else
-                printf "\n  $G✓$N  Selected $(count $__smb_custom_folders) folder(s)\n"
-            end
-        else if test "$scope_choice" = "4"
-            # Custom path input
-            set -g __smb_custom_folders ()
-            printf "\n"
-            while true
-                read -g -P "  Enter full path: " custom_path
-                __smb_stop_check; or break
-                if test -z "$custom_path"
-                    printf "  Path cannot be empty.\n"
-                    continue
-                end
-                if not test -d "$custom_path"
-                    printf "  $R✗$N  '$custom_path' does not exist.\n"
-                    if __confirm_yn "  Try again? [Y/n]: " y
-                        continue
-                    else
-                        break
-                    end
-                end
-                # Check not already added
-                set -l already 0
-                for existing in $__smb_custom_folders
-                    if test "$existing" = "$custom_path"
-                        set already 1
-                        break
-                    end
-                end
-                if test $already -eq 1
-                    printf "  Already added.\n"
-                else
-                    set -a __smb_custom_folders "$custom_path"
-                    printf "  $G✓$N  Added: $W$custom_path$N\n"
-                end
-                if not __confirm_yn "  Add another? [y/N]: " n
-                    break
-                end
-            end
-            if test (count $__smb_custom_folders) -eq 0
-                printf "\n  $R✗$N  No paths selected. Falling back to home directory.\n"
-                set scope_choice "1"
-            else
-                printf "\n  $G✓$N  Selected $(count $__smb_custom_folders) path(s)\n"
             end
         else
             printf "  $G✓$N  Home directory selected\n"
@@ -622,9 +550,6 @@ function smb --description 'Samba file sharing manager'
         if test "$scope_choice" = "2"
             set scope_type "ROOT"
             set scope_path "/"
-        else if test "$scope_choice" = "3"; or test "$scope_choice" = "4"
-            set scope_type "CUSTOM"
-            set scope_path (printf '%s, ' $__smb_custom_folders | string trim -s -r -c ', ')
         end
         printf "  $C╭──────────────────────────────────────────────────────────╮$N\n"
         printf "  $C│$N  Ready to apply:                                         \n"
@@ -650,16 +575,6 @@ function smb --description 'Samba file sharing manager'
             else
                 printf '\n[root_share]\n    comment = Root Filesystem\n    path = /\n    browseable = yes\n    writable = yes\n    valid users = %s\n' "$smb_user" | sudo tee -a "$SMB_CONF" >/dev/null
                 printf "  $G✓$N  [root_share] section added to smb.conf\n"
-            end
-        else if test "$scope_choice" = "3"; or test "$scope_choice" = "4"
-            for dp in $__smb_custom_folders
-                set -l share_name (basename "$dp")
-                if __smb_share_exists "$share_name"
-                    printf "  $G✓$N  [$share_name] section already exists in smb.conf\n"
-                else
-                    printf '\n[%s]\n    comment = %s\n    path = %s\n    browseable = yes\n    writable = yes\n    valid users = %s\n    create mask = 0700\n    directory mask = 0700\n' "$share_name" "$share_name" "$dp" "$smb_user" | sudo tee -a "$SMB_CONF" >/dev/null
-                    printf "  $G✓$N  [$share_name] section added to smb.conf\n"
-                end
             end
         else
             # Home share
@@ -699,14 +614,6 @@ function smb --description 'Samba file sharing manager'
             sudo setsebool -P samba_enable_home_dirs on 2>/dev/null
             printf "  $G✓$N  samba_enable_home_dirs enabled\n"
         end
-        # Label custom folders/paths for Samba
-        if test "$scope_choice" = "3"; or test "$scope_choice" = "4"
-            for dp in $__smb_custom_folders
-                sudo chcon -t samba_share_t "$dp" 2>/dev/null
-                chmod 755 "$dp" 2>/dev/null
-                printf "  $G✓$N  Labeled: $D$dp$N\n"
-            end
-        end
         printf "\n"
 
         # ── Step 9: Final checks ──
@@ -732,7 +639,6 @@ function smb --description 'Samba file sharing manager'
         set -l local_ip (__smb_ip)
         set -l smb_url "smb://$local_ip/$smb_user"
         set -l win_url "\\\\$local_ip\\\\$smb_user"
-        set -l smb_server "smb://$local_ip"
         set -l sep (printf '%*s' 62 '' | tr ' ' '─')
 
         printf "  $C╭$sep╮$N\n"
@@ -752,70 +658,29 @@ function smb --description 'Samba file sharing manager'
         end
         printf "  $C╠$sep╣$N\n"
         printf "  $C║$N  SHARED DIRECTORIES\n"
-        if test "$scope_choice" = "3"; or test "$scope_choice" = "4"
-            for dp in $__smb_custom_folders
-                set -l share_name (basename "$dp")
-                printf "  $C║$N    $W$share_name$N  →  $D$dp$N\n"
-            end
-        else
-            printf "  $C║$N    Scope:  $W$scope_type$N  ($D$scope_path$N)\n"
-        end
+        printf "  $C║$N    Scope:  $W$scope_type$N  ($D$scope_path$N)\n"
         printf "  $C╠$sep╣$N\n"
         printf "  $C║$N\n"
-        if test "$scope_choice" = "3"; or test "$scope_choice" = "4"
-            # Custom folder connection URLs
-            printf "  $C║$N  SAMSUNG / ANDROID:\n"
-            printf "  $C║$N    Open My Files > Network > Add network storage\n"
-            printf "  $C║$N    Address:   $B$smb_server$N\n"
-            printf "  $C║$N    Username:  $W$smb_user$N\n"
-            printf "  $C║$N    Password:  (your SMB password)\n"
-            printf "  $C║$N    Shares:    $(printf '%s ' (for dp in $__smb_custom_folders; basename "$dp"; end))\n"
-            printf "  $C║$N\n"
-            printf "  $C║$N  WINDOWS:\n"
-            printf "  $C║$N    File Explorer address bar > paste:\n"
-            for dp in $__smb_custom_folders
-                set -l share_name (basename "$dp")
-                printf "  $C║$N    $B\\\\$local_ip\\$share_name$N\n"
-            end
-            printf "  $C║$N    When prompted, use your SMB password.\n"
-            printf "  $C║$N\n"
-            printf "  $C║$N  NAUTILUS (Fedora):\n"
-            printf "  $C║$N    Files > Other Locations > Connect to Server\n"
-            for dp in $__smb_custom_folders
-                set -l share_name (basename "$dp")
-                printf "  $C║$N    $B smb://$local_ip/$share_name$N\n"
-            end
-            printf "  $C║$N    When prompted, use your SMB password.\n"
-            printf "  $C║$N\n"
-            printf "  $C║$N  iPHONE / MAC:\n"
-            printf "  $C║$N    Finder > Go > Connect to Server\n"
-            for dp in $__smb_custom_folders
-                set -l share_name (basename "$dp")
-                printf "  $C║$N    $B smb://$local_ip/$share_name$N\n"
-            end
-            printf "  $C║$N    When prompted, use your SMB password.\n"
-        else
-            printf "  $C║$N  SAMSUNG / ANDROID:\n"
-            printf "  $C║$N    Open My Files > Network > Add network storage\n"
-            printf "  $C║$N    Address:   $B$smb_server$N\n"
-            printf "  $C║$N    Username:  $W$smb_user$N\n"
-            printf "  $C║$N    Password:  (your SMB password)\n"
-            printf "  $C║$N\n"
-            printf "  $C║$N  WINDOWS:\n"
-            printf "  $C║$N    File Explorer address bar > paste:\n"
-            printf "  $C║$N    $B$win_url$N\n"
-            printf "  $C║$N    When prompted, use your SMB password.\n"
-            printf "  $C║$N\n"
-            printf "  $C║$N  NAUTILUS (Fedora):\n"
-            printf "  $C║$N    Files > Other Locations > Connect to Server\n"
-            printf "  $C║$N    Address:   $B$smb_url$N\n"
-            printf "  $C║$N    When prompted, use your SMB password.\n"
-            printf "  $C║$N\n"
-            printf "  $C║$N  iPHONE / MAC:\n"
-            printf "  $C║$N    Finder > Go > Connect to Server\n"
-            printf "  $C║$N    Address:   $B$smb_url$N\n"
-            printf "  $C║$N    When prompted, use your SMB password.\n"
-        end
+        printf "  $C║$N  SAMSUNG / ANDROID:\n"
+        printf "  $C║$N    Open My Files > Network > Add network storage\n"
+        printf "  $C║$N    Address:   $B$local_ip$N\n"
+        printf "  $C║$N    Username:  $W$smb_user$N\n"
+        printf "  $C║$N    Password:  (your SMB password)\n"
+        printf "  $C║$N\n"
+        printf "  $C║$N  WINDOWS:\n"
+        printf "  $C║$N    File Explorer address bar > paste:\n"
+        printf "  $C║$N    $B$win_url$N\n"
+        printf "  $C║$N    When prompted, use your SMB password.\n"
+        printf "  $C║$N\n"
+        printf "  $C║$N  NAUTILUS (Fedora):\n"
+        printf "  $C║$N    Type in the address bar (top):\n"
+        printf "  $C║$N    $B$smb_url$N\n"
+        printf "  $C║$N    When prompted, use your SMB password.\n"
+        printf "  $C║$N\n"
+        printf "  $C║$N  iPHONE / MAC:\n"
+        printf "  $C║$N    Finder > Go > Connect to Server\n"
+        printf "  $C║$N    Address:   $B$smb_url$N\n"
+        printf "  $C║$N    When prompted, use your SMB password.\n"
         printf "  $C║$N\n"
         printf "  $C╚$sep╝$N\n"
         printf "\n"
@@ -1225,11 +1090,14 @@ function smb --description 'Samba file sharing manager'
                 return 0
             end
             # Add share to smb.conf
-            # SELinux — allow Samba to access the directory
+            # Ensure directory is traversable and SELinux allows Samba access
+            chmod 755 "$dir" 2>/dev/null
             sudo setsebool -P samba_enable_home_dirs on 2>/dev/null
             sudo chcon -t samba_share_t "$dir" 2>/dev/null
-            # Root share needs extra SELinux boolean
-            if test "$dir" = "/"
+            # Non-home paths (e.g. /mnt/*, /media/*) need samba_export_all_rw
+            # because chcon silently fails on FUSE/NTFS/exFAT filesystems
+            set -l real_dir (realpath "$dir" 2>/dev/null; or echo "$dir")
+            if not string match -qr "^$HOME" "$real_dir"
                 sudo setsebool -P samba_export_all_rw on 2>/dev/null
             end
             printf '\n[%s]\n    comment = %s\n    path = %s\n    browseable = yes\n    writable = yes\n    valid users = %s\n' "$name" "$name" "$dir" (whoami) | sudo tee -a "$SMB_CONF" >/dev/null
@@ -1399,8 +1267,23 @@ function smb --description 'Samba file sharing manager'
         # Always fix home dirs access
         sudo setsebool -P samba_enable_home_dirs on 2>/dev/null
         printf "  $G✓$N  samba_enable_home_dirs = on\n"
-        # Check if root share exists — needs extra SELinux boolean
-        if grep -q 'path\s*=\s*/\s*$' "$SMB_CONF" 2>/dev/null
+        # Check if any share points outside $HOME — needs samba_export_all_rw
+        # (chcon silently fails on FUSE/NTFS/exFAT so we need the boolean)
+        set -l needs_export 0
+        if test -f "$SMB_CONF"
+            while read -l line
+                set -l m (string match -r '^\s*path\s*=\s*(.+)' "$line")
+                if test -n "$m"
+                    set -l sp (string trim -- "$m[2]")
+                    set -l real_sp (realpath "$sp" 2>/dev/null; or echo "$sp")
+                    if not string match -qr "^$HOME" "$real_sp"
+                        set needs_export 1
+                        break
+                    end
+                end
+            end < "$SMB_CONF"
+        end
+        if test $needs_export -eq 1
             sudo setsebool -P samba_export_all_rw on 2>/dev/null
             printf "  $G✓$N  samba_export_all_rw = on\n"
         end
@@ -1427,6 +1310,11 @@ function smb --description 'Samba file sharing manager'
                         end < "$SMB_CONF"
                         if test -n "$share_path"; and test -d "$share_path"
                             sudo chcon -t samba_share_t "$share_path" 2>/dev/null
+                            # Non-home paths need the SELinux boolean
+                            set -l real_sp (realpath "$share_path" 2>/dev/null; or echo "$share_path")
+                            if not string match -qr "^$HOME" "$real_sp"
+                                sudo setsebool -P samba_export_all_rw on 2>/dev/null
+                            end
                             printf "  $G✓$N  [$sec] → $D$share_path$N\n"
                             set fixed (math $fixed + 1)
                         end
@@ -1443,6 +1331,11 @@ function smb --description 'Samba file sharing manager'
             if test -d "$target"
                 # It's a directory path
                 sudo chcon -t samba_share_t "$target" 2>/dev/null
+                # Non-home paths need the SELinux boolean (chcon fails on FUSE)
+                set -l real_target (realpath "$target" 2>/dev/null; or echo "$target")
+                if not string match -qr "^$HOME" "$real_target"
+                    sudo setsebool -P samba_export_all_rw on 2>/dev/null
+                end
                 printf "  $G✓$N  $D$target$N labeled for Samba\n"
             else
                 # Try to find share by name in smb.conf
@@ -1467,6 +1360,11 @@ function smb --description 'Samba file sharing manager'
                 end
                 if test -n "$share_path"; and test -d "$share_path"
                     sudo chcon -t samba_share_t "$share_path" 2>/dev/null
+                    # Non-home paths need the SELinux boolean
+                    set -l real_sp (realpath "$share_path" 2>/dev/null; or echo "$share_path")
+                    if not string match -qr "^$HOME" "$real_sp"
+                        sudo setsebool -P samba_export_all_rw on 2>/dev/null
+                    end
                     printf "  $G✓$N  [$target] → $D$share_path$N labeled for Samba\n"
                 else
                     printf "  $R✗$N  Share '$target' not found or path doesn't exist.\n"
@@ -1489,7 +1387,7 @@ function smb --description 'Samba file sharing manager'
         printf "  Local IP:    $B$local_ip$N\n"
         printf "  Username:    $W$smb_user$N\n"
         printf "\n"
-        printf "  Phone:    $B smb://$local_ip/$smb_user$N\n"
+        printf "  Phone:    $B$local_ip$N\n"
         printf "  Windows:  $B \\\\$local_ip\\\\$smb_user$N\n"
         printf "  Nautilus: $B smb://$local_ip/$smb_user$N\n"
         printf "  Mac:      $B smb://$local_ip/$smb_user$N\n"
@@ -1705,7 +1603,7 @@ function smb --description 'Samba file sharing manager'
         printf "  $C║$N\n"
         printf "  $C║$N  SAMSUNG / ANDROID:\n"
         printf "  $C║$N    Open My Files > Network > Add network storage\n"
-        printf "  $C║$N    Address:   $B smb://$local_ip/$smb_user$N\n"
+        printf "  $C║$N    Address:   $B$local_ip$N\n"
         printf "  $C║$N    Username:  $W$smb_user$N\n"
         printf "  $C║$N    Password:  (your SMB password)\n"
         printf "  $C║$N\n"
@@ -1715,8 +1613,8 @@ function smb --description 'Samba file sharing manager'
         printf "  $C║$N    When prompted, use your SMB password.\n"
         printf "  $C║$N\n"
         printf "  $C║$N  NAUTILUS (Fedora):\n"
-        printf "  $C║$N    Files > Other Locations > Connect to Server\n"
-        printf "  $C║$N    Address:   $B smb://$local_ip/$smb_user$N\n"
+        printf "  $C║$N    Type in the address bar (top):\n"
+        printf "  $C║$N    $B$smb_url$N\n"
         printf "  $C║$N    When prompted, use your SMB password.\n"
         printf "  $C║$N\n"
         printf "  $C║$N  iPHONE / MAC:\n"
@@ -2020,7 +1918,7 @@ function smb --description 'Samba file sharing manager'
     # Try to suggest the closest match
     set -l cmd "$argv[1]"
     set -l suggestions ()
-    set -l known setup user share unshare on off restart data ip password status log help
+    set -l known setup user share unshare on off restart data ip password status fix log help
 
     for k in $known
         # Exact prefix match (e.g. "he" matches "help")
