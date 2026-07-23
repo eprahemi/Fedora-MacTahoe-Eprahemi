@@ -1207,8 +1207,9 @@ function smb --description 'Samba file sharing manager'
                 return 1
             end
             if string match -qr '\s' "$name"
+                set -l _fixed (string replace -ra '\s+' '' "$name")
                 printf "  $R✗$N  Share name cannot contain spaces.\n"
-                printf "  $Y→$N  Use: $W'smb share rename $dir MyDrive'$N\n"
+                printf "  $Y→$N  Use: $W'smb share rename $dir $_fixed'$N\n"
                 return 1
             end
             if not __smb_share_exists "$dir"
@@ -1266,8 +1267,9 @@ function smb --description 'Samba file sharing manager'
                 end
             end
             if string match -qr '\s' "$name"
+                set -l _fixed (string replace -ra '\s+' '' "$name")
                 printf "  $R✗$N  Share name cannot contain spaces.\n"
-                printf "  $Y→$N  Use a single word like: $W'smb share $dir MyDrive'$N\n"
+                printf "  $Y→$N  Use: $W'smb share $dir $_fixed'$N\n"
                 return 1
             end
             if __smb_share_exists "$name"
