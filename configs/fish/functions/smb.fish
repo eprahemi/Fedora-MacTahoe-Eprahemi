@@ -828,7 +828,7 @@ function smb --description 'Samba file sharing manager'
 
             # ── smb user add ──
             case add
-                set -l newuser ""
+                set -g newuser ""
                 if test -n "$extra"
                     set newuser $extra
                 else
@@ -1092,7 +1092,7 @@ function smb --description 'Samba file sharing manager'
 
     if test "$argv[1]" = "share"
         set -l subcmd ""
-        set -l dir ""
+        set -g dir ""
         set -g name ""
         if test (count $argv) -ge 2
             set subcmd $argv[2]
