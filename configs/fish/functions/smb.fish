@@ -1155,9 +1155,52 @@ function smb --description 'Samba file sharing manager'
 
         # ── smb share rename <old> <new> ──
         else if test "$subcmd" = "rename"
+            # Interactive: list shares if no args
+            if test -z "$dir"; or test -z "$name"
+                # Collect custom shares
+                set -l _shares
+                if test -f "$SMB_CONF"
+                    while read -l line
+                        set -l sec (string match -r '^\[([^\]]+)\]' "$line" | tail -1)
+                        if test -n "$sec"; and test "$sec" != "global"; and test "$sec" != "homes"; and test "$sec" != "root_share"; and test "$sec" != "printers"; and test "$sec" != 'print\$'
+                            set -a _shares $sec
+                        end
+                    end < "$SMB_CONF"
+                end
+                if test (count $_shares) -eq 0
+                    printf "  $R✗$N  No custom shares to rename.\n"
+                    printf "  Run 'smb share list' to see current shares.\n"
+                    return 1
+                end
+                printf "\n"
+                set -l _idx 1
+                for s in $_shares
+                    printf "    $W%d)$N  %s\n" $_idx $s
+                    set _idx (math $_idx + 1)
+                end
+                printf "\n"
+                read -P "  Pick a share to rename: " -g _pick
+                __smb_stop_check; or return 1
+                if string match -qr '^\d+$' "$_pick"
+                    set -l _num (math "$_pick")
+                    if test $_num -ge 1 -a $_num -le (count $_shares)
+                        set dir $_shares[$_num]
+                    else
+                        printf "  $R✗$N  Invalid number.\n"
+                        return 1
+                    end
+                else
+                    set dir $_pick
+                end
+                if not __smb_share_exists "$dir"
+                    printf "  $R✗$N  Share '$W$dir$N' not found.\n"
+                    return 1
+                end
+                read -P "  New name for '$W$dir$N': " -g name
+                __smb_stop_check; or return 1
+            end
             if test -z "$dir"; or test -z "$name"
                 printf "  $R✗$N  Usage: smb share rename $D<current-name> <new-name>$N\n"
-                printf "  Example: smb share rename Windows WorkDrive\n"
                 return 1
             end
             if not __smb_share_exists "$dir"
