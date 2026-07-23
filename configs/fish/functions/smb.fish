@@ -41,7 +41,7 @@ function smb --description 'Samba file sharing manager'
         if test -z "$ip"
             set ip (hostname -I | awk '{print $1}')
         end
-        echo "$ip"
+        printf '%s\n' "$ip"
     end
 
     function __smb_user_exists
@@ -55,11 +55,26 @@ function smb --description 'Samba file sharing manager'
 
     function __smb_get_scope
         if grep -q '^\[homes\]' "$SMB_CONF" 2>/dev/null
-            echo "home"
+            printf '%s\n' "home"
         else if grep -q 'path\s*=\s*/\s*$' "$SMB_CONF" 2>/dev/null
-            echo "root"
+            printf '%s\n' "root"
+        else if test -f "$SMB_CONF"
+            # Check for any custom share sections
+            set -l has_custom 0
+            while read -l line
+                set -l sec (string match -r '^\[([^\]]+)\]' "$line" | tail -1)
+                if test -n "$sec"; and test "$sec" != "global"; and test "$sec" != "homes"; and test "$sec" != "root_share"; and test "$sec" != "printers"; and test "$sec" != 'print\$'
+                    set has_custom 1
+                    break
+                end
+            end < "$SMB_CONF"
+            if test $has_custom -eq 1
+                printf '%s\n' "custom"
+            else
+                printf '%s\n' "none"
+            end
         else
-            echo "none"
+            printf '%s\n' "none"
         end
     end
 
@@ -78,7 +93,7 @@ function smb --description 'Samba file sharing manager'
         end
         type -q secret-tool; or begin; set -g __smb_keyring_available 0; return 1; end
         # Verify keyring is actually unlocked
-        echo "test" | secret-tool store --label="SMB test" smb-test probe >/dev/null 2>&1
+        printf '%s\n' "test" | secret-tool store --label="SMB test" smb-test probe >/dev/null 2>&1
         if test $status -eq 0
             secret-tool clear smb-test probe >/dev/null 2>&1
             set -g __smb_keyring_available 1
@@ -510,8 +525,14 @@ function smb --description 'Samba file sharing manager'
         printf "  $NUM4  $BOLD Custom path$N\n"
         printf "      Enter any folder path you want to share.\n"
         printf "\n"
-        read -P "  Choose [1/2/3/4] (default: 1): " -l scope_choice
-        __smb_stop_check; or return 1
+        while true
+            read -P "  Choose [1/2/3/4] (default: 1): " -l scope_choice
+            __smb_stop_check; or return 1
+            if test -z "$scope_choice"; or test "$scope_choice" = "1"; or test "$scope_choice" = "2"; or test "$scope_choice" = "3"; or test "$scope_choice" = "4"
+                break
+            end
+            printf "  $R✗$N  Invalid choice. Enter 1, 2, 3, or 4: "
+        end
         if test "$scope_choice" = "2"
             printf "\n"
             printf "  $Y⚠$N  WARNING: Root sharing gives FULL access to /etc, /boot, /root,\n"
@@ -653,9 +674,6 @@ function smb --description 'Samba file sharing manager'
 
         # ── Step 6: Start service ──
         printf "  $BOLD Step 6/9$N   Starting Samba service...\n"
-        # SELinux — allow Samba to access home directories
-        sudo setsebool -P samba_enable_home_dirs on 2>/dev/null
-        printf "  $G✓$N  SELinux: Samba can access home directories\n"
         sudo systemctl enable smb --now 2>/dev/null
         printf "  $G✓$N  smb.service enabled and started\n"
         printf "\n"
@@ -685,6 +703,7 @@ function smb --description 'Samba file sharing manager'
         if test "$scope_choice" = "3"; or test "$scope_choice" = "4"
             for dp in $__smb_custom_folders
                 sudo chcon -t samba_share_t "$dp" 2>/dev/null
+                chmod 755 "$dp" 2>/dev/null
                 printf "  $G✓$N  Labeled: $D$dp$N\n"
             end
         end
@@ -932,7 +951,7 @@ function smb --description 'Samba file sharing manager'
                     read -s -P "  > " -l try_pass
                     __smb_stop_check; or return 1
                     printf "\n"
-                    echo "$try_pass" | smbclient -L localhost -U "$extra%$try_pass" >/dev/null 2>&1
+                    printf '%s' "$try_pass" | smbclient -L localhost -U "$extra%$try_pass" >/dev/null 2>&1
                     if test $status -eq 0
                         sudo smbpasswd -x "$extra" 2>/dev/null
                         printf "  $G✓$N  User '$W$extra$N' removed\n"
@@ -1209,6 +1228,10 @@ function smb --description 'Samba file sharing manager'
             # SELinux — allow Samba to access the directory
             sudo setsebool -P samba_enable_home_dirs on 2>/dev/null
             sudo chcon -t samba_share_t "$dir" 2>/dev/null
+            # Root share needs extra SELinux boolean
+            if test "$dir" = "/"
+                sudo setsebool -P samba_export_all_rw on 2>/dev/null
+            end
             printf '\n[%s]\n    comment = %s\n    path = %s\n    browseable = yes\n    writable = yes\n    valid users = %s\n' "$name" "$name" "$dir" (whoami) | sudo tee -a "$SMB_CONF" >/dev/null
             printf "  $G✓$N  Share '$W$name$N' added → $D$dir$N\n"
             sudo systemctl restart smb 2>/dev/null
@@ -1237,7 +1260,7 @@ function smb --description 'Samba file sharing manager'
                 while read -l line
                     if string match -qr '^\[([^\]]+)\]' "$line"
                         set -l sec (string match -r '^\[([^\]]+)\]' "$line" | tail -1)
-                        if test "$sec" != "global" -a "$sec" != "homes" -a "$sec" != "printers" -a "$sec" != 'print\$'
+                        if test "$sec" != "global" -a "$sec" != "homes" -a "$sec" != "root_share" -a "$sec" != "printers" -a "$sec" != 'print\$'
                             set -a shares $sec
                         end
                     end
@@ -1376,6 +1399,11 @@ function smb --description 'Samba file sharing manager'
         # Always fix home dirs access
         sudo setsebool -P samba_enable_home_dirs on 2>/dev/null
         printf "  $G✓$N  samba_enable_home_dirs = on\n"
+        # Check if root share exists — needs extra SELinux boolean
+        if grep -q 'path\s*=\s*/\s*$' "$SMB_CONF" 2>/dev/null
+            sudo setsebool -P samba_export_all_rw on 2>/dev/null
+            printf "  $G✓$N  samba_export_all_rw = on\n"
+        end
         if test -z "$target"
             # No arg — fix all shares from smb.conf
             if test -f "$SMB_CONF"
@@ -1600,7 +1628,7 @@ function smb --description 'Samba file sharing manager'
                 set -l uid (printf '%s\n' "$u" | cut -d: -f2)
                 if test $show_pass -eq 1
                     set -l pass (__smb_get_password "$uname")
-                    printf "  $C║$N    $W$smb_user$N  (uid=$uid)\n"
+                    printf "  $C║$N    $W$uname$N  (uid=$uid)  $D$pass$N\n"
                 else
                     printf "  $C║$N    $W$uname$N  ••••••••••••  (uid=$uid)\n"
                 end
@@ -1622,6 +1650,8 @@ function smb --description 'Samba file sharing manager'
             printf "  $C║$N    Type:    $W HOME$N  ($D$HOME$N)\n"
         else if test "$scope" = "root"
             printf "  $C║$N    Type:    $Y ROOT$N  ($D/$N)  ← NOT RECOMMENDED\n"
+        else if test "$scope" = "custom"
+            printf "  $C║$N    Type:    $B CUSTOM$N\n"
         else
             printf "  $C║$N    Type:    $D none$N\n"
         end
@@ -2009,8 +2039,8 @@ function smb --description 'Samba file sharing manager'
         if test $len_cmd -eq $len_k
             set -l mismatches 0
             for i in (seq 1 $len_cmd)
-                set -l c1 (string sub -s $i -l 1 -- "$cmd" 2>/dev/null; or echo "")
-                set -l c2 (string sub -s $i -l 1 -- "$k" 2>/dev/null; or echo "")
+                set -l c1 (string sub -s $i -l 1 -- "$cmd" 2>/dev/null; or printf '')
+                set -l c2 (string sub -s $i -l 1 -- "$k" 2>/dev/null; or printf '')
                 if test "$c1" != "$c2"
                     set mismatches (math $mismatches + 1)
                 end
@@ -2023,7 +2053,7 @@ function smb --description 'Samba file sharing manager'
         # 1 char longer: removing one char from cmd matches k (e.g. "daata" → "data")
         if test (math $len_cmd - $len_k) -eq 1
             for i in (seq 1 $len_cmd)
-                set -l shortened (string sub -s 1 -l (math $i - 1) -- "$cmd"; or echo "")(string sub -s (math $i + 1) -- "$cmd" 2>/dev/null; or echo "")
+                set -l shortened (string sub -s 1 -l (math $i - 1) -- "$cmd"; or printf '')(string sub -s (math $i + 1) -- "$cmd" 2>/dev/null; or printf '')
                 if test "$shortened" = "$k"
                     set -a suggestions "$k"
                     break
@@ -2033,7 +2063,7 @@ function smb --description 'Samba file sharing manager'
         # 1 char shorter: removing one char from k matches cmd (e.g. "dat" → "data" won't match, but "dat" has no good match)
         if test (math $len_k - $len_cmd) -eq 1
             for i in (seq 1 $len_k)
-                set -l shortened (string sub -s 1 -l (math $i - 1) -- "$k"; or echo "")(string sub -s (math $i + 1) -- "$k" 2>/dev/null; or echo "")
+                set -l shortened (string sub -s 1 -l (math $i - 1) -- "$k"; or printf '')(string sub -s (math $i + 1) -- "$k" 2>/dev/null; or printf '')
                 if test "$shortened" = "$cmd"
                     set -a suggestions "$k"
                     break
