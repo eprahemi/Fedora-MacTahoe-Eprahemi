@@ -243,9 +243,10 @@ function smb --description 'Samba file sharing manager'
         printf "  ────────────────────────────────────────────────────────────────\n"
         printf "  $BOLDC SHARES$N\n"
         printf "  ────────────────────────────────────────────────────────────────\n"
+        printf "    $W smb unshare$N $D<name>$N          Remove a share by name\n"
         printf "    $W smb share$N $D<dir> [name]$N      Share a local directory over SMB\n"
         printf "                                     Example: smb share ~/Documents docs\n"
-        printf "    $W smb unshare$N $D<name>$N          Remove a share by name\n"
+        printf "\n"
         printf "    $W smb share list$N              List all active shares with paths\n"
         printf "\n"
         printf "  ────────────────────────────────────────────────────────────────\n"
@@ -1207,78 +1208,82 @@ function smb --description 'Samba file sharing manager'
             printf "  $G✓$N  Samba service restarted\n"
             printf "\n"
 
-        # ── smb unshare ──
-        else if test "$subcmd" = "unshare"
-            set -l target $dir
-            if test -z "$target"
-                # Show list of custom shares
-                set -l shares ()
-                if test -f "$SMB_CONF"
-                    while read -l line
-                        if string match -qr '^\[([^\]]+)\]' "$line"
-                            set -l sec (string match -r '^\[([^\]]+)\]' "$line" | tail -1)
-                            if test "$sec" != "global" -a "$sec" != "homes" -a "$sec" != "printers" -a "$sec" != "print\$"
-                                set -a shares $sec
-                            end
-                        end
-                    end < "$SMB_CONF"
-                end
-                if test (count $shares) -eq 0
-                    printf "  No custom shares to remove.\n"
-                    printf "  Home directory share cannot be removed via unshare.\n"
-                    return 0
-                end
-                printf "\n"
-                printf "  Shared directories:\n"
-                set -l idx 1
-                for s in $shares
-                    printf "    $W%d)$N  %s\n" $idx $s
-                    set idx (math $idx + 1)
-                end
-                printf "\n"
-                read -P "  Enter number or share name to remove: " -l choice
-                __smb_stop_check; or return 1
-                # Check if numeric
-                if string match -qr '^\d+$' "$choice"
-                    set -l num (math "$choice")
-                    if test $num -ge 1 -a $num -le (count $shares)
-                        set target $shares[$num]
-                    else
-                        printf "  $R✗$N  Invalid number.\n"
-                        return 1
-                    end
-                else
-                    set target $choice
-                end
-            end
-            if not __smb_share_exists "$target"
-                printf "  $R✗$N  Share '$W$target$N' not found.\n"
-                printf "  Run 'smb share list' to see current shares.\n"
-                return 1
-            end
-            if not __confirm_yn "  Remove share '$target'? [Y/n]: " y
-                printf "  Cancelled.\n"
-                return 0
-            end
-            # Remove share section from smb.conf
-            # Remove share section from smb.conf using awk
-            sudo awk -v sec="[$target]" '
-                BEGIN { skip=0 }
-                /^\[/ { if ($0 == sec) { skip=1; next } else { skip=0 } }
-                skip && /^$/ { skip=0; next }
-                !skip { print }
-            ' "$SMB_CONF" | sudo tee "$SMB_CONF.tmp" >/dev/null
-            sudo mv "$SMB_CONF.tmp" "$SMB_CONF"
-            sudo systemctl restart smb 2>/dev/null
-            printf "  $G✓$N  Share '$W$target$N' removed\n"
-            printf "  $G✓$N  Samba service restarted\n"
-            printf "\n"
-
         else
             printf "  $R✗$N  Unknown share command: '$subcmd'\n"
-            printf "  Usage: smb share (list|unshare|<dir> <name>)\n"
+            printf "  Usage: smb share (list|<dir> <name>)\n"
             return 1
         end
+        return 0
+    end
+
+    # ════════════════════════════════════════════════════════════
+    # UNSHARE
+    # ════════════════════════════════════════════════════════════
+
+    if test "$argv[1]" = "unshare"
+        set -l target "$argv[2]"
+        printf "\n"
+        if test -z "$target"
+            # Show list of custom shares
+            set -l shares ()
+            if test -f "$SMB_CONF"
+                while read -l line
+                    if string match -qr '^\[([^\]]+)\]' "$line"
+                        set -l sec (string match -r '^\[([^\]]+)\]' "$line" | tail -1)
+                        if test "$sec" != "global" -a "$sec" != "homes" -a "$sec" != "printers" -a "$sec" != 'print\$'
+                            set -a shares $sec
+                        end
+                    end
+                end < "$SMB_CONF"
+            end
+            if test (count $shares) -eq 0
+                printf "  No custom shares to remove.\n"
+                printf "  Home directory share cannot be removed via unshare.\n"
+                return 0
+            end
+            printf "  Shared directories:\n"
+            set -l idx 1
+            for s in $shares
+                printf "    $W%d)$N  %s\n" $idx $s
+                set idx (math $idx + 1)
+            end
+            printf "\n"
+            read -P "  Enter number or share name to remove: " -l choice
+            __smb_stop_check; or return 1
+            # Check if numeric
+            if string match -qr '^\d+$' "$choice"
+                set -l num (math "$choice")
+                if test $num -ge 1 -a $num -le (count $shares)
+                    set target $shares[$num]
+                else
+                    printf "  $R✗$N  Invalid number.\n"
+                    return 1
+                end
+            else
+                set target $choice
+            end
+        end
+        if not __smb_share_exists "$target"
+            printf "  $R✗$N  Share '$W$target$N' not found.\n"
+            printf "  Run 'smb share list' to see current shares.\n"
+            return 1
+        end
+        if not __confirm_yn "  Remove share '$target'? [Y/n]: " y
+            printf "  Cancelled.\n"
+            return 0
+        end
+        # Remove share section from smb.conf using awk
+        sudo awk -v sec="[$target]" '
+            BEGIN { skip=0 }
+            /^\[/ { if ($0 == sec) { skip=1; next } else { skip=0 } }
+            skip && /^$/ { skip=0; next }
+            !skip { print }
+        ' "$SMB_CONF" | sudo tee "$SMB_CONF.tmp" >/dev/null
+        sudo mv "$SMB_CONF.tmp" "$SMB_CONF"
+        sudo systemctl restart smb 2>/dev/null
+        printf "  $G✓$N  Share '$W$target$N' removed\n"
+        printf "  $G✓$N  Samba service restarted\n"
+        printf "\n"
         return 0
     end
 
