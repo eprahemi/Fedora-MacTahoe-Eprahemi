@@ -681,6 +681,13 @@ function smb --description 'Samba file sharing manager'
             sudo setsebool -P samba_enable_home_dirs on 2>/dev/null
             printf "  $G✓$N  samba_enable_home_dirs enabled\n"
         end
+        # Label custom folders/paths for Samba
+        if test "$scope_choice" = "3"; or test "$scope_choice" = "4"
+            for dp in $__smb_custom_folders
+                sudo chcon -t samba_share_t "$dp" 2>/dev/null
+                printf "  $G✓$N  Labeled: $D$dp$N\n"
+            end
+        end
         printf "\n"
 
         # ── Step 9: Final checks ──
