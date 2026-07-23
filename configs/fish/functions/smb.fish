@@ -254,6 +254,7 @@ function smb --description 'Samba file sharing manager'
         printf "    $W smb on$N                      Start the Samba service\n"
         printf "    $W smb off$N                     Stop the Samba service\n"
         printf "    $W smb restart$N                 Restart Samba (apply config changes)\n"
+        printf "    $W smb fix$N $D<dir|name>$N          Fix SELinux permissions for a share\n"
         printf "\n"
         printf "  ────────────────────────────────────────────────────────────────\n"
         printf "  $B DATA$N\n"
@@ -1324,6 +1325,92 @@ function smb --description 'Samba file sharing manager'
         sudo systemctl restart smb 2>/dev/null
         printf "  $G✓$N  smb.service restarted\n"
         printf "  $G✓$N  Status: $BOLDG active$N\n"
+        return 0
+    end
+
+    # ════════════════════════════════════════════════════════════
+    # FIX
+    # ════════════════════════════════════════════════════════════
+
+    if test "$argv[1]" = "fix"
+        set -l target "$argv[2]"
+        printf "\n"
+        printf "  $BOLD Fixing SELinux permissions...$N\n"
+        printf "\n"
+        # Always fix home dirs access
+        sudo setsebool -P samba_enable_home_dirs on 2>/dev/null
+        printf "  $G✓$N  samba_enable_home_dirs = on\n"
+        if test -z "$target"
+            # No arg — fix all shares from smb.conf
+            if test -f "$SMB_CONF"
+                set -l fixed 0
+                while read -l line
+                    set -l sec (string match -r '^\[([^\]]+)\]' "$line" | tail -1)
+                    if test -n "$sec"; and test "$sec" != "global"; and test "$sec" != "homes"; and test "$sec" != "printers"; and test "$sec" != 'print\$'
+                        # Find path for this share
+                        set -l share_path ""
+                        while read -l inner
+                            if string match -qr '^\[' "$inner"
+                                if test "$inner" != "$line"
+                                    break
+                                end
+                            end
+                            set -l m (string match -r '^\s*path\s*=\s*(.+)' "$inner")
+                            if test -n "$m"
+                                set share_path (string trim -- "$m[2]")
+                                break
+                            end
+                        end < "$SMB_CONF"
+                        if test -n "$share_path"; and test -d "$share_path"
+                            sudo chcon -t samba_share_t "$share_path" 2>/dev/null
+                            printf "  $G✓$N  [$sec] → $D$share_path$N\n"
+                            set fixed (math $fixed + 1)
+                        end
+                    end
+                end < "$SMB_CONF"
+                if test $fixed -eq 0
+                    printf "  $D No custom shares found to fix.$N\n"
+                else
+                    printf "\n  $G✓$N  Fixed $fixed share(s)\n"
+                end
+            end
+        else
+            # Arg given — could be a path or a share name
+            if test -d "$target"
+                # It's a directory path
+                sudo chcon -t samba_share_t "$target" 2>/dev/null
+                printf "  $G✓$N  $D$target$N labeled for Samba\n"
+            else
+                # Try to find share by name in smb.conf
+                set -l share_path ""
+                if test -f "$SMB_CONF"
+                    set -l in_section 0
+                    while read -l line
+                        set -l sec (string match -r '^\[([^\]]+)\]' "$line" | tail -1)
+                        if test -n "$sec"; and test "$sec" = "$target"
+                            set in_section 1
+                        else if string match -qr '^\[' "$line"
+                            set in_section 0
+                        end
+                        if test $in_section -eq 1
+                            set -l m (string match -r '^\s*path\s*=\s*(.+)' "$line")
+                            if test -n "$m"
+                                set share_path (string trim -- "$m[2]")
+                                break
+                            end
+                        end
+                    end < "$SMB_CONF"
+                end
+                if test -n "$share_path"; and test -d "$share_path"
+                    sudo chcon -t samba_share_t "$share_path" 2>/dev/null
+                    printf "  $G✓$N  [$target] → $D$share_path$N labeled for Samba\n"
+                else
+                    printf "  $R✗$N  Share '$target' not found or path doesn't exist.\n"
+                    printf "  Use $W'smb share list'$N to see available shares.\n"
+                end
+            end
+        end
+        printf "\n"
         return 0
     end
 
