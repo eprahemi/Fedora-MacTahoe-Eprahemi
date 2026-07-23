@@ -325,6 +325,7 @@ function smb --description 'Samba file sharing manager'
         printf "                                     Example: smb share ~/Documents docs\n"
         printf "\n"
         printf "    $W smb share list$N              List all active shares with paths\n"
+        printf "    $W smb share rename$N $D<old> <new>$N   Rename a share\n"
         printf "\n"
         printf "  ────────────────────────────────────────────────────────────────\n"
         printf "  $BOLDR SERVICE$N\n"
@@ -1152,6 +1153,39 @@ function smb --description 'Samba file sharing manager'
             end
             printf "\n"
 
+        # ── smb share rename <old> <new> ──
+        else if test "$subcmd" = "rename"
+            if test -z "$dir"; or test -z "$name"
+                printf "  $R✗$N  Usage: smb share rename $D<current-name> <new-name>$N\n"
+                printf "  Example: smb share rename Windows WorkDrive\n"
+                return 1
+            end
+            if not __smb_share_exists "$dir"
+                printf "  $R✗$N  Share '$W$dir$N' not found.\n"
+                printf "  Run 'smb share list' to see current shares.\n"
+                return 1
+            end
+            if __smb_share_exists "$name"
+                printf "  $R✗$N  Share '$W$name$N' already exists.\n"
+                return 1
+            end
+            # Rename in smb.conf: replace [old] with [new] and update comment
+            set -l SMB_TMP (mktemp)
+            while read -l line
+                set -l sec (string match -r '^\[([^\]]+)\]' "$line" | tail -1)
+                if test -n "$sec"; and test "$sec" = "$dir"
+                    printf '[%s]\n' "$name" >> "$SMB_TMP"
+                else if string match -qr "^\s*comment\s*=\s*$(string escape --style=regex "$dir")\$" "$line"
+                    printf '    comment = %s\n' "$name" >> "$SMB_TMP"
+                else
+                    printf '%s\n' "$line" >> "$SMB_TMP"
+                end
+            end < "$SMB_CONF"
+            sudo mv "$SMB_TMP" "$SMB_CONF"
+            printf "  $G✓$N  Share '$W$dir$N' renamed to '$W$name$N'\n"
+            sudo systemctl restart smb 2>/dev/null
+            printf "  $G✓$N  Samba service restarted\n"
+
         # ── smb share (no args) or smb share <dir> [name] ──
         else if test -z "$subcmd"; or string match -qr '^/' "$subcmd"
             # Determine dir and name from args
@@ -1221,7 +1255,7 @@ function smb --description 'Samba file sharing manager'
 
         else
             printf "  $R✗$N  Unknown share command: '$subcmd'\n"
-            printf "  Usage: smb share (list|<dir> <name>)\n"
+            printf "  Usage: smb share (list|rename|<dir> [name])\n"
             return 1
         end
         return 0
