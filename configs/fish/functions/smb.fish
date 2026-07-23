@@ -53,6 +53,59 @@ function smb --description 'Samba file sharing manager'
         grep -q "^\[$argv[1]\]" "$SMB_CONF" 2>/dev/null
     end
 
+    function __smb_find_share_by_path
+        # Returns the share name for a given path, or empty if not shared
+        set -l target_path $argv[1]
+        set -l real_target (realpath "$target_path" 2>/dev/null; or echo "$target_path")
+        set -l in_section 0
+        set -l sec_name ""
+        set -l sec_path ""
+        while read -l line
+            set -l sec (string match -r '^\[([^\]]+)\]' "$line" | tail -1)
+            if test -n "$sec"
+                # Save previous section if it matched
+                if test $in_section -eq 1; and test "$sec_path" = "$real_target"
+                    printf '%s\n' "$sec_name"
+                    return 0
+                end
+                set in_section 1
+                set sec_name "$sec"
+                set sec_path ""
+            else if test $in_section -eq 1
+                set -l val (string match -r '^\s*path\s*=\s*(.+)' "$line" | tail -1 | string trim)
+                if test -n "$val"
+                    set sec_path (realpath "$val" 2>/dev/null; or echo "$val")
+                end
+            end
+        end < "$SMB_CONF"
+        # Check last section
+        if test $in_section -eq 1; and test "$sec_path" = "$real_target"
+            printf '%s\n' "$sec_name"
+            return 0
+        end
+        return 1
+    end
+
+    function __smb_remove_share_section
+        # Remove a [section] block from smb.conf by name
+        set -l target_name $argv[1]
+        set -l SMB_TMP (mktemp)
+        set -l in_section 0
+        while read -l line
+            set -l sec (string match -r '^\[([^\]]+)\]' "$line" | tail -1)
+            if test -n "$sec"; and test "$sec" = "$target_name"
+                set in_section 1
+                continue
+            else if test -n "$sec"
+                set in_section 0
+            end
+            if test $in_section -eq 0
+                printf '%s\n' "$line" >> "$SMB_TMP"
+            end
+        end < "$SMB_CONF"
+        sudo mv "$SMB_TMP" "$SMB_CONF"
+    end
+
     function __smb_get_scope
         if grep -q '^\[homes\]' "$SMB_CONF" 2>/dev/null
             printf '%s\n' "home"
@@ -1131,6 +1184,18 @@ function smb --description 'Samba file sharing manager'
                 printf "  $R✗$N  Share '$W$name$N' already exists.\n"
                 printf "  Run 'smb share list' to see current shares.\n"
                 return 1
+            end
+            # Check if same directory is already shared under a different name
+            set -l existing_name (__smb_find_share_by_path "$dir")
+            if test -n "$existing_name"; and test "$existing_name" != "$name"
+                printf "  $Y⚠$N  Directory is already shared as '$W$existing_name$N'.\n"
+                if __confirm_yn "  Replace '$existing_name' with '$name'? [Y/n]: " y
+                    __smb_remove_share_section "$existing_name"
+                    printf "  $G✓$N  Removed old share '$W$existing_name$N'\n"
+                else
+                    printf "  Cancelled.\n"
+                    return 0
+                end
             end
             printf "\n"
             if not __confirm_yn "  Share '$dir' as '$name'? [Y/n]: " y
