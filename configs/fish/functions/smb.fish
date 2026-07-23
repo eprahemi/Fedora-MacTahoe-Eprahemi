@@ -1222,13 +1222,8 @@ function smb --description 'Samba file sharing manager'
             # Check if same directory is already shared under a different name
             set -l existing_name (__smb_find_share_by_path "$dir")
             if test -n "$existing_name"; and test "$existing_name" != "$name"
-                printf "  $Y⚠$N  Directory is already shared as '$W$existing_name$N'.\n"
-                if __confirm_yn "  Replace '$existing_name' with '$name'? [Y/n]: " y
-                    __smb_remove_share_section "$existing_name"
-                    printf "  $G✓$N  Removed old share '$W$existing_name$N'\n"
-                else
-                    printf "  $G✓$N  Keeping both shares\n"
-                end
+                __smb_remove_share_section "$existing_name"
+                printf "  $G✓$N  Replaced old share '$W$existing_name$N' → '$W$name$N'\n"
             end
             printf "\n"
             if not __confirm_yn "  Share '$dir' as '$name'? [Y/n]: " y
