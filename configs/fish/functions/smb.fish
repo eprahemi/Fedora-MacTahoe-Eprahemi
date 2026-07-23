@@ -1093,7 +1093,7 @@ function smb --description 'Samba file sharing manager'
     if test "$argv[1]" = "share"
         set -l subcmd ""
         set -l dir ""
-        set -l name ""
+        set -g name ""
         if test (count $argv) -ge 2
             set subcmd $argv[2]
         end
