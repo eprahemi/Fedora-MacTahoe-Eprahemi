@@ -1227,8 +1227,7 @@ function smb --description 'Samba file sharing manager'
                     __smb_remove_share_section "$existing_name"
                     printf "  $G✓$N  Removed old share '$W$existing_name$N'\n"
                 else
-                    printf "  Cancelled.\n"
-                    return 0
+                    printf "  $G✓$N  Keeping both shares\n"
                 end
             end
             printf "\n"
