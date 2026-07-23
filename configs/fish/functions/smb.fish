@@ -243,7 +243,7 @@ function smb --description 'Samba file sharing manager'
         printf "  ────────────────────────────────────────────────────────────────\n"
         printf "  $BOLDC SHARES$N\n"
         printf "  ────────────────────────────────────────────────────────────────\n"
-        printf "    $W smb unshare$N $D<name>$N          Remove a share by name\n"
+        printf "    $W smb unshare$N $D<name|path>$N     Remove a share by name or path\n"
         printf "    $W smb share$N $D<dir> [name]$N      Share a local directory over SMB\n"
         printf "                                     Example: smb share ~/Documents docs\n"
         printf "\n"
@@ -1261,6 +1261,30 @@ function smb --description 'Samba file sharing manager'
                 end
             else
                 set target $choice
+            end
+        end
+        # If target is a path, find the share name for that path
+        if string match -qr '^/' "$target"
+            if test -f "$SMB_CONF"
+                set -l in_section 0
+                set -l sec_name ""
+                while read -l line
+                    set -l sec (string match -r '^\[([^\]]+)\]' "$line" | tail -1)
+                    if test -n "$sec"
+                        if test "$sec" = "global"; or test "$sec" = "homes"; or test "$sec" = "printers"; or test "$sec" = 'print\$'
+                            set in_section 0
+                        else
+                            set sec_name "$sec"
+                            set in_section 1
+                        end
+                    else if test $in_section -eq 1
+                        set -l m (string match -r '^\s*path\s*=\s*(.+)' "$line")
+                        if test -n "$m"; and test (string trim -- "$m[2]") = "$target"
+                            set target "$sec_name"
+                            break
+                        end
+                    end
+                end < "$SMB_CONF"
             end
         end
         if not __smb_share_exists "$target"
