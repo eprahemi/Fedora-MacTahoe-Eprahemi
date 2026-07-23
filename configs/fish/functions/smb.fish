@@ -1945,7 +1945,7 @@ function smb --description 'Samba file sharing manager'
                 break
             end
             set -l _prompt (printf "  Type DESTROY to confirm (attempt %d/3) or n to cancel: " $nuke_attempts)
-            read -P "$_prompt" -l nuke_confirm
+            read -P "$_prompt" -g nuke_confirm
             __smb_stop_check
             if test $status -ne 0
                 printf "\n"
