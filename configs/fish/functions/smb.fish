@@ -539,7 +539,7 @@ function smb --description 'Samba file sharing manager'
         printf "  $D You can add more shares later with: smb share <dir> [name]$N\n"
         printf "\n"
         while true
-            read -P "  Choose [1/2] (default: 1): " -l scope_choice
+            read -P "  Choose [1/2] (default: 1): " -g scope_choice
             __smb_stop_check; or return 1
             if test -z "$scope_choice"; or test "$scope_choice" = "1"; or test "$scope_choice" = "2"
                 break
