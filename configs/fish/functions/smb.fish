@@ -1277,16 +1277,16 @@ function smb --description 'Samba file sharing manager'
                 printf "  Run 'smb share list' to see current shares.\n"
                 return 1
             end
-            # Check if same directory is already shared under a different name
-            set -l existing_name (__smb_find_share_by_path "$dir")
-            if test -n "$existing_name"; and test "$existing_name" != "$name"
-                __smb_remove_share_section "$existing_name"
-                printf "  $G✓$N  Replaced old share '$W$existing_name$N' → '$W$name$N'\n"
-            end
             printf "\n"
             if not __confirm_yn "  Share '$dir' as '$name'? [Y/n]: " y
                 printf "  Cancelled.\n"
                 return 0
+            end
+            # Replace old share on same path (after confirmation)
+            set -l existing_name (__smb_find_share_by_path "$dir")
+            if test -n "$existing_name"; and test "$existing_name" != "$name"
+                __smb_remove_share_section "$existing_name"
+                printf "  $G✓$N  Replaced old share '$W$existing_name$N' → '$W$name$N'\n"
             end
             # Add share to smb.conf
             # Ensure directory is traversable and SELinux allows Samba access
