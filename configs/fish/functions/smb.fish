@@ -1100,8 +1100,9 @@ function smb --description 'Samba file sharing manager'
         if test (count $argv) -ge 3
             set dir $argv[3]
         end
+        # Join remaining args as name (catches multi-word names for space check)
         if test (count $argv) -ge 4
-            set name $argv[4]
+            set name (string join " " $argv[4..])
         end
 
         # ── smb share list ──
