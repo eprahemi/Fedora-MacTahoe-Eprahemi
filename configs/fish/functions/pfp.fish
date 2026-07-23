@@ -325,8 +325,7 @@ print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in rang
                 echo -e "  $YE║$C$(printf '%*s' (math "60 - "(string length "$br")) '')$YE║$C"
                 echo -e "  $YE╚══════════════════════════════════════════════════════════════╝$C"
                 echo -e ""
-                echo -n "  [y/N]: "
-                read -l confirm
+                read -P "  [y/N]: " -l confirm
                 if test $status -ne 0
                     echo -e "  $GY  ✧  Cancelled.$C"
                     return 0

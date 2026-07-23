@@ -222,11 +222,7 @@ function passwd --description 'Toggle passwordless sudo for the current user'
 
         # ─── Prompt to add if missing ───
         if test "$ro_uncommented" -eq 0 -a "$ro_commented" -eq 0
-            # Split color variables from brackets to avoid Fish $var[ array-index parsing
-            set -l opn_b "$D[$C"
-            set -l clos_b "$C$D]$C"
-            echo -n "  $YE⚠️   No NOPASSWD line found for $CY$B$user$C$YE.  Add one?$C $opn_b$GR Y$C$D/$C$RE n$clos_b "
-            set -l answer (string lower (read -l -n 1 ans; echo "$ans"))
+            set -l answer (string lower (read -P "  ⚠️  No NOPASSWD line found for $user.  Add one? [Y/n] " -l -n 1 ans; echo "$ans"))
             if test "$answer" = "y" -o "$answer" = ""
                 # ─── Add new NOPASSWD line ───
                 set -l bak_file /tmp/sudoers.bak

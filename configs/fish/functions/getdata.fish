@@ -37,8 +37,7 @@ function getdata --description 'Data science toolkit: install or list packages'
                 set -l venv_dir "./.venv"
                 if test -d "$venv_dir"
                 echo -e "  \033[1;33m⚠️  Virtual environment already exists at $venv_dir\033[0m"
-                echo -n "  \033[1;33mRecreate? [y/N]: \033[0m"
-                read -l resp
+                read -P "  Recreate? [y/N]: " -l resp
                 if test "$resp" = "y" -o "$resp" = "Y"
                     rm -rf "$venv_dir"
                 else
