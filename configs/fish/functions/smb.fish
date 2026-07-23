@@ -651,6 +651,9 @@ function smb --description 'Samba file sharing manager'
 
         # ── Step 6: Start service ──
         printf "  $BOLD Step 6/9$N   Starting Samba service...\n"
+        # SELinux — allow Samba to access home directories
+        sudo setsebool -P samba_enable_home_dirs on 2>/dev/null
+        printf "  $G✓$N  SELinux: Samba can access home directories\n"
         sudo systemctl enable smb --now 2>/dev/null
         printf "  $G✓$N  smb.service enabled and started\n"
         printf "\n"
@@ -1194,6 +1197,9 @@ function smb --description 'Samba file sharing manager'
                 return 0
             end
             # Add share to smb.conf
+            # SELinux — allow Samba to access the directory
+            sudo setsebool -P samba_enable_home_dirs on 2>/dev/null
+            sudo chcon -t samba_share_t "$dir" 2>/dev/null
             printf '\n[%s]\n    comment = %s\n    path = %s\n    browseable = yes\n    writable = yes\n    valid users = %s\n' "$name" "$name" "$dir" (whoami) | sudo tee -a "$SMB_CONF" >/dev/null
             printf "  $G✓$N  Share '$W$name$N' added → $D$dir$N\n"
             sudo systemctl restart smb 2>/dev/null
