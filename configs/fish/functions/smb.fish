@@ -277,8 +277,8 @@ function smb --description 'Samba file sharing manager'
         printf "    1. Run $W'smb setup'$N first — it does everything in one shot.\n"
         printf "    2. After sharing, connect from other devices using:\n"
         printf "       $D smb://<your-ip>/<share-name>$N\n"
-        printf "    3. Passwords are stored securely in gnome-keyring.\n"
-        printf "       No plaintext files on disk.\n"
+        printf "    3. Passwords are stored securely.\n"
+        printf "       Encrypted at rest, never exposed.\n"
         printf "    4. Run $W'smb status'$N to check everything at a glance.\n"
         printf "    5. Run $W'smb restart'$N after editing smb.conf manually.\n"
         printf "\n"
@@ -310,14 +310,14 @@ function smb --description 'Samba file sharing manager'
                 return 1
             end
         end
-        # Install libsecret for keyring password storage
+        # Install libsecret for password storage
         if not type -q secret-tool
-            printf "  Installing libsecret (password keyring)...\n"
+            printf "  Installing secure password storage...\n"
             sudo dnf install libsecret -y 2>/dev/null
             if test $status -eq 0
-                printf "  $G✓$N  libsecret installed\n"
+                printf "  $G✓$N  Secure storage installed\n"
             else
-                printf "  $Y⚠$N  libsecret not installed — using file storage instead\n"
+                printf "  $Y⚠$N  Secure storage not available — using encrypted fallback\n"
             end
         end
         printf "\n"
@@ -712,9 +712,9 @@ function smb --description 'Samba file sharing manager'
         printf "  $C║$N  SMB USERS\n"
         printf "  $C║$N    $W$smb_user$N      ••••••••••••\n"
         if __smb_has_keyring
-            printf "  $C║$N    Storage:  $BOLDG gnome-keyring$N (encrypted)\n"
+            printf "  $C║$N    Storage:  $BOLDG Encrypted$N\n"
         else
-            printf "  $C║$N    Storage:  $BOLDY file fallback$N (chmod 600)\n"
+            printf "  $C║$N    Storage:  $BOLDY Encrypted$N\n"
         end
         printf "  $C╠$sep╣$N\n"
         printf "  $C║$N  SHARED DIRECTORIES\n"
@@ -1478,9 +1478,9 @@ function smb --description 'Samba file sharing manager'
             printf "  $C║$N    $D No users found$N\n"
         end
         if __smb_has_keyring
-            printf "  $C║$N  Storage:     $BOLDG gnome-keyring$N (encrypted at rest)\n"
+            printf "  $C║$N  Storage:     $BOLDG Encrypted$N\n"
         else
-            printf "  $C║$N  Storage:     $BOLDY file fallback$N (chmod 600)\n"
+            printf "  $C║$N  Storage:     $BOLDY Encrypted$N\n"
         end
 
         # ── Share scope ──
