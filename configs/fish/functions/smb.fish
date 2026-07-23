@@ -20,8 +20,7 @@ function smb --description 'Samba file sharing manager'
     set -l BOLDC (printf "\e[1;36m")
     set -l NUM1 (printf "\e[1;32m[1]\e[0m")
     set -l NUM2 (printf "\e[1;31m[2]\e[0m")
-    set -l NUM3 (printf "\e[1;33m[3]\e[0m")
-    set -l NUM4 (printf "\e[1;36m[4]\e[0m")
+    # NUM3/NUM4 removed — setup uses only [1] and [2]
 
     # ── Config paths ──
     set -e CONF_DIR PASS_FILE SMB_CONF __smb_keyring_available
@@ -232,7 +231,7 @@ function smb --description 'Samba file sharing manager'
         printf "  $C╭──────────────────────────────────────────────────────────────╮$N\n"
         printf "  $C│$N                      SMB FILE SHARING                        \n"
         printf "  $C│$N              Fedora MacTahoe  ·  Eprahemi System             \n"
-        printf "  $C│$N           Samba manager  ·  19 commands  ·  4 groups         \n"
+        printf "  $C│$N           Samba manager  ·  16 commands  ·  7 groups         \n"
         printf "  $C╰──────────────────────────────────────────────────────────────╯$N\n"
         printf "\n"
         printf "  Usage:  $Y smb$N <command> [args]\n"
@@ -276,10 +275,16 @@ function smb --description 'Samba file sharing manager'
         printf "  ────────────────────────────────────────────────────────────────\n"
         printf "  $B DATA$N\n"
         printf "  ────────────────────────────────────────────────────────────────\n"
-                printf "    $W smb data$N                    Export smb.conf + passwords to a\n"
-                printf "                                     password-protected zip in ~/Documents\n"
+        printf "    $W smb data$N                    Export smb.conf + passwords to a\n"
+        printf "                                     password-protected zip in ~/Documents\n"
         printf "    $W smb data list$N               List all saved export zips\n"
         printf "    $W smb data clean$N              Delete all saved exports\n"
+        printf "\n"
+        printf "  ────────────────────────────────────────────────────────────────\n"
+        printf "  $BOLDR DANGER$N\n"
+        printf "  ────────────────────────────────────────────────────────────────\n"
+        printf "    $W smb nuke$N                   Completely remove Samba and all\n"
+        printf "                                     traces (users, config, packages)\n"
         printf "\n"
         printf "  ────────────────────────────────────────────────────────────────\n"
         printf "  $C INFO$N\n"
@@ -288,6 +293,9 @@ function smb --description 'Samba file sharing manager'
         printf "                                     URLs for other devices on your network\n"
         printf "    $W smb password$N                View your saved SMB password\n"
         printf "                                     Requires system authentication.\n"
+        printf "    $W smb secure$N                  Install or verify secure password\n"
+        printf "                                     storage (keyring). Migrates from\n"
+        printf "                                     file fallback if possible.\n"
         printf "    $W smb status$N                  Full dashboard: service, users,\n"
         printf "                                     shares, firewall, config status\n"
         printf "    $W smb log$N                     Show recent Samba log entries\n"
@@ -329,6 +337,11 @@ function smb --description 'Samba file sharing manager'
                 printf "  $G✓$N  Samba installed successfully\n"
             else
                 printf "  $R✗$N  Failed to install Samba\n"
+                if not ping -c1 -W2 8.8.8.8 >/dev/null 2>&1
+                    printf "  $Y→$N  No internet connection. Connect to a network and try again.\n"
+                else
+                    printf "  $Y→$N  Check your connection or try: $W sudo dnf install samba samba-client$N\n"
+                end
                 return 1
             end
         end
@@ -339,7 +352,11 @@ function smb --description 'Samba file sharing manager'
             if test $status -eq 0
                 printf "  $G✓$N  Secure storage installed\n"
             else
-                printf "  $Y⚠$N  Secure storage not available — using encrypted fallback\n"
+                if not ping -c1 -W2 8.8.8.8 >/dev/null 2>&1
+                    printf "  $Y⚠$N  Secure storage install failed (no internet) — using encrypted fallback\n"
+                else
+                    printf "  $Y⚠$N  Secure storage not available — using encrypted fallback\n"
+                end
             end
         end
         printf "\n"
@@ -1614,7 +1631,7 @@ function smb --description 'Samba file sharing manager'
         printf "  $C║$N\n"
         printf "  $C║$N  NAUTILUS (Fedora):\n"
         printf "  $C║$N    Type in the address bar (top):\n"
-        printf "  $C║$N    $B$smb_url$N\n"
+        printf "  $C║$N    $B smb://$local_ip/$smb_user$N\n"
         printf "  $C║$N    When prompted, use your SMB password.\n"
         printf "  $C║$N\n"
         printf "  $C║$N  iPHONE / MAC:\n"
@@ -1896,6 +1913,154 @@ function smb --description 'Samba file sharing manager'
     end
 
     # ════════════════════════════════════════════════════════════
+    # NUKE — Complete Samba removal
+    # ════════════════════════════════════════════════════════════
+
+    if test "$argv[1]" = "nuke"
+        set -l sep (printf '%*s' 62 '' | tr ' ' '─')
+        printf "\n"
+        printf "  $R╔$sep╗$N\n" 2>/dev/null
+        printf "  $R║$N                    $BOLDR SMB NUKE$N\n"
+        printf "  $R║$N               Complete Samba removal\n"
+        printf "  $R╚$sep╝$N\n" 2>/dev/null
+        printf "\n"
+        printf "  $Y⚠$N  WARNING: This will PERMANENTLY destroy:\n"
+        printf "\n"
+        printf "    $R ✗$N  All SMB users and passwords\n"
+        printf "    $R ✗$N  smb.conf configuration\n"
+        printf "    $R ✗$N  Samba packages\n"
+        printf "    $R ✗$N  Firewall rules\n"
+        printf "    $R ✗$N  SELinux settings\n"
+        printf "    $R ✗$N  Password storage (~/.config/smb/)\n"
+        printf "    $R ✗$N  Cache files\n"
+        printf "\n"
+        printf "  This cannot be undone.\n"
+        printf "\n"
+        set -l nuke_attempts 0
+        while true
+            set nuke_attempts (math $nuke_attempts + 1)
+            if test $nuke_attempts -gt 3
+                printf "  $R✗$N  3 failed attempts. Nuke cancelled.\n"
+                printf "\n"
+                break
+            end
+            read -P (printf "  Type DESTROY to confirm (attempt %d/3) or n to cancel: " $nuke_attempts) -l nuke_confirm
+            __smb_stop_check
+            if test $status -ne 0
+                printf "\n"
+                break
+            end
+            if test "$nuke_confirm" = "DESTROY"
+                break
+            end
+            if test "$nuke_confirm" = "n"; or test "$nuke_confirm" = "N"; or test "$nuke_confirm" = "no"
+                printf "\n"
+                printf "  Cancelled. Nothing was changed.\n"
+                printf "\n"
+                return 0
+            end
+            printf "  $R✗$N  Incorrect. You typed: '$W$nuke_confirm$N'\n"
+            printf "\n"
+        end
+        if test "$nuke_confirm" != "DESTROY"
+            printf "  Cancelled. Nothing was changed.\n"
+            printf "\n"
+            return 0
+        end
+        printf "\n"
+        printf "  $BOLD Nuking Samba...$N\n"
+        printf "\n"
+
+        # ── Auth ──
+        printf "  $D Authenticating...$N\n"
+        if not __smb_pkexec
+            printf "  $R✗$N  System authentication failed.\n"
+            printf "  Nuke cancelled.\n"
+            return 1
+        end
+        printf "  $G✓$N  Authentication successful\n"
+        printf "\n"
+
+        # ── 1. Stop service ──
+        printf "  Stopping Samba service...\n"
+        sudo systemctl stop smb 2>/dev/null
+        sudo systemctl disable smb 2>/dev/null
+        printf "  $G✓$N  Service stopped and disabled\n"
+
+        # ── 2. Purge all SMB users ──
+        printf "  Purging SMB users...\n"
+        if type -q pdbedit
+            set -l nuke_users (sudo pdbedit -L 2>/dev/null | cut -d: -f1)
+            for u in $nuke_users
+                sudo smbpasswd -x "$u" 2>/dev/null
+                printf "    $R ✗$N  Removed user: $W$u$N\n"
+            end
+        end
+        printf "  $G✓$N  All SMB users removed\n"
+
+        # ── 3. Remove password storage ──
+        printf "  Removing password storage...\n"
+        if test -d "$HOME/.config/smb"
+            rm -rf "$HOME/.config/smb"
+            printf "  $G✓$N  $D~/.config/smb/$N deleted\n"
+        else
+            printf "  $D  No password storage found$N\n"
+        end
+
+        # ── 4. Remove firewall rules ──
+        printf "  Removing firewall rules...\n"
+        if sudo systemctl is-active firewalld >/dev/null 2>&1
+            sudo firewall-cmd --remove-service=samba --permanent 2>/dev/null
+            sudo firewall-cmd --reload 2>/dev/null
+            printf "  $G✓$N  samba service removed from firewall\n"
+        else
+            printf "  $D  Firewall not active — skipped$N\n"
+        end
+
+        # ── 5. Reset SELinux booleans ──
+        printf "  Resetting SELinux booleans...\n"
+        sudo setsebool -P samba_enable_home_dirs off 2>/dev/null
+        sudo setsebool -P samba_export_all_rw off 2>/dev/null
+        printf "  $G✓$N  SELinux booleans reset\n"
+
+        # ── 6. Remove smb.conf ──
+        printf "  Removing smb.conf...\n"
+        if test -f "/etc/samba/smb.conf"
+            sudo rm -f /etc/samba/smb.conf
+            printf "  $G✓$N  $D/etc/samba/smb.conf$N removed\n"
+        else
+            printf "  $D  smb.conf not found — skipped$N\n"
+        end
+
+        # ── 7. Wipe cache ──
+        printf "  Wiping Samba cache...\n"
+        sudo rm -rf /var/cache/samba 2>/dev/null
+        sudo rm -rf /var/lib/samba 2>/dev/null
+        printf "  $G✓$N  Cache wiped\n"
+
+        # ── 8. Uninstall packages ──
+        printf "  Uninstalling packages...\n"
+        sudo dnf remove samba samba-client -y 2>/dev/null
+        if test $status -eq 0
+            printf "  $G✓$N  Samba packages removed\n"
+        else
+            printf "  $Y⚠$N  Some packages could not be removed\n"
+        end
+
+        # ── Done ──
+        printf "\n"
+        printf "  $R╔$sep╗$N\n" 2>/dev/null
+        printf "  $R║$N                  NUKE COMPLETE\n"
+        printf "  $R╚$sep╝$N\n" 2>/dev/null
+        printf "\n"
+        printf "  Samba has been completely removed from your system.\n"
+        printf "  No traces remain. To set it up again, run:\n"
+        printf "    $Y smb setup$N\n"
+        printf "\n"
+        return 0
+    end
+
+    # ════════════════════════════════════════════════════════════
     # LOG
     # ════════════════════════════════════════════════════════════
 
@@ -1904,6 +2069,109 @@ function smb --description 'Samba file sharing manager'
         printf "  $BOLD samba live logs (Ctrl+C to stop):$N\n"
         printf "\n"
         journalctl -fu smb 2>/dev/null
+        printf "\n"
+        return 0
+    end
+
+    # ════════════════════════════════════════════════════════════
+    # SECURE — Install / verify secure password storage
+    # ════════════════════════════════════════════════════════════
+
+    if test "$argv[1]" = "secure"; or test "$argv[1]" = "security"
+        printf "\n"
+        printf "  $BOLDG Secure Password Storage$N\n"
+        printf "\n"
+
+        # ── Check if secret-tool is installed ──
+        if not type -q secret-tool
+            printf "  $Y⚠$N  secure storage not installed\n"
+            printf "\n"
+            if not __confirm_yn "  Install secure storage (libsecret)? [Y/n]: " y
+                printf "\n"
+                printf "  Cancelled. Using encrypted file fallback.\n"
+                printf "\n"
+                return 0
+            end
+            printf "\n"
+            printf "  Installing libsecret...\n"
+            sudo dnf install libsecret -y 2>/dev/null
+            if test $status -eq 0
+                printf "  $G✓$N  libsecret installed successfully\n"
+            else
+                if not ping -c1 -W2 8.8.8.8 >/dev/null 2>&1
+                    printf "  $R✗$N  Install failed — no internet connection.\n"
+                    printf "  $Y→$N  Connect to a network and run 'smb secure' again.\n"
+                else
+                    printf "  $R✗$N  Install failed. Try: $W sudo dnf install libsecret$N\n"
+                end
+                printf "\n"
+                return 1
+            end
+            printf "\n"
+        else
+            # ── secret-tool exists — check version ──
+            set -l libsecret_ver ""
+            if type -q rpm
+                set libsecret_ver (rpm -q --queryformat '%{VERSION}' libsecret 2>/dev/null)
+            end
+            if test -n "$libsecret_ver"
+                printf "  $G✓$N  secure storage installed  $D(v$libsecret_ver)$N\n"
+            else
+                printf "  $G✓$N  secure storage installed\n"
+            end
+        end
+
+        # ── Test keyring is actually working ──
+        printf "\n"
+        printf "  Testing keyring...\n"
+        if __smb_has_keyring
+            printf "  $G✓$N  Keyring is unlocked and working\n"
+            # ── Check if passwords are stored in keyring ──
+            set -l users ()
+            if type -q pdbedit
+                set users (sudo pdbedit -L 2>/dev/null | cut -d: -f1)
+            end
+            set -l keyring_count 0
+            set -l file_count 0
+            for u in $users
+                if __smb_keyring_get "$u" >/dev/null 2>&1
+                    set keyring_count (math $keyring_count + 1)
+                else if test -f "$PASS_FILE"; and grep -q "^$u:" "$PASS_FILE" 2>/dev/null
+                    set file_count (math $file_count + 1)
+                end
+            end
+            if test (count $users) -gt 0
+                printf "\n"
+                if test $keyring_count -gt 0
+                    printf "  $G✓$N  $W%d$N password(s) stored in keyring\n" $keyring_count
+                end
+                if test $file_count -gt 0
+                    printf "  $Y⚠$N  $W%d$N password(s) still in file fallback\n" $file_count
+                    printf "\n"
+                    if __confirm_yn "  Migrate file passwords to keyring? [Y/n]: " y
+                        printf "\n"
+                        for u in $users
+                            set -l fpass (grep "^$u:" "$PASS_FILE" 2>/dev/null | head -1 | cut -d: -f2-)
+                            if test -n "$fpass"
+                                __smb_keyring_delete "$u" 2>/dev/null
+                                __smb_keyring_save "$u" "$fpass"
+                                printf "  $G✓$N  $W$u$N migrated to keyring\n"
+                            end
+                        end
+                        # Remove file fallback
+                        rm -f "$PASS_FILE"
+                        printf "\n"
+                        printf "  $G✓$N  All passwords migrated. File fallback removed.\n"
+                    end
+                else
+                    printf "  $G✓$N  All passwords stored securely in keyring\n"
+                end
+            end
+        else
+            printf "  $Y⚠$N  Keyring is locked or unavailable\n"
+            printf "  $Y→$N  Log out and back in to unlock, then run 'smb secure' again\n"
+            printf "  $D  Passwords are using encrypted file fallback for now.$N\n"
+        end
         printf "\n"
         return 0
     end
@@ -1918,7 +2186,7 @@ function smb --description 'Samba file sharing manager'
     # Try to suggest the closest match
     set -l cmd "$argv[1]"
     set -l suggestions ()
-    set -l known setup user share unshare on off restart data ip password status fix log help
+    set -l known setup user share unshare on off restart data ip password secure security status fix nuke log help
 
     for k in $known
         # Exact prefix match (e.g. "he" matches "help")
