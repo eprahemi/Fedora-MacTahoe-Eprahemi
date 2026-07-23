@@ -354,6 +354,29 @@ function smb --description 'Samba file sharing manager'
                 return 1
             end
         end
+        # Ensure smb.conf exists — nuke removes it, reinstall may not restore it
+        if not test -f /etc/samba/smb.conf
+            printf "  Creating default smb.conf...\n"
+            sudo bash -c 'cat > /etc/samba/smb.conf' <<'SMBCONF'
+[global]
+   workgroup = WORKGROUP
+   server string = Samba Server
+   security = user
+   map to guest = Bad Password
+   dns proxy = no
+
+[homes]
+   comment = Home Directories
+   browseable = no
+   writable = yes
+   valid users = %S
+SMBCONF
+            if test $status -eq 0
+                printf "  $G✓$N  Default smb.conf created\n"
+            else
+                printf "  $Y⚠$N  Could not create smb.conf — smbpasswd may fail\n"
+            end
+        end
         # Install libsecret for password storage
         if not type -q secret-tool
             printf "  Installing secure password storage...\n"
