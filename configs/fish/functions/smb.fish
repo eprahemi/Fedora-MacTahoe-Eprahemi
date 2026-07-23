@@ -409,6 +409,13 @@ function smb --description 'Samba file sharing manager'
         # ── Step 3: Set password ──
         printf "  $BOLD Step 3/9$N   Setting SMB password...\n"
 
+        # Ensure samba private dir and secrets exist — needed by smbpasswd
+        sudo mkdir -p /var/lib/samba/private
+        sudo chmod 700 /var/lib/samba/private
+        # Start smb briefly so secrets.tdb is created
+        sudo systemctl start smb 2>/dev/null
+        sudo systemctl stop smb 2>/dev/null
+
         # ── Ensure pwscore is available for password strength checking ──
         set -l has_pwscore 0
         if type -q pwscore
