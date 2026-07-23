@@ -18,6 +18,10 @@ function smb --description 'Samba file sharing manager'
     set -l BOLDR (printf "\e[1;31m")
     set -l BOLDY (printf "\e[1;33m")
     set -l BOLDC (printf "\e[1;36m")
+    set -l NUM1 (printf "\e[1;32m[1]\e[0m")
+    set -l NUM2 (printf "\e[1;31m[2]\e[0m")
+    set -l NUM3 (printf "\e[1;33m[3]\e[0m")
+    set -l NUM4 (printf "\e[1;36m[4]\e[0m")
 
     # ── Config paths ──
     set -g CONF_DIR  "$HOME/.config/smb"
@@ -489,19 +493,19 @@ function smb --description 'Samba file sharing manager'
         # ── Step 4: Share scope ──
         printf "  $BOLD Step 4/9$N   Choosing share scope...\n"
         printf "\n"
-        printf "  $BOLDG[1]$N $BOLD Home directory$N $D(recommended)$N\n"
+        printf "  $NUM1  $BOLD Home directory$N  $D(recommended)$N\n"
         printf "      Shares: $D$HOME$N\n"
         printf "      $D Safe — only your personal files are visible.$N\n"
         printf "\n"
-        printf "  $BOLDR[2]$N $BOLD Root filesystem$N $R(NOT recommended)$N\n"
+        printf "  $NUM2  $BOLD Root filesystem$N  $R(NOT recommended)$N\n"
         printf "      Shares: $D/$N\n"
         printf "      $Y WARNING — full access to every file on your laptop.$N\n"
         printf "\n"
-        printf "  $BOLDY[3]$N $BOLD Custom folders$N\n"
+        printf "  $NUM3  $BOLD Custom folders$N\n"
         printf "      Pick specific folders: Downloads, Pictures, Videos,\n"
         printf "      Music, Documents, Desktop.\n"
         printf "\n"
-        printf "  $BOLDC[4]$N $BOLD Custom path$N\n"
+        printf "  $NUM4  $BOLD Custom path$N\n"
         printf "      Enter any folder path you want to share.\n"
         printf "\n"
         read -P "  Choose [1/2/3/4] (default: 1): " -l scope_choice
