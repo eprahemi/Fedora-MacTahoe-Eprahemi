@@ -788,6 +788,8 @@ function smb --description 'Samba file sharing manager'
         printf "  $C║$N\n"
         printf "  $C╚$sep╝$N\n"
         printf "\n"
+        printf "  Run 'smb password' to reveal your password.\n"
+        printf "\n"
         return 0
     end
 
