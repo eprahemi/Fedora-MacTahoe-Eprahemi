@@ -738,13 +738,14 @@ except:
         if test $fn_pad -lt 0; set fn_pad 0; end
         echo -e "  $CY║$C    $D│$C  $fn_label$GR$B$f_name$C$(printf '%*s' $fn_pad '')$D│$C  $CY║$C"
 
-        # Dir line — dim gray (📍 emoji visual +1)
+        # Dir line — dim gray (📍 emoji visual +1); hide real path
         set -l dr_label "📍  "
-        set -l dr_line "$dr_label$f_dir/"
+        set -l dr_val "Local storage"
+        set -l dr_line "$dr_label$dr_val"
         set -l dr_len (string length -- "$dr_line")
         set -l dr_pad (math "50 - $dr_len - 1")
         if test $dr_pad -lt 0; set dr_pad 0; end
-        echo -e "  $CY║$C    $D│$C  $D$dr_label$C$GY$f_dir/$C$(printf '%*s' $dr_pad '')$D│$C  $CY║$C"
+        echo -e "  $CY║$C    $D│$C  $D$dr_label$C$GY$dr_val$C$(printf '%*s' $dr_pad '')$D│$C  $CY║$C"
 
         # Size + Date on one line (💾🕒 emoji visual +2)
         set -l sd_label  "💾  "
