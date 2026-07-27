@@ -293,7 +293,7 @@ function smb --description 'Samba file sharing manager'
         printf "  $C╭──────────────────────────────────────────────────────────────╮$N\n"
         printf "  $C│$N                      SMB FILE SHARING                        \n"
         printf "  $C│$N              Fedora MacTahoe  ·  Eprahemi System             \n"
-        printf "  $C│$N           Samba manager  ·  16 commands  ·  7 groups         \n"
+        printf "  $C│$N           Samba manager  ·  17 commands  ·  8 groups         \n"
         printf "  $C╰──────────────────────────────────────────────────────────────╯$N\n"
         printf "\n"
         printf "  Usage:  $Y smb$N <command> [args]\n"
@@ -326,6 +326,16 @@ function smb --description 'Samba file sharing manager'
         printf "\n"
         printf "    $W smb share list$N              List all active shares with paths\n"
         printf "    $W smb share rename$N $D<old> <new>$N   Rename a share\n"
+        printf "\n"
+        printf "  ────────────────────────────────────────────────────────────────\n"
+        printf "  $BOLDC CONNECT$N\n"
+        printf "  ────────────────────────────────────────────────────────────────\n"
+        printf "    $W smb connect$N                 Connect to a remote SMB share.\n"
+        printf "                                     Scans shares, bookmarks in\n"
+        printf "                                     Nautilus, saves password securely.\n"
+        printf "    $W smb connect --scan$N          Scan the local network for SMB servers\n"
+        printf "                                     and pick one to connect to. Requires\n"
+        printf "                                     sudo for nmap port scan.\n"
         printf "\n"
         printf "  ────────────────────────────────────────────────────────────────\n"
         printf "  $BOLDR SERVICE$N\n"
@@ -2360,6 +2370,492 @@ function smb --description 'Samba file sharing manager'
     end
 
     # ════════════════════════════════════════════════════════════
+    # CONNECT — Connect to a remote SMB share
+    # ════════════════════════════════════════════════════════════
+
+    if test "$argv[1]" = "connect"
+        printf "\n"
+        printf "  $BOLDG Connect to Remote SMB Share$N\n"
+        printf "\n"
+        printf "  Tip: Use $C$BOLD$HWsmb connect --scan$N to auto-detect SMB servers on your entire network.\n"
+        printf "\n"
+
+        # 0. Check for saved connections in Nautilus bookmarks
+        set -l bookmark_file "$HOME/.config/gtk-3.0/bookmarks"
+        if test "$argv[2]" != "--scan"; and test -f "$bookmark_file"
+            set -l saved_servers ()
+            set -l saved_users ()
+            for line in (grep '^smb://' "$bookmark_file" 2>/dev/null)
+                set -l match (string match -r 'smb://([^@]+)@([^/]+)' "$line" 2>/dev/null)
+                if test (count $match) -ge 3
+                    set -l u $match[2]
+                    set -l ip $match[3]
+                    set -l already_have 0
+                    for i in (seq (count $saved_servers))
+                        if test "$saved_servers[$i]" = "$ip"; and test "$saved_users[$i]" = "$u"
+                            set already_have 1
+                            break
+                        end
+                    end
+                    if test $already_have -eq 0
+                        set -a saved_users "$u"
+                        set -a saved_servers "$ip"
+                    end
+                end
+            end
+            if test (count $saved_servers) -gt 0
+                printf "  Saved connections:\n"
+                printf "\n"
+                for i in (seq (count $saved_servers))
+                    printf "  %s[%d]%s  $W%s$N  $D(@%s)$N\n" "$G" "$i" "$N" "$saved_users[$i]" "$saved_servers[$i]"
+                end
+                set -l manual_idx (math (count $saved_servers) + 1)
+                printf "  %s[%d]%s  $W%s$N\n" "$C" "$manual_idx" "$N" "Enter new IP manually"
+                printf "\n"
+                set -l pick ""
+                while test -z "$pick"
+                    read -P "  Pick a saved connection [1-$manual_idx]: " pick
+                    if test $status -ne 0; printf "\n  Cancelled.\n"; return 1; end
+                    __smb_stop_check; or return 1
+                    if string match -q -r '^[0-9]+$' "$pick"
+                        if test "$pick" -ge 1 -a "$pick" -le (count $saved_servers)
+                            set -g server "$saved_servers[$pick]"
+                            set -g remote_user "$saved_users[$pick]"
+                            set -g remote_pass ""
+                            if __smb_has_keyring
+                                set -g remote_pass (secret-tool lookup smb-connect-server "$server" smb-connect-user "$remote_user" 2>/dev/null)
+                            end
+                            printf "\n"
+                            printf "  $G✓$N  Using saved: $W$remote_user$N@$W$server$N\n"
+                            if test -z "$remote_pass"
+                                printf "  $Y⚠$N  Password not saved. Enter it below.\n"
+                            else
+                                printf "  $G✓$N  Password loaded from keyring.\n"
+                            end
+                            printf "\n"
+                            break
+                        else if test "$pick" -eq $manual_idx
+                            break
+                        end
+                    end
+                    printf "  $R✗$N  Invalid choice. Pick 1-$manual_idx.\n"
+                    set pick ""
+                end
+            end
+        end
+
+        # 1. Get IP address — manual or --scan
+        if not set -q server; or test -z "$server"
+            set server ""
+        end
+        if test "$argv[2]" = "--scan"
+            # ── Scan for SMB servers on network ──
+            printf "  %s[ Scanning for SMB servers... ]%s\n" "$C" "$N"
+            printf "\n"
+
+            # Detect local subnet
+            set -l iface (ip -4 route show default 2>/dev/null | head -1 | awk '{print $5; exit}')
+            set -l subnet ""
+            if test -n "$iface"
+                set subnet (ip -4 route show dev "$iface" 2>/dev/null | grep -v default | head -1 | awk '{print $1; exit}')
+            end
+            if test -z "$subnet"
+                set subnet (ip -4 route 2>/dev/null | grep -v default | grep '/.*dev' | head -1 | awk '{print $1}')
+            end
+
+            if test -n "$subnet"
+                printf "  Detected subnet: $W$subnet$N\n"
+                printf "\n"
+
+                # Check nmap
+                if not type -q nmap
+                    printf "  $Y⚠$N  nmap not found.\n"
+                    if __confirm_yn "  Install nmap? [y/N]: " n
+                        printf "\n"
+                        printf "  Installing nmap...\n"
+                        sudo dnf install nmap -y 2>/dev/null
+                        if test $status -ne 0
+                            if not ping -c1 -W2 8.8.8.8 >/dev/null 2>&1
+                                printf "  $R✗$N  Install failed — no internet connection.\n"
+                            else
+                                printf "  $R✗$N  Install failed. Try: $W sudo dnf install nmap$N\n"
+                            end
+                            printf "\n"
+                            set subnet ""
+                        else
+                            printf "  $G✓$N  nmap installed\n"
+                            printf "\n"
+                        end
+                    else
+                        printf "\n"
+                        set subnet ""
+                    end
+                end
+
+                # Run the scan
+                if test -n "$subnet"; and type -q nmap
+                    printf "  Scanning $W$subnet$N for port 445...\n"
+                    printf "  $D(This may take a few seconds)$N\n"
+                    printf "\n"
+
+                    set -l nmap_out (sudo nmap -p 445 --open -sS "$subnet" 2>&1)
+                    set -l nmap_status $status
+
+                    if test $nmap_status -ne 0
+                        printf "  $R✗$N  Scan failed (sudo may be required).\n"
+                        printf "\n"
+                    else
+                        # Parse IPs
+                        set -l found_servers ()
+                        for line in $nmap_out
+                            set -l ip_match (string match -r 'Nmap scan report for .*?\(?([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)\)?' "$line" 2>/dev/null | tail -1)
+                            if test -n "$ip_match"
+                                set -a found_servers "$ip_match"
+                            end
+                        end
+
+                        # Filter out local machine
+                        set -l local_ip (__smb_ip)
+                        set -l filtered_servers ()
+                        set -l self_found 0
+                        for s in $found_servers
+                            if test "$s" = "$local_ip"
+                                set self_found 1
+                            else
+                                set -a filtered_servers "$s"
+                            end
+                        end
+                        set found_servers $filtered_servers
+                        if test $self_found -eq 1
+                            printf "  $D(Excluded your own machine: $W$local_ip$D)$N\n"
+                            printf "\n"
+                        end
+
+                        if test (count $found_servers) -eq 0
+                            printf "  $Y⚠$N  No SMB servers found on $W$subnet$N\n"
+                            printf "\n"
+                        else
+                            printf "  $G✓$N  Found $W%d$N server(s):\n" (count $found_servers)
+                            printf "\n"
+
+                            for i in (seq (count $found_servers))
+                                # Try to get remote hostname
+                                set -l remote_hostname ""
+                                for hline in $nmap_out
+                                    set -l h (string match -r "Nmap scan report for (.+) \($found_servers[$i]\)" "$hline" 2>/dev/null | tail -1)
+                                    if test -n "$h"
+                                        set remote_hostname "$h"
+                                        break
+                                    end
+                                end
+                                if test -n "$remote_hostname"
+                                    printf "  %s[%d]%s  %s%s%s  %s(%s)%s\n" "$G" "$i" "$N" "$W" "$found_servers[$i]" "$N" "$D" "$remote_hostname" "$N"
+                                else
+                                    printf "  %s[%d]%s  %s%s%s\n" "$G" "$i" "$N" "$W" "$found_servers[$i]" "$N"
+                                end
+                            end
+                            set -l manual_idx (math (count $found_servers) + 1)
+                            printf "  %s[%d]%s  %s%s%s\n" "$C" "$manual_idx" "$N" "$W" "Enter IP manually" "$N"
+                            printf "\n"
+
+                            # Pick a server
+                            set -l pick ""
+                            while test -z "$server"
+                                read -P "  Pick a server [1-$manual_idx]: " pick
+                                if test $status -ne 0; printf "\n  Cancelled.\n"; return 1; end
+                                __smb_stop_check; or return 1
+                                if string match -q -r '^[0-9]+$' "$pick"
+                                    if test "$pick" -ge 1 -a "$pick" -le (count $found_servers)
+                                        set server "$found_servers[$pick]"
+                                        break
+                                    else if test "$pick" -eq $manual_idx
+                                        break
+                                    end
+                                end
+                                printf "  $R✗$N  Invalid choice. Pick 1-$manual_idx.\n"
+                            end
+                        end
+                    end
+                end
+            else
+                printf "  $R✗$N  Could not detect your network subnet.\n"
+            end
+
+            printf "\n"
+        end
+
+        # Manual IP entry if still empty
+        while test -z "$server"
+            read -P "  Enter remote IP address: " server
+            if test $status -ne 0; printf "\n  Cancelled.\n"; return 1; end
+            __smb_stop_check; or return 1
+        end
+
+        # 2. Get username
+        if not set -q remote_user; or test -z "$remote_user"
+            set remote_user ""
+        end
+        while test -z "$remote_user"
+            read -P "  Enter username: " remote_user
+            if test $status -ne 0; printf "\n  Cancelled.\n"; return 1; end
+            __smb_stop_check; or return 1
+        end
+
+        # 3. Get password (silent)
+        if not set -q remote_pass; or test -z "$remote_pass"
+            set remote_pass ""
+        end
+        if test -z "$remote_pass"
+            printf "\n"
+            printf "  Enter password:\n"
+            read -s -P "  > " remote_pass
+            if test $status -ne 0; printf "\n  Cancelled.\n"; return 1; end
+            __smb_stop_check; or return 1
+            printf "\n"
+        end
+
+        # 4. Check if smbclient is available
+        if not type -q smbclient
+            printf "  $Y⚠$N  smbclient not found.\n"
+            if __confirm_yn "  Install samba-client? [y/N]: " n
+                printf "\n"
+                printf "  Installing samba-client...\n"
+                sudo dnf install samba-client -y 2>/dev/null
+                if test $status -eq 0
+                    printf "  $G✓$N  samba-client installed\n"
+                    printf "\n"
+                else
+                    if not ping -c1 -W2 8.8.8.8 >/dev/null 2>&1
+                        printf "  $R✗$N  Install failed — no internet connection.\n"
+                        printf "  $Y→$N  Connect to a network and try again.\n"
+                    else
+                        printf "  $R✗$N  Install failed. Try: $W sudo dnf install samba-client$N\n"
+                    end
+                    printf "\n"
+                    return 1
+                end
+            else
+                printf "\n"
+                return 1
+            end
+        end
+
+        # 5. Scan shares via smbclient (with 10s timeout, SMB2/3 fallback)
+        printf "  Scanning shares on $W$server$N...\n"
+        printf "\n"
+        set -l shares ()
+        set -l smb_out ()
+        set -l smb_used_protocol "default"
+
+        # Try default first, then SMB2 if that fails
+        for attempt in 1 2
+            if test $attempt -eq 1
+                set smb_out (timeout 10 smbclient -L "//$server" -U "$remote_user%$remote_pass" 2>&1)
+            else
+                printf "  $Y⚠$N  Default failed. Retrying with SMB2 protocol...\n"
+                printf "\n"
+                set smb_out (timeout 10 smbclient -L "//$server" --option="client min protocol=SMB2" -U "$remote_user%$remote_pass" 2>&1)
+                set smb_used_protocol "SMB2"
+            end
+
+            if test $status -eq 124
+                printf "  $R✗$N  Connection timed out. Is the IP correct and the server online?\n"
+                printf "\n"
+                return 1
+            end
+
+            # Parse shares
+            set -l parsed_shares ()
+            for line in $smb_out
+                set -l match (string match -r '^\s+(\S+)\s+Disk' "$line" 2>/dev/null | tail -1)
+                if test -n "$match"
+                    set -a parsed_shares "$match"
+                end
+            end
+
+            if test (count $parsed_shares) -gt 0
+                set shares $parsed_shares
+                break
+            end
+
+            # Check if error is logon failure — try next protocol
+            set -l is_logon_failure 0
+            for line in $smb_out
+                if string match -q '*NT_STATUS_LOGON_FAILURE*' "$line"
+                    set is_logon_failure 1
+                else if string match -q '*NT_STATUS_ACCESS_DENIED*' "$line"
+                    set is_logon_failure 1
+                end
+            end
+
+            if test $attempt -eq 2; or test $is_logon_failure -eq 0
+                # Show error
+                printf "  $R✗$N  No shares found or connection failed.\n"
+
+                set -l raw_lines (count $smb_out)
+                if test $raw_lines -gt 0
+                    printf "\n"
+                    printf "  $D Raw smbclient output:$N\n"
+                    for line in $smb_out
+                        printf "  $D | %s$N\n" "$line"
+                    end
+                    printf "\n"
+                end
+
+                printf "\n"
+                printf "  Check:\n"
+                printf "    - The IP address is correct\n"
+                printf "    - The server is online\n"
+                printf "    - The username and password are correct\n"
+                printf "    - The server allows SMB connections\n"
+                printf "\n"
+                return 1
+            end
+            # Otherwise (logon failure on attempt 1), fall through to attempt 2
+        end
+
+        # Filter out hidden/system shares (ending with $)
+        set -l visible_shares ()
+        for s in $shares
+            if not string match -q '*$' "$s"
+                set -a visible_shares "$s"
+            end
+        end
+
+        if test (count $visible_shares) -eq 0
+            printf "  $R✗$N  No visible shares found (all are hidden/system shares).\n"
+            printf "\n"
+            return 1
+        end
+
+        # 6. Show numbered menu
+        printf "  Shares found on $W$server$N:\n"
+        printf "\n"
+
+        for i in (seq (count $visible_shares))
+            printf "  %s[%d]%s  %s%s%s\n" "$G" "$i" "$N" "$W" "$visible_shares[$i]" "$N"
+        end
+        set -l all_idx (math (count $visible_shares) + 1)
+        printf "  %s[%d]%s  %s%s%s\n" "$C" "$all_idx" "$N" "$W" "Connect to all (bookmark all shares)" "$N"
+        printf "\n"
+
+        # 7. Pick share
+        set -l pick ""
+        set -l selected_shares ()
+        while true
+            read -P "  Pick a share [1-$all_idx]: " pick
+            if test $status -ne 0; printf "\n  Cancelled.\n"; return 1; end
+            __smb_stop_check; or return 1
+            if string match -q -r '^[0-9]+$' "$pick"
+                if test "$pick" -ge 1 -a "$pick" -le (count $visible_shares)
+                    set selected_shares $visible_shares[$pick]
+                    break
+                else if test "$pick" -eq $all_idx
+                    set selected_shares $visible_shares
+                    break
+                end
+            end
+            printf "  $R✗$N  Invalid choice. Pick 1-$all_idx.\n"
+        end
+
+        # 8. Save password to keyring for future use
+        printf "\n"
+        if __smb_has_keyring
+            # Use different attributes than smb-user to avoid conflicts
+            printf '%s' "$remote_pass" | secret-tool store --label="SMB Connect: $remote_user@$server" smb-connect-server "$server" smb-connect-user "$remote_user" >/dev/null 2>&1
+            printf "  $G✓$N  Password saved securely.\n"
+        else
+            # Fallback — store in smb config dir with server-specific file
+            mkdir -p "$CONF_DIR/connect"
+            set -l connect_file "$CONF_DIR/connect/$server-$remote_user.pass"
+            printf '%s\n' "$remote_pass" > "$connect_file"
+            chmod 600 "$connect_file"
+            printf "  $Y⚠$N  Password saved to file (keyring unavailable).\n"
+            printf "  $Y→$N  Run $W smb secure$N to set up keyring storage.\n"
+        end
+        printf "\n"
+
+        # 9. For each selected share, add Nautilus bookmark
+        set -l bookmark_file "$HOME/.config/gtk-3.0/bookmarks"
+        mkdir -p (dirname "$bookmark_file")
+
+        set -l bookmarks_added 0
+        set -l bookmarks_skipped 0
+            for share in $selected_shares
+                set -l smb_url "smb://$remote_user@$server/$share"
+
+            # Check if bookmark already exists
+            set -l existing (grep -F "$smb_url" "$bookmark_file" 2>/dev/null)
+
+            if test -n "$existing"
+                # Extract existing name from bookmark (format: "url name")
+                set -l existing_name (printf '%s\n' "$existing" | awk '{$1=""; print $0}' | string trim)
+                printf "  $Y⚠$N  Already bookmarked '$W$share$N' as '$existing_name'\n"
+                set bookmarks_skipped (math $bookmarks_skipped + 1)
+                continue
+            end
+
+            # Ask for bookmark name
+            set -l bookmark_name ""
+            printf "  Name for '$W$share$N' bookmark:\n"
+            read -P "  (empty uses '$share'): " bookmark_name
+            if test $status -ne 0; printf "\n  Cancelled.\n"; return 1; end
+            __smb_stop_check; or return 1
+            if test -z "$bookmark_name"
+                set bookmark_name "$share"
+            end
+
+            # Add bookmark (format: "url name")
+            printf '%s %s\n' "$smb_url" "$bookmark_name" >> "$bookmark_file"
+            set bookmarks_added (math $bookmarks_added + 1)
+            printf "  $G✓$N  Bookmark added: $W$bookmark_name$N\n"
+        end
+
+        printf "\n"
+
+        if test $bookmarks_added -gt 0
+            printf "  $G✓$N  $W%d$N bookmark(s) added to Nautilus.\n" $bookmarks_added
+        end
+        if test $bookmarks_skipped -gt 0
+            printf "  $Y⚠$N  $W%d$N bookmark(s) already existed (skipped).\n" $bookmarks_skipped
+        end
+
+        printf "\n"
+
+        # 10. Open in Nautilus?
+        if __confirm_yn "  Open in Nautilus? [Y/n]: " y
+            if type -q nautilus
+                set -l first_share $selected_shares[1]
+                nautilus "smb://$remote_user@$server/$first_share" &
+                printf "  $G✓$N  Nautilus opened.\n"
+            else
+                printf "  $Y⚠$N  Nautilus not found.\n"
+                if __confirm_yn "  Install Nautilus (nautilus)? [y/N]: " n
+                    printf "\n"
+                    printf "  Installing nautilus...\n"
+                    sudo dnf install nautilus -y 2>/dev/null
+                    if test $status -eq 0
+                        printf "\n"
+                        printf "  $G✓$N  Nautilus installed.\n"
+                        set -l first_share $selected_shares[1]
+                        nautilus "smb://$remote_user@$server/$first_share" &
+                        printf "  $G✓$N  Nautilus opened.\n"
+                    else
+                        if not ping -c1 -W2 8.8.8.8 >/dev/null 2>&1
+                            printf "  $R✗$N  Install failed — no internet connection.\n"
+                        else
+                            printf "  $R✗$N  Install failed. Try: $W sudo dnf install nautilus$N\n"
+                        end
+                    end
+                end
+            end
+        end
+
+        printf "\n"
+        return 0
+    end
+
+    # ════════════════════════════════════════════════════════════
     # UNKNOWN
     # ════════════════════════════════════════════════════════════
 
@@ -2369,7 +2865,7 @@ function smb --description 'Samba file sharing manager'
     # Try to suggest the closest match
     set -l cmd "$argv[1]"
     set -l suggestions ()
-    set -l known setup user share unshare on off restart data ip password secure security status fix nuke log help
+    set -l known setup user share unshare on off restart data ip password secure security status fix nuke log help connect
 
     for k in $known
         # Exact prefix match (e.g. "he" matches "help")
