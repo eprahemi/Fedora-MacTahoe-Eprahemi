@@ -52,6 +52,14 @@ for m in matches:
     # ── Display error message ──
     echo -e "\033[1;31m✘ Command not found: '$cmd'\033[0m" >&2
 
+    # ── Custom hints for common mistypes ──
+    switch "$cmd"
+        case connect
+            echo -e "  \033[1;33mTip: Use \033[1;36msmb connect\033[1;33m (or \033[1;36msmb connect --scan\033[1;33m to auto-detect).\033[0m" >&2
+        case scan
+            echo -e "  \033[1;33mTip: Use \033[1;36msmb connect --scan\033[1;33m to auto-detect SMB servers.\033[0m" >&2
+    end
+
     # ── Show suggestions ──
     if set -q suggestions[1]
         echo -e "  \033[1;33mDid you mean...\033[0m" >&2
