@@ -316,7 +316,7 @@ function ghlogin --description 'Login to GitHub CLI and configure git'
 
             # ── Auth status ──
             set -l gh_user ""
-            if gh auth status >/dev/null 2>&1
+            if command -q gh; and gh auth status >/dev/null 2>&1
                 set gh_user (gh api user 2>/dev/null | jq -r '.login' 2>/dev/null)
                 if test -n "$gh_user"
                     printf "  \033[1;36m║\033[0m  \033[1;37mLogged in as:\033[0m \033[1;32m✓\033[0m  \033[1;37m%s\033[0m\n" "$gh_user"
@@ -329,7 +329,10 @@ function ghlogin --description 'Login to GitHub CLI and configure git'
 
             # ── Git email ──
             set -l git_email (git config --global user.email 2>/dev/null)
-            set -l gh_email (gh api user 2>/dev/null | jq -r '.email // empty' 2>/dev/null)
+            set -l gh_email ""
+            if command -q gh
+                set gh_email (gh api user 2>/dev/null | jq -r '.email // empty' 2>/dev/null)
+            end
             set -l email_ok 0
             if test -n "$git_email"
                 if string match -qr '^[^@]+@[^@]+\.[^@]+$' "$git_email"
@@ -356,7 +359,7 @@ function ghlogin --description 'Login to GitHub CLI and configure git'
             set -l name_ok 0
             if test -n "$git_name"
                 # Check if the name exists as a GitHub user
-                if test -n "$gh_user"; and gh api "users/$gh_user" >/dev/null 2>&1
+                if test -n "$gh_user"; and command -q gh; and gh api "users/$gh_user" >/dev/null 2>&1
                     set -l gh_full_name (gh api "users/$gh_user" 2>/dev/null | jq -r '.name // empty' 2>/dev/null)
                     if test -n "$gh_full_name"; and test "$git_name" = "$gh_full_name"
                         printf "  \033[1;36m║\033[0m  \033[1;37mGit name:\033[0m     \033[1;32m✓\033[0m  \033[1;37m%s\033[0m \033[2;37mmatches GitHub profile\033[0m\n" "$git_name"
@@ -382,7 +385,7 @@ function ghlogin --description 'Login to GitHub CLI and configure git'
             set -l all_good 1
             command -q gh; or set all_good 0
             set -l is_logged_in 0
-            gh auth status >/dev/null 2>&1; and set is_logged_in 1
+            if command -q gh; gh auth status >/dev/null 2>&1; and set is_logged_in 1; end
             test "$is_logged_in" -eq 1; or set all_good 0
             test "$email_ok" -eq 1; or set all_good 0
             test "$name_ok" -eq 1; or set all_good 0

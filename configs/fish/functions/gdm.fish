@@ -1838,7 +1838,7 @@ except Exception:
         end
         # Remove .git && .gitignore — not needed at runtime, saves ~500 KB
         rm -rf "$repo/.git" "$repo/.gitignore" 2>/dev/null
-        echo -e "  $GR✅  FedoraTahoe-GDM cached at $repo (works offline from now on)$C$C"
+        echo -e "  $GR✅  FedoraTahoe-GDM engine ready (works offline from now on)$C$C"
 
         # Restore preserved runtime state files
         if test -n "$saved_undo"; and test -f "$saved_undo"
