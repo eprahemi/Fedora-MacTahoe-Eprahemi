@@ -52,12 +52,18 @@ for m in matches:
     # ── Display error message ──
     echo -e "\033[1;31m✘ Command not found: '$cmd'\033[0m" >&2
 
-    # ── Custom hints for common mistypes ──
+    # ── Custom hints for common mistypes (skip generic suggestions) ──
     switch "$cmd"
         case connect
-            echo -e "  \033[1;33mTip: Use \033[1;36msmb connect\033[1;33m (or \033[1;36msmb connect --scan\033[1;33m to auto-detect).\033[0m" >&2
+            echo -e "  \033[1;33mDid you mean \033[1;36msmb connect\033[1;33m?\033[0m" >&2
+            echo -e "  \033[38;5;248m  Use \033[1;36msmb connect --scan\033[38;5;248m to auto-detect SMB servers.\033[0m" >&2
+            echo -e "  \033[38;5;248m  Type \033[1;36mfunc\033[38;5;248m to see all available MacTahoe functions.\033[0m" >&2
+            return 0
         case scan
-            echo -e "  \033[1;33mTip: Use \033[1;36msmb connect --scan\033[1;33m to auto-detect SMB servers.\033[0m" >&2
+            echo -e "  \033[1;33mDid you mean \033[1;36msmb connect --scan\033[1;33m?\033[0m" >&2
+            echo -e "  \033[38;5;248m  Use \033[1;36msmb connect --scan\033[38;5;248m to auto-detect SMB servers.\033[0m" >&2
+            echo -e "  \033[38;5;248m  Type \033[1;36mfunc\033[38;5;248m to see all available MacTahoe functions.\033[0m" >&2
+            return 0
     end
 
     # ── Show suggestions ──
