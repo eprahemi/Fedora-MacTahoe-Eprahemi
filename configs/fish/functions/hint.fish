@@ -1,7 +1,7 @@
 # ══════════════════════════════════════════════════════════════
 # hint  —  Terminal power-user teaching + interactive demos
 # Fedora MacTahoe Eprahemi Edition © 2026 — copyright 100%
-# Teaches kitty v2, fish functions, what changed — with live demos
+# Teaches kitty, fish functions, what changed — with live demos
 # Usage:  hint                 → interactive menu
 #         hint kitty|fish|colors|new   → show one topic
 #         hint -w 80           → custom box width
@@ -10,7 +10,7 @@
 # helper functions do NOT inherit locals in fish 4.6, so they
 # read these shared values instead. They are re-set on every call.
 # ══════════════════════════════════════════════════════════════
-function hint -d 'Interactive teaching: kitty v2, fish functions, whats-new + live demos'
+function hint -d 'Interactive teaching: kitty, fish functions, whats-new + live demos'
     # ──────────────────────────────────────────────────────────
     # CONFIG — EDIT TO CUSTOMIZE
     #   __hint_bw       box inner width (>= 30)
@@ -36,7 +36,7 @@ function hint -d 'Interactive teaching: kitty v2, fish functions, whats-new + li
     set -g __hint_BOLDY (set_color --bold yellow)
     set -g __hint_BOLDR (set_color --bold red)
 
-    # ── Kitty v2 palette (must match ~/.config/kitty/kitty.conf) ──
+    # ── Kitty palette (must match ~/.config/kitty/kitty.conf) ──
     set -g __hint_hexs 45475a ff5f56 27c93f ffbd2e 007aff cba6f7 94e2d5 cdd6f4 585b70 ff5f56 27c93f ffbd2e 007aff cba6f7 94e2d5 f5e0dc
     set -g __hint_nms "black" "red (close)" "green (max)" "yellow (min)" "blue (hl)" "purple" "cyan" "white" "bright black" "bright red" "bright green" "bright yellow" "bright blue" "bright purple" "bright cyan" "rosewater"
 
@@ -87,10 +87,10 @@ function hint -d 'Interactive teaching: kitty v2, fish functions, whats-new + li
     end
 
     # ══════════════════════════════════════════════════════════
-    # SECTION — KITTY v2
+    # SECTION — KITTY
     # ══════════════════════════════════════════════════════════
     function __hint_section_kitty
-        __hint_section "KITTY v2 — COLORFUL EDITION"
+        __hint_section "KITTY — COLORFUL EDITION"
         __hint_line "  • Full 16-color Catppuccin Mocha + Mac buttons:" $__hint_W
         __hint_line "    red #ff5f56  green #27c93f" $__hint_D
         __hint_line "    yellow #ffbd2e  blue #007aff" $__hint_D
@@ -127,6 +127,7 @@ function hint -d 'Interactive teaching: kitty v2, fish functions, whats-new + li
         __hint_line "  • kitty @ ls     →  see this kitty's windows" $__hint_W
         __hint_blank
         __hint_line "  Tip: run  hint menu  for live demos" $__hint_D
+        __hint_line "  Made by eprahemi — Fedora MacTahoe © 2026" $__hint_D
         __hint_section_end
     end
 
@@ -144,6 +145,7 @@ function hint -d 'Interactive teaching: kitty v2, fish functions, whats-new + li
         __hint_line "  • recently updated: kernels, gdm, pfp, kit, hint" $__hint_W
         __hint_blank
         __hint_line "  Tip: func search smb  — or: func show gdm" $__hint_D
+        __hint_line "  Made by eprahemi — Fedora MacTahoe © 2026" $__hint_D
         __hint_section_end
     end
 
@@ -152,18 +154,18 @@ function hint -d 'Interactive teaching: kitty v2, fish functions, whats-new + li
     # ══════════════════════════════════════════════════════════
     function __hint_section_new
         __hint_section "WHAT CHANGED — RECENT UPDATES"
-        __hint_line "  • kitty v2 Colorful Edition: full palette + kittens" $__hint_W
+        __hint_line "  • kitty Colorful Edition: full palette + kittens" $__hint_W
         __hint_line "    (see: hint kitty  |  live demos: hint menu)" $__hint_D
         __hint_line "  • fastfetch: new terminal module (kitty version)" $__hint_W
         __hint_line "  • kernels.fish: help box redesigned + bugs fixed" $__hint_W
-        __hint_line "  • kitty listen_on fixed: unix:/tmp/kitty" $__hint_W
-        __hint_line "    (TMPDIR trap: env vars expand only if they exist)" $__hint_D
+        __hint_line "  • kitty remote control works from any terminal" $__hint_W
+        __hint_line "    (no extra setup — the socket lives at /tmp/kitty)" $__hint_D
         __hint_line "  • ktheme: kitty colors auto-match your wallpaper" $__hint_W
         __hint_line "    (extracts palette, live reload, watcher on/off)" $__hint_D
-        __hint_line "  • remote control works: kitty @ from any terminal" $__hint_W
         __hint_line "  • hint.fish: this teaching function (new)" $__hint_W
         __hint_blank
         __hint_line "  Tip: hint kitty  — details + keybindings" $__hint_D
+        __hint_line "  Made by eprahemi — Fedora MacTahoe © 2026" $__hint_D
         __hint_section_end
     end
 
@@ -200,6 +202,7 @@ function hint -d 'Interactive teaching: kitty v2, fish functions, whats-new + li
         __hint_line "  • Accent: #007aff  (Mac blue — borders, tabs, url)" $__hint_W
         __hint_blank
         __hint_line "  Tip: press ctrl+shift+f4 to try live themes" $__hint_D
+        __hint_line "  Made by eprahemi — Fedora MacTahoe © 2026" $__hint_D
         __hint_section_end
     end
 
@@ -209,7 +212,7 @@ function hint -d 'Interactive teaching: kitty v2, fish functions, whats-new + li
     function __hint_section_help
         __hint_section "HINT — USAGE"
         __hint_line "  • hint                  interactive menu (default)" $__hint_W
-        __hint_line "  • hint kitty            kitty v2 features" $__hint_W
+        __hint_line "  • hint kitty            kitty features" $__hint_W
         __hint_line "  • hint fish             fish function tips" $__hint_W
         __hint_line "  • hint colors           live palette swatches" $__hint_W
         __hint_line "  • hint new              what changed recently" $__hint_W

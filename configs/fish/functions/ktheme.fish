@@ -5,8 +5,8 @@
 # ktheme                 apply wallpaper colors to kitty (all instances)
 # ktheme <image>         apply colors extracted from a specific image
 # ktheme on              enable watcher — auto re-theme on wallpaper change
-# ktheme off             disable watcher + restore the v2 palette
-# ktheme undo            restore the v2 palette (watcher untouched)
+# ktheme off             disable watcher + restore the Colorful Edition palette
+# ktheme undo            restore the Colorful Edition palette (watcher untouched)
 # ktheme status          wallpaper, palette, watcher state, instances
 # ktheme watch           internal — watcher loop (systemd user service)
 # ktheme --silent        apply with no output (used by the watcher)
@@ -65,7 +65,7 @@ function ktheme --description "Kitty auto-theme — colors from the wallpaper"
         case undo
             __kt_restore
             __kt_apply >/dev/null
-            printf '\n  %sUndone.%s v2 palette restored.\n' $__kt_G $__kt_K
+            printf '\n  %sUndone.%s The Colorful Edition palette is back.\n' $__kt_G $__kt_K
         case status
             __kt_status
         case apply
@@ -267,7 +267,7 @@ end
 
 function __kt_restore
     set -l f ~/.config/kitty/auto-theme.conf
-    printf '# v2 Colorful Edition palette (ktheme restore) — do not edit\n' > $f
+    printf '# Colorful Edition palette (ktheme restore) — do not edit\n' > $f
     printf 'background #1e1e2e\nforeground #cdd6f4\n' >> $f
     printf 'color0  #45475a\ncolor1  #ff5f56\ncolor2  #27c93f\ncolor3  #ffbd2e\n' >> $f
     printf 'color4  #007aff\ncolor5  #cba6f7\ncolor6  #94e2d5\ncolor7  #cdd6f4\n' >> $f
@@ -314,7 +314,7 @@ function __kt_off
     end
     __kt_restore
     __kt_apply >/dev/null
-    printf '  %sv2 palette restored.%s\n' $__kt_G $__kt_K
+    printf '  %sColorful Edition palette restored.%s\n' $__kt_G $__kt_K
 end
 
 # ════════════════════════════════════════════════════════════════
@@ -337,8 +337,12 @@ function __kt_show
     __kt_blank
     __kt_ramp_rows
     __kt_blank
-    __kt_line "applied to $n kitty instance(s) — reload-config" $__kt_G
-    __kt_line "persisted: ~/.config/kitty/auto-theme.conf" $__kt_D
+    if test $n -eq 0
+        __kt_line "no kitty running — colors will apply on next launch" $__kt_G
+    else
+        __kt_line "applied live to $n kitty window(s)" $__kt_G
+    end
+    __kt_line "saved in: ~/.config/kitty/auto-theme.conf" $__kt_D
     __kt_blank
     __kt_line "Made by eprahemi — Fedora MacTahoe © 2026" $__kt_BOLD
     __kt_bot
@@ -378,7 +382,7 @@ function __kt_status
     __kt_line "wallpaper: $short ($dir)" $__kt_D
     __kt_line "palette:   ~/.config/kitty/auto-theme.conf" $__kt_D
     __kt_line "watcher:   $w" (test "$w" = active; and echo $__kt_G; or echo $__kt_Y)
-    __kt_line "kitty instances: $socks" $__kt_W
+    __kt_line "kitty windows: $socks" $__kt_W
     __kt_blank
     __kt_line "Made by eprahemi — Fedora MacTahoe © 2026" $__kt_BOLD
     __kt_bot
