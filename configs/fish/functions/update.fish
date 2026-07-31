@@ -372,6 +372,15 @@ function _update_configs_mode --description 'refresh kitty, fish, starship, gtk,
     end
     set -l cfg "$tmp/configs"
     mkdir -p "$HOME/.config/kitty" "$HOME/.config/fish/functions" "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0" "$HOME/.config/fastfetch" "$HOME/.config/systemd/user"
+    # Auto-backup the live fish config before overwriting (keeps last 10)
+    set -l bk "$HOME/.cache/fedora-mactahoe/backups"
+    if test -d "$HOME/.config/fish"
+        mkdir -p "$bk"
+        tar czf "$bk/fish-"(date +%Y%m%d-%H%M%S)".tar.gz" -C "$HOME/.config" fish 2>/dev/null
+        for old in (ls -1t "$bk"/fish-*.tar.gz 2>/dev/null | tail -n +11)
+            rm -f "$old"
+        end
+    end
     if test -f "$cfg/kitty/kitty.conf"
         cp -f "$cfg/kitty/kitty.conf" "$HOME/.config/kitty/"
     end
