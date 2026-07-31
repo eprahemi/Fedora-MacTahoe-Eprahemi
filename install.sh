@@ -223,6 +223,26 @@ ok()    { echo -e "  ${GREEN}  ┊ ✓ ${NC}  $1"; }
 warn()  { echo -e "  ${YELLOW}  ┊ ⚠ ${NC}  $1"; }
 fail()  { echo -e "  ${RED}  ┊ ✗ ${NC}  $1"; exit 1; }
 
+backup_dconf() {
+  # Rollback point before ANY destructive dconf operation (load/reset).
+  # Saves a full dump of the user's live dconf database (few KB) to
+  # ~/.cache/fedora-mactahoe/backups/ as dconf-<timestamp>.conf, chmod 600.
+  # Restore anytime with:  dconf load / < ~/.cache/fedora-mactahoe/backups/dconf-*.conf
+  local bk_dir="$HOME/.cache/fedora-mactahoe/backups"
+  mkdir -p "$bk_dir" 2>/dev/null || true
+  local bk_file="$bk_dir/dconf-$(date +%Y%m%d-%H%M%S).conf"
+  if dconf dump / > "$bk_file" 2>/dev/null; then
+    chmod 600 "$bk_file" 2>/dev/null || true
+    log "dconf snapshot saved: $bk_file"
+    # Keep only the 5 most recent snapshots
+    ls -1t "$bk_dir"/dconf-*.conf 2>/dev/null | tail -n +6 | while read -r old; do
+      rm -f "$old" 2>/dev/null || true
+    done || true
+  else
+    warn "dconf snapshot failed — continuing without backup"
+  fi
+}
+
 confirm() {
   local prompt="$1" default="${2:-}"
   local reply=""
@@ -1210,6 +1230,7 @@ remove_ptyxis() {
   # GNOME Software cache icons
   find "$HOME/.cache/gnome-software" -name "*ptyxi*" -delete 2>/dev/null || true
   # Dconf profiles and settings
+  backup_dconf
   dconf reset -f /org/gnome/Ptyxis/ 2>/dev/null || true
   # Desktop entry
   sudo rm -f /usr/share/applications/org.gnome.Ptyxis.desktop 2>/dev/null || true
@@ -2025,6 +2046,9 @@ EOF
 
 apply_dconf() {
   next_step "GNOME dconf Settings"
+
+  # Rollback point before any gsettings/dconf writes + extension restore
+  backup_dconf
 
   local dconf_file="$BUNDLE/configs/dconf/full-backup.ini"
 
