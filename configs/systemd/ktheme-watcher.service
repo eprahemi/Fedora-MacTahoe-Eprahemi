@@ -1,0 +1,14 @@
+[Unit]
+Description=Kitty auto-theme watcher — re-theme kitty from wallpaper colors
+After=graphical-session.target
+
+[Service]
+Type=simple
+# NOTE: %U = numeric UID (1000). %i = instance name (EMPTY for non-instanced
+# units!) — %i produced /run/user//bus, a dead address. Do not "fix" back.
+ExecStart=/usr/bin/env DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/%U/bus /usr/bin/fish -c 'ktheme watch'
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
