@@ -246,7 +246,7 @@ is_valid_zip() {
   od -A n -t x1 -N 4 "$f" 2>/dev/null | grep -qi "50 4b 03 04"
 }
 
-TOTAL_STEPS=28
+TOTAL_STEPS=29
 STEP=0
 
 # ── Incremental update state ──────────────────────────────
@@ -1929,6 +1929,11 @@ apply_configs() {
   if [ -f "$cfg/kitty/kitty.conf" ]; then
     mkdir -p "$HOME/.config/kitty"
     cp "$cfg/kitty/kitty.conf" "$HOME/.config/kitty/"
+    # ktheme auto-theme palette file — kitty.conf ends with `include auto-theme.conf`,
+    # so the file MUST exist or kitty logs an include error and skips it.
+    if [ -f "$cfg/kitty/auto-theme.conf" ]; then
+      cp "$cfg/kitty/auto-theme.conf" "$HOME/.config/kitty/"
+    fi
     ok "Kitty config"
   fi
 
@@ -3093,6 +3098,34 @@ install_updater() {
   fi
 }
 
+# ── PHASE 4c: KTHEME WATCHER ────────────────────────────────
+
+install_ktheme_watcher() {
+  next_step "Kitty Auto-Theme Watcher (ktheme)"
+
+  local ktheme_src="$BUNDLE/configs/systemd"
+  if [ ! -f "$ktheme_src/ktheme-watcher.service" ]; then
+    warn "ktheme-watcher.service not found at $ktheme_src — skipping"
+    return
+  fi
+
+  # 1. Install the unit
+  mkdir -p "$HOME/.config/systemd/user"
+  cp "$ktheme_src/ktheme-watcher.service" "$HOME/.config/systemd/user/"
+  log "ktheme-watcher.service installed"
+
+  # 2. Reload, enable, start — re-themes kitty from the wallpaper on every change
+  systemctl --user daemon-reload 2>/dev/null || true
+  systemctl --user enable ktheme-watcher.service 2>/dev/null || true
+  systemctl --user start ktheme-watcher.service 2>/dev/null || true
+
+  if systemctl --user is-active ktheme-watcher.service &>/dev/null; then
+    ok "Auto-theme watcher active — kitty follows your wallpaper"
+  else
+    warn "ktheme watcher could not be started (kitty colors still theme on demand via ktheme)"
+  fi
+}
+
 # ── PHASE 5: TERMINAL & SHELL ────────────────────────────────
 
 setup_terminal() {
@@ -3685,6 +3718,7 @@ _run_step "setup_firefox_theme" setup_firefox_theme
 _run_step "setup_flatpak_theme" setup_flatpak_theme
 _run_step "install_sounds" install_sounds
 _run_step "install_updater" install_updater
+_run_step "install_ktheme_watcher" install_ktheme_watcher
 
 phase_divider "PHASE 5 : TERMINAL & SHELL" 24 25
 _run_step "setup_terminal" setup_terminal

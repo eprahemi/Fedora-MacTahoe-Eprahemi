@@ -1,6 +1,15 @@
 {
-  "latest_version": "1.8",
+  "latest_version": "1.9",
   "changelog": [
+    {
+      "version": "1.9",
+      "changes": [
+        "Kitty follows your wallpaper — ktheme pulls the colors out of your desktop picture and re-themes every kitty window, live. A quiet background watcher does it automatically every time the wallpaper changes (ktheme on/off to control it)",
+        "Kitty Colorful Edition — a fresh full palette, interactive kittens (ctrl+shift+f4 themes, ctrl+shift+d diff) and remote control from any terminal",
+        "hint — a little teacher in your terminal: shortcuts, functions, the palette, and live demos, all in one menu",
+        "fastfetch shows your terminal; old kitty/fastfetch config backups cleaned up"
+      ]
+    },
     {
       "version": "1.8",
       "changes": [
@@ -97,7 +106,7 @@
     "apply_desktop_entries": "1.0",
     "ensure_celluloid_default": "1.0",
     "configure_nautilus_defaults": "1.0",
-    "apply_configs": "1.8",
+    "apply_configs": "1.9",
     "apply_dconf": "1.0",
     "optimize_system_resources": "1.0",
     "apply_wallpapers": "1.1",
@@ -108,6 +117,7 @@
     "setup_flatpak_theme": "1.0",
     "install_sounds": "1.0",
     "install_updater": "1.2",
+    "install_ktheme_watcher": "1.0",
     "setup_terminal": "1.0",
     "setup_shell": "1.0",
     "install_extensions": "1.7",
