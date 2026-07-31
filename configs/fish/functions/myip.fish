@@ -30,7 +30,9 @@ function myip --description 'Show public IP, local IP & DNS servers in a styled 
     echo -e "\033[1;33m║           \033[1;36mNETWORK IDENTITY - IP COMPASS\033[1;33m              ║\033[0m"
     echo -e "\033[1;33m╚══════════════════════════════════════════════════════════╝\033[0m"
 
-    set -l pub_ip (curl -s --max-time 5 https://ifconfig.me 2>/dev/null)
+    __loading "Contacting the network" "curl -s --max-time 5 https://ifconfig.me"
+    set -l pub_ip "$__loading_result"
+    set -e __loading_result
     if test -z "$pub_ip"
         set pub_ip "\033[1;31mUNREACHABLE\033[0m"
     else

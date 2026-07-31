@@ -22,8 +22,13 @@ function weather --description 'Terminal forecast or Mousam GUI (-g)'
         end
     else
         if command -v curl &>/dev/null
-            echo -e "\033[1;36m🌤️  Fetching weather data...\033[0m"
-            curl -s "wttr.in?m1" 2>/dev/null || echo -e "\033[1;31m❌ Could not reach wttr.in. Check your connection 🌧️\033[0m"
+            __loading "Fetching weather data" "curl -s 'wttr.in?m1'"
+            if test $status -ne 0
+                echo -e "\033[1;31m❌ Could not reach wttr.in. Check your connection 🌧️\033[0m"
+            else if test -n "$__loading_result"
+                printf '%s\n' $__loading_result
+            end
+            set -e __loading_result
         else
             echo -e "\033[1;31m❌ curl is required for weather. Install it 🌩️\033[0m"
         end

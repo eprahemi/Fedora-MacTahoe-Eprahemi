@@ -215,7 +215,9 @@ function _update_loading --description 'loading ritual; optional seconds (defaul
         end
         set -l pct (math -s0 "$t * 100 / $ticks")
         set -l filled (math -s0 "$pct * 20 / 100")
-        printf '\r  \e[1;36m%s\e[0m  \e[1;37m%s\e[0m  \e[2;37m[\e[0m\e[1;36m%s\e[0m\e[2;37m%s\e[0m\e[2;37m]\e[0m \e[1;33m%3d%%\e[0m' $frames[$i] $msgs[$j] (string repeat -n $filled '█') (string repeat -n (math -s0 "20 - $filled") '░') $pct
+        set -l fill_part (string repeat -n $filled '█')
+        set -l empty_part (string repeat -n (math -s0 "20 - $filled") '░')
+        printf '\r  \e[1;36m%s\e[0m  \e[1;37m%s\e[0m  \e[2;37m[\e[0m\e[1;36m%s\e[0m\e[2;37m%s\e[0m\e[2;37m]\e[0m \e[1;33m%3d%%\e[0m' $frames[$i] $msgs[$j] "$fill_part" "$empty_part" $pct
         sleep 0.2
         set i (math "$i % 10 + 1")
         if test (math "$t % $step") -eq 0

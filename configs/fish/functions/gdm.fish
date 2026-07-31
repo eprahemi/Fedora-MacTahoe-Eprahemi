@@ -397,18 +397,13 @@ except: sys.exit(1)
         if test -f "$wp_repo"
             gdm --yes "$wp_repo"
         else
-            # Try downloading silently up to 3 times
+            # Download with the one-line loader — retries up to 3 times inside
             set -l dl_ok 0
-            for attempt in (seq 3)
-                mkdir -p "$HOME/.local/share/mactahoe-gdm"
-                if curl -fsSL --connect-timeout 5 "$wp_url" -o "$wp_repo" 2>/dev/null
-                    set dl_ok 1
-                    break
-                end
-                if test $attempt -lt 3
-                    sleep 1
-                end
+            __loading "Downloading the login wallpaper" "mkdir -p '$HOME/.local/share/mactahoe-gdm'; for a in 1 2 3; do curl -fsSL --connect-timeout 5 '$wp_url' -o '$wp_repo' && exit 0; sleep 1; done; exit 1"
+            if test $status -eq 0
+                set dl_ok 1
             end
+            set -e __loading_result
             if test $dl_ok -eq 0
                 printf "\n"
                 echo -e "  $RE┌────────────────────────────────────────────────────────────┐$C"
@@ -1821,7 +1816,8 @@ except Exception:
             end
         end
 
-        if not git clone --depth 1 https://github.com/eprahemi/FedoraTahoe-GDM.git "$repo" 2>/dev/null
+        __loading "Downloading the wallpaper engine" "git clone --depth 1 https://github.com/eprahemi/FedoraTahoe-GDM.git '$repo'"
+        if test $status -ne 0
             printf "\n"
             echo -e "  $RE┌────────────────────────────────────────────────────────────┐$C"
             echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
@@ -1834,8 +1830,10 @@ except Exception:
             echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
             echo -e "  $RE└────────────────────────────────────────────────────────────┘$C"
             printf "\n"
+            set -e __loading_result
             return 1
         end
+        set -e __loading_result
         # Remove .git && .gitignore — not needed at runtime, saves ~500 KB
         rm -rf "$repo/.git" "$repo/.gitignore" 2>/dev/null
         echo -e "  $GR✅  FedoraTahoe-GDM engine ready (works offline from now on)$C$C"
