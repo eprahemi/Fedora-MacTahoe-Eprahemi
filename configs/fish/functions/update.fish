@@ -185,36 +185,47 @@ function _update_low_battery --description 'is the machine on dying battery?'
     end
 end
 
-# ── 5-second animated loading line (spinner + rotating status text) ──
+# ── animated loading line: spinner + rotating status + filling progress bar ──
+# Usage: _update_loading [seconds]  (default 5; update full uses 8)
 # Ctrl+C mid-animation: clears the line + cancels cleanly (no leftover text,
 # no blinking cursor stuck inside the prompt). Verified --on-signal behavior.
-function _update_loading --description 'cool little loading ritual before the verdict'
+function _update_loading --description 'loading ritual; optional seconds (default 5)'
+    set -l seconds 5
+    if set -q argv[1]; and string match -qr '^[0-9]+$' -- $argv[1]
+        set seconds $argv[1]
+    end
     set -g __update_abort 0
     function __update_clear --on-signal INT
         set -g __update_abort 1
-        printf '\e[?25h\r  %*s\r' 48 ''
+        printf '\e[?25h\r  %*s\r' 80 ''
     end
     printf '\e[?25l'
     set -l frames ⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏
-    set -l msgs "Contacting GitHub..." "Fetching the manifest..." "Comparing versions..." "Checking your setup..." "Almost there..."
+    set -l msgs "Contacting GitHub..." "Fetching the manifest..." "Comparing versions..." "Scanning your setup..." "Preparing the installer..." "Almost there..."
+    set -l ticks (math "$seconds * 5")
+    set -l step (math "$ticks / "(count $msgs))
+    if test $step -lt 1
+        set step 1
+    end
     set -l i 1
     set -l j 1
-    for t in (seq 1 25)
+    for t in (seq 1 $ticks)
         if test $__update_abort -eq 1
             break
         end
-        printf '\r  \e[1;36m%s\e[0m  \e[1;37m%s\e[0m' $frames[$i] $msgs[$j]
+        set -l pct (math "$t * 100 / $ticks")
+        set -l filled (math -s0 "$pct * 20 / 100")
+        printf '\r  \e[1;36m%s\e[0m  \e[1;37m%s\e[0m  \e[2;37m[\e[0m\e[1;36m%s\e[0m\e[2;37m%s\e[0m\e[2;37m]\e[0m \e[1;33m%3d%%\e[0m' $frames[$i] $msgs[$j] (string repeat -n $filled '█') (string repeat -n (math -s0 "20 - $filled") '░') $pct
         sleep 0.2
         set i (math "$i % 10 + 1")
-        if test (math "$t % 5") -eq 0
-            set j (math "$j + 1")
-            if test $j -gt (count $msgs)
-                set j 1
+        if test (math "$t % $step") -eq 0
+            if test $j -lt (count $msgs)
+                set j (math "$j + 1")
             end
         end
     end
     functions -e __update_clear 2>/dev/null
-    printf '\e[?25h\r  %*s\r' 48 ''
+    printf '\e[?25h\r  %*s\r' 80 ''
     if test $__update_abort -eq 1
         set -e __update_abort
         printf "\n  \e[1;31m✘ Cancelled.\e[0m\n"
@@ -438,12 +449,17 @@ function update --description 'Fedora MacTahoe update — Kitty only (menu: quic
                 _update_configs_mode
                 return $status
             case full
-                if not _update_loading
+                if not _update_loading 8
                     return 1
                 end
-                printf "\n  \e[1;33mFull reinstall — re-runs everything from scratch\e[0m\n"
-                printf "  \e[1;33mand may ask for your password.\e[0m\n"
-                read -l fc -P "  Continue? [y/N]: "
+                printf "\n"
+                _update_box_top
+                _update_box_text "Full reinstall — re-runs everything from scratch" "1;33"
+                _update_box_text "and may ask for your password." "1;33"
+                _update_box_text ""
+                _update_box_text "Continue?   y = yes   n = no (default)" "1;37"
+                _update_box_bottom
+                read -l fc -P "  Your choice [y/N]: "
                 if test $status -ne 0
                     printf "\n  \e[1;31m✘ Cancelled.\e[0m\n"
                     return 1
@@ -556,8 +572,14 @@ except Exception:
 
     # ── battery guard ──
     if test (_update_low_battery) -eq 1
-        printf "\n  \e[1;31m⚠ Battery is below 20% and unplugged — an update can die mid-way.\e[0m\n"
-        read -l bc -P "  Continue anyway? [y/N]: "
+        printf "\n"
+        _update_box_top
+        _update_box_text "Battery is below 20% and unplugged —" "1;31"
+        _update_box_text "an update can die mid-way." "1;31"
+        _update_box_text ""
+        _update_box_text "Continue anyway?   y = yes   n = no (default)" "1;37"
+        _update_box_bottom
+        read -l bc -P "  Your choice [y/N]: "
         if test $status -ne 0
             printf "\n  \e[1;31m✘ Cancelled.\e[0m\n"
             return 1
@@ -591,9 +613,14 @@ except Exception:
             case 1
                 set action quick
             case 2
-                printf "\n  \e[1;33mFull reinstall — re-runs everything from scratch\e[0m\n"
-                printf "  \e[1;33mand may ask for your password.\e[0m\n"
-                read -l fc -P "  Continue? [y/N]: "
+                printf "\n"
+                _update_box_top
+                _update_box_text "Full reinstall — re-runs everything from scratch" "1;33"
+                _update_box_text "and may ask for your password." "1;33"
+                _update_box_text ""
+                _update_box_text "Continue?   y = yes   n = no (default)" "1;37"
+                _update_box_bottom
+                read -l fc -P "  Your choice [y/N]: "
                 if test $status -ne 0
                     printf "\n  \e[1;31m✘ Cancelled.\e[0m\n"
                     return 1
