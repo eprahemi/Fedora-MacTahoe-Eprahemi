@@ -19,7 +19,9 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
 
     if set -q _flag_help
         printf 'kernels - Clean up old Fedora kernels and GRUB entries\n\n'
-        printf 'Usage: kernels [OPTIONS]\n\n'
+        printf 'Usage: kernels [COMMAND] [OPTIONS]\n\n'
+        printf 'Commands:\n'
+        printf '  status      Show kernel state (running, latest, reboot needed) — read-only, no sudo\n\n'
         printf 'Options:\n'
         printf '  -n, --dry-run   Show what would be done without making changes\n'
         printf '  -h, --help      Show this help message\n\n'
@@ -30,6 +32,174 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
         printf '  * Double confirmation before any changes\n'
         printf '  * Reboot prompt if not on latest kernel\n'
         printf '  * GRUB indices validated before removal\n'
+        return 0
+    end
+
+    # ══════════════════════════════════════════════════════════
+    # STATUS subcommand — read-only kernel state, no sudo
+    # ══════════════════════════════════════════════════════════
+    if set -q argv[1]; and contains -- $argv[1] status st
+        set -l running (uname -r 2>/dev/null | string trim)
+
+        # Installed kernel versions
+        set -l pkgs (rpm -qa kernel 2>/dev/null)
+        set -l seen
+        set -l vers
+        for p in $pkgs
+            set -l v (string replace -r '^kernel(-[a-z]+)*-' '' -- $p)
+            if test -n "$v"; and not contains -- $v $seen
+                set -a seen $v
+                set -a vers $v
+            end
+        end
+        set vers (printf '%s\n' $vers 2>/dev/null | sort -V)
+        set -l kcount (count $vers)
+        set -l latest $vers[-1]
+        if test -z "$latest"
+            set latest "—"
+        end
+
+        # Reboot needed?
+        set -l rn_txt "No — you're on the latest"
+        set -l rn_col $G
+        if test -n "$running"; and test "$running" != "$latest"
+            set rn_txt "YES — reboot to use the latest"
+            set rn_col $R
+        end
+
+        # Uptime
+        set -l up_txt "—"
+        set -l up_raw (cat /proc/uptime 2>/dev/null)
+        if test -n "$up_raw"
+            set -l up_secs (string replace -r '\..*' '' -- (string split ' ' -- "$up_raw")[1])
+            if test -n "$up_secs"; and string match -qr '^[0-9]+$' -- "$up_secs"
+                set -l d (string replace -r '\..*' '' -- (math "$up_secs / 86400" 2>/dev/null))
+                set -l h (string replace -r '\..*' '' -- (math "($up_secs % 86400) / 3600" 2>/dev/null))
+                set -l m (string replace -r '\..*' '' -- (math "($up_secs % 3600) / 60" 2>/dev/null))
+                if test -n "$d"; and test "$d" -gt 0
+                    set up_txt "$d days, $h hours"
+                else if test -n "$h"; and test "$h" -gt 0
+                    set up_txt "$h hours, $m mins"
+                else
+                    set up_txt "$m mins"
+                end
+            end
+        end
+
+        # Boot partition usage
+        set -l boot_txt "—"
+        set -l boot_row (df -h /boot 2>/dev/null | awk 'NR==2 {print $3 " used / " $2}')
+        if test -n "$boot_row"
+            set boot_txt "$boot_row"
+        end
+
+        # GRUB default index
+        set -l grub_txt "—"
+        if command -q grubby
+            set -l gd (grubby --default-index 2>/dev/null | string trim)
+            if test -z "$gd"; and test -r /boot/grub2/grubenv
+                set gd (string replace 'saved_entry=' '' -- (grep -m1 '^saved_entry=' /boot/grub2/grubenv 2>/dev/null) | string trim)
+            end
+            if test -n "$gd"
+                set grub_txt "index $gd"
+            end
+        end
+
+        # ── Draw box (62-char inner width) ──
+        set -l blank (printf '%*s' 62 '')
+        printf '\n'
+        printf '  %s╔══════════════════════════════════════════════════════════╗%s\n' $BOLD $N
+        set -l hdr "KERNEL STATUS"
+        set -l hl (string length -- "$hdr")
+        set -l hleft (math "(62 - $hl - 1) / 2")
+        set -l hright (math "62 - $hl - $hleft")
+        printf '  %s║%s%*s%s%s%s%*s%s║%s\n' $BOLD $N $hleft "" $BOLDG $hdr $N $hright "" $BOLD $N
+        printf '  %s╠══════════════════════════════════════════════════════════╣%s\n' $BOLD $N
+        printf '  %s║%s%s%s║%s\n' $BOLD $N $blank $BOLD $N
+
+        # Running kernel
+        set -l lab "  Running kernel:    "
+        set -l plain "$lab$running"
+        set -l pad (math "62 - "(string length -- "$plain"))
+        printf '  %s║%s%s%s%s%s%*s%s║%s\n' $BOLD $N $lab $W $running $N $pad "" $BOLD $N
+
+        # Latest installed
+        set -l lab "  Latest installed:  "
+        set -l plain "$lab$latest"
+        set -l pad (math "62 - "(string length -- "$plain"))
+        printf '  %s║%s%s%s%s%s%*s%s║%s\n' $BOLD $N $lab $W $latest $N $pad "" $BOLD $N
+
+        # Reboot needed
+        set -l lab "  Reboot needed:     "
+        set -l plain "$lab$rn_txt"
+        set -l pad (math "62 - "(string length -- "$plain"))
+        printf '  %s║%s%s%s%s%s%*s%s║%s\n' $BOLD $N $lab $rn_col $rn_txt $N $pad "" $BOLD $N
+
+        # Uptime
+        set -l lab "  Uptime:            "
+        set -l plain "$lab$up_txt"
+        set -l pad (math "62 - "(string length -- "$plain"))
+        printf '  %s║%s%s%s%s%s%*s%s║%s\n' $BOLD $N $lab $W $up_txt $N $pad "" $BOLD $N
+
+        # Boot partition
+        set -l lab "  Boot partition:    "
+        set -l plain "$lab$boot_txt"
+        set -l pad (math "62 - "(string length -- "$plain"))
+        printf '  %s║%s%s%s%s%s%*s%s║%s\n' $BOLD $N $lab $W $boot_txt $N $pad "" $BOLD $N
+
+        # GRUB default
+        set -l lab "  GRUB default:      "
+        set -l plain "$lab$grub_txt"
+        set -l pad (math "62 - "(string length -- "$plain"))
+        printf '  %s║%s%s%s%s%s%*s%s║%s\n' $BOLD $N $lab $W $grub_txt $N $pad "" $BOLD $N
+
+        printf '  %s║%s%s%s║%s\n' $BOLD $N $blank $BOLD $N
+
+        # Installed kernels list
+        set -l khdr "INSTALLED KERNELS ($kcount):"
+        set -l plain "  $khdr"
+        set -l pad (math "62 - "(string length -- "$plain"))
+        printf '  %s║%s  %s%s%s%*s%s║%s\n' $BOLD $N $BOLDG $khdr $N $pad "" $BOLD $N
+        for v in $vers
+            set -l mark "  "
+            set -l tag ""
+            set -l tagc $D
+            if string match -q "*rescue*" -- $v
+                set mark "- "
+                set tagc $M
+                set tag "rescue"
+            else if test "$v" = "$running"; and test "$v" = "$latest"
+                set mark "* "
+                set tagc $G
+                set tag "running, latest"
+            else if test "$v" = "$running"
+                set mark "* "
+                set tagc $Y
+                set tag "running"
+            else if test "$v" = "$latest"
+                set mark "! "
+                set tagc $G
+                set tag "latest"
+            else
+                set mark "- "
+                set tagc $R
+                set tag "OLD"
+            end
+            set -l plain "    $mark$v   ($tag)"
+            set -l pad (math "62 - "(string length -- "$plain"))
+            printf '  %s║%s    %s%s%s%s%s   (%s%s%s)%s%*s%s║%s\n' $BOLD $N $tagc $mark $N $W $v $N $tagc $tag $N $pad "" $BOLD $N
+        end
+
+        printf '  %s║%s%s%s║%s\n' $BOLD $N $blank $BOLD $N
+
+        # TIP
+        set -l tip "TIP: run kernels --dry-run to preview cleanup"
+        set -l plain "  $tip"
+        set -l pad (math "62 - "(string length -- "$plain"))
+        printf '  %s║%s  %s%s%s%*s%s║%s\n' $BOLD $N $D $tip $N $pad "" $BOLD $N
+
+        printf '  %s╚══════════════════════════════════════════════════════════╝%s\n' $BOLD $N
+        printf '\n'
         return 0
     end
 
