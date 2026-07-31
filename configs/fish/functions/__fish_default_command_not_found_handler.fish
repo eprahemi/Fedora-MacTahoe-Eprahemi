@@ -64,6 +64,11 @@ for m in matches:
             echo -e "  \033[38;5;248m  Use \033[1;36msmb connect --scan\033[38;5;248m to auto-detect SMB servers.\033[0m" >&2
             echo -e "  \033[38;5;248m  Type \033[1;36mfunc\033[38;5;248m to see all available MacTahoe functions.\033[0m" >&2
             return 0
+        case kernel
+            echo -e "  \033[1;33mDid you mean \033[1;36mkernels\033[1;33m?\033[0m" >&2
+            echo -e "  \033[38;5;248m  Use \033[1;36mkernels clean\033[38;5;248m to remove old kernels, \033[1;36mkernels status\033[38;5;248m to check.\033[0m" >&2
+            echo -e "  \033[38;5;248m  Type \033[1;36mfunc\033[38;5;248m to see all available MacTahoe functions.\033[0m" >&2
+            return 0
     end
 
     # ── Show suggestions ──

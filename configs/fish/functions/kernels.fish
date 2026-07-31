@@ -39,8 +39,6 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
         printf 'Options:\n'
         printf '  -n, --dry-run   Show what would be done without making changes\n'
         printf '  -h, --help      Show this help message\n\n'
-        printf 'Aliases:\n'
-        printf '  kernel, k    Same as kernels\n\n'
         printf 'Safety features:\n'
         printf '  * Running kernel is always protected\n'
         printf '  * Rescue kernels are always protected\n'
