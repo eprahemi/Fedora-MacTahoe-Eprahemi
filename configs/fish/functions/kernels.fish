@@ -13,6 +13,18 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
     set -l BOLDR (set_color --bold red)
     set -l BOLDX (set_color --bold brblack)
 
+    # ── Detect clean subcommand BEFORE argparse (argparse can't handle -clean/-cl) ──
+    set -l want_clean 0
+    if set -q argv[1]; and contains -- $argv[1] clean cl -clean --clean -cl --cl
+        set want_clean 1
+        set -e argv[1]
+    end
+
+    # ── Bare `kernels` (no command) → show help ──
+    if test $want_clean -eq 0; and test (count $argv) -eq 0
+        set argv -h
+    end
+
     # ── Argparse ──
     argparse 'n/dry-run' 'h/help' -- $argv
     or return 1
@@ -21,10 +33,14 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
         printf 'kernels - Clean up old Fedora kernels and GRUB entries\n\n'
         printf 'Usage: kernels [COMMAND] [OPTIONS]\n\n'
         printf 'Commands:\n'
-        printf '  status      Show kernel state (running, latest, reboot needed) — read-only, no sudo\n\n'
+        printf '  clean       Remove old kernels + GRUB entries (also: -clean --clean -cl --cl)\n'
+        printf '  status      Show kernel state (running, latest, reboot needed) — read-only, no sudo\n'
+        printf '  (no args)   Show this help message\n\n'
         printf 'Options:\n'
         printf '  -n, --dry-run   Show what would be done without making changes\n'
         printf '  -h, --help      Show this help message\n\n'
+        printf 'Aliases:\n'
+        printf '  kernel, k    Same as kernels\n\n'
         printf 'Safety features:\n'
         printf '  * Running kernel is always protected\n'
         printf '  * Rescue kernels are always protected\n'
@@ -206,6 +222,16 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
     set -l dry_run 0
     if set -q _flag_dry_run
         set dry_run 1
+    end
+
+    # ── Guard: cleanup only runs with `clean` subcommand or --dry-run ──
+    # (bare `kernels` shows help; `kernels -n` is safe dry-run preview)
+    if test $want_clean -eq 0; and test $dry_run -eq 0
+        printf '\n  %sUsage:%s kernels clean   (or: -clean --clean -cl --cl)\n' $Y $N
+        printf '  %s       %s kernels status   (read-only state)\n' $Y $N
+        printf '  %s       %s kernels -h       (full help)\n' $Y $N
+        printf '\n'
+        return 0
     end
 
     # ── Pre-checks ──
