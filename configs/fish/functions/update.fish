@@ -186,12 +186,23 @@ function _update_low_battery --description 'is the machine on dying battery?'
 end
 
 # ── 5-second animated loading line (spinner + rotating status text) ──
+# Ctrl+C mid-animation: clears the line + cancels cleanly (no leftover text,
+# no blinking cursor stuck inside the prompt). Verified --on-signal behavior.
 function _update_loading --description 'cool little loading ritual before the verdict'
+    set -g __update_abort 0
+    function __update_clear --on-signal INT
+        set -g __update_abort 1
+        printf '\e[?25h\r  %*s\r' 48 ''
+    end
+    printf '\e[?25l'
     set -l frames ⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏
     set -l msgs "Contacting GitHub..." "Fetching the manifest..." "Comparing versions..." "Checking your setup..." "Almost there..."
     set -l i 1
     set -l j 1
     for t in (seq 1 25)
+        if test $__update_abort -eq 1
+            break
+        end
         printf '\r  \e[1;36m%s\e[0m  \e[1;37m%s\e[0m' $frames[$i] $msgs[$j]
         sleep 0.2
         set i (math "$i % 10 + 1")
@@ -202,7 +213,15 @@ function _update_loading --description 'cool little loading ritual before the ve
             end
         end
     end
-    printf '\r  %*s\r' 48 ''
+    functions -e __update_clear 2>/dev/null
+    printf '\e[?25h\r  %*s\r' 48 ''
+    if test $__update_abort -eq 1
+        set -e __update_abort
+        printf "\n  \e[1;31m✘ Cancelled.\e[0m\n"
+        return 1
+    end
+    set -e __update_abort
+    return 0
 end
 
 # ── update check: status at a glance, no prompts ──
@@ -236,7 +255,9 @@ except Exception:
         end
     end
     printf "\n"
-    _update_loading
+    if not _update_loading
+        return 1
+    end
     _update_header "FEDORA MACTAHOE UPDATER"
     _update_box_text "Installed:  $current_ver"
     _update_box_text "Available:  $latest_ver"
@@ -417,7 +438,9 @@ function update --description 'Fedora MacTahoe update — Kitty only (menu: quic
                 _update_configs_mode
                 return $status
             case full
-                _update_loading
+                if not _update_loading
+                    return 1
+                end
                 printf "\n  \e[1;33mFull reinstall — re-runs everything from scratch\e[0m\n"
                 printf "  \e[1;33mand may ask for your password.\e[0m\n"
                 read -l fc -P "  Continue? [y/N]: "
@@ -483,7 +506,9 @@ except Exception:
     end
 
     # ── the ritual: 5 seconds of loading, then the verdict ──
-    _update_loading
+    if not _update_loading
+        return 1
+    end
 
     # ── header ──
     printf "\n"
