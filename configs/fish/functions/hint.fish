@@ -158,8 +158,8 @@ function hint -d 'Interactive teaching: kitty v2, fish functions, whats-new + li
         __hint_line "  • kernels.fish: help box redesigned + bugs fixed" $__hint_W
         __hint_line "  • kitty listen_on fixed: unix:/tmp/kitty" $__hint_W
         __hint_line "    (TMPDIR trap: env vars expand only if they exist)" $__hint_D
-        __hint_line "  • old configs backed up in:" $__hint_W
-        __hint_line "    ~/Documents/Kitty-Fastfetch-Backup/" $__hint_D
+        __hint_line "  • ktheme: kitty colors auto-match your wallpaper" $__hint_W
+        __hint_line "    (extracts palette, live reload, watcher on/off)" $__hint_D
         __hint_line "  • remote control works: kitty @ from any terminal" $__hint_W
         __hint_line "  • hint.fish: this teaching function (new)" $__hint_W
         __hint_blank
