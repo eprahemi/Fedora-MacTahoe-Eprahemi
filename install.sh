@@ -2168,18 +2168,18 @@ desk_t="        ◆  DESKTOP WALLPAPER?  ◆"
 desk1="  Install the custom Himeno Fedora desktop wallpaper?"
     echo -e "  ${CYAN}║${NC}${desk1}$(printf '%*s' $((62 - ${#desk1})) '')${CYAN}║${NC}"
     echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-desk2="    Yes  — Set Himeno Fedora.jpg as your desktop"
-    echo -e "  ${CYAN}║${NC}    ${BOLD}${GREEN}Y${NC}${BOLD}es${NC}  — Set Himeno Fedora.jpg as your desktop$(printf '%*s' $((62 - ${#desk2})) '')${CYAN}║${NC}"
-desk3="    no   — Keep current wallpaper"
-    echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}n${NC}${BOLD}o${NC}   — Keep current wallpaper$(printf '%*s' $((62 - ${#desk3})) '')${CYAN}║${NC}"
+desk2="    no   — Keep current wallpaper"
+    echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}n${NC}${BOLD}o${NC}   — Keep current wallpaper$(printf '%*s' $((62 - ${#desk2})) '')${CYAN}║${NC}"
+desk3="    Yes  — Set Himeno Fedora.jpg as your desktop"
+    echo -e "  ${CYAN}║${NC}    ${BOLD}${GREEN}Y${NC}${BOLD}es${NC}  — Set Himeno Fedora.jpg as your desktop$(printf '%*s' $((62 - ${#desk3})) '')${CYAN}║${NC}"
     echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
 desk4="  (Login screen wallpaper has its own prompt below)"
     echo -e "  ${CYAN}║${NC}${DIM}${desk4}$(printf '%*s' $((62 - ${#desk4})) '')${NC}${CYAN}║${NC}"
-desk5="  Press Enter for default (Yes)"
+desk5="  Press Enter for default (No)"
     echo -e "  ${CYAN}║${NC}${DIM}${desk5}$(printf '%*s' $((62 - ${#desk5})) '')${NC}${CYAN}║${NC}"
     echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
     echo ""
-    if confirm "Desktop wallpaper? [Y/n]: " Y; then
+    if confirm "Desktop wallpaper? [y/N]: " N; then
       INSTALL_DESKTOP_WALLPAPER="true"
       echo -e "  ${GREEN}→ Desktop wallpaper will be installed${NC}"
     else
@@ -2466,7 +2466,7 @@ EOF
     sudo mkdir -p "$wp_norm"
 
     # Copy desktop wallpapers (excluding Himeno — lives in ~/.local/share/backgrounds/)
-    if [ "${INSTALL_DESKTOP_WALLPAPER:-true}" = "true" ]; then
+    if [ "${INSTALL_DESKTOP_WALLPAPER:-false}" = "true" ]; then
       for img in "$wp/desktop/"*; do
         [ -f "$img" ] || continue
         bname="${img##*/}"
@@ -2528,7 +2528,7 @@ EOF
   fi
 
   # Set active desktop wallpaper only if user opted in
-  if [ "${INSTALL_DESKTOP_WALLPAPER:-true}" = "true" ]; then
+  if [ "${INSTALL_DESKTOP_WALLPAPER:-false}" = "true" ]; then
     if [ -f "$HOME/.local/share/backgrounds/Himeno Fedora.jpg" ]; then
       gsettings set org.gnome.desktop.background picture-uri "file://$HOME/.local/share/backgrounds/Himeno Fedora.jpg" 2>/dev/null || true
       gsettings set org.gnome.desktop.background picture-uri-dark "file://$HOME/.local/share/backgrounds/Himeno Fedora.jpg" 2>/dev/null || true

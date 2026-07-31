@@ -433,18 +433,18 @@ echo -e "  ${CYAN}║${NC}                                                      
 dw2="  Install the custom Himeno Fedora desktop wallpaper?"
 echo -e "  ${CYAN}║${NC}${dw2}$(printf '%*s' $((62 - ${#dw2})) '')${CYAN}║${NC}"
 echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-dw3="    Y  — Set Himeno Fedora.jpg as your desktop"
+dw3="    n   — Keep current wallpaper"
 echo -e "  ${CYAN}║${NC}${dw3}$(printf '%*s' $((62 - ${#dw3})) '')${CYAN}║${NC}"
-dw4="    n   — Keep current wallpaper"
+dw4="    Y  — Set Himeno Fedora.jpg as your desktop"
 echo -e "  ${CYAN}║${NC}${dw4}$(printf '%*s' $((62 - ${#dw4})) '')${CYAN}║${NC}"
 echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
 dw5="  (Login screen wallpaper has its own prompt below)"
 echo -e "  ${CYAN}║${NC}${dw5}$(printf '%*s' $((62 - ${#dw5})) '')${CYAN}║${NC}"
-dw6="  Press Enter for default (Yes)"
+dw6="  Press Enter for default (No)"
 echo -e "  ${CYAN}║${NC}${dw6}$(printf '%*s' $((62 - ${#dw6})) '')${CYAN}║${NC}"
 echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
 echo ""
-if confirm "Desktop wallpaper? [Y/n]: " Y; then
+if confirm "Desktop wallpaper? [y/N]: " N; then
   export INSTALL_DESKTOP_WALLPAPER="true"
   echo -e "  ${GREEN}→ Desktop wallpaper will be installed${NC}"
 else
