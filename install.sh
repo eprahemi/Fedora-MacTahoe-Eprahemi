@@ -230,6 +230,7 @@ backup_dconf() {
   # Restore anytime with:  dconf load / < ~/.cache/fedora-mactahoe/backups/dconf-*.conf
   local bk_dir="$HOME/.cache/fedora-mactahoe/backups"
   mkdir -p "$bk_dir" 2>/dev/null || true
+  chmod 700 "$bk_dir" 2>/dev/null || true
   local bk_file="$bk_dir/dconf-$(date +%Y%m%d-%H%M%S).conf"
   if dconf dump / > "$bk_file" 2>/dev/null; then
     chmod 600 "$bk_file" 2>/dev/null || true
@@ -1970,7 +1971,10 @@ apply_configs() {
     # Auto-backup the live fish config before overwriting (keeps last 10)
     if [ -d "$HOME/.config/fish" ]; then
       mkdir -p "$HOME/.cache/fedora-mactahoe/backups"
-      tar czf "$HOME/.cache/fedora-mactahoe/backups/fish-$(date +%Y%m%d-%H%M%S).tar.gz" -C "$HOME/.config" fish 2>/dev/null || true
+      chmod 700 "$HOME/.cache/fedora-mactahoe/backups" 2>/dev/null || true
+      local snap="$HOME/.cache/fedora-mactahoe/backups/fish-$(date +%Y%m%d-%H%M%S).tar.gz"
+      tar czf "$snap" -C "$HOME/.config" fish 2>/dev/null || true
+      chmod 600 "$snap" 2>/dev/null || true
       ls -1t "$HOME/.cache/fedora-mactahoe/backups"/fish-*.tar.gz 2>/dev/null | tail -n +11 | xargs -r rm -f 2>/dev/null || true
     fi
     mkdir -p "$HOME/.config/fish/functions"

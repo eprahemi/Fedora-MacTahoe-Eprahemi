@@ -513,7 +513,10 @@ function _update_configs_mode --description 'refresh kitty, fish, starship, gtk,
     set -l bk "$HOME/.cache/fedora-mactahoe/backups"
     if test -d "$HOME/.config/fish"
         mkdir -p "$bk"
-        tar czf "$bk/fish-"(date +%Y%m%d-%H%M%S)".tar.gz" -C "$HOME/.config" fish 2>/dev/null
+        chmod 700 "$bk" 2>/dev/null
+        set -l snap "$bk/fish-"(date +%Y%m%d-%H%M%S)".tar.gz"
+        tar czf "$snap" -C "$HOME/.config" fish 2>/dev/null
+        chmod 600 "$snap" 2>/dev/null
         for old in (ls -1t "$bk"/fish-*.tar.gz 2>/dev/null | tail -n +11)
             rm -f "$old"
         end
