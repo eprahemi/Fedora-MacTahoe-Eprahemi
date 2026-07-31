@@ -21,6 +21,78 @@ function _update_fetch_manifest --description 'fetch the version manifest from G
     test -s "$cache_dir/latest-manifest.json"
 end
 
+# ── sha256 hex of a file (empty on failure) — the fingerprint ──
+function _update_sha256 --description 'sha256 hex of a file (empty on failure)'
+    set -l file "$argv[1]"
+    if not test -f "$file"
+        return 1
+    end
+    if not command -q sha256sum
+        return 1
+    end
+    sha256sum "$file" 2>/dev/null | string split ' ' -f1
+end
+
+# ── pinned sha256 for a key in the cached manifest (bootstrap_sha256 / update_sha256) ──
+function _update_manifest_hash --description 'pinned sha256 for a key in the cached manifest'
+    set -l key "$argv[1]"
+    set -l man "$HOME/.cache/fedora-mactahoe/latest-manifest.json"
+    if not test -f "$man"
+        return 1
+    end
+    python3 -c 'import json,sys
+try:
+    print(json.load(open(sys.argv[1])).get(sys.argv[2], ""))
+except Exception:
+    pass' "$man" "$key"
+end
+
+# ── fingerprint trust: first run saves silently; a change asks for trust ──
+# returns 0 = safe to run the installer
+function _update_fingerprint_check --description 'trust-store check for the installer hash'
+    set -l hash "$argv[1]"
+    set -l trust_file "$HOME/.cache/fedora-mactahoe/trusted-bootstrap-hash"
+    mkdir -p "$HOME/.cache/fedora-mactahoe"
+    if not test -f "$trust_file"
+        printf '%s\n' "$hash" > "$trust_file"
+        chmod 600 "$trust_file"
+        printf "\n  \e[2;37mFirst verified run — installer fingerprint %s… saved.\e[0m\n" (string sub -l 16 -- $hash)
+        return 0
+    end
+    set -l old (string trim < "$trust_file")
+    if test "$old" = "$hash"
+        return 0
+    end
+    printf "\n"
+    _update_box_top
+    _update_box_title "INSTALLER FINGERPRINT CHANGED" "1;33"
+    _update_box_rule
+    _update_box_text "The installer's fingerprint is new:" "1;37"
+    _update_box_text "  before  "(string sub -l 16 -- $old)"…" "2;37"
+    _update_box_text "  now     "(string sub -l 16 -- $hash)"…" "1;37"
+    _update_box_text ""
+    _update_box_text "Normal when a new version is released." "1;37"
+    _update_box_text "Could also mean a tampered download." "1;33"
+    _update_box_text ""
+    _update_box_text "Trust this new fingerprint?" "1;37"
+    _update_box_text "y = yes   n = no (default)" "1;37"
+    _update_box_bottom
+    read -l fpr -P "  Your choice [y/N]: "
+    if test $status -ne 0
+        printf "\n  \e[1;31m✘ Cancelled.\e[0m\n"
+        return 1
+    end
+    switch $fpr
+        case y Y yes Yes YES
+            printf '%s\n' "$hash" > "$trust_file"
+            chmod 600 "$trust_file"
+            return 0
+        case '*'
+            printf "\n  \e[1;31m✘ Refused — the installer was NOT run.\e[0m\n"
+            return 1
+    end
+end
+
 # ── diff installed state against the manifest ──
 # emits: LATEST=… HASUPDATE=0|1  then CH=… rows and ST=… rows
 function _update_parse --description 'compare installed state to the manifest'
@@ -330,20 +402,69 @@ function _update_usage --description 'the help box'
     return 0
 end
 
-# ── run bootstrap in incremental or full mode ──
-function _update_run --description 'run the real installer; log the outcome'
+# ── run bootstrap in incremental or full mode; log the outcome ──
+# Supply-chain check first: the file must match the sha256 pinned in
+# updates.json (same repo, same commit), and a changed fingerprint
+# needs a human yes before anything is executed.
+function _update_run --description 'fetch + verify + run the real installer; log the outcome'
     set -l mode $argv[1]
     set -l label $argv[2]
     set -l frm $argv[3]
     set -l to $argv[4]
+
+    # fresh manifest — it pins the hash of the very file we are about to run
+    if not _update_fetch_manifest
+        printf "\n  \e[1;31m✘ Could not reach GitHub — check your connection.\e[0m\n"
+        return 1
+    end
+    set -l expected (_update_manifest_hash bootstrap_sha256)
+    if test -z "$expected"
+        printf "\n  \e[1;31m✘ The version manifest has no pinned fingerprint.\e[0m\n"
+        return 1
+    end
+
     printf "\n  \e[1;37mFetching the installer from GitHub...\e[0m\n"
-    set -l url "https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/bootstrap.sh"
+    set -l base "https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main"
+    set -l tmpfile (mktemp /tmp/mactahoe-bootstrap.XXXXXX)
+    curl -fsSL --max-time 120 "$base/bootstrap.sh" -o "$tmpfile" 2>/dev/null
+    if test $status -ne 0
+        rm -f "$tmpfile"
+        printf "\n  \e[1;31m✘ Could not download the installer.\e[0m\n"
+        return 1
+    end
+    set -l got (_update_sha256 "$tmpfile")
+    if test -z "$got"; or not test "$got" = "$expected"
+        rm -f "$tmpfile"
+        printf "\n"
+        _update_box_top
+        _update_box_title "SECURITY CHECK FAILED" "1;31"
+        _update_box_rule
+        _update_box_text "The installer's fingerprint does not match" "1;31"
+        _update_box_text "the one pinned in the version manifest." "1;31"
+        _update_box_text ""
+        _update_box_text "This usually means a corrupted download" "1;33"
+        _update_box_text "or a tampered file. Nothing was run." "1;33"
+        _update_box_text ""
+        _update_box_text "  got   "(string sub -l 16 -- $got)"…" "2;37"
+        _update_box_text "  want  "(string sub -l 16 -- $expected)"…" "2;37"
+        _update_box_bottom
+        printf "\n"
+        return 1
+    end
+
+    # human check: first run saves the fingerprint, changes ask for trust
+    if not _update_fingerprint_check "$expected"
+        rm -f "$tmpfile"
+        return 1
+    end
+
     if test "$mode" = full
-        env UPDATE_MODE=full curl -fsSL --max-time 120 "$url" | bash
+        env UPDATE_MODE=full bash "$tmpfile"
     else
-        env UPDATE_MODE=incremental curl -fsSL --max-time 120 "$url" | bash
+        env UPDATE_MODE=incremental bash "$tmpfile"
     end
     set -l code $status
+    rm -f "$tmpfile"
     if test $code -eq 0
         _update_log_add $label $frm $to ok
         echo "$to" > "$HOME/.cache/fedora-mactahoe/last-notified-version"

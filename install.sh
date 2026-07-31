@@ -1962,6 +1962,9 @@ apply_configs() {
 
   # Guard hook (root-owned) — /etc/fish/config.fish warns in every terminal if
   # the MacTahoe fish config is ever deleted. A normal user cannot remove it.
+  # The recovery one-liner fingerprint-checks update.fish against updates.json
+  # before it is restored (sha256 pinned in the manifest — same supply-chain
+  # rule as _update_run in update.fish).
   if [ -f /etc/fish/config.fish ] && sudo -n true 2>/dev/null; then
     if ! grep -q "fedora-mactahoe-guard" /etc/fish/config.fish 2>/dev/null; then
       sudo tee -a /etc/fish/config.fish >/dev/null <<'EOF'
@@ -1970,7 +1973,8 @@ apply_configs() {
 if test -d "$HOME/.cache/fedora-mactahoe"; and not test -f "$HOME/.config/fish/functions/update.fish"
     printf '\n  [!] Fedora MacTahoe fish config is missing.\n'
     printf '      Restore it with this one line (any terminal):\n'
-    printf '      mkdir -p ~/.config/fish/functions && curl -fsSL https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/configs/fish/functions/update.fish -o ~/.config/fish/functions/update.fish && env KITTY_PID=1 fish -c "source ~/.config/fish/functions/update.fish; update configs"\n\n'
+    printf '      mkdir -p ~/.config/fish/functions ~/.cache/fedora-mactahoe; and set -l m ~/.cache/fedora-mactahoe/latest-manifest.json; and curl -fsSL --max-time 30 https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/updates.json -o $m; and curl -fsSL --max-time 30 https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/configs/fish/functions/update.fish -o ~/.cache/fedora-mactahoe/update.fish; and test (sha256sum ~/.cache/fedora-mactahoe/update.fish | string split " " -f1) = (python3 -c \'import json,sys;print(json.load(open(sys.argv[1])).get("update_sha256",""))\' $m); and mv ~/.cache/fedora-mactahoe/update.fish ~/.config/fish/functions/update.fish; and env KITTY_PID=1 fish -c "source ~/.config/fish/functions/update.fish; update configs"; or printf "      [!] fingerprint check failed — nothing was restored.\\\n"\n\n'
+    printf '      (update.fish is fingerprint-checked before it is restored)\n'
 end
 # ── end of fedora-mactahoe-guard ──
 EOF
