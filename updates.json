@@ -1,6 +1,13 @@
 {
-  "latest_version": "1.9",
+  "latest_version": "2.0",
   "changelog": [
+    {
+      "version": "2.0",
+      "changes": [
+        "Fish config safety net — every config refresh auto-backups your live fish folder first (last 10 snapshots kept)",
+        "The can't-lose-it guard — a root-owned warning in /etc/fish/config.fish: if your fish config is ever deleted, every terminal shows the exact one-line recovery"
+      ]
+    },
     {
       "version": "1.9",
       "changes": [
@@ -106,7 +113,7 @@
     "apply_desktop_entries": "1.0",
     "ensure_celluloid_default": "1.0",
     "configure_nautilus_defaults": "1.0",
-    "apply_configs": "1.9",
+    "apply_configs": "1.10",
     "apply_dconf": "1.0",
     "optimize_system_resources": "1.0",
     "apply_wallpapers": "1.1",

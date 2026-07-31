@@ -1946,12 +1946,35 @@ apply_configs() {
 
   # Fish
   if [ -f "$cfg/fish/config.fish" ]; then
+    # Auto-backup the live fish config before overwriting (keeps last 10)
+    if [ -d "$HOME/.config/fish" ]; then
+      mkdir -p "$HOME/.cache/fedora-mactahoe/backups"
+      tar czf "$HOME/.cache/fedora-mactahoe/backups/fish-$(date +%Y%m%d-%H%M%S).tar.gz" -C "$HOME/.config" fish 2>/dev/null || true
+      ls -1t "$HOME/.cache/fedora-mactahoe/backups"/fish-*.tar.gz 2>/dev/null | tail -n +11 | xargs -r rm -f 2>/dev/null || true
+    fi
     mkdir -p "$HOME/.config/fish/functions"
     cp "$cfg/fish/config.fish" "$HOME/.config/fish/"
     if [ -d "$cfg/fish/functions" ]; then
       cp -f "$cfg/fish/functions/"*.fish "$HOME/.config/fish/functions/" 2>/dev/null || true
     fi
     ok "Fish config ($(ls "$HOME/.config/fish/functions/"*.fish 2>/dev/null | wc -l) functions)"
+  fi
+
+  # Guard hook (root-owned) — /etc/fish/config.fish warns in every terminal if
+  # the MacTahoe fish config is ever deleted. A normal user cannot remove it.
+  if [ -f /etc/fish/config.fish ] && sudo -n true 2>/dev/null; then
+    if ! grep -q "fedora-mactahoe-guard" /etc/fish/config.fish 2>/dev/null; then
+      sudo tee -a /etc/fish/config.fish >/dev/null <<'EOF'
+
+# ── Fedora MacTahoe guard (eprahemi) ──
+if test -d "$HOME/.cache/fedora-mactahoe"; and not test -f "$HOME/.config/fish/functions/update.fish"
+    printf '\n  [!] Fedora MacTahoe fish config is missing.\n'
+    printf '      Restore it with this one line (any terminal):\n'
+    printf '      mkdir -p ~/.config/fish/functions && curl -fsSL https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/configs/fish/functions/update.fish -o ~/.config/fish/functions/update.fish && env KITTY_PID=1 fish -c "source ~/.config/fish/functions/update.fish; update configs"\n\n'
+end
+# ── end of fedora-mactahoe-guard ──
+EOF
+    fi
   fi
 
   # Starship
