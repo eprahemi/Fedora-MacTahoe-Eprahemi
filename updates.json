@@ -1,8 +1,20 @@
 {
-  "latest_version": "2.0",
+  "latest_version": "2.1",
   "bootstrap_sha256": "ac7d300a9c8b9337e6a3291482a7a219a25a8c3e7deef94860409fbf23bcd216",
   "update_sha256": "817b2cd4dfeb820b7d19d66467c06899d2e791e7b8660f48ad8cc01cfb499ad4",
   "changelog": [
+    {
+      "version": "2.1",
+      "changes": [
+        "Security hardening pass — the full audit is in:",
+        "Verified update chain — installs are fingerprint-checked, tamper-proof downloads, a trust prompt the first time, hard refusal on any mismatch",
+        "Your settings are safe — a full dconf snapshot is saved before anything touches your GNOME settings (restore with one command)",
+        "gdm wallpaper switching no longer uses shared /tmp — everything stays in your private cache",
+        "Kitty control sockets are private now — no other user can connect to your terminal",
+        "Automatic security downloads — patches download in the background nightly (never installed without your say-so)",
+        "Backup snapshots are private too — folder and files locked to you only"
+      ]
+    },
     {
       "version": "2.0",
       "changes": [
@@ -103,7 +115,7 @@
   ],
   "steps": {
     "preflight": "1.0",
-    "remove_ptyxis": "1.0",
+    "remove_ptyxis": "1.1",
     "remove_gnome_weather": "1.0",
     "install_rpmfusion": "1.0",
     "install_nvidia": "1.0",
@@ -115,8 +127,8 @@
     "apply_desktop_entries": "1.0",
     "ensure_celluloid_default": "1.0",
     "configure_nautilus_defaults": "1.0",
-    "apply_configs": "1.10",
-    "apply_dconf": "1.0",
+    "apply_configs": "1.11",
+    "apply_dconf": "1.1",
     "optimize_system_resources": "1.0",
     "apply_wallpapers": "1.1",
     "install_custom_avatars": "1.0",
