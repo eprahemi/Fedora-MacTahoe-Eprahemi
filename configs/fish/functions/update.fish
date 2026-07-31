@@ -13,11 +13,27 @@
 # ══════════════════════════════════════════════════════════════
 
 # ── fetch updates.json into the cache; rc 0 = got it ──
+# raw.githubusercontent is CDN-cached and can lag a fresh push for minutes
+# (observed 2026-08-01: old copy served after the push landed). When the
+# pinned fingerprint is missing, fall back to the GitHub API — always fresh.
 function _update_fetch_manifest --description 'fetch the version manifest from GitHub'
     set -l cache_dir "$HOME/.cache/fedora-mactahoe"
     mkdir -p "$cache_dir"
     set -l url "https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/updates.json"
     curl -sf --max-time 15 "$url" -o "$cache_dir/latest-manifest.json" 2>/dev/null
+    if test -s "$cache_dir/latest-manifest.json"; and not string match -q '*bootstrap_sha256*' (cat "$cache_dir/latest-manifest.json")
+        # stale CDN copy — pull the manifest from the GitHub API instead
+        curl -sf --max-time 20 "https://api.github.com/repos/eprahemi/Fedora-MacTahoe-Eprahemi/contents/updates.json" -o "$cache_dir/api-manifest.json" 2>/dev/null
+        if test -s "$cache_dir/api-manifest.json"
+            python3 -c 'import json,sys,base64
+try:
+    d = json.load(open(sys.argv[1]))
+    open(sys.argv[2], "w").write(base64.b64decode(d["content"]).decode("utf-8"))
+except Exception:
+    pass' "$cache_dir/api-manifest.json" "$cache_dir/latest-manifest.json"
+        end
+        rm -f "$cache_dir/api-manifest.json"
+    end
     test -s "$cache_dir/latest-manifest.json"
 end
 
