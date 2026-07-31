@@ -213,7 +213,7 @@ function _update_loading --description 'loading ritual; optional seconds (defaul
         if test $__update_abort -eq 1
             break
         end
-        set -l pct (math "$t * 100 / $ticks")
+        set -l pct (math -s0 "$t * 100 / $ticks")
         set -l filled (math -s0 "$pct * 20 / 100")
         printf '\r  \e[1;36m%s\e[0m  \e[1;37m%s\e[0m  \e[2;37m[\e[0m\e[1;36m%s\e[0m\e[2;37m%s\e[0m\e[2;37m]\e[0m \e[1;33m%3d%%\e[0m' $frames[$i] $msgs[$j] (string repeat -n $filled '█') (string repeat -n (math -s0 "20 - $filled") '░') $pct
         sleep 0.2
