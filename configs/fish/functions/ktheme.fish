@@ -48,7 +48,7 @@ function ktheme --description "Kitty auto-theme — colors from the wallpaper"
         switch $a
             case -s --silent
                 set silent 1
-            case on off undo status watch
+            case apply on off undo status watch
                 set cmd $a
             case '*'
                 set target $a

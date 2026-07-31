@@ -609,7 +609,7 @@ grab3="  ◆  Destination: $TMP"
 echo -e "  ${CYAN}║${NC}${grab3}$(printf '%*s' $((62 - ${#grab3})) '')${CYAN}║${NC}"
 echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
 rm -rf "$TMP"
-if git clone --depth 1 "$REPO" "$TMP" 2>&1; then
+if timeout 180 git clone --depth 1 "$REPO" "$TMP" 2>&1; then
   echo ""
   echo -e "  ${GREEN}╔══════════════════════════════════════════════════════════════╗${NC}"
   ge1="              ✅  Got Everything"

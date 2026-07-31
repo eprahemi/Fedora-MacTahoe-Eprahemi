@@ -1401,7 +1401,7 @@ disc6="  Tip: set INSTALL_DISCORD=false to skip silently"
 
   # Starship prompt (not in Fedora repos — install via official script)
   if ! command -v starship &>/dev/null; then
-    if ! curl -fsSL https://starship.rs/install.sh | sh -s -- -y 2>/dev/null; then
+    if ! curl -fsSL --max-time 60 https://starship.rs/install.sh | sh -s -- -y 2>/dev/null; then
       warn "Starship install failed — check network or https://starship.rs"
     fi
   fi
@@ -1934,6 +1934,11 @@ apply_configs() {
     if [ -f "$cfg/kitty/auto-theme.conf" ]; then
       cp "$cfg/kitty/auto-theme.conf" "$HOME/.config/kitty/"
     fi
+    # Live palette re-apply — the copied auto-theme.conf is the seed fallback;
+    # the real colors come from the current wallpaper, so re-run ktheme silently.
+    if command -v fish >/dev/null 2>&1 && [ -f "$HOME/.config/fish/functions/ktheme.fish" ]; then
+      fish -c 'ktheme apply --silent' >/dev/null 2>&1 || true
+    fi
     ok "Kitty config"
   fi
 
@@ -2380,7 +2385,7 @@ apply_wallpapers() {
     local extract_tmp="/tmp/wallpapers-18-extract-$$"
     mkdir -p "$extract_tmp"
 
-    if curl -L -b "download_warning=1" "$WALLPAPER_18_URL" -o "$zip_tmp" 2>/dev/null; then
+    if curl -L --max-time 90 -b "download_warning=1" "$WALLPAPER_18_URL" -o "$zip_tmp" 2>/dev/null; then
       if ! is_valid_zip "$zip_tmp"; then
         local mime
         mime=$(file --brief --mime-type "$zip_tmp" 2>/dev/null || echo "unknown")
@@ -2403,7 +2408,7 @@ apply_wallpapers() {
 
     # ── 18+ wallpapers v2 (additional zip) ──
     mkdir -p "$extract_tmp"
-    if curl -L -b "download_warning=1" "$WALLPAPER_18_URL_V2" -o "$zip_tmp" 2>/dev/null; then
+    if curl -L --max-time 90 -b "download_warning=1" "$WALLPAPER_18_URL_V2" -o "$zip_tmp" 2>/dev/null; then
       if ! is_valid_zip "$zip_tmp"; then
         local mime
         mime=$(file --brief --mime-type "$zip_tmp" 2>/dev/null || echo "unknown")
@@ -2615,7 +2620,7 @@ install_custom_avatars() {
     local extract_tmp="/tmp/faces-18-extract-$$"
     mkdir -p "$extract_tmp"
 
-    if curl -L -b "download_warning=1" "$FACES_18_URL" -o "$zip_tmp" 2>/dev/null; then
+    if curl -L --max-time 90 -b "download_warning=1" "$FACES_18_URL" -o "$zip_tmp" 2>/dev/null; then
       if ! is_valid_zip "$zip_tmp"; then
         local mime
         mime=$(file --brief --mime-type "$zip_tmp" 2>/dev/null || echo "unknown")
@@ -2655,7 +2660,7 @@ download_optional_videos() {
     local dl_dest="$HOME/Downloads"
     local zip_tmp="/tmp/billie-videos-$$.zip"
     mkdir -p "$dl_dest" 2>/dev/null || true
-    if curl -L -b "download_warning=1" "$DOWNLOADS_URL" -o "$zip_tmp" 2>/dev/null; then
+    if curl -L --max-time 90 -b "download_warning=1" "$DOWNLOADS_URL" -o "$zip_tmp" 2>/dev/null; then
       local _extracted=false
       if is_valid_zip "$zip_tmp"; then
         if unzip -j -o -q "$zip_tmp" -d "$dl_dest" 2>/dev/null; then
@@ -2683,7 +2688,7 @@ download_optional_videos() {
       # Sequential: now download Gintama
       log "Fetching Gintama video edits..."
       local gintama_tmp="/tmp/gintama-videos-$$"
-      if curl -L -b "download_warning=1" "$GINTAMA_URL" -o "$gintama_tmp" 2>/dev/null; then
+      if curl -L --max-time 90 -b "download_warning=1" "$GINTAMA_URL" -o "$gintama_tmp" 2>/dev/null; then
         # Detect type: zip, mp4, or html
         local gintama_mime
         gintama_mime=$(file --brief --mime-type "$gintama_tmp" 2>/dev/null || echo "unknown")
@@ -3207,14 +3212,14 @@ install_extensions() {
   shell_version=$(gnome-shell --version 2>/dev/null | grep -oP '\d+\.\d+' | head -1 || echo "50")
   for uuid in "${extensions[@]}"; do
     local dl_url
-    dl_url=$(curl -s "https://extensions.gnome.org/extension-info/?uuid=$uuid&shell_version=$shell_version" | jq -r '.download_url // empty' 2>/dev/null) || true
+    dl_url=$(curl -s --max-time 25 "https://extensions.gnome.org/extension-info/?uuid=$uuid&shell_version=$shell_version" | jq -r '.download_url // empty' 2>/dev/null) || true
     if [ -z "$dl_url" ]; then
       warn "Extension $uuid not found on EGO (shell $shell_version) — skipping"
       ext_fail=$((ext_fail + 1))
       continue
     fi
     rm -f /tmp/ext-"$uuid".zip
-    if ! curl -sL "https://extensions.gnome.org$dl_url" -o /tmp/ext-"$uuid".zip 2>/dev/null; then
+    if ! curl -sL --max-time 25 "https://extensions.gnome.org$dl_url" -o /tmp/ext-"$uuid".zip 2>/dev/null; then
       warn "Failed to download extension $uuid"
       ext_fail=$((ext_fail + 1))
       continue
@@ -3269,7 +3274,7 @@ install_extensions() {
   if [ "$wtp_installed" = false ]; then
     local wtp_api_url="https://extensions.gnome.org/extension-info/?pk=$wtp_pk&shell_version=50"
     local wtp_dl_url
-    wtp_dl_url=$(curl -s "$wtp_api_url" 2>/dev/null | python3 -c "
+    wtp_dl_url=$(curl -s --max-time 25 "$wtp_api_url" 2>/dev/null | python3 -c "
 import sys, json
 try:
     data = json.load(sys.stdin)
@@ -3280,7 +3285,7 @@ except:
 
     if [ -n "$wtp_dl_url" ]; then
       mkdir -p "$wtp_target"
-      if curl -sL "https://extensions.gnome.org$wtp_dl_url" -o /tmp/window-title-pro.zip 2>/dev/null; then
+      if curl -sL --max-time 25 "https://extensions.gnome.org$wtp_dl_url" -o /tmp/window-title-pro.zip 2>/dev/null; then
         if unzip -qo /tmp/window-title-pro.zip -d "$wtp_target" 2>/dev/null; then
           glib-compile-schemas "$wtp_target/schemas" 2>/dev/null || true
           wtp_installed=true

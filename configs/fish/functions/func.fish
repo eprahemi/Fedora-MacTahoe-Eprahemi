@@ -40,7 +40,7 @@ function func --description 'Browse all fish functions'
 
     set -l cat_name[6] "🔧  Utility"
     set -l cat_esc[6]  $C
-    set -l cat_func[6] "func passgen passwd ghlogin hint ktheme"
+    set -l cat_func[6] "func passgen passwd ghlogin hint ktheme update"
 
     set -l cat_cnt (count $cat_name)
 
@@ -53,7 +53,7 @@ function func --description 'Browse all fish functions'
             case clean refresh gdm logout reboot shutdown pfp kit update kernels smb; echo 3
             case testdrive getdata myip stats calc qr exc; echo 4
             case matrix hollywood stayawake fish_greeting; echo 5
-            case func passgen passwd ghlogin hint ktheme; echo 6
+            case func passgen passwd ghlogin hint ktheme update; echo 6
             case '*';                     echo 0
         end
     end
@@ -107,7 +107,7 @@ function func --description 'Browse all fish functions'
             case ghlogin; echo "ghlogin [start|status]  —  GitHub CLI login + git config"
             case hint;    echo "hint [kitty|fish|colors|new|menu]  —  Interactive teaching + live demos"
             case ktheme;  echo "ktheme [on|off|undo|status|<image>]  —  kitty colors from the wallpaper"
-            case update;  echo "update  —  Fetch and run latest Fedora MacTahoe update"
+            case update;  echo "update [check|log|configs|full]  —  Fedora MacTahoe updater (menu by default)"
             case kernels; echo "kernels  —  List and clean old Fedora kernels + GRUB entries"
             case smb;     echo "smb [setup|status|user|share|...]  —  Samba file sharing manager"
             case '*';     echo "$u"
