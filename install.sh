@@ -185,6 +185,8 @@ _print_log_header() {
   echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
   _repo_url="https://github.com/eprahemi/Fedora-MacTahoe-Eprahemi"
   echo -e "  ${CYAN}║${NC}  ${DIM}${_repo_url}${NC}$(printf '%*s' $((60 - ${#_repo_url})) '')${CYAN}║${NC}"
+_credit="  ┊  Made by eprahemi — Fedora MacTahoe © 2026"
+  echo -e "  ${CYAN}║${NC}  ${DIM}${_credit}${NC}$(printf '%*s' $((60 - ${#_credit})) '')${CYAN}║${NC}"
   echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
   echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
   echo ""

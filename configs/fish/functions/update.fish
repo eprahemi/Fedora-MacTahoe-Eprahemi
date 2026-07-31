@@ -529,6 +529,8 @@ except Exception:
         _update_box_text "[2] Full reinstall — everything fresh" "1;36"
         _update_box_text "[3] Configs only — just the files, no system changes" "1;36"
         _update_box_text "[4] Just checking — exit" "1;36"
+        _update_box_text ""
+        _update_box_text "Made by eprahemi — Fedora MacTahoe © 2026" "1;37"
         _update_box_bottom
         read -l choice -P "  Your choice [1-4]: "
         if test $status -ne 0
