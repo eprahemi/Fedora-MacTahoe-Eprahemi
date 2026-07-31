@@ -15,6 +15,17 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
     set -l D  (printf "\e[2m")
     set -l B  (printf "\e[1m")
 
+    # ── Private working dir (user cache, 700) — blur/conversion transient files ──
+    # Never world-writable /tmp: other local users could read or tamper with these.
+    set -l gdm_tmp "$HOME/.cache/fedora-mactahoe/gdm"
+    mkdir -p "$gdm_tmp" 2>/dev/null
+    chmod 700 "$gdm_tmp" 2>/dev/null
+
+    # One-time cleanup: legacy /tmp leftovers from previous versions
+    rm -rf /tmp/.gdm-info 2>/dev/null
+    rm -f /tmp/gdm-blurred.jpg /tmp/gdm-converted.jpg /tmp/.gdm-tmp-write /tmp/.gdm-conv-write 2>/dev/null
+    find /tmp -maxdepth 1 \( -name 'gdm-undo-*.jpg' -o -name 'gdm-info-*.txt' \) -delete 2>/dev/null
+
     # ── Flags ──
     set -l skip_confirm 0
     set -l skip_double_confirm 0
@@ -1379,27 +1390,26 @@ except Exception:
             end
     end
 
-    # ── Save original source info to /tmp/ before blur/conversion overwrites $image ──
+    # ── Save original source info to the private cache before blur/conversion overwrites $image ──
     #     This survives through blur + JPEG conversion; apply step reads it back
-    mkdir -p /tmp/.gdm-info
-    basename "$image" > /tmp/.gdm-info/original-name.txt
-    realpath "$image" 2>/dev/null > /tmp/.gdm-info/original-path.txt
+    mkdir -p $gdm_tmp
+    basename "$image" > $gdm_tmp/original-name.txt
+    realpath "$image" 2>/dev/null > $gdm_tmp/original-path.txt
 
     # ══════════════════════════════════════════════════════════════
     # 🎨  BLUR OPTIONS — blur + dark tint before applying
     # ══════════════════════════════════════════════════════════════
     if command -v magick &>/dev/null
         if test $skip_confirm -eq 0
-            set -l blurred_file "/tmp/gdm-blurred.jpg"
+            set -l blurred_file "$gdm_tmp/blurred.jpg"
             set -l blur_done 0
-            # Guard: /tmp must be writable for blur output
-            if not touch "/tmp/.gdm-tmp-write" 2>/dev/null
-                echo -e "  $D  ⚠️  Cannot write to /tmp — blur unavailable. Using original.$C$C"
+            # Guard: private cache must be writable for blur output
+            if not touch "$gdm_tmp/.write-test" 2>/dev/null
+                echo -e "  $D  ⚠️  Cannot write to the private cache — blur unavailable. Using original.$C$C"
                 set blur_done 1
             else
-                rm -f "/tmp/.gdm-tmp-write"
+                rm -f "$gdm_tmp/.write-test"
             end
-            mkdir -p /tmp
 
             while test $blur_done -eq 0
                 printf "\n"
@@ -1451,7 +1461,7 @@ except Exception:
 
                 # ── Match input with explicit regex (avoids switch/case pattern ambiguity) ──
                 else if string match -qir '^n' "$blur_choice"
-                    echo "No blur applied" > /tmp/.gdm-info/blur-settings.txt
+                    echo "No blur applied" > $gdm_tmp/blur-settings.txt
                     set blur_done 1
 
                 else if string match -qir '^c' "$blur_choice"
@@ -1553,14 +1563,14 @@ except Exception:
                             end
                             if string match -qir '^y' "$like_it"
                                 set image "$blurred_file"
-                                echo "Blur 0x$blur_sigma + black $colorize_pct%" > /tmp/.gdm-info/blur-settings.txt
+                                echo "Blur 0x$blur_sigma + black $colorize_pct%" > $gdm_tmp/blur-settings.txt
                                 set blur_done 1
                                 echo -e "  $GR✅  Custom blur applied$C"
                             end
                             # N → loops back to blur menu
                         else
                             set image "$blurred_file"
-                            echo "Blur 0x$blur_sigma + black $colorize_pct%" > /tmp/.gdm-info/blur-settings.txt
+                            echo "Blur 0x$blur_sigma + black $colorize_pct%" > $gdm_tmp/blur-settings.txt
                             echo -e "  $D  💻  Preview requires Kitty terminal — blur applied without preview.$C"
                             echo -e "  $GR✅  Custom blur applied$C"
                             printf "\n"
@@ -1592,7 +1602,7 @@ except Exception:
                             return 1
                         end
                         echo -e "  $RE✘  Custom blur failed — image may be corrupt or unsupported. Using original.$C$C"
-                        echo "No blur applied (blur failed)" > /tmp/.gdm-info/blur-settings.txt
+                        echo "No blur applied (blur failed)" > $gdm_tmp/blur-settings.txt
                         set blur_done 1
                     end
 
@@ -1609,7 +1619,7 @@ except Exception:
                         end
                         # Apply immediately — no LIKE THE RESULT? prompt for default
                         set image "$blurred_file"
-                        echo "Blur 0x40 + black 40%" > /tmp/.gdm-info/blur-settings.txt
+                        echo "Blur 0x40 + black 40%" > $gdm_tmp/blur-settings.txt
                         set blur_done 1
                         echo -e "  $GR✅  Default blur applied$C"
                     else
@@ -1619,7 +1629,7 @@ except Exception:
                             return 1
                         end
                         echo -e "  $RE✘  Blur failed — image may be corrupt or unsupported. Using original.$C$C"
-                        echo "No blur applied (blur failed)" > /tmp/.gdm-info/blur-settings.txt
+                        echo "No blur applied (blur failed)" > $gdm_tmp/blur-settings.txt
                         set blur_done 1
                     end
 
@@ -1628,7 +1638,7 @@ except Exception:
                 end
             end
         else
-            echo "No blur applied" > /tmp/.gdm-info/blur-settings.txt
+            echo "No blur applied" > $gdm_tmp/blur-settings.txt
             set blur_choice "n"
         end
     else
@@ -1675,13 +1685,13 @@ except Exception:
                 if sudo dnf install -y ImageMagick 2>/dev/null
                     echo -e "  $GR✅  ImageMagick installed!$C$C"
                     echo -e "  $GY  Run $CY$B gdm$C $GY again to use blur options.$C"
-                    echo "No blur applied (ImageMagick was just installed)" > /tmp/.gdm-info/blur-settings.txt
+                    echo "No blur applied (ImageMagick was just installed)" > $gdm_tmp/blur-settings.txt
                 else
                     echo -e "  $RE✘  Installation failed. Try: $CY$B sudo dnf install ImageMagick$C$C"
                 end
             else
                 echo -e "  $D  Skipping blur — using original image.$C$C"
-                echo "No blur applied (ImageMagick not installed)" > /tmp/.gdm-info/blur-settings.txt
+                echo "No blur applied (ImageMagick not installed)" > $gdm_tmp/blur-settings.txt
             end
         end
     end
@@ -1760,11 +1770,11 @@ except Exception:
         set -l saved_undo ""
         set -l saved_info ""
         if test -f "$repo/.gdm-undo-copy.jpg"
-            set saved_undo (mktemp /tmp/gdm-undo-XXXXXX.jpg)
+            set saved_undo (mktemp $gdm_tmp/undo-XXXXXX.jpg)
             cp "$repo/.gdm-undo-copy.jpg" "$saved_undo"
         end
         if test -f "$repo/.gdm-info.txt"
-            set saved_info (mktemp /tmp/gdm-info-XXXXXX.txt)
+            set saved_info (mktemp $gdm_tmp/info-XXXXXX.txt)
             cp "$repo/.gdm-info.txt" "$saved_info"
         end
         rm -rf "$repo"
@@ -1855,9 +1865,9 @@ except Exception:
     if command -v magick &>/dev/null
         set -l ext (string lower (string replace -r '.*\.' '' "$image" 2>/dev/null) 2>/dev/null)
         if not contains -- "$ext" "jpg" "jpeg"
-            set -l converted "/tmp/gdm-converted.jpg"
-            if touch "/tmp/.gdm-conv-write" 2>/dev/null
-                rm -f "/tmp/.gdm-conv-write"
+            set -l converted "$gdm_tmp/converted.jpg"
+            if touch "$gdm_tmp/.write-test" 2>/dev/null
+                rm -f "$gdm_tmp/.write-test"
                 echo -e "  $D🔄  Converting $ext → JPEG 90%% quality...$C"
                 if magick "$image" -quality 90 "$converted" 2>/dev/null
                     set image "$converted"
@@ -1871,7 +1881,7 @@ except Exception:
                     echo -e "  $D  ⚠️  JPEG conversion failed, using original.$C$C"
                 end
             else
-                echo -e "  $D  ⚠️  Cannot write to /tmp — skipping JPEG conversion.$C$C"
+                echo -e "  $D  ⚠️  Cannot write to the private cache — skipping JPEG conversion.$C$C"
             end
         end
     else
@@ -1937,25 +1947,25 @@ except Exception:
     # ══════════════════════════════════════════════════════════════
 
     # Default blur-settings if not written by any path
-    if not test -f /tmp/.gdm-info/blur-settings.txt
-        echo "No blur applied" > /tmp/.gdm-info/blur-settings.txt
+    if not test -f $gdm_tmp/blur-settings.txt
+        echo "No blur applied" > $gdm_tmp/blur-settings.txt
     end
-    set -l blur_desc (string trim < /tmp/.gdm-info/blur-settings.txt 2>/dev/null)
+    set -l blur_desc (string trim < $gdm_tmp/blur-settings.txt 2>/dev/null)
 
     # Read saved source path (fallback to $image if missing)
     set -l orig_path ""
-    if test -f /tmp/.gdm-info/original-path.txt
-        set orig_path (string trim < /tmp/.gdm-info/original-path.txt 2>/dev/null)
+    if test -f $gdm_tmp/original-path.txt
+        set orig_path (string trim < $gdm_tmp/original-path.txt 2>/dev/null)
     end
     if test -z "$orig_path"
         set orig_path "$image"
     end
     set orig_path (string replace -r "^$HOME" "~" "$orig_path")
 
-    # Read original filename from /tmp/ (saved before blur/conversion)
+    # Read original filename from the private cache (saved before blur/conversion)
     set -l original_name ""
-    if test -f /tmp/.gdm-info/original-name.txt
-        set original_name (string trim < /tmp/.gdm-info/original-name.txt 2>/dev/null)
+    if test -f $gdm_tmp/original-name.txt
+        set original_name (string trim < $gdm_tmp/original-name.txt 2>/dev/null)
     end
     if test -z "$original_name"
         set original_name (basename "$image")
@@ -2007,8 +2017,8 @@ except Exception:
 
         # ── File size from stat; date = current timestamp ──
         set -l stat_target "$image"
-        if test -f /tmp/.gdm-info/original-path.txt
-            set -l op (string trim < /tmp/.gdm-info/original-path.txt 2>/dev/null)
+        if test -f $gdm_tmp/original-path.txt
+            set -l op (string trim < $gdm_tmp/original-path.txt 2>/dev/null)
             if test -f "$op"
                 set stat_target "$op"
             end
@@ -2040,7 +2050,7 @@ except Exception:
         end
 
         # ── Write to temporary cache file ──
-        set -l tmp_cache "/tmp/.gdm-info-tmp.txt"
+        set -l tmp_cache "$gdm_tmp/cache-tmp.txt"
         mkdir -p "$repo"
         echo "NAME: $original_name"  >  "$tmp_cache"
         echo "FORMAT: $fmt"        >> "$tmp_cache"
@@ -2137,8 +2147,8 @@ except Exception:
     end
     # Save a copy for 'gdm info'
     cp "$image" "$repo/.gdm-undo-copy.jpg"
-    # Clean up /tmp/.gdm-info/ — original name + source path now in metadata cache
-    rm -rf /tmp/.gdm-info
+    # Clean up the private cache — original name + source path now in metadata cache
+    rm -rf $gdm_tmp
     echo -e "  $CY🖼️  Applying GDM wallpaper...$C$C"
     cd "$repo"
     sudo ./gdm-wallpaper.sh -g -nb -nd -b "$image"
