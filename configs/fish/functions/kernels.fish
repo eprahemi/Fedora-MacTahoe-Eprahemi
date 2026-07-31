@@ -30,22 +30,85 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
     or return 1
 
     if set -q _flag_help
-        printf 'kernels - Clean up old Fedora kernels and GRUB entries\n\n'
-        printf 'Usage: kernels [COMMAND] [OPTIONS]\n\n'
-        printf 'Commands:\n'
-        printf '  clean       Remove old kernels + GRUB entries (also: -clean --clean -cl --cl)\n'
-        printf '  status      Show kernel state (running, latest, reboot needed) — read-only, no sudo\n'
-        printf '  (no args)   Show this help message\n\n'
-        printf 'Options:\n'
-        printf '  -n, --dry-run   Show what would be done without making changes\n'
-        printf '  -h, --help      Show this help message\n\n'
-        printf 'Safety features:\n'
-        printf '  * Running kernel is always protected\n'
-        printf '  * Rescue kernels are always protected\n'
-        printf '  * Latest kernel is always kept\n'
-        printf '  * Double confirmation before any changes\n'
-        printf '  * Reboot prompt if not on latest kernel\n'
-        printf '  * GRUB indices validated before removal\n'
+        set -l blank (printf '%*s' 62 '')
+        printf '\n'
+        printf '  %s╔══════════════════════════════════════════════════════════╗%s\n' $BOLD $N
+        set -l hdr "KERNELS — HELP"
+        set -l hl (string length -- "$hdr")
+        set -l hleft (math "(62 - $hl) / 2" | string replace -r '\..*' '')
+        set -l hright (math "62 - $hl - $hleft")
+        printf '  %s║%s%*s%s%s%s%*s%s║%s\n' $BOLD $N $hleft "" $BOLDG $hdr $N $hright "" $BOLD $N
+        printf '  %s╠══════════════════════════════════════════════════════════╣%s\n' $BOLD $N
+        printf '  %s║%s%s%s║%s\n' $BOLD $N $blank $BOLD $N
+
+        # Tagline
+        set -l txt "  Clean up old Fedora kernels and GRUB entries"
+        set -l pad (math "62 - "(string length -- "$txt"))
+        printf '  %s║%s%s%s%s%*s%s║%s\n' $BOLD $N $D $txt $N $pad "" $BOLD $N
+        printf '  %s║%s%s%s║%s\n' $BOLD $N $blank $BOLD $N
+
+        # Usage
+        set -l txt "  USAGE:"
+        set -l pad (math "62 - "(string length -- "$txt"))
+        printf '  %s║%s%s%s%s%*s%s║%s\n' $BOLD $N $BOLDY $txt $N $pad "" $BOLD $N
+        set -l txt "    kernels [COMMAND] [OPTIONS]"
+        set -l pad (math "62 - "(string length -- "$txt"))
+        printf '  %s║%s%s%s%s%*s%s║%s\n' $BOLD $N $W $txt $N $pad "" $BOLD $N
+        printf '  %s║%s%s%s║%s\n' $BOLD $N $blank $BOLD $N
+
+        # Commands
+        set -l txt "  COMMANDS:"
+        set -l pad (math "62 - "(string length -- "$txt"))
+        printf '  %s║%s%s%s%s%*s%s║%s\n' $BOLD $N $BOLDG $txt $N $pad "" $BOLD $N
+        set -l txt "    clean            Remove old kernels + GRUB entries"
+        set -l pad (math "62 - "(string length -- "$txt"))
+        printf '  %s║%s%s%s%s%*s%s║%s\n' $BOLD $N $W $txt $N $pad "" $BOLD $N
+        set -l txt "    status           Show kernel state (read-only, no sudo)"
+        set -l pad (math "62 - "(string length -- "$txt"))
+        printf '  %s║%s%s%s%s%*s%s║%s\n' $BOLD $N $W $txt $N $pad "" $BOLD $N
+        set -l txt "    (no args)        Show this help"
+        set -l pad (math "62 - "(string length -- "$txt"))
+        printf '  %s║%s%s%s%s%*s%s║%s\n' $BOLD $N $W $txt $N $pad "" $BOLD $N
+        set -l txt "    clean aliases:   -clean --clean -cl --cl"
+        set -l pad (math "62 - "(string length -- "$txt"))
+        printf '  %s║%s%s%s%s%*s%s║%s\n' $BOLD $N $D $txt $N $pad "" $BOLD $N
+        printf '  %s║%s%s%s║%s\n' $BOLD $N $blank $BOLD $N
+
+        # Options
+        set -l txt "  OPTIONS:"
+        set -l pad (math "62 - "(string length -- "$txt"))
+        printf '  %s║%s%s%s%s%*s%s║%s\n' $BOLD $N $BOLDG $txt $N $pad "" $BOLD $N
+        set -l txt "    -n, --dry-run    Preview cleanup without changes"
+        set -l pad (math "62 - "(string length -- "$txt"))
+        printf '  %s║%s%s%s%s%*s%s║%s\n' $BOLD $N $W $txt $N $pad "" $BOLD $N
+        set -l txt "    -h, --help       Show this help"
+        set -l pad (math "62 - "(string length -- "$txt"))
+        printf '  %s║%s%s%s%s%*s%s║%s\n' $BOLD $N $W $txt $N $pad "" $BOLD $N
+        printf '  %s║%s%s%s║%s\n' $BOLD $N $blank $BOLD $N
+
+        # Safety
+        set -l txt "  SAFETY:"
+        set -l pad (math "62 - "(string length -- "$txt"))
+        printf '  %s║%s%s%s%s%*s%s║%s\n' $BOLD $N $BOLDG $txt $N $pad "" $BOLD $N
+        set -l safetxt \
+            "    • Running kernel is always protected" \
+            "    • Rescue kernels are always protected" \
+            "    • Latest kernel is always kept" \
+            "    • Double confirmation before any changes" \
+            "    • Reboot prompt if not on latest kernel" \
+            "    • GRUB indices validated before removal"
+        for st in $safetxt
+            set -l pad (math "62 - "(string length -- "$st"))
+            printf '  %s║%s%s%s%s%*s%s║%s\n' $BOLD $N $D $st $N $pad "" $BOLD $N
+        end
+        printf '  %s║%s%s%s║%s\n' $BOLD $N $blank $BOLD $N
+
+        # Footer
+        set -l txt "  Tip: type kernel and get corrected to kernels"
+        set -l pad (math "62 - "(string length -- "$txt"))
+        printf '  %s║%s%s%s%s%*s%s║%s\n' $BOLD $N $D $txt $N $pad "" $BOLD $N
+        printf '  %s╚══════════════════════════════════════════════════════════╝%s\n' $BOLD $N
+        printf '\n'
         return 0
     end
 
