@@ -3154,6 +3154,36 @@ install_updater() {
   else
     warn "Update notifier timer could not be enabled"
   fi
+
+  # 4. Automatic security updates — dnf5-plugin-automatic in download + notify mode.
+  #    Downloads security patches silently, NEVER installs by itself — you
+  #    apply them at your leisure with: sudo dnf upgrade
+  if ! rpm -q dnf5-plugin-automatic &>/dev/null; then
+    log "Installing dnf5-plugin-automatic (automatic security downloads)"
+    if sudo dnf install -y dnf5-plugin-automatic >/dev/null 2>&1; then
+      ok "dnf5-plugin-automatic installed"
+    else
+      warn "dnf5-plugin-automatic install failed — security updates stay manual"
+    fi
+  else
+    ok "dnf5-plugin-automatic already installed"
+  fi
+
+  # Explicit config: download yes, apply NO, notify via motd (idempotent)
+  sudo tee /etc/dnf/automatic.conf > /dev/null <<'EOF' || warn "Could not write /etc/dnf/automatic.conf"
+[commands]
+download_updates = yes
+apply_updates = no
+
+[emitters]
+emit_via = motd
+EOF
+
+  if sudo systemctl enable --now dnf5-automatic.timer 2>/dev/null; then
+    ok "Auto security updates active (download + notify, never auto-install)"
+  else
+    warn "dnf5-automatic timer could not be enabled"
+  fi
 }
 
 # ── PHASE 4c: KTHEME WATCHER ────────────────────────────────

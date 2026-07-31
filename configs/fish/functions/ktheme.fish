@@ -256,6 +256,7 @@ function __kt_apply
     set -l n 0
     for sock in /tmp/kitty-*
         if test -S "$sock"
+            chmod 600 "$sock" 2>/dev/null
             command kitty @ --to "unix:$sock" load-config 2>/dev/null
             if test $status -eq 0
                 set n (math "$n + 1")
@@ -372,6 +373,7 @@ function __kt_status
     set -l socks 0
     for s in /tmp/kitty-*
         if test -S "$s"
+            chmod 600 "$s" 2>/dev/null
             set socks (math "$socks + 1")
         end
     end

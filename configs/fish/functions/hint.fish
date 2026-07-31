@@ -245,6 +245,7 @@ function hint -d 'Interactive teaching: kitty, fish functions, whats-new + live 
             return 1
         end
         set -l sock (ls /tmp/kitty-* 2>/dev/null | head -1)
+        chmod 600 "$sock" 2>/dev/null
         if test -z "$sock"
             __hint_line "  No running kitty socket found in /tmp." $__hint_Y
             __hint_line "  Open a kitty window first, then try again." $__hint_W

@@ -125,7 +125,7 @@
     "setup_firefox_theme": "1.0",
     "setup_flatpak_theme": "1.0",
     "install_sounds": "1.0",
-    "install_updater": "1.2",
+    "install_updater": "1.3",
     "install_ktheme_watcher": "1.0",
     "setup_terminal": "1.0",
     "setup_shell": "1.0",
