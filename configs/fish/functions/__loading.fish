@@ -52,6 +52,13 @@ function __loading --description 'One-line live loader: spinner + message + prog
         sleep 0.2
     end
 
+    # Completion flash — the bar always finishes at 100% before the result appears
+    if test "$__loading_abort" != 1; and test $__l_t -gt 0
+        set -l __l_fill (string repeat -n 20 '█')
+        printf '\r  \e[1;32m✓\e[0m  \e[1;37m%s\e[0m  \e[2;37m[\e[0m\e[1;32m%s\e[0m\e[2;37m]\e[0m \e[1;33m100%%\e[0m' $__l_msg "$__l_fill"
+        sleep 0.3
+    end
+
     printf '\r  %*s\r' 90 ''
 
     if test "$__loading_abort" = 1
