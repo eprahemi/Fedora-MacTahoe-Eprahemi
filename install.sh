@@ -21,7 +21,6 @@ set -euo pipefail
 
 # ── Log finalization (runs on normal exit, crash, or Ctrl+C) ──
 _fed_log_finalize() {
-  local _rc=$?
   exec 1>&5 2>&6 2>/dev/null || true
   trap - EXIT
   # User closed the installer (Ctrl+C forced exit) or it closed itself
@@ -76,13 +75,13 @@ BOLD='\033[1m'; WHITE='\033[1;37m'; DIM='\033[2m'; PINK='\033[1;35m'
 _fed_header_row() {
   local _lbl="$1" _val="$2"
   # Visible chars before value: 2 (spaces after ║) + 12 (label) + 5 ("  :  ") = 19
-  # Total inner width between ║ chars: 64 (matches the 64 ═'s in the border)
-  # Max value length = 64 - 19 - 1 (min pad) = 44
-  local _max_val=43  # leaves room for ellipsis + 1 pad
-  if [ ${#_val} -gt 44 ]; then
+  # Total inner width between ║ chars: 62 (matches the 62 ═'s in the border)
+  # Max value length = 62 - 19 - 1 (min pad) = 42
+  local _max_val=41  # leaves room for ellipsis + 1 pad
+  if [ ${#_val} -gt 42 ]; then
     _val="${_val:0:_max_val}…"
   fi
-  local _pad=$((64 - 19 - ${#_val}))
+  local _pad=$((62 - 19 - ${#_val}))
   [ "$_pad" -lt 1 ] && _pad=1
   echo -e "  ${CYAN}║${NC}  ${BOLD}$(printf "%-12s" "$_lbl")${NC}  :  ${_val}$(printf '%*s' "$_pad" '')${CYAN}║${NC}"
 }
@@ -90,7 +89,7 @@ _fed_header_row() {
 # ── Log header — system info and start timestamp ──
 _print_log_header() {
   local _hn _user _os _kernel _de _session_type _term _shell _cpu _gpu _ram _disk _uptime _date _sid _log_name
-  
+
   _hn=$(hostname 2>/dev/null || echo "?")
   _user=$(whoami 2>/dev/null || echo "?")
   _date=$(date '+%Y-%m-%d %H:%M:%S' 2>/dev/null || echo "?")
@@ -164,12 +163,14 @@ _print_log_header() {
   # ── Render the box ──
   echo ""
   echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-  echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
-  echo -e "  ${CYAN}║${NC}        ${BOLD}${WHITE}FEDORA MACTAHOE — EPRAHEMI EDITION${NC}                     ${CYAN}║${NC}"
-  echo -e "  ${CYAN}║${NC}        ${DIM}Installation Log${NC}                                             ${CYAN}║${NC}"
-  echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+  _hdr_t1="FEDORA MACTAHOE — EPRAHEMI EDITION"
+  echo -e "  ${CYAN}║${NC}        ${BOLD}${WHITE}${_hdr_t1}${NC}$(printf '%*s' $((62 - 8 - ${#_hdr_t1})) '')${CYAN}║${NC}"
+  _hdr_t2="Installation Log"
+  echo -e "  ${CYAN}║${NC}        ${DIM}${_hdr_t2}${NC}$(printf '%*s' $((62 - 8 - ${#_hdr_t2})) '')${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
   echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
-  echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
   _fed_header_row "Hostname"   "$_hn"
   _fed_header_row "User"       "$_user"
   _fed_header_row "OS"         "$_os"
@@ -186,14 +187,14 @@ _print_log_header() {
   _fed_header_row "Date"       "$_date"
   _fed_header_row "Session ID" "$_sid"
   _fed_header_row "Log"        "$_log_name"
-  echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
   echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
-  echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
   _repo_url="https://github.com/eprahemi/Fedora-MacTahoe-Eprahemi"
   echo -e "  ${CYAN}║${NC}  ${DIM}${_repo_url}${NC}$(printf '%*s' $((60 - ${#_repo_url})) '')${CYAN}║${NC}"
 _credit="  ┊  Made by eprahemi — Fedora MacTahoe © 2026"
   echo -e "  ${CYAN}║${NC}  ${DIM}${_credit}${NC}$(printf '%*s' $((60 - ${#_credit})) '')${CYAN}║${NC}"
-  echo -e "  ${CYAN}║                                                            ${CYAN}║${NC}"
+  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
   echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
   echo ""
 }
@@ -464,15 +465,6 @@ except Exception:
   fi
 }
 
-# ── Save all prompt answers from installer variables into state ──
-_save_prompt_answers_all() {
-  [ -n "${INSTALL_DISCORD:-}" ]            && _save_prompt_answer "discord"            "$INSTALL_DISCORD"
-  [ -n "${INSTALL_DESKTOP_WALLPAPER:-}" ] && _save_prompt_answer "wallpaper_desktop" "$INSTALL_DESKTOP_WALLPAPER"
-  [ -n "${INSTALL_LOGIN_WALLPAPER:-}" ]   && _save_prompt_answer "wallpaper_login"   "$INSTALL_LOGIN_WALLPAPER"
-  [ -n "${INSTALL_WALLPAPER_18:-}" ]      && _save_prompt_answer "wallpaper_18"      "$INSTALL_WALLPAPER_18"
-  [ -n "${INSTALL_BILLIE_VIDEOS:-}" ]     && _save_prompt_answer "billie_videos"     "$INSTALL_BILLIE_VIDEOS"
-}
-
 # ── Update a single step's version in state ──
 _update_step_state() {
   local sid="$1"
@@ -526,7 +518,7 @@ next_step() {
   local pct=$((STEP * 100 / TOTAL_STEPS))
   local filled=$((STEP * 30 / TOTAL_STEPS))
   local empty=$((30 - filled))
-  
+
   echo ""
   echo -e "  ${CYAN}┌──${NC} ${YELLOW}${BOLD}Step ${STEP}/${TOTAL_STEPS}${NC}  ${WHITE}${BOLD}$1${NC}  ${CYAN}──┐${NC}"
   local bar_filled=$(printf '%*s' "$filled" '' | sed 's/ /▰/g')
@@ -540,7 +532,7 @@ phase_divider() {
   local ph="◈◈◈  ${title}  ◈◈◈"
   local range
   [ "$start" = "$end" ] && range="Step ${start} of ${TOTAL_STEPS}" || range="Steps ${start}–${end} of ${TOTAL_STEPS}"
-  
+
   echo ""
   echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
   echo -e "  ${CYAN}║${NC}"'                                                              '"${CYAN}║${NC}"
@@ -1018,7 +1010,7 @@ preflight() {
       echo ""
       echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
 pt_title="          ⛔  WOAH — PTYXIS DETECTED"
-      echo -e "  ${CYAN}║${NC}${pt_title}$(printf '%*s' $((62 - ${#pt_title})) '')${CYAN}║${NC}"
+      echo -e "  ${CYAN}║${NC}${pt_title}$(printf '%*s' $((61 - ${#pt_title})) '')${CYAN}║${NC}"
       echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
       echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
 pt1="  You're in Ptyxis. Bad news — this installer"
@@ -1048,7 +1040,9 @@ pt10="  1. Install Kitty:  sudo dnf install kitty"
       echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
 pt11="  2. Launch Kitty and re-run from there"
       echo -e "  ${CYAN}║${NC}  ${BOLD}${pt11}$(printf '%*s' $((60 - ${#pt11})) '')${CYAN}║${NC}"
-      echo -e "  ${CYAN}║${NC}     kitty -e bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/bootstrap.sh)\" ${CYAN}║${NC}"
+      echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+      echo -e "     ${YELLOW}kitty -e bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/bootstrap.sh)\"${NC}"
+      echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
       echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
 pt12="  You can keep Ptyxis as a backup, but Kitty"
       echo -e "  ${CYAN}║${NC}  ${pt12}$(printf '%*s' $((60 - ${#pt12})) '')${CYAN}║${NC}"
@@ -1075,7 +1069,10 @@ pt13="  needs to be the main ride for this to work."
     echo "  │  ◆ Keyboard shortcuts that just make sense                  │"
     echo "  │                                                             │"
     echo "  │  Get it:  sudo dnf install kitty                            │"
-    echo "  │  Then:    kitty -e bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/bootstrap.sh)\" │"
+    echo "  │  Then:    run this in Kitty:                                │"
+    echo "  │                                                             │"
+    echo "     kitty -e bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/bootstrap.sh)\""
+    echo "  │                                                             │"
     echo "  │                                                             │"
     echo "  │  Press any key to continue                                  │"
     echo "  │  or Ctrl+C to grab Kitty first (recommended)                │"
@@ -3680,9 +3677,9 @@ ep2="  ┊  Fedora MacTahoe  —  Open-source Mac vibes"
 m1="  🐙  GitHub         →  https://github.com/eprahemi"
   echo -e "  ${DIM}│${NC}  ${CYAN}${m1}${NC}$(printf '%*s' $((62 - ${#m1})) '')${DIM}│${NC}"
 m2="  🖥   MacTahoe Site  →  https://fedoratahoe.pages.dev"
-  echo -e "  ${DIM}│${NC}  ${CYAN}${m2}${NC}$(printf '%*s' $((63 - ${#m2})) '')${DIM}│${NC}"
-m3="  🖼   Wallpapers     →  https://wallvault.pages.dev/home  (+18)"
-  echo -e "  ${DIM}│${NC}  ${CYAN}${m3}${NC}$(printf '%*s' $((63 - ${#m3})) '')${DIM}│${NC}"
+  echo -e "  ${DIM}│${NC}  ${CYAN}${m2}${NC}$(printf '%*s' $((62 - ${#m2})) '')${DIM}│${NC}"
+m3="  🖼   Wallpapers    →  https://wallvault.pages.dev/home  (+18)"
+  echo -e "  ${DIM}│${NC}  ${CYAN}${m3}${NC}$(printf '%*s' $((62 - ${#m3})) '')${DIM}│${NC}"
   echo -e "  ${DIM}│${NC}                                                                 ${DIM}│${NC}"
 m4="  If you enjoyed this project, consider starring ⭐ on GitHub"
   echo -e "  ${DIM}│${NC}  ${DIM}${m4}${NC}$(printf '%*s' $((62 - ${#m4})) '')${DIM}│${NC}"

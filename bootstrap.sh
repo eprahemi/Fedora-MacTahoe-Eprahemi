@@ -24,11 +24,10 @@ REPO="https://github.com/eprahemi/Fedora-MacTahoe-Eprahemi.git"
 TMP="/tmp/fedora-mactahoe"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
-BOLD='\033[1m'; WHITE='\033[1;37m'; DIM='\033[2m'; PINK='\033[1;35m'
+BOLD='\033[1m'; WHITE='\033[1;37m'; DIM='\033[2m'
 
 # ── Log finalization (runs on normal exit, crash, or Ctrl+C) ──
 _fed_log_finalize() {
-  local _rc=$?
   exec 1>&5 2>&6 2>/dev/null || true
   trap - EXIT
   # User closed the script (Ctrl+C forced exit) or it closed itself
@@ -92,7 +91,7 @@ if [ -z "${KITTY_PID:-}" ]; then
     echo ""
     echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
 pt_title="          ⛔  WOAH — PTYXIS DETECTED"
-    echo -e "  ${CYAN}║${NC}${pt_title}$(printf '%*s' $((62 - ${#pt_title})) '')${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}${pt_title}$(printf '%*s' $((61 - ${#pt_title})) '')${CYAN}║${NC}"
     echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
     echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
 pt1="  You're in Ptyxis. Bad news — this installer"
@@ -122,7 +121,9 @@ pt10="  1. Install Kitty:  sudo dnf install kitty"
     echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
 pt11="  2. Launch Kitty and re-run from there"
     echo -e "  ${CYAN}║${NC}  ${BOLD}${pt11}$(printf '%*s' $((60 - ${#pt11})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}     kitty -e bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/bootstrap.sh)\" ${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+    echo -e "     ${YELLOW}kitty -e bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/bootstrap.sh)\"${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
     echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
 pt12="  You can keep Ptyxis as a backup, but Kitty"
     echo -e "  ${CYAN}║${NC}  ${pt12}$(printf '%*s' $((60 - ${#pt12})) '')${CYAN}║${NC}"
@@ -151,7 +152,10 @@ pt13="  needs to be the main ride for this to work."
     echo "  │  ◆ Keyboard shortcuts that just make sense                  │"
     echo "  │                                                             │"
     echo "  │  Get it:  sudo dnf install kitty                            │"
-    echo "  │  Then:    kitty -e bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/bootstrap.sh)\" │"
+    echo "  │  Then:    run this in Kitty:                                │"
+    echo "  │                                                             │"
+    echo "     kitty -e bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/bootstrap.sh)\""
+    echo "  │                                                             │"
     echo "  │                                                             │"
     echo "  │  Press any key to continue                                  │"
     echo "  │  or Ctrl+C to grab Kitty first (recommended)                │"
