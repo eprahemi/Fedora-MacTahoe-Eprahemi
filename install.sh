@@ -3257,6 +3257,20 @@ install_updater() {
   cp "$updater_src/fedora-mactahoe-updater.timer" "$HOME/.config/systemd/user/"
   log "Systemd timer and service installed"
 
+  # 2.5 System-wide rescue copy — if the user's fish functions are ever
+  #      wiped, /etc/fish/functions/update.fish still answers the 'update'
+  #      command: fish's autoload falls back to /etc when the user copy is
+  #      gone. Root-owned, so it can't be tampered with from a user session.
+  #      Refreshed on every full install; the timer self-heal keeps the user
+  #      copy current in between (and the rescue copy always fetches the
+  #      latest bundle, so a stale copy still fully works).
+  if [ -f "$BUNDLE/configs/fish/functions/update.fish" ]; then
+    sudo mkdir -p /etc/fish/functions 2>/dev/null
+    sudo cp "$BUNDLE/configs/fish/functions/update.fish" /etc/fish/functions/update.fish
+    sudo chmod 644 /etc/fish/functions/update.fish
+    log "Rescue copy installed to /etc/fish/functions/update.fish"
+  fi
+
   # 3. Reload, enable, start
   systemctl --user daemon-reload 2>/dev/null || true
   systemctl --user enable fedora-mactahoe-updater.timer 2>/dev/null || true

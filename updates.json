@@ -33,7 +33,8 @@
         "Every update fetch now shows a live braille spinner while cloning — same style as the installer's loader, no more static 'Fetching...' text",
         "Ctrl+C is now safe everywhere: cancelling mid-install or mid-fetch prints '✘ Cancelled — nothing was changed.', never touches your setup, and cleans up the temp files",
         "Fixed the download spinner never noticing a failed clone (fish's wait always reported success) — git's real exit code is read from the temp bundle now, so connection errors are reported honestly",
-        "Self-healing 'update' command — if update.fish is ever deleted (say, a wiped fish config), the boot + 2-hour updater timer restores it automatically, fingerprint-verified against the pinned sha256 so unverified code is never installed"
+        "Self-healing 'update' command — if update.fish is ever deleted (say, a wiped fish config), the boot + 2-hour updater timer restores it automatically, fingerprint-verified against the pinned sha256 so unverified code is never installed",
+        "System-wide rescue copy — the installer now also drops update.fish into /etc/fish/functions (root-owned, untouchable from your session): even with the entire fish config wiped, the 'update' command still answers, because fish falls back to /etc when the user copy is gone"
       ]
     },
     {
