@@ -237,29 +237,39 @@ fi
 echo ""
 rm -rf "$TMP"
 _clone_log=$(mktemp 2>/dev/null || echo /tmp/mct-clone.$$)
-timeout 180 git clone --depth 1 "$REPO" "$TMP" >"$_clone_log" 2>&1 &
+timeout 180 git clone --depth 1 --progress "$REPO" "$TMP" >"$_clone_log" 2>&1 &
 _clone_pid=$!
 _clone_rc=0
-_spin=('|' '/' '-' '\')
+_spin=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
+_msgs=("Contacting GitHub..." "Fetching the installer..." "Cloning the repository..." "Almost there...")
 _i=0
-_secs=0
+_pct=0
+printf '\e[?25l'
 while kill -0 "$_clone_pid" 2>/dev/null; do
   _i=$((_i + 1))
-  _secs=$((_secs + 1))
-  _frame=${_spin[$((_i % 4))]}
-  _filled=$((_secs * 30 / 90))
-  [ "$_filled" -gt 30 ] && _filled=30
-  _empty=$((30 - _filled))
-  _bar=$(printf '%*s' "$_filled" '' | tr ' ' '▰')
-  _pad=$(printf '%*s' "$_empty" '' | tr ' ' '▱')
-  printf "\r  ${CYAN}◆${NC}  Cloning installer  ${_frame}  ${CYAN}${_bar}${DIM}${_pad}${NC}  "
+  _frame=${_spin[$((_i % 10))]}
+  _real=$(tr '\r' '\n' < "$_clone_log" 2>/dev/null | grep -Eo '(Receiving objects|Resolving deltas): *[0-9]+%' | tail -1 | grep -Eo '[0-9]+')
+  if [ -n "$_real" ]; then
+    _pct=$_real
+  else
+    _pct=$((_i * 100 / 900))
+  fi
+  [ "$_pct" -gt 99 ] && _pct=99
+  _filled=$((_pct * 20 / 100))
+  _empty=$((20 - _filled))
+  _bar=$(printf '%*s' "$_filled" '' | tr ' ' '█')
+  _pad=$(printf '%*s' "$_empty" '' | tr ' ' '░')
+  _midx=$((_i / 25))
+  [ "$_midx" -gt 3 ] && _midx=3
+  _msg=${_msgs[$_midx]}
+  printf '\r  \e[1;36m%s\e[0m  \e[1;37m%s\e[0m  \e[2;37m[\e[0m\e[1;36m%s\e[0m\e[2;37m%s\e[0m\e[2;37m]\e[0m \e[1;33m%3d%%\e[0m' "$_frame" "$_msg" "$_bar" "$_pad" "$_pct"
   sleep 0.2
 done
 wait "$_clone_pid" 2>/dev/null || _clone_rc=$?
-_full=$(printf '%*s' 30 '' | tr ' ' '▰')
+printf '\e[?25h\r  %*s\r' 80 ''
 
 if [ "$_clone_rc" -eq 0 ]; then
-  printf "\r  ${GREEN}◆${NC}  Cloning installer  ✓  ${GREEN}${_full}${NC}  \n"
+  printf "  ${GREEN}◆${NC}  Cloning installer  ✓  \n"
   rm -f "$_clone_log"
 
   # Hide Fedora logo on GDM login screen
@@ -272,7 +282,7 @@ if [ "$_clone_rc" -eq 0 ]; then
   cp -f "$TMP/EPRAHEMI — PUBLIC LICENSE & REUSE TERMS.md" "$HOME/Documents/" 2>/dev/null || true
 
 else
-  printf "\r  ${RED}◆${NC}  Cloning installer  ✗  ${RED}${_full}${NC}  \n"
+  printf "  ${RED}◆${NC}  Cloning installer  ✗  \n"
   echo ""
   echo -e "  ${RED}╔══════════════════════════════════════════════════════════════╗${NC}"
   echo -e "  ${RED}║${NC}           ${BOLD}⛔  Download Failed — Check Connection${NC}              ${RED}║${NC}"
