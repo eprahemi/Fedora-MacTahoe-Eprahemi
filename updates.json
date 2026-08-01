@@ -26,7 +26,8 @@
         "Fixed kitty terminal boxes: ✦/⚠ title rows padded correctly for narrow glyphs; removed leftover over-padding on the \"Press any key\" rows",
         "The update menu no longer lists every step that will re-run — just what's new, then the choice. Cleaner.",
         "Fixed the progress bar showing '�' blocks — the bar builder used tr (byte-based, mangles multi-byte █); now built with string concat like install.sh's sed bars, byte-perfect in any locale",
-        "MacTahoe GTK source is now vendored in the repo (vendor/MacTahoe-gtk-theme) — if the upstream repo is ever deleted or unreachable, the theme still compiles fresh for your GNOME version, and GDM + Firefox theming still work via the vendored tweaks.sh"
+        "MacTahoe GTK source is now vendored in the repo (vendor/MacTahoe-gtk-theme) — if the upstream repo is ever deleted or unreachable, the theme still compiles fresh for your GNOME version, and GDM + Firefox theming still work via the vendored tweaks.sh",
+        "The firewalld question moved up front — it now appears with the Discord/wallpaper/video prompts before Phase 1, so the installation never pauses mid-flow; the actual disable (or keep/enable) still happens in the 'Disable RAM-wasting Services' step, and your answer is saved like the others"
       ]
     },
     {
@@ -155,7 +156,7 @@
     "configure_nautilus_defaults": "1.0",
     "apply_configs": "1.11",
     "apply_dconf": "1.1",
-    "optimize_system_resources": "1.0",
+    "optimize_system_resources": "1.1",
     "apply_wallpapers": "1.1",
     "install_custom_avatars": "1.0",
     "download_optional_videos": "1.0",

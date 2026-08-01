@@ -503,7 +503,7 @@ Phases:
 
 ---
 
-## 21. FIREWALLD PROMPT (Step 15 — during dconf configuration)
+## 21. FIREWALLD PROMPT (top prompt group — after Billie & Jinx, before Phase 1)
 
 ```
   ╔══════════════════════════════════════════════════════════════╗
@@ -533,7 +533,7 @@ Phases:
 ```
 
 > Color scheme: **YELLOW** borders (matching NVIDIA prompt), **green bold** reassurance line, **red bold** warning header and 4 consequence bullets.
-> Always shown — user decides: **Yes** = disable firewalld, **No** = enable firewalld. Default No.
+> Shown at the top with Discord/wallpapers/videos (only when firewalld is actually running). The answer is saved; the disable/enable action still runs in Step: Disable RAM-wasting Services — no mid-install pause. Default No.
 
 ---
 
@@ -777,7 +777,7 @@ PHASE 4 : CONFIGURATION  (Steps 10–21)
   ├── Step 12 → Celluloid default video player
   ├── Step 13 → Nautilus defaults
   ├── Step 14 → Configs
-  ├── Step 15 → dconf + Firewalld prompt (always, Yes=disable / No=enable)
+  ├── Step 15 → dconf + Firewalld action (decision was asked at the top prompts)
   ├── Step 16 → Wallpaper + Login Screen
   ├── Step 17 → Custom Avatars
   ├── Step 18 → GDM Login Screen
