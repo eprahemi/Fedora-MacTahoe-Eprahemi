@@ -248,10 +248,10 @@ printf '\e[?25l'
 while kill -0 "$_clone_pid" 2>/dev/null; do
   _i=$((_i + 1))
   _frame=${_spin[$((_i % 10))]}
-  _real=$(tr '\r' '\n' < "$_clone_log" 2>/dev/null | grep -Eo '(Receiving objects|Resolving deltas): *[0-9]+%' | tail -1 | grep -Eo '[0-9]+')
-  if [ -n "$_real" ]; then
+  _real=$(tr '\r' '\n' < "$_clone_log" 2>/dev/null | grep -Eo '(Receiving objects|Resolving deltas): *[0-9]+%' | tail -1 | grep -Eo '[0-9]+' || true)
+  if [ -n "$_real" ] && [ "$_real" -gt "$_pct" ]; then
     _pct=$_real
-  else
+  elif [ -z "$_real" ]; then
     _pct=$((_i * 100 / 900))
   fi
   [ "$_pct" -gt 99 ] && _pct=99
