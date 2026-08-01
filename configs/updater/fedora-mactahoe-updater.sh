@@ -46,6 +46,44 @@ except Exception:
 
 [ -z "$LATEST_VER" ] && exit 0
 
+# ── Self-heal: restore a deleted update.fish (verified) ──
+# The 'update' command lives in a fish function, so deleting it must never
+# leave the user stuck — the timer brings it back automatically. The file
+# is only replaced when missing entirely, and only when its sha256 matches
+# the fingerprint pinned in updates.json (never installs unverified code).
+_repair_update_fish() {
+  local target="$HOME/.config/fish/functions/update.fish"
+  [ -f "$target" ] && return 0
+
+  local pin
+  pin=$(echo "$UPDATES_JSON" | python3 -c "
+import sys, json
+try:
+    d = json.load(sys.stdin)
+    print(d.get('update_sha256', ''))
+except Exception:
+    print('')
+" 2>/dev/null)
+  [ -z "$pin" ] && return 1
+
+  local tmp
+  tmp=$(mktemp /tmp/mactahoe-update-fish.XXXXXX 2>/dev/null) || return 1
+  if ! curl -sf "https://raw.githubusercontent.com/${REPO}/main/configs/fish/functions/update.fish" -o "$tmp" 2>/dev/null; then
+    rm -f "$tmp"
+    return 1
+  fi
+  if [ "$(sha256sum "$tmp" 2>/dev/null | awk '{print $1}')" != "$pin" ]; then
+    rm -f "$tmp"
+    return 1
+  fi
+  mkdir -p "$(dirname "$target")"
+  chmod 644 "$tmp"
+  mv "$tmp" "$target"
+  return 0
+}
+
+_repair_update_fish
+
 # ── Read user's installed version from install-state.json ──
 USER_VER="0.0"
 if [ -f "$STATE_FILE" ]; then
