@@ -544,10 +544,6 @@ __secure_tunnel() {
 
   local client_id="mct-$(echo "$token" | cut -c1-12)"
   local server_id="srv-$((RANDOM % 9000 + 1000))"
-  local node_num=$((RANDOM % 8 + 1))
-  local node="cdn-${node_num}.mactahoe.io"
-  local locations=("us-east-1" "us-west-2" "eu-central-1" "eu-west-1" "ap-southeast-1" "ap-northeast-1" "sa-east-1" "me-south-1")
-  local location=${locations[$RANDOM % ${#locations[@]}]}
   local bw="$((RANDOM % 800 + 200))"
   local bw_label="${bw} Mbps"
   local uptime="$((RANDOM % 999 + 1))d $((RANDOM % 23 + 1))h"
@@ -568,11 +564,8 @@ __secure_tunnel() {
   local t3="  Server:    ${server_id}"
   echo -e "  ${CYAN}║${NC}  ${DIM}Server:${NC}    ${BOLD}${WHITE}${server_id}${NC}$(printf '%*s' $((62 - ${#t3})) '')${CYAN}║${NC}"
 
-  local t4="  Node:      ${node}"
-  echo -e "  ${CYAN}║${NC}  ${DIM}Node:${NC}      ${BOLD}${WHITE}${node}${NC}$(printf '%*s' $((62 - ${#t4})) '')${CYAN}║${NC}"
-
-  local t5="  Region:    ${location}"
-  echo -e "  ${CYAN}║${NC}  ${DIM}Region:${NC}    ${BOLD}${WHITE}${location}${NC}$(printf '%*s' $((62 - ${#t5})) '')${CYAN}║${NC}"
+  local t4="  Location:  Secure"
+  echo -e "  ${CYAN}║${NC}  ${DIM}Location:${NC}  ${BOLD}${WHITE}Secure${NC}$(printf '%*s' $((62 - ${#t4})) '')${CYAN}║${NC}"
 
   local t6="  Uplink:    ${bw_label}"
   echo -e "  ${CYAN}║${NC}  ${DIM}Uplink:${NC}    ${BOLD}${WHITE}${bw_label}${NC}$(printf '%*s' $((62 - ${#t6})) '')${CYAN}║${NC}"

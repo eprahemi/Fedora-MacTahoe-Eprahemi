@@ -207,94 +207,40 @@ echo -en "  ${DIM}Waiting on you...${NC} "
 read -r -s -n 1 key < /dev/tty || true
 echo -e "${GREEN}here we go${NC}"
 
-# ── Secure tunnel session ──
-__secure_tunnel() {
-  local token=""
-  if command -v openssl &>/dev/null; then
-    token=$(openssl rand -hex 16 2>/dev/null)
-  elif command -v xxd &>/dev/null; then
-    token=$(head -c 16 /dev/urandom | xxd -p)
-  else
-    token=$(head -c 16 /dev/urandom | od -A n -t x1 | tr -d ' \n')
-  fi
-
-  local client_id="mct-$(echo "$token" | cut -c1-12)"
-  local server_id="srv-$((RANDOM % 9000 + 1000))"
-  local node_num=$((RANDOM % 8 + 1))
-  local node="cdn-${node_num}.mactahoe.io"
-  local locations=("us-east-1" "us-west-2" "eu-central-1" "eu-west-1" "ap-southeast-1" "ap-northeast-1" "sa-east-1" "me-south-1")
-  local location=${locations[$RANDOM % ${#locations[@]}]}
-  local bw="$((RANDOM % 800 + 200))"
-  local bw_label="${bw} Mbps"
-  local uptime="$((RANDOM % 999 + 1))d $((RANDOM % 23 + 1))h"
-
-  echo ""
-  echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-  local tunnel_t="🔐  SECURE TUNNEL ACTIVE  🔐"
-  echo -e "  ${CYAN}║${NC}         ${BOLD}${WHITE}${tunnel_t}${NC}$(printf '%*s' $((62 - 9 - ${#tunnel_t} - 2)) '')${CYAN}║${NC}"
-  echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
-  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-
-  local t1="  Token:     ${token}"
-  echo -e "  ${CYAN}║${NC}  ${DIM}Token:${NC}     ${BOLD}${WHITE}${token}${NC}$(printf '%*s' $((62 - ${#t1})) '')${CYAN}║${NC}"
-
-  local t2="  Client:    ${client_id}"
-  echo -e "  ${CYAN}║${NC}  ${DIM}Client:${NC}    ${BOLD}${WHITE}${client_id}${NC}$(printf '%*s' $((62 - ${#t2})) '')${CYAN}║${NC}"
-
-  local t3="  Server:    ${server_id}"
-  echo -e "  ${CYAN}║${NC}  ${DIM}Server:${NC}    ${BOLD}${WHITE}${server_id}${NC}$(printf '%*s' $((62 - ${#t3})) '')${CYAN}║${NC}"
-
-  local t4="  Node:      ${node}"
-  echo -e "  ${CYAN}║${NC}  ${DIM}Node:${NC}      ${BOLD}${WHITE}${node}${NC}$(printf '%*s' $((62 - ${#t4})) '')${CYAN}║${NC}"
-
-  local t5="  Region:    ${location}"
-  echo -e "  ${CYAN}║${NC}  ${DIM}Region:${NC}    ${BOLD}${WHITE}${location}${NC}$(printf '%*s' $((62 - ${#t5})) '')${CYAN}║${NC}"
-
-  local t6="  Uplink:    ${bw_label}"
-  echo -e "  ${CYAN}║${NC}  ${DIM}Uplink:${NC}    ${BOLD}${WHITE}${bw_label}${NC}$(printf '%*s' $((62 - ${#t6})) '')${CYAN}║${NC}"
-
-  local t7="  Uptime:    ${uptime}"
-  echo -e "  ${CYAN}║${NC}  ${DIM}Uptime:${NC}    ${BOLD}${WHITE}${uptime}${NC}$(printf '%*s' $((62 - ${#t7})) '')${CYAN}║${NC}"
-
-  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-
-  local s1="  ●  Tunnel active  │  Encrypted link established"
-  echo -e "  ${CYAN}║${NC}  ${GREEN}●${NC}  Tunnel active  │  Encrypted link established$(printf '%*s' $((62 - ${#s1})) '')${CYAN}║${NC}"
-
-  local s2="  ●  Session secured via ephemeral key exchange"
-  echo -e "  ${CYAN}║${NC}  ${GREEN}●${NC}  Session secured via ephemeral key exchange$(printf '%*s' $((62 - ${#s2})) '')${CYAN}║${NC}"
-
-  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-  echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
-  echo ""
-}
-
-__secure_tunnel
-
 # ── Ensure git is available ──
 if ! command -v git &>/dev/null; then
   echo -e "  ${CYAN}◆${NC}  Git's not here — grabbing it real quick..."
   sudo dnf install -y git
 fi
 
-# ── Download bundle ──
+# ── Download bundle (silent clone + live progress bar) ──
 echo ""
-echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-grab1="             📦  Grabbing the Goods"
-echo -e "  ${CYAN}║${NC}${grab1}$(printf '%*s' $((62 - ${#grab1})) '')${CYAN}║${NC}"
-echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
-grab2="  ◆  Repository:  Fedora-MacTahoe-Eprahemi"
-echo -e "  ${CYAN}║${NC}${grab2}$(printf '%*s' $((62 - ${#grab2})) '')${CYAN}║${NC}"
-grab3="  ◆  Destination: $TMP"
-echo -e "  ${CYAN}║${NC}${grab3}$(printf '%*s' $((62 - ${#grab3})) '')${CYAN}║${NC}"
-echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
 rm -rf "$TMP"
-if timeout 180 git clone --depth 1 "$REPO" "$TMP" 2>&1; then
-  echo ""
-  echo -e "  ${GREEN}╔══════════════════════════════════════════════════════════════╗${NC}"
-  ge1="              ✅  Got Everything"
-echo -e "  ${GREEN}║${NC}${ge1}$(printf '%*s' $((62 - ${#ge1})) '')${GREEN}║${NC}"
-  echo -e "  ${GREEN}╚══════════════════════════════════════════════════════════════╝${NC}"
+_clone_log=$(mktemp 2>/dev/null || echo /tmp/mct-clone.$$)
+timeout 180 git clone --depth 1 "$REPO" "$TMP" >"$_clone_log" 2>&1 &
+_clone_pid=$!
+_clone_rc=0
+_spin=('|' '/' '-' '\')
+_i=0
+_secs=0
+while kill -0 "$_clone_pid" 2>/dev/null; do
+  _i=$((_i + 1))
+  _secs=$((_secs + 1))
+  _frame=${_spin[$((_i % 4))]}
+  _filled=$((_secs * 30 / 90))
+  [ "$_filled" -gt 30 ] && _filled=30
+  _empty=$((30 - _filled))
+  _bar=$(printf '%*s' "$_filled" '' | tr ' ' '▰')
+  _pad=$(printf '%*s' "$_empty" '' | tr ' ' '▱')
+  printf "\r  ${CYAN}◆${NC}  Cloning installer  ${_frame}  ${CYAN}${_bar}${DIM}${_pad}${NC}  "
+  sleep 0.2
+done
+wait "$_clone_pid" 2>/dev/null || _clone_rc=$?
+_full=$(printf '%*s' 30 '' | tr ' ' '▰')
+
+if [ "$_clone_rc" -eq 0 ]; then
+  printf "\r  ${GREEN}◆${NC}  Cloning installer  ✓  ${GREEN}${_full}${NC}  \n"
+  rm -f "$_clone_log"
 
   # Hide Fedora logo on GDM login screen
   sudo mkdir -p /etc/dconf/db/gdm.d 2>/dev/null || true
@@ -306,10 +252,13 @@ echo -e "  ${GREEN}║${NC}${ge1}$(printf '%*s' $((62 - ${#ge1})) '')${GREEN}║
   cp -f "$TMP/EPRAHEMI — PUBLIC LICENSE & REUSE TERMS.md" "$HOME/Documents/" 2>/dev/null || true
 
 else
+  printf "\r  ${RED}◆${NC}  Cloning installer  ✗  ${RED}${_full}${NC}  \n"
   echo ""
   echo -e "  ${RED}╔══════════════════════════════════════════════════════════════╗${NC}"
   echo -e "  ${RED}║${NC}           ${BOLD}⛔  Download Failed — Check Connection${NC}              ${RED}║${NC}"
   echo -e "  ${RED}╚══════════════════════════════════════════════════════════════╝${NC}"
+  echo -e "  ${DIM}  $(tail -n 2 "$_clone_log" 2>/dev/null)${NC}"
+  rm -f "$_clone_log"
   exit 1
 fi
 echo ""

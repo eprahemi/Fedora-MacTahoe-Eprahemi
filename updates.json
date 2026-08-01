@@ -1,6 +1,6 @@
 {
   "latest_version": "2.2",
-  "bootstrap_sha256": "d90bdd3808036f7a2735f28454111e996b25e91d86d6b23b75f93a3b00c615cd",
+  "bootstrap_sha256": "260a0ef8813d6fa1ea7766dc5e69123b738764594ea61a7efa9350319485a9dc",
   "update_sha256": "817b2cd4dfeb820b7d19d66467c06899d2e791e7b8660f48ad8cc01cfb499ad4",
   "changelog": [
     {
@@ -9,7 +9,10 @@
         "Quick updates are now truly quiet — no more questions: your saved answers are reused (Discord, wallpapers, videos) once you've answered them once",
         "All setup prompts moved from bootstrap into the installer — bootstrap is just the start button now: splash, verify, download, hand off",
         "Discord's answer is now saved too (it was the only prompt without persistence)",
-        "Bootstrap no longer prints its own system-info box — the dashboard shows once, from the installer"
+        "Bootstrap no longer prints its own system-info box — the dashboard shows once, from the installer",
+        "Bootstrap no longer prints its own SECURE TUNNEL box — the tunnel shows once, from the installer",
+        "Tunnel location is hidden — a generic 'Location: Secure' row instead of fake CDN node details",
+        "The installer download now shows a live progress bar — the clone runs quietly in the background, no more raw git text"
       ]
     },
     {
