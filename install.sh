@@ -1968,14 +1968,14 @@ apply_configs() {
 
   # Fish
   if [ -f "$cfg/fish/config.fish" ]; then
-    # Auto-backup the live fish config before overwriting (keeps last 10)
+    # Auto-backup the live fish config before overwriting (keeps last 5)
     if [ -d "$HOME/.config/fish" ]; then
       mkdir -p "$HOME/.cache/fedora-mactahoe/backups"
       chmod 700 "$HOME/.cache/fedora-mactahoe/backups" 2>/dev/null || true
       local snap="$HOME/.cache/fedora-mactahoe/backups/fish-$(date +%Y%m%d-%H%M%S).tar.gz"
       tar czf "$snap" -C "$HOME/.config" fish 2>/dev/null || true
       chmod 600 "$snap" 2>/dev/null || true
-      ls -1t "$HOME/.cache/fedora-mactahoe/backups"/fish-*.tar.gz 2>/dev/null | tail -n +11 | xargs -r rm -f 2>/dev/null || true
+      ls -1t "$HOME/.cache/fedora-mactahoe/backups"/fish-*.tar.gz 2>/dev/null | tail -n +6 | xargs -r rm -f 2>/dev/null || true
     fi
     mkdir -p "$HOME/.config/fish/functions"
     cp "$cfg/fish/config.fish" "$HOME/.config/fish/"

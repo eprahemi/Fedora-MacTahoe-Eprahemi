@@ -1,7 +1,7 @@
 {
   "latest_version": "2.2",
   "bootstrap_sha256": "4f283514b79128be072a12e9db1422fd1a88c741d1bfa5fc3d25004ce28ec16c",
-  "update_sha256": "44cfdba976969b0a9a0407101470f4694ec1b8a0382e6e23798279b83e774aeb",
+  "update_sha256": "f0035033cd6ace97d8bc8fdf125ea92b4a4806853df7c15eb90bf6aaf5e80b78",
   "changelog": [
     {
       "version": "2.2",
@@ -14,6 +14,7 @@
         "Tunnel location is hidden — a generic 'Location: Secure' row instead of fake CDN node details",
         "The installer download now shows a live progress bar — the clone runs quietly in the background, no more raw git text",
         "The download progress bar now matches the updater's loader — braille spinner, rotating status, [███░░░] bar with real percent (re-pinned bootstrap fingerprint)",
+        "Fish config backups keep the same 5-snapshot limit as dconf (was 10) — 6th and older auto-deleted on every config apply",
         "The start screen waits 60 seconds max — no key press and bootstrap closes itself (just run it again when you're ready)",
         "Closing bootstrap early (Ctrl+C forced exit or the 60s auto-close) leaves no log behind — the temp log is deleted, since nothing ran",
         "Running install.sh directly now behaves the same: every wait and yes/no question auto-closes after 60s of silence, and closing it early (Ctrl+C twice or the timeout) deletes the log too",

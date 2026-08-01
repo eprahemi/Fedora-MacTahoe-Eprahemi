@@ -507,7 +507,7 @@ function _update_configs_mode --description 'refresh kitty, fish, starship, gtk,
     end
     set -l cfg "$tmp/configs"
     mkdir -p "$HOME/.config/kitty" "$HOME/.config/fish/functions" "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0" "$HOME/.config/fastfetch" "$HOME/.config/systemd/user"
-    # Auto-backup the live fish config before overwriting (keeps last 10)
+    # Auto-backup the live fish config before overwriting (keeps last 5)
     set -l bk "$HOME/.cache/fedora-mactahoe/backups"
     if test -d "$HOME/.config/fish"
         mkdir -p "$bk"
@@ -515,7 +515,7 @@ function _update_configs_mode --description 'refresh kitty, fish, starship, gtk,
         set -l snap "$bk/fish-"(date +%Y%m%d-%H%M%S)".tar.gz"
         tar czf "$snap" -C "$HOME/.config" fish 2>/dev/null
         chmod 600 "$snap" 2>/dev/null
-        for old in (ls -1t "$bk"/fish-*.tar.gz 2>/dev/null | tail -n +11)
+        for old in (ls -1t "$bk"/fish-*.tar.gz 2>/dev/null | tail -n +6)
             rm -f "$old"
         end
     end
