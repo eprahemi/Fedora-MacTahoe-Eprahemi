@@ -517,17 +517,50 @@ end
 
 # ── fetch the repo bundle into a temp dir; echoes its path ──
 # UI messages go to stderr — stdout is ONLY the path (command substitution).
+# The clone runs in the background with a live spinner; Ctrl+C aborts it
+# cleanly (git dies → cancel path, cursor restored, temp dir removed).
 function _update_fetch_bundle --description 'clone the repo bundle; echoes the temp dir path'
     if not command -q git
         printf "\n  \e[1;31m✘ git is not installed — can't fetch the files.\e[0m\n" >&2
         return 1
     end
-    printf "\n  \e[1;37mFetching the latest files from GitHub...\e[0m\n" >&2
     set -l tmp (mktemp -d /tmp/mactahoe-target.XXXXXX)
-    git clone --depth 1 -q https://github.com/eprahemi/Fedora-MacTahoe-Eprahemi.git "$tmp" 2>/dev/null
-    if test $status -ne 0
+    set -g __update_clean_tmp "$tmp"
+    function __update_fetch_cleanup --on-signal INT
+        printf '\e[?25h\r  %*s\r' 78 '' >&2
+        if set -q __update_clean_tmp
+            string match -q "/tmp/*" "$__update_clean_tmp"
+            and rm -rf "$__update_clean_tmp"
+        end
+        set -e __update_clean_tmp
+    end
+    set -l frames ⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏
+    printf '\e[?25l' >&2
+    # fish's wait() always reports 0 for background jobs, so record git's
+    # real exit code in a status file and read it back after the spinner.
+    sh -c 'git clone --depth 1 -q https://github.com/eprahemi/Fedora-MacTahoe-Eprahemi.git "$1" 2>/dev/null; echo $? > "$1/.clone-status"' sh "$tmp" &
+    set -l pid $last_pid
+    set -l i 1
+    while kill -0 $pid 2>/dev/null
+        printf '\r  \e[1;36m%s\e[0m  \e[1;37mFetching the latest files from GitHub...\e[0m' $frames[$i] >&2
+        sleep 0.1
+        set i (math "$i % 10 + 1")
+    end
+    wait $pid 2>/dev/null
+    set -l code 130
+    if test -f "$tmp/.clone-status"
+        set code (cat "$tmp/.clone-status")
+    end
+    printf '\e[?25h\r  %*s\r' 78 '' >&2
+    functions --erase __update_fetch_cleanup
+    set -e __update_clean_tmp
+    if test $code -ne 0
         rm -rf "$tmp"
-        printf "\n  \e[1;31m✘ Could not fetch the repo — check your connection.\e[0m\n" >&2
+        if test $code -eq 130
+            printf "\n  \e[1;33m✘ Cancelled — nothing was changed.\e[0m\n" >&2
+        else
+            printf "\n  \e[1;31m✘ Could not fetch the repo — check your connection.\e[0m\n" >&2
+        end
         return 1
     end
     echo "$tmp"
@@ -606,7 +639,18 @@ end
 # ── run install.sh in single-target mode from a fetched bundle ──
 # argv[1] = bundle dir, argv[2] = UPDATE_STEPS list (comma-separated),
 # remaining args = INSTALL_* env pairs ("KEY=value") passed to the installer.
+# Ctrl+C mid-run: the bundle is cleaned up and the cancel is logged —
+# nothing is left half-done (verified --on-signal behavior).
 function _update_run_step --description 'run installer steps from a bundle clone'
+    set -g __update_clean_tmp "$argv[1]"
+    function __update_step_cleanup --on-signal INT
+        printf '\e[?25h\r  %*s\r' 78 '' >&2
+        if set -q __update_clean_tmp
+            string match -q "/tmp/*" "$__update_clean_tmp"
+            and rm -rf "$__update_clean_tmp"
+        end
+        set -e __update_clean_tmp
+    end
     set -l tmp "$argv[1]"
     set -l steps "$argv[2]"
     set -e argv[1 2]
@@ -620,6 +664,10 @@ function _update_run_step --description 'run installer steps from a bundle clone
     if test $code -eq 0
         _update_log_add $steps "—" "—" ok
         printf "\n  \e[1;32m✓ %s — done.\e[0m\n" $steps
+    else if test $code -eq 130
+        # Ctrl+C — the installer was interrupted mid-run
+        _update_log_add $steps "—" "—" cancel
+        printf "\n  \e[1;33m✘ Cancelled — nothing was changed.\e[0m\n" $steps
     else
         _update_log_add $steps "—" "—" fail
         printf "\n  \e[1;31m✘ %s failed (exit $code).\e[0m\n" $steps
@@ -627,6 +675,8 @@ function _update_run_step --description 'run installer steps from a bundle clone
     # safety: only ever delete a bundle that really lives in /tmp
     string match -q "/tmp/*" "$tmp"
     and rm -rf "$tmp"
+    functions --erase __update_step_cleanup
+    set -e __update_clean_tmp
     return $code
 end
 

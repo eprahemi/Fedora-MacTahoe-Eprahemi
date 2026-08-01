@@ -1,7 +1,7 @@
 {
   "latest_version": "2.2",
   "bootstrap_sha256": "a435e91a79f93cc67f99f7adb75656288653f57b9bfa823de23d17a658753966",
-  "update_sha256": "085a9c64167096a3a6b82ebce992295562e7aecf099b4d76c3431d134d47c51c",
+  "update_sha256": "733cdc7d8389060e9057c4de499e8ec943456a3df7b4ccd9df7f1b2171ba62a3",
   "changelog": [
     {
       "version": "2.2",
@@ -29,7 +29,10 @@
         "MacTahoe GTK source is now vendored in the repo (vendor/MacTahoe-gtk-theme) — if the upstream repo is ever deleted or unreachable, the theme still compiles fresh for your GNOME version, and GDM + Firefox theming still work via the vendored tweaks.sh",
         "The firewalld question moved up front — it now appears with the Discord/wallpaper/video prompts before Phase 1, so the installation never pauses mid-flow; the actual disable (or keep/enable) still happens in the 'Disable RAM-wasting Services' step, and your answer is saved like the others",
         "update menu — per-target toolbox: re-run a single part of the setup with update <target> (icons, gtk, extensions, wallpaper, pfp, theme, fonts, sounds, videos, services, gdm, defaults, dconf, notifier, clean) — no full reinstall needed",
-        "update <target> asks about logging out when the change needs a fresh session — per-target reason in the box (theme/gtk/extensions/gdm/wallpaper/icons/fonts), strict y/n with no default so Enter alone never logs you out"
+        "update <target> asks about logging out when the change needs a fresh session — per-target reason in the box (theme/gtk/extensions/gdm/wallpaper/icons/fonts), strict y/n with no default so Enter alone never logs you out",
+        "Every update fetch now shows a live braille spinner while cloning — same style as the installer's loader, no more static 'Fetching...' text",
+        "Ctrl+C is now safe everywhere: cancelling mid-install or mid-fetch prints '✘ Cancelled — nothing was changed.', never touches your setup, and cleans up the temp files",
+        "Fixed the download spinner never noticing a failed clone (fish's wait always reported success) — git's real exit code is read from the temp bundle now, so connection errors are reported honestly"
       ]
     },
     {
