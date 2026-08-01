@@ -256,7 +256,7 @@ backup_dconf() {
   local bk_file="$bk_dir/dconf-$(date +%Y%m%d-%H%M%S).conf"
   if dconf dump / > "$bk_file" 2>/dev/null; then
     chmod 600 "$bk_file" 2>/dev/null || true
-    log "dconf snapshot saved: $bk_file"
+    ok "dconf snapshot saved"
     # Keep only the 5 most recent snapshots
     ls -1t "$bk_dir"/dconf-*.conf 2>/dev/null | tail -n +6 | while read -r old; do
       rm -f "$old" 2>/dev/null || true
