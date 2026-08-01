@@ -30,6 +30,13 @@ BOLD='\033[1m'; WHITE='\033[1;37m'; DIM='\033[2m'; PINK='\033[1;35m'
 _fed_log_finalize() {
   local _rc=$?
   exec 1>&5 2>&6 2>/dev/null || true
+  trap - EXIT
+  # User closed the script (Ctrl+C forced exit) or it closed itself
+  # (60s no-key timeout) — nothing ran, so the log is not worth keeping.
+  if [ "${_FED_ABORT:-0}" = "1" ]; then
+    rm -f "${_FED_LOG:-}" 2>/dev/null || true
+    return 0
+  fi
   sleep 0.5 2>/dev/null || true
   # Strip ANSI escape sequences from log file (post-process, no pipe race)
   if [ -n "${_FED_LOG:-}" ] && [ -f "$_FED_LOG" ]; then
@@ -40,7 +47,6 @@ _fed_log_finalize() {
       gio set "$_FED_LOG" metadata::custom-icon "file://${HOME}/.local/share/icons/fedora-mactahoe/mactahoe_log_icon.png" 2>/dev/null || true
   fi
   echo -e "  ${GREEN}Log saved: ${_FED_LOG}${NC}"
-  trap - EXIT
 }
 trap _fed_log_finalize EXIT
 
@@ -53,11 +59,13 @@ _fed_log_error() {
 trap '_fed_log_error $LINENO $?' ERR
 
 # ── Ctrl+C / Interrupt handling ──
-# First press warns, second press force-exits immediately.
+# First press warns, second press force-exits immediately (no log saved).
 _INT_PRESS=0
+_FED_ABORT=0
 _handle_sigint() {
   _INT_PRESS=$((_INT_PRESS + 1))
   if [ "$_INT_PRESS" -ge 2 ]; then
+    _FED_ABORT=1
     echo -e "\n  ${RED}${BOLD}⛔  Forced exit.${NC}"
     exit 130
   fi
@@ -206,7 +214,9 @@ echo -e "  ${CYAN}╚═══════════════════�
 echo -en "  ${DIM}Waiting on you...${NC} "
 _read_rc=0
 read -t 60 -r -s -n 1 key < /dev/tty || _read_rc=$?
-if [ "$_read_rc" -gt 128 ]; then
+# 142 = read's timeout (SIGALRM). Other codes (Ctrl+C = 130, EOF = 1) are NOT the timeout.
+if [ "$_read_rc" -eq 142 ]; then
+  _FED_ABORT=1
   echo ""
   echo -e "  ${YELLOW}◆${NC}  No key pressed in 60 seconds — closing. Run it again when you're ready!"
   exit 1

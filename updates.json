@@ -1,6 +1,6 @@
 {
   "latest_version": "2.2",
-  "bootstrap_sha256": "981d742724afd5785d56f95ab6e3ff0bd4fa6004c18753540ebbf611c4bdb751",
+  "bootstrap_sha256": "a76194cf54e0a632c848f961abfb35475e9ff5ae2c66634f7788204ec6ec1c33",
   "update_sha256": "817b2cd4dfeb820b7d19d66467c06899d2e791e7b8660f48ad8cc01cfb499ad4",
   "changelog": [
     {
@@ -13,7 +13,8 @@
         "Bootstrap no longer prints its own SECURE TUNNEL box — the tunnel shows once, from the installer",
         "Tunnel location is hidden — a generic 'Location: Secure' row instead of fake CDN node details",
         "The installer download now shows a live progress bar — the clone runs quietly in the background, no more raw git text",
-        "The start screen waits 60 seconds max — no key press and bootstrap closes itself (just run it again when you're ready)"
+        "The start screen waits 60 seconds max — no key press and bootstrap closes itself (just run it again when you're ready)",
+        "Closing bootstrap early (Ctrl+C forced exit or the 60s auto-close) leaves no log behind — the temp log is deleted, since nothing ran"
       ]
     },
     {
