@@ -1044,7 +1044,7 @@ function smb --description 'Samba file sharing manager'
                     end
                     printf "\n"
                     printf "  Usage: smb user password <username>\n"
-                    printf "  Example: smb user password eprahemi\n"
+                    printf "  Example: smb user password alice\n"
                     printf "\n"
                     return 0
                 end
