@@ -442,21 +442,28 @@ _save_prompt_answer() {
   [ -z "$pid" ] && return
   PR_ANS["$pid"]="$choice"
   PR_VER["$pid"]="$MANIFEST_VERSION"
-  local _MERGED
-  _MERGED=$(echo "$STATE_JSON" | python3 -c "
+  local _MERGED _JFILE
+  _JFILE=$(mktemp "$STATE_DIR/state.XXXXXX" 2>/dev/null || echo "")
+  if [ -z "$_JFILE" ]; then
+    return
+  fi
+  echo "$STATE_JSON" > "$_JFILE" 2>/dev/null || true
+  _MERGED=$(python3 -c '
 import sys, json
 try:
-    s = json.load(sys.stdin)
+    with open(sys.argv[1], "r") as fh:
+        s = json.load(fh)
 except Exception:
-    s = {'version': '0.0', 'steps': {}, 'prompts': {}}
+    s = {"version": "0.0", "steps": {}, "prompts": {}}
 try:
-    if 'prompts' not in s:
-        s['prompts'] = {}
-    s['prompts']['$pid'] = {'answered': True, 'choice': '$choice', 'version': '$MANIFEST_VERSION'}
+    if "prompts" not in s:
+        s["prompts"] = {}
+    s["prompts"][sys.argv[2]] = {"answered": True, "choice": sys.argv[3], "version": sys.argv[4]}
     print(json.dumps(s))
 except Exception:
-    print('$STATE_JSON')
-" 2>/dev/null || echo "$STATE_JSON")
+    print("")
+' "$_JFILE" "$pid" "$choice" "$MANIFEST_VERSION" 2>/dev/null || echo "$STATE_JSON")
+  rm -f "$_JFILE" 2>/dev/null || true
   [ -n "$_MERGED" ] && STATE_JSON="$_MERGED"
   local _TMPFILE
   _TMPFILE=$(mktemp "$STATE_DIR/state.XXXXXX" 2>/dev/null || echo "")
@@ -471,21 +478,28 @@ _update_step_state() {
   local sv="${STEP_MAN_VERS[$sid]:-0.0}"
   [ "$sv" = "0.0" ] && sv="$MANIFEST_VERSION"
   STEP_USR_VERS["$sid"]="$sv"
-  local _MERGED
-  _MERGED=$(echo "$STATE_JSON" | python3 -c "
+  local _MERGED _JFILE
+  _JFILE=$(mktemp "$STATE_DIR/state.XXXXXX" 2>/dev/null || echo "")
+  if [ -z "$_JFILE" ]; then
+    return
+  fi
+  echo "$STATE_JSON" > "$_JFILE" 2>/dev/null || true
+  _MERGED=$(python3 -c '
 import sys, json
 try:
-    s = json.load(sys.stdin)
+    with open(sys.argv[1], "r") as fh:
+        s = json.load(fh)
 except Exception:
-    s = {'version': '0.0', 'steps': {}, 'prompts': {}}
+    s = {"version": "0.0", "steps": {}, "prompts": {}}
 try:
-    if 'steps' not in s:
-        s['steps'] = {}
-    s['steps']['$sid'] = '$sv'
+    if "steps" not in s:
+        s["steps"] = {}
+    s["steps"][sys.argv[2]] = sys.argv[3]
     print(json.dumps(s))
 except Exception:
-    print('$STATE_JSON')
-" 2>/dev/null || echo "$STATE_JSON")
+    print("")
+' "$_JFILE" "$sid" "$sv" 2>/dev/null || echo "$STATE_JSON")
+  rm -f "$_JFILE" 2>/dev/null || true
   [ -n "$_MERGED" ] && STATE_JSON="$_MERGED"
   local _TMPFILE
   _TMPFILE=$(mktemp "$STATE_DIR/state.XXXXXX" 2>/dev/null || echo "")
@@ -3600,21 +3614,28 @@ finalize() {
   ok "System cleaned and polished"
 
   # ── 12. Finalize install state (overall version + date) ──
-  local _FINAL_JSON
-  _FINAL_JSON=$(echo "$STATE_JSON" | python3 -c "
+  local _FINAL_JSON _JFILE _INSTALL_DATE
+  _INSTALL_DATE=$(date -Iseconds 2>/dev/null || date +%Y-%m-%dT%H:%M:%S)
+  _JFILE=$(mktemp "$STATE_DIR/state.XXXXXX" 2>/dev/null || echo "")
+  if [ -n "$_JFILE" ]; then
+    echo "$STATE_JSON" > "$_JFILE" 2>/dev/null || true
+    _FINAL_JSON=$(python3 -c '
 import sys, json
 try:
-    s = json.load(sys.stdin)
+    with open(sys.argv[1], "r") as fh:
+        s = json.load(fh)
 except Exception:
-    s = {'version': '0.0', 'steps': {}, 'prompts': {}}
+    s = {"version": "0.0", "steps": {}, "prompts": {}}
 try:
-    s['version'] = '$MANIFEST_VERSION'
-    s['install_date'] = '$(date -Iseconds 2>/dev/null || date +%Y-%m-%dT%H:%M:%S)'
+    s["version"] = sys.argv[2]
+    s["install_date"] = sys.argv[3]
     print(json.dumps(s))
 except Exception:
-    print('$STATE_JSON')
-" 2>/dev/null || echo "$STATE_JSON")
-  [ -n "$_FINAL_JSON" ] && STATE_JSON="$_FINAL_JSON"
+    print("")
+' "$_JFILE" "$MANIFEST_VERSION" "$_INSTALL_DATE" 2>/dev/null || echo "$STATE_JSON")
+    rm -f "$_JFILE" 2>/dev/null || true
+    [ -n "$_FINAL_JSON" ] && STATE_JSON="$_FINAL_JSON"
+  fi
   local _TMPFILE
   _TMPFILE=$(mktemp "$STATE_DIR/state.XXXXXX" 2>/dev/null || echo "")
   if [ -n "$_TMPFILE" ]; then

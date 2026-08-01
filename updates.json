@@ -164,6 +164,6 @@
     "setup_shell": "1.0",
     "install_extensions": "1.7",
     "mirror_flatpak_icons": "1.0",
-    "finalize": "1.8"
+    "finalize": "1.9"
   }
 }
