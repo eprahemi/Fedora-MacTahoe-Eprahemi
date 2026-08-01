@@ -204,7 +204,13 @@ wp_line="  ⚠  Read yes/no prompts carefully — some are permanent!"
 echo -e "  ${CYAN}║${NC}  ${BOLD}${RED}${wp_line}${NC}$(printf '%*s' $((60 - ${#wp_line})) '')${CYAN}║${NC}"
 echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
 echo -en "  ${DIM}Waiting on you...${NC} "
-read -r -s -n 1 key < /dev/tty || true
+_read_rc=0
+read -t 60 -r -s -n 1 key < /dev/tty || _read_rc=$?
+if [ "$_read_rc" -gt 128 ]; then
+  echo ""
+  echo -e "  ${YELLOW}◆${NC}  No key pressed in 60 seconds — closing. Run it again when you're ready!"
+  exit 1
+fi
 echo -e "${GREEN}here we go${NC}"
 
 # ── Ensure git is available ──
