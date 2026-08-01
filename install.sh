@@ -23,6 +23,13 @@ set -euo pipefail
 _fed_log_finalize() {
   local _rc=$?
   exec 1>&5 2>&6 2>/dev/null || true
+  trap - EXIT
+  # User closed the installer (Ctrl+C forced exit) or it closed itself
+  # (60s no-key/no-answer timeout) — nothing useful ran, so no log is kept.
+  if [ "${_FED_ABORT:-0}" = "1" ]; then
+    rm -f "${_FED_LOG:-}" 2>/dev/null || true
+    return 0
+  fi
   sleep 0.5 2>/dev/null || true
   # Strip ANSI escape sequences from log file (post-process, no pipe race)
   if [ -n "${_FED_LOG:-}" ] && [ -f "$_FED_LOG" ]; then
@@ -33,7 +40,6 @@ _fed_log_finalize() {
       gio set "$_FED_LOG" metadata::custom-icon "file://$_FED_ICON_PATH" 2>/dev/null || true
   fi
   echo -e "  ${GREEN}Log saved: ${_FED_LOG}${NC}"
-  trap - EXIT
 }
 trap _fed_log_finalize EXIT
 
@@ -194,17 +200,32 @@ _credit="  ┊  Made by eprahemi — Fedora MacTahoe © 2026"
 _print_log_header
 
 # ── Ctrl+C / Interrupt handling ──
-# First press warns, second press force-exits immediately.
+# First press warns, second press force-exits immediately (no log saved).
 _INT_PRESS=0
+_FED_ABORT=0
 _handle_sigint() {
   _INT_PRESS=$((_INT_PRESS + 1))
   if [ "$_INT_PRESS" -ge 2 ]; then
+    _FED_ABORT=1
     echo -e "\n  ${RED}${BOLD}⛔  Forced exit.${NC}"
     exit 130
   fi
   echo -e "\n  ${YELLOW}${BOLD}⚠  Interrupted. Press Ctrl+C again to exit.${NC}"
 }
 trap _handle_sigint INT
+
+# ── Key wait with 60s auto-close ──
+# Any 'press any key' style wait: 60s of silence closes the installer (no log saved).
+_wait_or_close() {
+  local _rc=0
+  read -t 60 -r -s -n 1 key < /dev/tty || _rc=$?
+  if [ "$_rc" -eq 142 ]; then
+    _FED_ABORT=1
+    echo ""
+    echo -e "  ${YELLOW}◆${NC}  No key pressed in 60 seconds — closing. Run it again when you're ready!"
+    exit 1
+  fi
+}
 
 # ── Config ──
 # 18+ wallpaper zip — Google Drive direct download (file ID from share link)
@@ -247,9 +268,17 @@ backup_dconf() {
 confirm() {
   local prompt="$1" default="${2:-}"
   local reply=""
+  local _rc=0
   while true; do
     echo -en "  ${DIM}${prompt}${NC} " >/dev/tty
-    read -r reply </dev/tty || reply=""
+    _rc=0
+    read -t 60 -r reply </dev/tty || _rc=$?
+    if [ "$_rc" -eq 142 ]; then
+      _FED_ABORT=1
+      echo ""
+      echo -e "  ${YELLOW}◆${NC}  No answer in 60 seconds — closing. Run it again when you're ready!"
+      exit 1
+    fi
     case "${reply,,}" in
       y|yes) return 0 ;;
       n|no)  return 1 ;;
@@ -1053,7 +1082,7 @@ pt13="  needs to be the main ride for this to work."
     echo "  └─────────────────────────────────────────────────────────────┘"
     echo ""
     # First press: acknowledge (any key including Enter works)
-    read -r -s -n 1 key < /dev/tty || true
+    _wait_or_close
     echo -e "  ${DIM}ok, one more thing...${NC}"
     # Second press: confirm
     echo ""
@@ -1068,11 +1097,8 @@ pt13="  needs to be the main ride for this to work."
     echo -e "  │  Press ${BOLD}Ctrl+C${NC} to install Kitty first (smart move)                  │"
     echo -e "  └─────────────────────────────────────────────────────────────┘"
     echo -en "  ${DIM}Waiting on you...${NC} "
-    while true; do
-      read -r -s -n 1 key < /dev/tty || true
-      echo -e "${GREEN}let's roll${NC}"
-      break
-    done
+    _wait_or_close
+    echo -e "${GREEN}let's roll${NC}"
   fi
 
   # ── OS check ──
@@ -1361,7 +1387,7 @@ n17="  Press any key to continue, or Ctrl+C to update first"
     echo -e "  ${YELLOW}╚══════════════════════════════════════════════════════════════╝${NC}"
     echo ""
     echo -en "  ${DIM}Press any key to continue...${NC} "
-    read -r -s -n 1 key < /dev/tty || true
+    _wait_or_close
     echo -e "${GREEN}proceeding${NC}"
     sudo dnf install -y akmod-nvidia xorg-x11-drv-nvidia-cuda nvidia-settings vdpauinfo libva-utils
     ok "NVIDIA drivers installed — fingers crossed"
@@ -2964,7 +2990,14 @@ setup_firefox_theme() {
         echo -e "  ${YELLOW}║${NC}  Enter to retry, or type ${BOLD}s${NC} to skip Firefox theming           ${YELLOW}║${NC}"
         echo -e "  ${YELLOW}╚══════════════════════════════════════════════════════════════╝${NC}"
         echo -en "  ${DIM}Close Firefox, then press Enter (s = skip):${NC} "
-        read -r reply </dev/tty || true
+        _ff_rc=0
+        read -t 60 -r reply </dev/tty || _ff_rc=$?
+        if [ "$_ff_rc" -eq 142 ]; then
+          _FED_ABORT=1
+          echo ""
+          echo -e "  ${YELLOW}◆${NC}  No answer in 60 seconds — closing. Run it again when you're ready!"
+          exit 1
+        fi
         if [ "$reply" = "s" ] || [ "$reply" = "S" ]; then
           warn "Firefox theming skipped by user"
           FIREFOX_THEME_FAILED=1

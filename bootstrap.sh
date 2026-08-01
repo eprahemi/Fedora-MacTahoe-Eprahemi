@@ -45,8 +45,8 @@ _fed_log_finalize() {
     # Set custom icon for this log file (icon may not exist yet on first bootstrap run — silently ignored)
     command -v gio &>/dev/null && [ -f "${HOME}/.local/share/icons/fedora-mactahoe/mactahoe_log_icon.png" ] && \
       gio set "$_FED_LOG" metadata::custom-icon "file://${HOME}/.local/share/icons/fedora-mactahoe/mactahoe_log_icon.png" 2>/dev/null || true
+    echo -e "  ${GREEN}Log saved: ${_FED_LOG}${NC}"
   fi
-  echo -e "  ${GREEN}Log saved: ${_FED_LOG}${NC}"
 }
 trap _fed_log_finalize EXIT
 
