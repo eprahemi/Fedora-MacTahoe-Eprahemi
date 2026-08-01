@@ -485,6 +485,12 @@ function _update_run --description 'fetch + verify + run the real installer; log
         _update_log_add $label $frm $to ok
         echo "$to" > "$HOME/.cache/fedora-mactahoe/last-notified-version"
         printf "\n  \e[1;32m✅ Update complete — you're on version $to.\e[0m\n"
+    else if test $code -eq 42; or test $code -eq 130
+        # 42 = installer closed itself (60s no-answer auto-close),
+        # 130 = user force-closed with Ctrl+C — neither is a failure.
+        _update_log_add $label $frm $to close
+        printf "\n  \e[1;33m⏹ Installer closed before finishing (exit $code) — nothing was marked done.\e[0m\n"
+        printf "  \e[1;33mRun 'update' again when you're ready — it continues where it left off.\e[0m\n"
     else
         _update_log_add $label $frm $to fail
         printf "\n  \e[1;31m✘ Update failed (exit $code).\e[0m\n"

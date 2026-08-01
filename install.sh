@@ -223,7 +223,7 @@ _wait_or_close() {
     _FED_ABORT=1
     echo ""
     echo -e "  ${YELLOW}◆${NC}  No key pressed in 60 seconds — closing. Run it again when you're ready!"
-    exit 1
+    exit 42
   fi
 }
 
@@ -277,7 +277,7 @@ confirm() {
       _FED_ABORT=1
       echo ""
       echo -e "  ${YELLOW}◆${NC}  No answer in 60 seconds — closing. Run it again when you're ready!"
-      exit 1
+      exit 42
     fi
     case "${reply,,}" in
       y|yes) return 0 ;;
@@ -2996,7 +2996,7 @@ setup_firefox_theme() {
           _FED_ABORT=1
           echo ""
           echo -e "  ${YELLOW}◆${NC}  No answer in 60 seconds — closing. Run it again when you're ready!"
-          exit 1
+          exit 42
         fi
         if [ "$reply" = "s" ] || [ "$reply" = "S" ]; then
           warn "Firefox theming skipped by user"

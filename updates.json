@@ -1,6 +1,6 @@
 {
   "latest_version": "2.2",
-  "bootstrap_sha256": "bb3a0474e4f78833349f29b93626964ca514cbe9fe1ecd7e30f23ae1a54ca966",
+  "bootstrap_sha256": "e3b52c6973a2a05bc3845616f4585fbf7378d49bcf5627fd783dd754c9731061",
   "update_sha256": "817b2cd4dfeb820b7d19d66467c06899d2e791e7b8660f48ad8cc01cfb499ad4",
   "changelog": [
     {
@@ -15,7 +15,8 @@
         "The installer download now shows a live progress bar — the clone runs quietly in the background, no more raw git text",
         "The start screen waits 60 seconds max — no key press and bootstrap closes itself (just run it again when you're ready)",
         "Closing bootstrap early (Ctrl+C forced exit or the 60s auto-close) leaves no log behind — the temp log is deleted, since nothing ran",
-        "Running install.sh directly now behaves the same: every wait and yes/no question auto-closes after 60s of silence, and closing it early (Ctrl+C twice or the timeout) deletes the log too"
+        "Running install.sh directly now behaves the same: every wait and yes/no question auto-closes after 60s of silence, and closing it early (Ctrl+C twice or the timeout) deletes the log too",
+        "A closed installer is no longer reported as a failure — the updater says 'closed before finishing' and you just run it again when ready"
       ]
     },
     {

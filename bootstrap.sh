@@ -219,7 +219,7 @@ if [ "$_read_rc" -eq 142 ]; then
   _FED_ABORT=1
   echo ""
   echo -e "  ${YELLOW}◆${NC}  No key pressed in 60 seconds — closing. Run it again when you're ready!"
-  exit 1
+  exit 42
 fi
 echo -e "${GREEN}here we go${NC}"
 
@@ -285,4 +285,7 @@ if [ "${UPDATE_MODE:-}" != "incremental" ]; then
 fi
 
 cd "$TMP"
-bash install.sh
+bash install.sh && _inst_rc=0 || _inst_rc=$?
+# 42 = the installer closed itself (60s no-key/no-answer auto-close) —
+# passed through as-is, it is NOT a failure. Everything else propagates.
+exit "$_inst_rc"
