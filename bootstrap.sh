@@ -257,8 +257,10 @@ while kill -0 "$_clone_pid" 2>/dev/null; do
   [ "$_pct" -gt 99 ] && _pct=99
   _filled=$((_pct * 20 / 100))
   _empty=$((20 - _filled))
-  _bar=$(printf '%*s' "$_filled" '' | tr ' ' '█')
-  _pad=$(printf '%*s' "$_empty" '' | tr ' ' '░')
+  _bar=""
+  _pad=""
+  for ((_k = 0; _k < _filled; _k++)); do _bar+="█"; done
+  for ((_k = 0; _k < _empty; _k++)); do _pad+="░"; done
   _midx=$((_i / 25))
   [ "$_midx" -gt 3 ] && _midx=3
   _msg=${_msgs[$_midx]}

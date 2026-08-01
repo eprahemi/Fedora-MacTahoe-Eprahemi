@@ -1,6 +1,6 @@
 {
   "latest_version": "2.2",
-  "bootstrap_sha256": "5394f3c131062b48614d8bcbe440b1dda655c2c2f49f10825196baa8364dc3d7",
+  "bootstrap_sha256": "a435e91a79f93cc67f99f7adb75656288653f57b9bfa823de23d17a658753966",
   "update_sha256": "f0035033cd6ace97d8bc8fdf125ea92b4a4806853df7c15eb90bf6aaf5e80b78",
   "changelog": [
     {
@@ -24,7 +24,8 @@
         "The kitty one-liner no longer bursts out of its box — it's now shown as a clean code line under both warning boxes (bootstrap + installer)",
         "Deep-scan cleanup: removed dead code (unused _save_prompt_answers_all, stray _rc captures, unused PINK color in bootstrap) and re-pinned the bootstrap fingerprint",
         "Fixed kitty terminal boxes: ✦/⚠ title rows padded correctly for narrow glyphs; removed leftover over-padding on the \"Press any key\" rows",
-        "The update menu no longer lists every step that will re-run — just what's new, then the choice. Cleaner."
+        "The update menu no longer lists every step that will re-run — just what's new, then the choice. Cleaner.",
+        "Fixed the progress bar showing '�' blocks — the bar builder used tr (byte-based, mangles multi-byte █); now built with string concat like install.sh's sed bars, byte-perfect in any locale"
       ]
     },
     {
