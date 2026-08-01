@@ -372,13 +372,11 @@ _step_should_run() {
 }
 
 # ── Prompt gate helper ──
-# Returns 0 if prompt should be asked (no saved answer, or answer outdated)
+# Returns 0 if the prompt should be asked (no saved answer yet).
+# Answers are sticky: once saved, a prompt is never re-asked.
 _prompt_should_ask() {
   local pid="$1"
-  local ans="${PR_ANS[$pid]:-}"
-  [ -z "$ans" ] && return 0
-  local pv="${PR_VER[$pid]:-0.0}"
-  _ver_lt "$pv" "$MANIFEST_VERSION"
+  [ -z "${PR_ANS[$pid]:-}" ]
 }
 
 # ── Load saved prompt answers into installer variables ──
@@ -386,6 +384,10 @@ _prompt_should_ask() {
 # Outdated prompts remain unset so they trigger re-asking.
 _load_prompt_answers() {
   local ans
+  if ! _prompt_should_ask "discord"; then
+    ans="${PR_ANS['discord']:-}"
+    [ -n "$ans" ] && INSTALL_DISCORD="$ans"
+  fi
   if ! _prompt_should_ask "wallpaper_desktop"; then
     ans="${PR_ANS['wallpaper_desktop']:-}"
     [ -n "$ans" ] && INSTALL_DESKTOP_WALLPAPER="$ans"
@@ -435,6 +437,7 @@ except Exception:
 
 # ── Save all prompt answers from installer variables into state ──
 _save_prompt_answers_all() {
+  [ -n "${INSTALL_DISCORD:-}" ]            && _save_prompt_answer "discord"            "$INSTALL_DISCORD"
   [ -n "${INSTALL_DESKTOP_WALLPAPER:-}" ] && _save_prompt_answer "wallpaper_desktop" "$INSTALL_DESKTOP_WALLPAPER"
   [ -n "${INSTALL_LOGIN_WALLPAPER:-}" ]   && _save_prompt_answer "wallpaper_login"   "$INSTALL_LOGIN_WALLPAPER"
   [ -n "${INSTALL_WALLPAPER_18:-}" ]      && _save_prompt_answer "wallpaper_18"      "$INSTALL_WALLPAPER_18"
@@ -1379,39 +1382,6 @@ n17="  Press any key to continue, or Ctrl+C to update first"
 install_rpm_packages() {
   next_step "RPM Packages"
 
-  # ── Discord optional prompt ──
-  if [ -z "${INSTALL_DISCORD:-}" ]; then
-    echo ""
-    echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-disc_t="            ◆  INSTALL DISCORD?  ◆"
-    echo -e "  ${CYAN}║${NC}${disc_t}$(printf '%*s' $((62 - ${#disc_t})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-disc1="  Discord via Flatpak — ~214 MB download, ~540 MB installed."
-    echo -e "  ${CYAN}║${NC}${disc1}$(printf '%*s' $((62 - ${#disc1})) '')${CYAN}║${NC}"
-disc2="  Skip it if you don't need it."
-    echo -e "  ${CYAN}║${NC}${disc2}$(printf '%*s' $((62 - ${#disc2})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-disc3="    Yes  — Install Discord"
-    echo -e "  ${CYAN}║${NC}    ${BOLD}${GREEN}Y${NC}${BOLD}es${NC}  — Install Discord$(printf '%*s' $((62 - ${#disc3})) '')${CYAN}║${NC}"
-disc4="    no   — Skip it"
-    echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}n${NC}${BOLD}o${NC}   — Skip it$(printf '%*s' $((62 - ${#disc4})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-disc5="  Press Enter for default (No)"
-    echo -e "  ${CYAN}║${NC}${DIM}${disc5}$(printf '%*s' $((62 - ${#disc5})) '')${NC}${CYAN}║${NC}"
-disc6="  Tip: set INSTALL_DISCORD=false to skip silently"
-    echo -e "  ${CYAN}║${NC}${DIM}${disc6}$(printf '%*s' $((62 - ${#disc6})) '')${NC}${CYAN}║${NC}"
-    echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
-    echo ""
-    if confirm "Discord? [y/N]: " N; then
-      INSTALL_DISCORD="true"
-      echo -e "  ${GREEN}→ Discord will be installed${NC}"
-    else
-      INSTALL_DISCORD="false"
-      echo -e "  ${DIM}→ Skipping Discord${NC}"
-    fi
-  fi
-
   local pkgs="fish kitty fastfetch figlet lolcat eza \
     celluloid vlc \
     kdenlive pavucontrol alacarte \
@@ -2220,6 +2190,41 @@ prompt_sudoers_entry() {
   fi
 }
 
+# ── Discord optional prompt (only when no saved answer) ──
+prompt_discord() {
+  if [ -z "${INSTALL_DISCORD:-}" ]; then
+    echo ""
+    echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+disc_t="            ◆  INSTALL DISCORD?  ◆"
+    echo -e "  ${CYAN}║${NC}${disc_t}$(printf '%*s' $((62 - ${#disc_t})) '')${CYAN}║${NC}"
+    echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+disc1="  Discord via Flatpak — ~214 MB download, ~540 MB installed."
+    echo -e "  ${CYAN}║${NC}${disc1}$(printf '%*s' $((62 - ${#disc1})) '')${CYAN}║${NC}"
+disc2="  Skip it if you don't need it."
+    echo -e "  ${CYAN}║${NC}${disc2}$(printf '%*s' $((62 - ${#disc2})) '')${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+disc3="    Yes  — Install Discord"
+    echo -e "  ${CYAN}║${NC}    ${BOLD}${GREEN}Y${NC}${BOLD}es${NC}  — Install Discord$(printf '%*s' $((62 - ${#disc3})) '')${CYAN}║${NC}"
+disc4="    no   — Skip it"
+    echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}n${NC}${BOLD}o${NC}   — Skip it$(printf '%*s' $((62 - ${#disc4})) '')${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+disc5="  Press Enter for default (No)"
+    echo -e "  ${CYAN}║${NC}${DIM}${disc5}$(printf '%*s' $((62 - ${#disc5})) '')${NC}${CYAN}║${NC}"
+disc6="  Tip: set INSTALL_DISCORD=false to skip silently"
+    echo -e "  ${CYAN}║${NC}${DIM}${disc6}$(printf '%*s' $((62 - ${#disc6})) '')${NC}${CYAN}║${NC}"
+    echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    if confirm "Discord? [y/N]: " N; then
+      INSTALL_DISCORD="true"
+      echo -e "  ${GREEN}→ Discord will be installed${NC}"
+    else
+      INSTALL_DISCORD="false"
+      echo -e "  ${DIM}→ Skipping Discord${NC}"
+    fi
+  fi
+}
+
 # ── Optional wallpaper prompts (run before Phase 1) ──
 
 prompt_optional_wallpapers() {
@@ -2346,7 +2351,7 @@ wp18_5="  Press Enter for default (No)"
 }
 
 prompt_billie_videos() {
-  # ── Prompt if not already set (e.g. by bootstrap.sh) ──
+  # ── Prompt if not already set (e.g. env var set by the user) ──
   if [ -z "${INSTALL_BILLIE_VIDEOS:-}" ]; then
     echo ""
     echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
@@ -3768,7 +3773,12 @@ _run_step "preflight" preflight
 _run_step "remove_ptyxis" remove_ptyxis
 _run_step "remove_gnome_weather" remove_gnome_weather
 
-# ── Interactive prompts (gated by saved answers + version) ──
+# ── Interactive prompts (gated by saved answers) ──
+if _prompt_should_ask "discord"; then
+  prompt_discord
+  _save_prompt_answer "discord" "${INSTALL_DISCORD:-false}"
+fi
+
 if _prompt_should_ask "wallpaper_desktop" || _prompt_should_ask "wallpaper_login" || _prompt_should_ask "wallpaper_18"; then
   prompt_optional_wallpapers
   _save_prompt_answer "wallpaper_desktop" "${INSTALL_DESKTOP_WALLPAPER:-false}"

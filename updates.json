@@ -1,8 +1,16 @@
 {
-  "latest_version": "2.1",
-  "bootstrap_sha256": "ac7d300a9c8b9337e6a3291482a7a219a25a8c3e7deef94860409fbf23bcd216",
+  "latest_version": "2.2",
+  "bootstrap_sha256": "d69cb766386a3410b94cdcd7c87dc32daa7054116a61a9f6bb696952d802230b",
   "update_sha256": "817b2cd4dfeb820b7d19d66467c06899d2e791e7b8660f48ad8cc01cfb499ad4",
   "changelog": [
+    {
+      "version": "2.2",
+      "changes": [
+        "Quick updates are now truly quiet — no more questions: your saved answers are reused (Discord, wallpapers, videos) once you've answered them once",
+        "All setup prompts moved from bootstrap into the installer — bootstrap is just the start button now: splash, verify, download, hand off",
+        "Discord's answer is now saved too (it was the only prompt without persistence)"
+      ]
+    },
     {
       "version": "2.1",
       "changes": [
@@ -143,6 +151,6 @@
     "setup_shell": "1.0",
     "install_extensions": "1.7",
     "mirror_flatpak_icons": "1.0",
-    "finalize": "1.7"
+    "finalize": "1.8"
   }
 }
