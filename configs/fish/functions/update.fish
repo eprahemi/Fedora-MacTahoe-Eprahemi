@@ -1,7 +1,7 @@
 # ══════════════════════════════════════════════════════════════
 # update 🚀 — Fedora MacTahoe updater
-# Kitty-only. Shows what's new + which steps will re-run, then
-# offers a menu: quick / full reinstall / configs-only / just checking.
+# Kitty-only. Shows what's new, then offers a
+# menu: quick / full reinstall / configs-only / just checking.
 #   update           → open the menu
 #   update check     → status at a glance, no prompts
 #   update configs   → refresh kitty, fish, fastfetch files only
@@ -173,14 +173,6 @@ for i, row in enumerate(rows):
         print("CH=… and more in the full notes")
         break
     print("CH=" + row)
-
-# steps that will re-run
-for name, mver in (man.get("steps") or {}).items():
-    mver = str(mver)
-    if name not in sstate:
-        print("ST=" + name + " (new)")
-    elif vk(mver) > vk(sstate.get(name)):
-        print("ST=" + name + " (" + str(sstate.get(name)) + " → " + mver + ")")
 '
     python3 -c "$_script" "$HOME/.cache/fedora-mactahoe/latest-manifest.json" "$HOME/.cache/fedora-mactahoe/install-state.json"
 end
@@ -660,7 +652,6 @@ except Exception:
     set -l latest_ver ""
     set -l has_update 0
     set -l ch_lines
-    set -l st_lines
     for line in (_update_parse)
         switch $line
             case 'LATEST=*'
@@ -669,8 +660,6 @@ except Exception:
                 set has_update (string replace 'HASUPDATE=' '' -- $line)
             case 'CH=*'
                 set -a ch_lines (string replace 'CH=' '' -- $line)
-            case 'ST=*'
-                set -a st_lines (string replace 'ST=' '' -- $line)
         end
     end
     if test -z "$latest_ver"
@@ -710,17 +699,6 @@ except Exception:
     else
         for ln in $ch_lines
             _update_box_text "$ln" "1;37"
-        end
-    end
-
-    # ── what will re-run ──
-    _update_box_rule
-    _update_box_text "This update will re-run:" "1;33"
-    if test (count $st_lines) -eq 0
-        _update_box_text "  nothing re-runs — just the version bump" "1;37"
-    else
-        for ln in $st_lines
-            _update_box_text "  $ln" "1;37"
         end
     end
     _update_box_text "Made by eprahemi — Fedora MacTahoe © 2026" "1;37"

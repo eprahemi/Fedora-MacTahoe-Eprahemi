@@ -1,7 +1,7 @@
 {
   "latest_version": "2.2",
   "bootstrap_sha256": "290c883f94bd8719e073a6f224d11339f6dfc134541e521cb7199a5ed992d13a",
-  "update_sha256": "817b2cd4dfeb820b7d19d66467c06899d2e791e7b8660f48ad8cc01cfb499ad4",
+  "update_sha256": "44cfdba976969b0a9a0407101470f4694ec1b8a0382e6e23798279b83e774aeb",
   "changelog": [
     {
       "version": "2.2",
@@ -20,7 +20,8 @@
         "Fixed the crooked log-header box (blank rows and data rows now line up with the 62-wide border) and the 'More from Eprahemi' box (links no longer poke past the right edge)",
         "The kitty one-liner no longer bursts out of its box — it's now shown as a clean code line under both warning boxes (bootstrap + installer)",
         "Deep-scan cleanup: removed dead code (unused _save_prompt_answers_all, stray _rc captures, unused PINK color in bootstrap) and re-pinned the bootstrap fingerprint",
-        "Fixed kitty terminal boxes: ✦/⚠ title rows padded correctly for narrow glyphs; removed leftover over-padding on the \"Press any key\" rows"
+        "Fixed kitty terminal boxes: ✦/⚠ title rows padded correctly for narrow glyphs; removed leftover over-padding on the \"Press any key\" rows",
+        "The update menu no longer lists every step that will re-run — just what's new, then the choice. Cleaner."
       ]
     },
     {
