@@ -1548,6 +1548,42 @@ install_flatpaks() {
 
 # ── PHASE 3: THEMES ──────────────────────────────────────────
 
+# ── MacTahoe source locator (upstream → vendored fallback) ──
+# Populates $1 with a working MacTahoe-gtk source tree, preferring the
+# upstream repo; falls back to the vendored snapshot bundled in this
+# project (vendor/MacTahoe-gtk-theme/) when upstream is unreachable.
+# Sets _MCT_SRC (path) and _MCT_FROM (upstream|vendored) on success.
+# Returns 0 on success, 1 when neither source is available.
+_mactahoe_get_source() {
+  _MCT_SRC=""
+  _MCT_FROM=""
+  local repo="$1"
+  local vendored="$BUNDLE/vendor/MacTahoe-gtk-theme"
+
+  rm -rf "$repo"
+  if git clone --depth 1 https://github.com/vinceliuice/MacTahoe-gtk-theme.git "$repo" 2>/dev/null \
+      && [ -f "$repo/install.sh" ] && [ -f "$repo/tweaks.sh" ] && bash -n "$repo/install.sh" 2>/dev/null; then
+    _MCT_SRC="$repo"
+    _MCT_FROM="upstream"
+    return 0
+  fi
+
+  # Vendored snapshot (survives upstream deletion / network failures)
+  if [ -f "$vendored/install.sh" ] && [ -f "$vendored/tweaks.sh" ] && bash -n "$vendored/install.sh" 2>/dev/null; then
+    warn "Upstream MacTahoe unreachable — using vendored source"
+    rm -rf "$repo"
+    if cp -a "$vendored" "$repo" 2>/dev/null && [ -f "$repo/install.sh" ]; then
+      _MCT_SRC="$repo"
+      _MCT_FROM="vendored"
+      return 0
+    fi
+    warn "Vendored source copy failed — MacTahoe source unavailable"
+    return 1
+  fi
+
+  return 1
+}
+
 install_mactahoe_theme() {
   next_step "MacTahoe GTK Theme (compiled from source)"
 
@@ -1559,11 +1595,20 @@ install_mactahoe_theme() {
   rm -rf "$HOME/.themes/MacTahoe"* "$HOME/.local/share/themes/MacTahoe"*
   sudo rm -rf /usr/share/themes/MacTahoe* 2>/dev/null || true
 
-  # Clone and compile for current GNOME version
+  # Get MacTahoe source: upstream clone → vendored snapshot → pre-compiled bundle
   log "Cloning MacTahoe source (GNOME $gtk_version)..."
-  rm -rf "$repo"
-  git clone --depth 1 https://github.com/vinceliuice/MacTahoe-gtk-theme.git "$repo" 2>/dev/null || {
-    warn "Clone failed — falling back to bundled pre-compiled theme"
+  if _mactahoe_get_source "$repo"; then
+    log "Compiling all theme variants with blur + libadwaita..."
+    local _compile_log="/tmp/mactahoe-compile.log"
+    if ! "$repo/install.sh" -t all -b -l > "$_compile_log" 2>&1; then
+      warn "Compilation failed — theme not installed"
+      tail -20 "$_compile_log" 2>/dev/null
+      rm -f "$_compile_log"
+      return
+    fi
+    rm -f "$_compile_log"
+  else
+    warn "No MacTahoe source available (upstream + vendored) — falling back to bundled pre-compiled theme"
     local fallback_dir="$BUNDLE/themes/MacTahoe-Dark"
     if [ -d "$fallback_dir" ]; then
       mkdir -p "$HOME/.themes" "$HOME/.local/share/themes" "$HOME/.config/gtk-4.0"
@@ -1575,17 +1620,7 @@ install_mactahoe_theme() {
       warn "No fallback available — theme not installed"
     fi
     return
-  }
-
-  log "Compiling all theme variants with blur + libadwaita..."
-  local _compile_log="/tmp/mactahoe-compile.log"
-  "$repo/install.sh" -t all -b -l > "$_compile_log" 2>&1 || {
-    warn "Compilation failed — theme not installed"
-    tail -20 "$_compile_log" 2>/dev/null
-    rm -f "$_compile_log"
-    return
-  }
-  rm -f "$_compile_log"
+  fi
 
   # XDG compat: also available in ~/.local/share/themes/
   mkdir -p "$HOME/.local/share/themes"
@@ -2933,10 +2968,12 @@ setup_gdm() {
     fi
   fi
 
-  # Clone MacTahoe repo to get tweaks.sh then apply to GDM (force fresh clone)
-  rm -rf /tmp/mactahoe-gtk
-  if ! git clone --depth 1 https://github.com/vinceliuice/MacTahoe-gtk-theme.git /tmp/mactahoe-gtk 2>/dev/null; then
-    warn "Failed to clone MacTahoe repo for GDM theme"
+  # Get MacTahoe source for tweaks.sh (upstream clone → vendored snapshot)
+  if ! _mactahoe_get_source /tmp/mactahoe-gtk; then
+    warn "No MacTahoe source available (upstream + vendored) — GDM theme not applied"
+    warn "Run manually after install:"
+    warn "  git clone https://github.com/vinceliuice/MacTahoe-gtk-theme.git /tmp/mactahoe-gtk"
+    warn "  sudo /tmp/mactahoe-gtk/tweaks.sh -g -nb -nd -b /path/to/wallpaper.jpg"
   fi
 
   if [ -f /tmp/mactahoe-gtk/tweaks.sh ]; then
@@ -2949,11 +2986,6 @@ setup_gdm() {
       warn "No wallpaper found in bundle — GDM themed without custom background"
     fi
     cd "$BUNDLE"
-  else
-    warn "Could not clone MacTahoe repo — GDM theme not applied"
-    warn "Run manually after install:"
-    warn "  git clone https://github.com/vinceliuice/MacTahoe-gtk-theme.git /tmp/mactahoe-gtk"
-    warn "  sudo /tmp/mactahoe-gtk/tweaks.sh -g -nb -nd -b /path/to/wallpaper.jpg"
   fi
 
   # Hide Fedora logo on GDM login screen (runs regardless of theme)
@@ -2968,12 +3000,11 @@ setup_firefox_theme() {
 
   local repo="/tmp/mactahoe-gtk"
   if [ ! -f "$repo/tweaks.sh" ]; then
-    warn "MacTahoe repo not found — cloning fresh"
-    rm -rf "$repo"
-    git clone --depth 1 https://github.com/vinceliuice/MacTahoe-gtk-theme.git "$repo" 2>/dev/null || {
-      warn "Could not clone MacTahoe repo — Firefox theme not applied"
+    warn "MacTahoe source not found — fetching (upstream or vendored)"
+    if ! _mactahoe_get_source "$repo"; then
+      warn "No MacTahoe source available (upstream + vendored) — Firefox theme not applied"
       return
-    }
+    fi
   fi
 
   # ── Ensure Firefox is closed before theming ──

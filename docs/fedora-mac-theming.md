@@ -299,14 +299,17 @@
 │      ├── ./install.sh -t all -b -l                                         │
 │      └── ✓ MacTahoe-Dark → ~/.themes/ + ~/.local/share/themes/            │
 │                                                                             │
-│  2.  FALLBACK: If git clone fails (no network, repo down)                  │
-│      ├── Source: themes/MacTahoe-Dark/ (bundled in repo)                  │
-│      ├── cp -r → ~/.themes/ + ~/.local/share/themes/                      │
-│      └── cp gtk-4.0 assets → ~/.config/gtk-4.0/                          │
+│  2.  FALLBACK: Upstream unreachable → compile vendored snapshot            │
+│      ├── Source: vendor/MacTahoe-gtk-theme/ (snapshot pinned in repo)     │
+│      ├── Same compile: ./install.sh -t all -b -l                           │
+│      ├── Still fresh for the current GNOME Shell version                   │
+│      └── GDM + Firefox tweaks.sh also served from this snapshot           │
 │                                                                             │
 │  3.  LAST RESORT: Pre-compiled MacTahoe-Dark from repo bundle              │
-│      ├── May not match current GNOME Shell version                         │
-│      └── Will still look mostly correct (GTK3/GTK4 are stable)            │
+│      ├── Source: themes/MacTahoe-Dark/ (bundled in repo)                  │
+│      ├── cp -r → ~/.themes/ + ~/.local/share/themes/                      │
+│      ├── cp gtk-4.0 assets → ~/.config/gtk-4.0/                          │
+│      └── May not match current GNOME Shell version                         │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```

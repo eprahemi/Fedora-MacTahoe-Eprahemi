@@ -1,0 +1,13 @@
+MacTahoe-gtk-theme — vendored snapshot for offline fallback
+
+Upstream:  https://github.com/vinceliuice/MacTahoe-gtk-theme
+Commit:    beeb7a25a5cd54fc7614814425b1c47d88f5897c
+Vendored:  2026-08-01 by Fedora MacTahoe Eprahemi
+
+Purpose: if the upstream repo is ever unreachable (deleted, network
+failure, GitHub outage), install.sh compiles the theme from THIS copy
+instead of failing. GDM + Firefox theming use the vendored tweaks.sh.
+
+Kept:      install.sh, tweaks.sh, parse-sass.sh, libs/, src/, other/, COPYING
+Stripped:  .git, screenshots, wallpaper/, release/, build scripts, README
+Re-vendor: clone upstream fresh, repeat the strip, update this file.

@@ -25,7 +25,8 @@
         "Deep-scan cleanup: removed dead code (unused _save_prompt_answers_all, stray _rc captures, unused PINK color in bootstrap) and re-pinned the bootstrap fingerprint",
         "Fixed kitty terminal boxes: ✦/⚠ title rows padded correctly for narrow glyphs; removed leftover over-padding on the \"Press any key\" rows",
         "The update menu no longer lists every step that will re-run — just what's new, then the choice. Cleaner.",
-        "Fixed the progress bar showing '�' blocks — the bar builder used tr (byte-based, mangles multi-byte █); now built with string concat like install.sh's sed bars, byte-perfect in any locale"
+        "Fixed the progress bar showing '�' blocks — the bar builder used tr (byte-based, mangles multi-byte █); now built with string concat like install.sh's sed bars, byte-perfect in any locale",
+        "MacTahoe GTK source is now vendored in the repo (vendor/MacTahoe-gtk-theme) — if the upstream repo is ever deleted or unreachable, the theme still compiles fresh for your GNOME version, and GDM + Firefox theming still work via the vendored tweaks.sh"
       ]
     },
     {
