@@ -7,7 +7,24 @@
 #   update configs   → refresh kitty, fish, fastfetch files only
 #   update full      → full reinstall from scratch
 #   update log       → your update history
+#   update menu      → pick any target from a numbered list
 #   update help      → this box
+# Per-target toolbox — re-run ONE part of the setup:
+#   update icons      → icon themes + custom macOS app icons
+#   update theme      → recompile the GTK theme for current GNOME
+#   update fonts      → reinstall SF Pro Display
+#   update sounds     → reinstall the Big Sur sounds
+#   update gtk        → GTK settings + Flatpak GTK runtime
+#   update extensions → reinstall all GNOME extensions from EGO
+#   update wallpaper  → normal / +18 pack picker, reinstalls wallpapers
+#   update pfp        → normal / +18 pack picker, reinstalls profile pics
+#   update gdm        → re-apply the GDM login theme
+#   update videos     → re-download the optional video edits
+#   update services   → re-apply RAM-saving service tweaks
+#   update defaults   → desktop renames + Celluloid + Nautilus defaults
+#   update dconf      → re-apply GNOME settings from the bundle
+#   update notifier   → reinstall the update notifier
+#   update clean      → flush caches and trim logs
 # Same as clicking "Update Now" on the notification popup.
 # Fedora MacTahoe Eprahemi Edition © 2026
 # ══════════════════════════════════════════════════════════════
@@ -403,6 +420,13 @@ function _update_usage --description 'the help box'
     _update_box_text "update configs          refresh kitty/fish/fastfetch only"
     _update_box_text "update full             full reinstall from scratch"
     _update_box_text "update log              your update history"
+    _update_box_text "update menu             pick any target from a list"
+    _update_box_text ""
+    _update_box_text "Per-target toolbox:" "1;36"
+    _update_box_text "icons / theme / fonts / sounds / gtk / extensions" "1;37"
+    _update_box_text "wallpaper / pfp / gdm / videos / services / defaults" "1;37"
+    _update_box_text "dconf / notifier / clean" "1;37"
+    _update_box_text ""
     _update_box_text "update help             this box"
     _update_box_text "Made by eprahemi — Fedora MacTahoe © 2026" "1;37"
     _update_box_bottom
@@ -491,20 +515,29 @@ function _update_run --description 'fetch + verify + run the real installer; log
     return $code
 end
 
-# ── configs-only: just the files, no system changes ──
-function _update_configs_mode --description 'refresh kitty, fish, starship, gtk, fastfetch files'
+# ── fetch the repo bundle into a temp dir; echoes its path ──
+# UI messages go to stderr — stdout is ONLY the path (command substitution).
+function _update_fetch_bundle --description 'clone the repo bundle; echoes the temp dir path'
     if not command -q git
-        printf "\n  \e[1;31m✘ git is not installed — can't fetch the files.\e[0m\n"
+        printf "\n  \e[1;31m✘ git is not installed — can't fetch the files.\e[0m\n" >&2
         return 1
     end
-    printf "\n  \e[1;37mFetching the latest files from GitHub...\e[0m\n"
-    set -l tmp (mktemp -d /tmp/mactahoe-configs.XXXXXX)
+    printf "\n  \e[1;37mFetching the latest files from GitHub...\e[0m\n" >&2
+    set -l tmp (mktemp -d /tmp/mactahoe-target.XXXXXX)
     git clone --depth 1 -q https://github.com/eprahemi/Fedora-MacTahoe-Eprahemi.git "$tmp" 2>/dev/null
     if test $status -ne 0
         rm -rf "$tmp"
-        printf "\n  \e[1;31m✘ Could not fetch the repo — check your connection.\e[0m\n"
+        printf "\n  \e[1;31m✘ Could not fetch the repo — check your connection.\e[0m\n" >&2
         return 1
     end
+    echo "$tmp"
+    return 0
+end
+
+# ── configs-only: just the files, no system changes ──
+function _update_configs_mode --description 'refresh kitty, fish, starship, gtk, fastfetch files'
+    set -l tmp (_update_fetch_bundle)
+    or return 1
     set -l cfg "$tmp/configs"
     mkdir -p "$HOME/.config/kitty" "$HOME/.config/fish/functions" "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0" "$HOME/.config/fastfetch" "$HOME/.config/systemd/user"
     # Auto-backup the live fish config before overwriting (keeps last 5)
@@ -567,6 +600,322 @@ function _update_configs_mode --description 'refresh kitty, fish, starship, gtk,
 end
 
 # ══════════════════════════════════════════════════════════════
+# per-target toolbox — update <target> re-runs one part of the setup
+# ══════════════════════════════════════════════════════════════
+
+# ── run install.sh in single-target mode from a fetched bundle ──
+# argv[1] = bundle dir, argv[2] = UPDATE_STEPS list (comma-separated),
+# remaining args = INSTALL_* env pairs ("KEY=value") passed to the installer.
+function _update_run_step --description 'run installer steps from a bundle clone'
+    set -l tmp "$argv[1]"
+    set -l steps "$argv[2]"
+    set -e argv[1 2]
+    set -l cmd env UPDATE_STEPS=$steps
+    for kv in $argv
+        set -a cmd $kv
+    end
+    set -a cmd bash "$tmp/install.sh"
+    $cmd
+    set -l code $status
+    if test $code -eq 0
+        _update_log_add $steps "—" "—" ok
+        printf "\n  \e[1;32m✓ %s — done.\e[0m\n" $steps
+    else
+        _update_log_add $steps "—" "—" fail
+        printf "\n  \e[1;31m✘ %s failed (exit $code).\e[0m\n" $steps
+    end
+    # safety: only ever delete a bundle that really lives in /tmp
+    string match -q "/tmp/*" "$tmp"
+    and rm -rf "$tmp"
+    return $code
+end
+
+# ── a saved prompt answer from install-state.json (empty if none) ──
+function _update_state_prompt --description 'saved prompt answer from the state file'
+    set -l st "$HOME/.cache/fedora-mactahoe/install-state.json"
+    if not test -f "$st"
+        return 0
+    end
+    python3 -c '
+import sys, json
+try:
+    d = json.load(open(sys.argv[1]))
+    p = d.get("prompts", {}).get(sys.argv[2], {})
+    print(p.get("choice", ""))
+except Exception:
+    pass' "$st" "$argv[1]" 2>/dev/null
+end
+
+# ── shared normal / +18 picker for wallpaper + pfp; echoes normal|18|cancel ──
+# box goes to stderr — stdout is ONLY the choice (command substitution).
+function _update_pick_pack --description 'picker: normal / +18 / cancel'
+    begin
+        printf "\n"
+        _update_box_top
+        _update_box_title "$argv[1]" "1;36"
+        _update_box_rule
+        _update_box_text "[1] Normal pack" "1;36"
+        _update_box_text "[2] +18 pack" "1;36"
+        _update_box_text "[3] Cancel" "1;37"
+        _update_box_text ""
+        _update_box_text "Made by eprahemi — Fedora MacTahoe © 2026" "1;37"
+        _update_box_bottom
+    end >&2
+    read -l pick -P "  Your choice [1-3]: "
+    if test $status -ne 0
+        printf "\n  \e[1;31m✘ Cancelled.\e[0m\n"
+        echo cancel
+        return 1
+    end
+    switch $pick
+        case 1
+            echo normal
+        case 2
+            echo 18
+        case 3 q 0
+            echo cancel
+        case '*'
+            printf "  \e[1;31m✘ Invalid — choose 1, 2 or 3.\e[0m\n"
+            _update_pick_pack $argv[1]
+    end
+    return 0
+end
+
+function _update_target_icons --description 'reinstall icon themes + custom app icons'
+    set -l tmp (_update_fetch_bundle)
+    or return 1
+    _update_run_step "$tmp" "install_icons"
+    return $status
+end
+
+function _update_target_theme --description 'recompile the GTK theme for the current GNOME'
+    set -l tmp (_update_fetch_bundle)
+    or return 1
+    _update_run_step "$tmp" "install_mactahoe_theme"
+    return $status
+end
+
+function _update_target_fonts --description 'reinstall SF Pro Display'
+    set -l tmp (_update_fetch_bundle)
+    or return 1
+    _update_run_step "$tmp" "install_font"
+    return $status
+end
+
+function _update_target_sounds --description 'reinstall the Big Sur sounds'
+    set -l tmp (_update_fetch_bundle)
+    or return 1
+    _update_run_step "$tmp" "install_sounds"
+    return $status
+end
+
+function _update_target_extensions --description 'reinstall all GNOME extensions from EGO'
+    set -l tmp (_update_fetch_bundle)
+    or return 1
+    _update_run_step "$tmp" "install_extensions"
+    return $status
+end
+
+function _update_target_gdm --description 're-apply the GDM login theme'
+    set -l tmp (_update_fetch_bundle)
+    or return 1
+    _update_run_step "$tmp" "setup_gdm" "INSTALL_LOGIN_WALLPAPER=true"
+    return $status
+end
+
+function _update_target_wallpaper --description 'reinstall wallpapers: normal or +18'
+    set -l pick (_update_pick_pack "UPDATE WALLPAPER")
+    set -l want false
+    switch $pick
+        case cancel
+            return 1
+        case 18
+            set want true
+    end
+    set -l tmp (_update_fetch_bundle)
+    or return 1
+    # the installer keeps ONE Wallvault set by design — this swaps to the chosen one
+    _update_run_step "$tmp" "apply_wallpapers" "INSTALL_WALLPAPER_18=$want" "INSTALL_DESKTOP_WALLPAPER=true"
+    return $status
+end
+
+function _update_target_pfp --description 'reinstall profile pictures: normal or +18'
+    set -l pick (_update_pick_pack "UPDATE PROFILE PICTURES")
+    set -l want false
+    switch $pick
+        case cancel
+            return 1
+        case 18
+            set want true
+    end
+    set -l tmp (_update_fetch_bundle)
+    or return 1
+    # install_custom_avatars keys off the same INSTALL_WALLPAPER_18 answer
+    _update_run_step "$tmp" "install_custom_avatars" "INSTALL_WALLPAPER_18=$want"
+    return $status
+end
+
+function _update_target_gtk --description 'refresh GTK settings + Flatpak GTK runtime'
+    set -l tmp (_update_fetch_bundle)
+    or return 1
+    mkdir -p "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0"
+    if test -f "$tmp/configs/gtk-3.0/settings.ini"
+        cp -f "$tmp/configs/gtk-3.0/settings.ini" "$HOME/.config/gtk-3.0/"
+    end
+    if test -f "$tmp/configs/gtk-4.0/settings.ini"
+        cp -f "$tmp/configs/gtk-4.0/settings.ini" "$HOME/.config/gtk-4.0/"
+    end
+    _update_run_step "$tmp" "setup_flatpak_theme"
+    return $status
+end
+
+function _update_target_videos --description 're-download the optional video edits'
+    set -l bv (_update_state_prompt billie_videos)
+    if test -z "$bv"
+        printf "\n  \e[1;33mNo saved choice for the optional videos — nothing to re-download.\e[0m\n"
+        return 0
+    end
+    set -l tmp (_update_fetch_bundle)
+    or return 1
+    _update_run_step "$tmp" "download_optional_videos" "INSTALL_BILLIE_VIDEOS=$bv"
+    return $status
+end
+
+function _update_target_services --description 're-apply the RAM-saving services'
+    set -l fw (_update_state_prompt firewalld)
+    set -l tmp (_update_fetch_bundle)
+    or return 1
+    if test -n "$fw"
+        _update_run_step "$tmp" "optimize_system_resources" "INSTALL_DISABLE_FIREWALLD=$fw"
+    else
+        _update_run_step "$tmp" "optimize_system_resources"
+    end
+    return $status
+end
+
+function _update_target_defaults --description 're-apply desktop renames + defaults'
+    set -l tmp (_update_fetch_bundle)
+    or return 1
+    _update_run_step "$tmp" "apply_desktop_entries,ensure_celluloid_default,configure_nautilus_defaults"
+    return $status
+end
+
+function _update_target_dconf --description 're-apply GNOME settings from the bundle (backup first)'
+    printf "\n"
+    _update_box_top
+    _update_box_text "This re-applies the bundled GNOME settings (keybindings," "1;33"
+    _update_box_text "theme, touchpad, window buttons...). Your live dconf is" "1;33"
+    _update_box_text "snapshotted first — restore anytime with:" "1;33"
+    _update_box_text "  dconf load / < ~/.cache/fedora-mactahoe/backups/dconf-*.conf" "1;37"
+    _update_box_text ""
+    _update_box_text "Continue?   y = yes   n = no (default)" "1;37"
+    _update_box_bottom
+    read -l dc -P "  Your choice [y/N]: "
+    if test $status -ne 0
+        printf "\n  \e[1;31m✘ Cancelled.\e[0m\n"
+        return 1
+    end
+    switch $dc
+        case y Y yes Yes YES
+        case '*'
+            printf "\n  \e[1;31m✘ Cancelled.\e[0m\n"
+            return 1
+    end
+    set -l tmp (_update_fetch_bundle)
+    or return 1
+    _update_run_step "$tmp" "apply_dconf"
+    return $status
+end
+
+function _update_target_notifier --description 'reinstall the update notifier'
+    set -l tmp (_update_fetch_bundle)
+    or return 1
+    _update_run_step "$tmp" "install_updater"
+    return $status
+end
+
+function _update_target_clean --description 'flush caches and trim logs'
+    printf "\n"
+    _update_header "UPDATE — CLEAN"
+    if test -d "$HOME/.cache/thumbnails"
+        rm -rf "$HOME/.cache/thumbnails/"* 2>/dev/null
+        _update_box_text "✓ thumbnail cache cleared" "1;32"
+    end
+    if test -d "$HOME/.cache/fontconfig"
+        rm -rf "$HOME/.cache/fontconfig/"* 2>/dev/null
+        _update_box_text "✓ fontconfig cache cleared" "1;32"
+    end
+    if test -d "$HOME/.cache/mesa_shader_cache"
+        rm -rf "$HOME/.cache/mesa_shader_cache/"* 2>/dev/null
+        _update_box_text "✓ Mesa shader cache cleared" "1;32"
+    end
+    sudo dnf clean all 2>/dev/null
+    _update_box_text "✓ DNF metadata cache cleared" "1;32"
+    flatpak uninstall --unused -y 2>/dev/null
+    _update_box_text "✓ unused Flatpak runtimes removed" "1;32"
+    sudo dnf autoremove -y 2>/dev/null
+    _update_box_text "✓ orphaned RPM packages removed" "1;32"
+    sudo journalctl --vacuum-time=3d 2>/dev/null
+    _update_box_text "✓ old journal logs trimmed (3 days)" "1;32"
+    for icon in MacTahoe MacTahoe-dark hicolor
+        if test -d "$HOME/.local/share/icons/$icon"
+            gtk-update-icon-cache "$HOME/.local/share/icons/$icon/" 2>/dev/null
+        end
+    end
+    _update_box_text "✓ icon caches rebuilt" "1;32"
+    _update_box_text "Made by eprahemi — Fedora MacTahoe © 2026" "1;37"
+    _update_box_bottom
+    printf "\n"
+    _update_log_add clean "—" "—" ok
+    return 0
+end
+
+function _update_target_menu --description 'pick any target from a numbered list'
+    printf "\n"
+    _update_header "UPDATE — TARGETS"
+    _update_box_text "[1]  icons         [9]  videos" "1;36"
+    _update_box_text "[2]  gtk           [10] services" "1;36"
+    _update_box_text "[3]  extensions    [11] gdm" "1;36"
+    _update_box_text "[4]  wallpaper     [12] defaults" "1;36"
+    _update_box_text "[5]  pfp           [13] dconf" "1;36"
+    _update_box_text "[6]  theme         [14] notifier" "1;36"
+    _update_box_text "[7]  fonts         [15] clean" "1;36"
+    _update_box_text "[8]  sounds        [0]  exit" "1;36"
+    _update_box_text ""
+    _update_box_text "Made by eprahemi — Fedora MacTahoe © 2026" "1;37"
+    _update_box_bottom
+    read -l t -P "  Your choice [0-15]: "
+    if test $status -ne 0
+        printf "\n  \e[1;31m✘ Cancelled.\e[0m\n"
+        return 1
+    end
+    switch $t
+        case 1;  _update_target_icons
+        case 2;  _update_target_gtk
+        case 3;  _update_target_extensions
+        case 4;  _update_target_wallpaper
+        case 5;  _update_target_pfp
+        case 6;  _update_target_theme
+        case 7;  _update_target_fonts
+        case 8;  _update_target_sounds
+        case 9;  _update_target_videos
+        case 10; _update_target_services
+        case 11; _update_target_gdm
+        case 12; _update_target_defaults
+        case 13; _update_target_dconf
+        case 14; _update_target_notifier
+        case 15; _update_target_clean
+        case 0 q
+            printf "\n  \e[1;32m✓ Nothing changed.\e[0m\n"
+            return 0
+        case '*'
+            printf "  \e[1;31m✘ Invalid — choose a number 0-15.\e[0m\n"
+            return 1
+    end
+    return $status
+end
+
+# ══════════════════════════════════════════════════════════════
 # update — the entry point
 # ══════════════════════════════════════════════════════════════
 function update --description 'Fedora MacTahoe update — Kitty only (menu: quick/full/configs/check)'
@@ -626,6 +975,54 @@ function update --description 'Fedora MacTahoe update — Kitty only (menu: quic
             case h help -h --help
                 _update_usage
                 return 0
+            case icons
+                _update_target_icons
+                return $status
+            case gtk
+                _update_target_gtk
+                return $status
+            case extensions
+                _update_target_extensions
+                return $status
+            case wallpaper
+                _update_target_wallpaper
+                return $status
+            case pfp
+                _update_target_pfp
+                return $status
+            case theme
+                _update_target_theme
+                return $status
+            case fonts
+                _update_target_fonts
+                return $status
+            case sounds
+                _update_target_sounds
+                return $status
+            case videos
+                _update_target_videos
+                return $status
+            case services
+                _update_target_services
+                return $status
+            case gdm
+                _update_target_gdm
+                return $status
+            case defaults
+                _update_target_defaults
+                return $status
+            case dconf
+                _update_target_dconf
+                return $status
+            case notifier
+                _update_target_notifier
+                return $status
+            case clean
+                _update_target_clean
+                return $status
+            case menu
+                _update_target_menu
+                return $status
             case '*'
                 printf "\n  \e[1;31m✘ Unknown option: %s\e[0m\n" "$argv[1]"
                 _update_usage
@@ -688,7 +1085,7 @@ except Exception:
         end
         _update_box_text "Made by eprahemi — Fedora MacTahoe © 2026" "1;37"
         _update_box_bottom
-        printf "\n"
+        printf "\n  \e[2;37mupdate menu — icons, wallpaper, pfp, theme, gdm and more tools\e[0m\n"
         return 0
     end
 

@@ -1610,7 +1610,11 @@ install_mactahoe_theme() {
   ok "MacTahoe theme compiled & installed for GNOME $gtk_version"
 
   # ── Icon themes (always from bundle, never change) ─────────
+  install_icons
+}
 
+# ── Icon themes + custom macOS app icons (standalone step for `update icons`) ──
+install_icons() {
   local theme_src="$BUNDLE/themes"
 
   # Clean stale icon theme directories/symlinks from previous installs
@@ -3873,6 +3877,32 @@ __cdn_speed_test
 # INSTALL_WALLPAPER_18, INSTALL_BILLIE_VIDEOS, and INSTALL_DISABLE_FIREWALLD
 # from previous runs
 _load_prompt_answers
+
+# ── Single-target update mode (update icons/wallpaper/pfp/... in update.fish) ──
+# Runs ONLY the listed step function(s), then exits. Prompts are skipped —
+# the caller passes every INSTALL_* variable the step needs, explicitly.
+if [ -n "${UPDATE_STEPS:-}" ]; then
+  # install_icons has no next_step of its own — print one for it
+  case "$UPDATE_STEPS" in
+    install_icons) next_step "MacTahoe Icon Themes + Custom App Icons" ;;
+  esac
+  _OLD_IFS="$IFS"
+  IFS=','
+  for _ustep in $UPDATE_STEPS; do
+    IFS="$_OLD_IFS"
+    case "$_ustep" in
+      install_mactahoe_theme|install_icons|install_font|apply_desktop_entries|ensure_celluloid_default|configure_nautilus_defaults|apply_dconf|optimize_system_resources|apply_wallpapers|install_custom_avatars|setup_gdm|setup_flatpak_theme|install_sounds|install_updater|install_extensions|download_optional_videos)
+        "$_ustep"
+        _update_step_state "$_ustep"
+        ;;
+      *)
+        warn "Unknown update step: $_ustep"
+        ;;
+    esac
+  done
+  IFS="$_OLD_IFS"
+  exit 0
+fi
 
 # ── Preflight (always runs) ──
 _run_step "preflight" preflight

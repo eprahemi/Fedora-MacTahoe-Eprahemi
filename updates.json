@@ -1,7 +1,7 @@
 {
   "latest_version": "2.2",
   "bootstrap_sha256": "a435e91a79f93cc67f99f7adb75656288653f57b9bfa823de23d17a658753966",
-  "update_sha256": "f0035033cd6ace97d8bc8fdf125ea92b4a4806853df7c15eb90bf6aaf5e80b78",
+  "update_sha256": "b22bc1df4fa33d1acb9da06e4ca990d9f2aa038f7dfde340ad1a4b01d08e3747",
   "changelog": [
     {
       "version": "2.2",
@@ -27,7 +27,8 @@
         "The update menu no longer lists every step that will re-run — just what's new, then the choice. Cleaner.",
         "Fixed the progress bar showing '�' blocks — the bar builder used tr (byte-based, mangles multi-byte █); now built with string concat like install.sh's sed bars, byte-perfect in any locale",
         "MacTahoe GTK source is now vendored in the repo (vendor/MacTahoe-gtk-theme) — if the upstream repo is ever deleted or unreachable, the theme still compiles fresh for your GNOME version, and GDM + Firefox theming still work via the vendored tweaks.sh",
-        "The firewalld question moved up front — it now appears with the Discord/wallpaper/video prompts before Phase 1, so the installation never pauses mid-flow; the actual disable (or keep/enable) still happens in the 'Disable RAM-wasting Services' step, and your answer is saved like the others"
+        "The firewalld question moved up front — it now appears with the Discord/wallpaper/video prompts before Phase 1, so the installation never pauses mid-flow; the actual disable (or keep/enable) still happens in the 'Disable RAM-wasting Services' step, and your answer is saved like the others",
+        "update menu — per-target toolbox: re-run a single part of the setup with update <target> (icons, gtk, extensions, wallpaper, pfp, theme, fonts, sounds, videos, services, gdm, defaults, dconf, notifier, clean) — no full reinstall needed"
       ]
     },
     {
