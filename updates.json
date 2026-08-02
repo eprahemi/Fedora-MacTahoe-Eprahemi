@@ -1,8 +1,14 @@
 {
-  "latest_version": "2.5",
+  "latest_version": "2.6",
   "bootstrap_sha256": "a435e91a79f93cc67f99f7adb75656288653f57b9bfa823de23d17a658753966",
   "update_sha256": "905f1d920292d5332318079b3662f551f9e454a5985e4cfc178d5c31fd696637",
   "changelog": [
+    {
+      "version": "2.6",
+      "changes": [
+        "fix incremental updates getting stuck: a machine installed on an older version stored per-step versions as that overall version (e.g. 2.2), which is higher than today's per-step manifest values (1.x) — every step was skipped and the version never moved. Now an older overall version forces all steps to re-run, then normal per-step gating resumes"
+      ]
+    },
     {
       "version": "2.5",
       "changes": [

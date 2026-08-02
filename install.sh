@@ -395,6 +395,13 @@ _ver_lt() {
 # Returns 0 if step needs to run (manifest version > user version)
 _step_should_run() {
   $_INCREMENTAL_ACTIVE || return 0   # no manifest → run all steps
+  # Legacy safety net: if the OVERALL installed version is older than the
+  # manifest, refresh every step. Old state files stored per-step versions
+  # as the then-current manifest version (e.g. steps saved as "2.2" from a
+  # 2.2 install), which can be HIGHER than today's per-step values (1.x) —
+  # without this, every step would be skipped, the finalize step would never
+  # re-run, and the machine would stay stuck on its old version forever.
+  _ver_lt "$USER_VERSION" "$MANIFEST_VERSION" && return 0
   local sid="$1"
   local mv="${STEP_MAN_VERS[$sid]:-0.0}"
   local uv="${STEP_USR_VERS[$sid]:-0.0}"
