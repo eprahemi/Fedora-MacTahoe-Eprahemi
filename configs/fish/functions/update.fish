@@ -620,7 +620,42 @@ function _update_sync_system_fish --description 'refresh the root-owned fish hel
     if test -f "$sys_cfg"
         set -l gstart '# ── Fedora MacTahoe guard (eprahemi) ──'
         set -l gend '# ── end of fedora-mactahoe-guard ──'
-        set -l gblock "\n$gstart\nif test -d \"\$HOME/.cache/fedora-mactahoe\"; and not test -f \"\$HOME/.config/fish/functions/update.fish\"\n    printf '\\\\n  [!] Fedora MacTahoe fish config is missing.\\\\n'\n    printf '\\\\n'\n    printf '      Do not worry — getting it back is one command:\\\\n'\n    printf '      Type   update   and press Enter (yes is the default).\\\\n'\n    printf '\\\\n'\n    printf '      It downloads the update function from GitHub, checks its\\\\n'\n    printf '      fingerprint, and then restores the rest of your fish\\\\n'\n    printf '      functions automatically (update configs).\\\\n'\n    printf '\\\\n'\n    printf '      Nothing is installed unless the fingerprint matches.\\\\n'\nend\n$gend\n"
+        set -l gblock "$gstart
+if test -d \"\$HOME/.cache/fedora-mactahoe\"; and not test -f \"\$HOME/.config/fish/functions/update.fish\"
+    set -g fish_greeting \"\"
+    printf '\\n'
+    printf '\\e[1;31m███╗   ██╗███████╗██████╗ ██████╗ ██████╗\\e[0m\\n'
+    printf '\\e[1;31m████╗  ██║██╔════╝██╔══██╗██╔══██╗██╔══██╗\\e[0m\\n'
+    printf '\\e[1;31m██╔██╗ ██║█████╗  ██████╔╝██████╔╝██████╔╝\\e[0m\\n'
+    printf '\\e[1;31m██║╚██╗██║██╔══╝  ██╔══██╗██╔══██╗██╔══██╗\\e[0m\\n'
+    printf '\\e[1;31m██║ ╚████║███████╗██║  ██║██║  ██║██████╔╝\\e[0m\\n'
+    printf '\\e[1;31m╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝\\e[0m\\n'
+    printf '\\e[1;31m██████╗ ███████╗███████╗ ██████╗██╗   ██╗███████╗\\e[0m\\n'
+    printf '\\e[1;31m██╔══██╗██╔════╝██╔════╝██╔════╝██║   ██║██╔════╝\\e[0m\\n'
+    printf '\\e[1;31m██████╔╝█████╗  ███████╗██║     ██║   ██║█████╗\\e[0m\\n'
+    printf '\\e[1;31m██╔══██╗██╔══╝  ╚════██║██║     ██║   ██║██╔══╝\\e[0m\\n'
+    printf '\\e[1;31m██║  ██║███████╗███████║╚██████╗╚██████╔╝███████╗\\e[0m\\n'
+    printf '\\e[1;31m╚═╝  ╚═╝╚══════╝╚══════╝ ╚═════╝ ╚═════╝ ╚══════╝\\e[0m\\n'
+    printf '\\e[1;31m██╗    ██╗ █████╗ ██████╗ ███╗   ██╗██╗███╗   ██╗ ██████╗\\e[0m\\n'
+    printf '\\e[1;31m██║    ██║██╔══██╗██╔══██╗████╗  ██║██║████╗  ██║██╔════╝\\e[0m\\n'
+    printf '\\e[1;31m██║ █╗ ██║███████║██████╔╝██╔██╗ ██║██║██╔██╗ ██║██║  ███╗\\e[0m\\n'
+    printf '\\e[1;31m██║███╗██║██╔══██║██╔══██╗██║╚██╗██║██║██║╚██╗██║██║   ██║\\e[0m\\n'
+    printf '\\e[1;31m╚███╔███╔╝██║  ██║██║  ██║██║ ╚████║██║██║ ╚████║╚██████╔╝\\e[0m\\n'
+    printf '\\e[1;31m ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚══╝╚═╝╚═╝  ╚══╝ ╚═════╝\\e[0m\\n'
+    printf '\\n'
+    printf '\\e[1m  [!] Fedora MacTahoe fish config is missing.\\e[0m\\n'
+    printf '\\e[1m\\n'
+    printf '\\e[1m      Do not worry — getting it back is one command:\\e[0m\\n'
+    printf '\\e[1m      Type   update   and press Enter (yes is the default).\\e[0m\\n'
+    printf '\\e[1m\\n'
+    printf '\\e[1m      It downloads the update function from GitHub, checks its\\e[0m\\n'
+    printf '\\e[1m      fingerprint, and then restores the rest of your fish\\e[0m\\n'
+    printf '\\e[1m      functions automatically (update configs).\\e[0m\\n'
+    printf '\\e[1m\\n'
+    printf '\\e[1m      Nothing is installed unless the fingerprint matches.\\e[0m\\n'
+end
+$gend
+"
         set -l py 'import sys
 path, start_marker, end_marker, block_file = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 with open(block_file) as fh:

@@ -1,8 +1,15 @@
 {
-  "latest_version": "2.3",
+  "latest_version": "2.4",
   "bootstrap_sha256": "a435e91a79f93cc67f99f7adb75656288653f57b9bfa823de23d17a658753966",
-  "update_sha256": "ef59d6f30091539b61e19fbe7ab7b69c3d9b6fcf55908f3c008e31be00cf256b",
+  "update_sha256": "3a9965c6ebf4e1e09e59de68d77a7062fee4d6b75d33945ebcfce0540a5d7f1a",
   "changelog": [
+    {
+      "version": "2.4",
+      "changes": [
+        "the recovery warning is now BIG and bold: a red ERROR/RESCUE/WARNING banner replaces the fish welcome when the config is missing, and the instructions are bold",
+        "the guard message is refreshed on existing machines automatically via update configs (same marker-replace mechanism)"
+      ]
+    },
     {
       "version": "2.3",
       "changes": [
