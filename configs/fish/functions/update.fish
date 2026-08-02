@@ -242,6 +242,47 @@ function _update_header --description 'box top + centered title + divider'
     _update_box_rule
 end
 
+function _update_box_tag --description 'section tag row: diamond + bold label'
+    set -l txt "$argv[1]"
+    set -l pad (math "58 - "(string length -- "$txt"))
+    if test $pad -lt 0
+        set pad 0
+    end
+    printf '  ║  \e[1;36m◈\e[0m \e[1;37m%s\e[0m%*s║\n' "$txt" $pad ""
+end
+
+function _update_box_cloud --description 'bold gray tag-cloud row'
+    set -l txt "$argv[1]"
+    set -l pad (math "58 - "(string length -- "$txt"))
+    if test $pad -lt 0
+        set pad 0
+    end
+    printf '  ║    \e[1;90m%s\e[0m%*s║\n' "$txt" $pad ""
+end
+
+function _update_box_cmd --description 'command row: bold name + bold gray description, two aligned columns'
+    set -l name "$argv[1]"
+    set -l desc "$argv[2]"
+    set -l nl (string length -- "$name")
+    set -l npad (math "22 - $nl")
+    if test $npad -lt 0
+        set npad 0
+    end
+    set -l dl (string length -- "$desc")
+    set -l dpad (math "37 - $dl")
+    if test $dpad -lt 0
+        set dpad 0
+    end
+    printf '  ║  \e[1;37m%s\e[0m%*s \e[1;90m%s\e[0m%*s║\n' "$name" $npad "" "$desc" $dpad ""
+end
+
+function _update_box_gradient_title --description 'centered two-tone title'
+    set -l total (math "1 + 3 + 6 + 1 + 1 + 1 + 4 + 3 + 1")
+    set -l hleft (math -s0 "(62 - $total) / 2")
+    set -l hright (math "62 - $total - $hleft")
+    printf '  ║%s\e[1;36m◈\e[0m   \e[1;96mUPDATE\e[0m \e[1;36m—\e[0m \e[1;95mHELP\e[0m   \e[1;36m◈\e[0m%s║\n' (string repeat -n $hleft ' ') (string repeat -n $hright ' ')
+end
+
 # ── history log ──
 function _update_log_add --description 'append one line to the update history'
     set -l mode $argv[1]
@@ -414,24 +455,33 @@ end
 # ── update help ──
 function _update_usage --description 'the help box'
     printf "\n"
-    _update_header "UPDATE — HELP"
-    _update_box_text "update                  open the updater menu"
-    _update_box_text "update check            status at a glance, no prompts"
-    _update_box_text "update configs          refresh kitty/fish/updater/fastfetch only"
-    _update_box_text "update full             full reinstall from scratch"
-    _update_box_text "update log              your update history"
-    _update_box_text "update menu             pick any target from a list"
+    _update_box_top
+    _update_box_gradient_title
+    _update_box_rule
     _update_box_text ""
-    _update_box_text "Per-target toolbox:" "1;36"
-    _update_box_text "icons / theme / fonts / sounds / gtk / extensions" "1;37"
-    _update_box_text "wallpaper / pfp / gdm / videos / services / defaults" "1;37"
-    _update_box_text "dconf / notifier / clean" "1;37"
+    _update_box_tag "CORE COMMANDS"
     _update_box_text ""
-    _update_box_text "update wallpaper add     install the other pack alongside" "1;36"
-    _update_box_text "update pfp add           same for profile pictures" "1;36"
+    _update_box_cmd "update" "open the updater menu"
+    _update_box_cmd "update check" "status at a glance, no prompts"
+    _update_box_cmd "update configs" "kitty · fish · updater · fastfetch"
+    _update_box_cmd "update full" "full reinstall from scratch"
+    _update_box_cmd "update log" "your update history"
+    _update_box_cmd "update menu" "pick any target from a list"
     _update_box_text ""
-    _update_box_text "update help             this box"
-    _update_box_text "Made by eprahemi — Fedora MacTahoe © 2026" "1;37"
+    _update_box_tag "PER-TARGET TOOLBOX"
+    _update_box_text ""
+    _update_box_cloud "icons · theme · fonts · sounds · gtk · extensions"
+    _update_box_cloud "wallpaper · pfp · gdm · videos · services · defaults"
+    _update_box_cloud "dconf · notifier · clean"
+    _update_box_text ""
+    _update_box_tag "EXTRA FLAGS"
+    _update_box_text ""
+    _update_box_cmd "update wallpaper add" "install the other pack alongside"
+    _update_box_cmd "update pfp add" "same for profile pictures"
+    _update_box_cmd "update help" "this box"
+    _update_box_text ""
+    _update_box_rule
+    _update_box_title "Made by eprahemi — Fedora MacTahoe © 2026" "1;90"
     _update_box_bottom
     printf "\n"
     return 0

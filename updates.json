@@ -1,8 +1,16 @@
 {
-  "latest_version": "2.4",
+  "latest_version": "2.5",
   "bootstrap_sha256": "a435e91a79f93cc67f99f7adb75656288653f57b9bfa823de23d17a658753966",
-  "update_sha256": "0ee97f54aa026e2acab3b23d6b1515a0c716adec50da9010c8fc28061cd32ce2",
+  "update_sha256": "905f1d920292d5332318079b3662f551f9e454a5985e4cfc178d5c31fd696637",
   "changelog": [
+    {
+      "version": "2.5",
+      "changes": [
+        "update help redesigned: gradient title, diamond section tags, aligned two-column command table (bold white names, bold gray descriptions), tag-cloud toolbox, divider footer",
+        "all help text is now bold so it stays readable on light auto-theme backgrounds",
+        "fixed command-row width so the box right edge is a straight line"
+      ]
+    },
     {
       "version": "2.4",
       "changes": [
