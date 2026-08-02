@@ -1,12 +1,13 @@
 {
   "latest_version": "2.2",
   "bootstrap_sha256": "a435e91a79f93cc67f99f7adb75656288653f57b9bfa823de23d17a658753966",
-  "update_sha256": "e0206311bd752f18847d95755f4af2cd2fa60a350c109f71c087924e2eb138d2",
+  "update_sha256": "db487b7eee160a39acb92aa72a207cdef1fe471c31d8d9af48021d765a3332df",
   "changelog": [
     {
       "version": "2.2",
       "changes": [
         "Quick updates are now truly quiet — no more questions: your saved answers are reused (Discord, wallpapers, videos) once you've answered them once",
+        "- Picker validation messages (Invalid/Cancelled) now go to stderr, keeping command-substitution output pure",
         "All setup prompts moved from bootstrap into the installer — bootstrap is just the start button now: splash, verify, download, hand off",
         "Discord's answer is now saved too (it was the only prompt without persistence)",
         "Bootstrap no longer prints its own system-info box — the dashboard shows once, from the installer",

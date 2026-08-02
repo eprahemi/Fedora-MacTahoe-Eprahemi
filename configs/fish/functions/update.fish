@@ -742,7 +742,7 @@ function _update_pick_pack --description 'picker: normal / +18 / cancel'
     end >&2
     read -l pick -P "  Your choice [1-3]: "
     if test $status -ne 0
-        printf "\n  \e[1;31m✘ Cancelled.\e[0m\n"
+        printf "\n  \e[1;31m✘ Cancelled.\e[0m\n" >&2
         echo cancel
         return 1
     end
@@ -754,7 +754,7 @@ function _update_pick_pack --description 'picker: normal / +18 / cancel'
         case 3 q 0
             echo cancel
         case '*'
-            printf "  \e[1;31m✘ Invalid — choose 1, 2 or 3.\e[0m\n"
+            printf "  \e[1;31m✘ Invalid — choose 1, 2 or 3.\e[0m\n" >&2
             _update_pick_pack $argv[1]
     end
     return 0
