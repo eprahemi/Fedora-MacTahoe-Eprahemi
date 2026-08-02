@@ -1,15 +1,21 @@
 {
-  "latest_version": "2.2",
+  "latest_version": "2.3",
   "bootstrap_sha256": "a435e91a79f93cc67f99f7adb75656288653f57b9bfa823de23d17a658753966",
   "update_sha256": "c7e5429bb5c6998bd85946b101f425a10053427f990989c1e292c9f5da471e20",
   "changelog": [
+    {
+      "version": "2.3",
+      "changes": [
+        "- A tiny system-wide rescue detector now guards 'update': if ~/.config/fish/functions/update.fish is ever deleted, the /etc copy detects it, explains the missing dependencies and offers to download the latest update function (yes is the default, 5 tries, fingerprint-verified) — the updater never runs until the user copy is restored",
+        "update configs replaces the old system-wide copy with the rescue detector — /etc/fish/functions/update.fish is now the tiny detector, the full updater lives only in ~/.config/fish/functions/"
+      ]
+    },
     {
       "version": "2.2",
       "changes": [
         "Quick updates are now truly quiet — no more questions: your saved answers are reused (Discord, wallpapers, videos) once you've answered them once",
         "- Picker validation messages (Invalid/Cancelled) now go to stderr, keeping command-substitution output pure",
         "- update wallpaper add / update pfp add (also --add, -add) install the other pack alongside — without the flag the chosen pack replaces the other (folder + XML)",
-        "- A tiny system-wide rescue detector now guards 'update': if ~/.config/fish/functions/update.fish is ever deleted, the /etc copy detects it, explains the missing dependencies and offers to download the latest update function (yes is the default, 5 tries, fingerprint-verified) — the updater never runs until the user copy is restored",
         "All setup prompts moved from bootstrap into the installer — bootstrap is just the start button now: splash, verify, download, hand off",
         "Discord's answer is now saved too (it was the only prompt without persistence)",
         "Bootstrap no longer prints its own system-info box — the dashboard shows once, from the installer",
