@@ -3273,19 +3273,18 @@ install_updater() {
   cp "$updater_src/fedora-mactahoe-updater.timer" "$HOME/.config/systemd/user/"
   log "Systemd timer and service installed"
 
-  # 2.5 System-wide rescue copy — if the user's fish functions are ever
-  #      wiped, a root-owned copy outside the home still answers the
-  #      'update' command: fish's autoload falls back to the system dir
-  #      when the user copy is gone. Refreshed on every full install; the
-  #      timer self-heal keeps the user copy current in between (and the
-  #      rescue copy always fetches the latest bundle, so a stale copy
-  #      still fully works).
-  if [ -f "$BUNDLE/configs/fish/functions/update.fish" ]; then
+  # 2.5 System-wide rescue detector — a tiny standalone 'update' function
+  #      (NOT the full updater — that lives only in ~/.config/fish/functions/).
+  #      If the user copy is ever wiped, fish autoloads this one from the
+  #      system dir and it restores the latest verified update.fish from
+  #      GitHub interactively. Refreshed on every full install; 'update
+  #      configs' keeps it current in between.
+  if [ -f "$BUNDLE/configs/updater/update-rescue.fish" ]; then
     local sys_fish_dir="/etc/fish/functions"
     sudo mkdir -p "$sys_fish_dir" 2>/dev/null
-    sudo cp "$BUNDLE/configs/fish/functions/update.fish" "$sys_fish_dir/update.fish"
+    sudo cp "$BUNDLE/configs/updater/update-rescue.fish" "$sys_fish_dir/update.fish"
     sudo chmod 644 "$sys_fish_dir/update.fish"
-    log "Rescue copy installed (root-owned, outside the home folder)"
+    log "Rescue detector installed (root-owned, outside the home folder)"
   fi
 
   # 3. Reload, enable, start
