@@ -592,9 +592,7 @@ function _update_sync_system_fish --description 'refresh the root-owned fish hel
         and sudo chmod 644 "$sys_fish_dir/update.fish" 2>/dev/null
         and sudo cp -f "$handler" "$sys_fish_dir/" 2>/dev/null
         and printf '\n  \e[1;32m✓ System-wide fish helpers updated (rescue detector + did-you-mean handler).\e[0m\n'
-        return 0
-    end
-    if command -q pkexec
+    else if command -q pkexec
         printf '\n  \e[1;33mSystem-wide fish helpers need your password — a dialog will pop up once.\e[0m\n'
         pkexec mkdir -p "$sys_fish_dir" 2>/dev/null
         and pkexec cp -f "$detector" "$sys_fish_dir/update.fish" 2>/dev/null
