@@ -76,8 +76,10 @@ function update --description 'rescue detector: restores the real update.fish in
     printf "  \e[1;36m║ %-62s║\e[0m\n" "y — download and restore (default)"
     printf "  \e[1;37m║ %-62s║\e[0m\n" "n — stop here"
     printf "  \e[1;31m╚%s╝\e[0m\n" (string repeat -n 62 '═')
+    # printf prints the prompt; -P "" only replaces fish's default 'read> '
+    # so that bare read> never shows up
     printf "\n  \e[1;37mDownload now?  [Y/n]: \e[0m"
-    read -l ans
+    read -l ans -P ""
     if test $status -ne 0
         printf "\n  \e[1;31m✘ Cancelled — update stays disabled.\e[0m\n"
         return 1
