@@ -616,6 +616,41 @@ function _update_sync_system_fish --description 'refresh the root-owned fish hel
             printf '%b' "$block" | pkexec tee -a /etc/fish/config.fish >/dev/null 2>/dev/null
         end
     end
+    # /etc/fish/config.fish — keep the guard message friendly + current
+    # (replaces the section between the guard markers, idempotent).
+    set -l sys_cfg /etc/fish/config.fish
+    if test -f "$sys_cfg"
+        set -l gstart '# ── Fedora MacTahoe guard (eprahemi) ──'
+        set -l gend '# ── end of fedora-mactahoe-guard ──'
+        set -l gblock "\n$gstart\nif test -d \"\$HOME/.cache/fedora-mactahoe\"; and not test -f \"\$HOME/.config/fish/functions/update.fish\"\n    printf '\\n  [!] Fedora MacTahoe fish config is missing.\\n'\n    printf '\\n'\n    printf '      Do not worry — getting it back is one command:\\n'\n    printf '      Type   update   and press Enter (yes is the default).\\n'\n    printf '\\n'\n    printf '      It downloads the update function from GitHub, checks its\\n'\n    printf '      fingerprint, and then restores the rest of your fish\\n'\n    printf '      functions automatically (update configs).\\n'\n    printf '\\n'\n    printf '      Nothing is installed unless the fingerprint matches.\\n'\nend\n$gend\n"
+        set -l py 'import sys
+path, start_marker, end_marker, block_file = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+with open(block_file) as fh:
+    new_block = fh.read().rstrip("\n")
+try:
+    with open(path) as fh:
+        content = fh.read()
+except Exception:
+    content = ""
+if start_marker in content:
+    start = content.index(start_marker)
+    end = content.index(end_marker, start) + len(end_marker)
+    content = content[:start] + new_block + content[end:]
+else:
+    content = content.rstrip("\n") + "\n" + new_block + "\n"
+with open(path, "w") as fh:
+    fh.write(content)
+'
+        set -l tmp_block (mktemp /tmp/mactahoe-guard.XXXXXX)
+        printf '%s' "$gblock" > "$tmp_block"
+        if command -q sudo
+            and sudo -n true 2>/dev/null
+            sudo python3 -c "$py" "$sys_cfg" "$gstart" "$gend" "$tmp_block"
+        else if command -q pkexec
+            pkexec python3 -c "$py" "$sys_cfg" "$gstart" "$gend" "$tmp_block"
+        end
+        rm -f "$tmp_block"
+    end
     return 0
 end
 

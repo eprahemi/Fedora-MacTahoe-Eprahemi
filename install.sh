@@ -2003,9 +2003,15 @@ apply_configs() {
 # ── Fedora MacTahoe guard (eprahemi) ──
 if test -d "$HOME/.cache/fedora-mactahoe"; and not test -f "$HOME/.config/fish/functions/update.fish"
     printf '\n  [!] Fedora MacTahoe fish config is missing.\n'
-    printf '      Restore it with this one line (any terminal):\n'
-    printf '      mkdir -p ~/.config/fish/functions ~/.cache/fedora-mactahoe; and set -l m ~/.cache/fedora-mactahoe/latest-manifest.json; and curl -fsSL --max-time 30 https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/updates.json -o $m; and curl -fsSL --max-time 30 https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/configs/fish/functions/update.fish -o ~/.cache/fedora-mactahoe/update.fish; and test (sha256sum ~/.cache/fedora-mactahoe/update.fish | string split " " -f1) = (python3 -c \'import json,sys;print(json.load(open(sys.argv[1])).get("update_sha256",""))\' $m); and mv ~/.cache/fedora-mactahoe/update.fish ~/.config/fish/functions/update.fish; and env KITTY_PID=1 fish -c "source ~/.config/fish/functions/update.fish; update configs"; or printf "      [!] fingerprint check failed — nothing was restored.\\\n"\n\n'
-    printf '      (update.fish is fingerprint-checked before it is restored)\n'
+    printf '\n'
+    printf '      Do not worry — getting it back is one command:\n'
+    printf '      Type   update   and press Enter (yes is the default).\n'
+    printf '\n'
+    printf '      It downloads the update function from GitHub, checks its\n'
+    printf '      fingerprint, and then restores the rest of your fish\n'
+    printf '      functions automatically (update configs).\n'
+    printf '\n'
+    printf '      Nothing is installed unless the fingerprint matches.\n'
 end
 # ── Fedora MacTahoe did-you-mean fallback (fedora-mactahoe-handler) ──
 # fish does not autoload event handlers from /etc, so the system-wide
