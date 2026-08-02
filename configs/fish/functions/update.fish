@@ -601,6 +601,16 @@ function _update_configs_mode --description 'refresh kitty, fish, updater, stars
     for f in "$cfg/fish/functions/"*.fish
         cp -f "$f" "$HOME/.config/fish/functions/"
     end
+    # system-wide rescue copy — kept current too, but only when sudo needs
+    # no prompt, so configs stays silent and never blocks on a password
+    # (a full install always refreshes it regardless)
+    if command -q sudo
+        and sudo -n true 2>/dev/null
+        set -l sys_fish_dir /etc/fish/functions
+        sudo mkdir -p "$sys_fish_dir" 2>/dev/null
+        sudo cp -f "$HOME/.config/fish/functions/update.fish" "$sys_fish_dir/update.fish"
+        sudo chmod 644 "$sys_fish_dir/update.fish"
+    end
     # starship
     if test -f "$cfg/starship.toml"
         cp -f "$cfg/starship.toml" "$HOME/.config/"
