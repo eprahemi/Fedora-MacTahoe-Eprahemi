@@ -419,29 +419,33 @@ _prompt_should_ask() {
 # ── Load saved prompt answers into installer variables ──
 # Only loads answers for prompts that are up-to-date (version matches manifest).
 # Outdated prompts remain unset so they trigger re-asking.
+# CRITICAL: an explicitly-set env var ALWAYS wins over a saved answer —
+# that is how `update wallpaper`, `update pfp` and `update gdm` pass
+# their pick (INSTALL_WALLPAPER_18=false, INSTALL_LOGIN_WALLPAPER=true…).
+# Never overwrite a caller-provided variable here.
 _load_prompt_answers() {
   local ans
-  if ! _prompt_should_ask "discord"; then
+  if [ -z "${INSTALL_DISCORD:-}" ] && ! _prompt_should_ask "discord"; then
     ans="${PR_ANS['discord']:-}"
     [ -n "$ans" ] && INSTALL_DISCORD="$ans"
   fi
-  if ! _prompt_should_ask "wallpaper_desktop"; then
+  if [ -z "${INSTALL_DESKTOP_WALLPAPER:-}" ] && ! _prompt_should_ask "wallpaper_desktop"; then
     ans="${PR_ANS['wallpaper_desktop']:-}"
     [ -n "$ans" ] && INSTALL_DESKTOP_WALLPAPER="$ans"
   fi
-  if ! _prompt_should_ask "wallpaper_login"; then
+  if [ -z "${INSTALL_LOGIN_WALLPAPER:-}" ] && ! _prompt_should_ask "wallpaper_login"; then
     ans="${PR_ANS['wallpaper_login']:-}"
     [ -n "$ans" ] && INSTALL_LOGIN_WALLPAPER="$ans"
   fi
-  if ! _prompt_should_ask "wallpaper_18"; then
+  if [ -z "${INSTALL_WALLPAPER_18:-}" ] && ! _prompt_should_ask "wallpaper_18"; then
     ans="${PR_ANS['wallpaper_18']:-}"
     [ -n "$ans" ] && INSTALL_WALLPAPER_18="$ans"
   fi
-  if ! _prompt_should_ask "billie_videos"; then
+  if [ -z "${INSTALL_BILLIE_VIDEOS:-}" ] && ! _prompt_should_ask "billie_videos"; then
     ans="${PR_ANS['billie_videos']:-}"
     [ -n "$ans" ] && INSTALL_BILLIE_VIDEOS="$ans"
   fi
-  if ! _prompt_should_ask "firewalld"; then
+  if [ -z "${INSTALL_DISABLE_FIREWALLD:-}" ] && ! _prompt_should_ask "firewalld"; then
     ans="${PR_ANS['firewalld']:-}"
     [ -n "$ans" ] && INSTALL_DISABLE_FIREWALLD="$ans"
   fi

@@ -1,8 +1,15 @@
 {
-  "latest_version": "2.6",
+  "latest_version": "2.7",
   "bootstrap_sha256": "a435e91a79f93cc67f99f7adb75656288653f57b9bfa823de23d17a658753966",
   "update_sha256": "905f1d920292d5332318079b3662f551f9e454a5985e4cfc178d5c31fd696637",
   "changelog": [
+    {
+      "version": "2.7",
+      "changes": [
+        "fix update wallpaper / update pfp ignoring your pick: the saved answer from the original install (+18) was overriding the choice you make in the picker, so picking Normal still downloaded the +18 pack. Env vars passed by update <target> now always win over saved answers (saved answers still apply on full installs and when the target passes nothing)",
+        "same fix protects update gdm, update videos and update services — their forced settings can no longer be overridden by an old saved answer"
+      ]
+    },
     {
       "version": "2.6",
       "changes": [
