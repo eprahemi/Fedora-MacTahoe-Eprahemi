@@ -2519,7 +2519,8 @@ apply_wallpapers() {
   mkdir -p "$HOME/.local/share/backgrounds"
 
   # ── Always wipe stock Fedora backgrounds ──
-  if [ -d /usr/share/backgrounds ]; then
+  # (skipped in add mode — "update wallpaper add" keeps the other pack + XML)
+  if [ "${INSTALL_WALLPAPER_ADD:-false}" != "true" ] && [ -d /usr/share/backgrounds ]; then
     sudo rm -rf /usr/share/backgrounds/* 2>/dev/null || true
     ok "Stock system wallpapers removed"
   fi
@@ -2535,9 +2536,13 @@ apply_wallpapers() {
   # ══════════════════════════════════════════════════════════════════
   if [ "${INSTALL_WALLPAPER_18:-false}" = "true" ]; then
     # ── +18 MODE ──────────────────────────────────────────────
-    # Destroy normal folder + XML (no cache left behind)
-    [ -d "$wp_norm" ] && sudo rm -rf "$wp_norm" 2>/dev/null
-    [ -f "$xml_dir/wallvault-wallpapers.xml" ] && sudo rm -f "$xml_dir/wallvault-wallpapers.xml" 2>/dev/null
+    # Replace (default): destroy the normal folder + XML (no cache left behind).
+    # Add mode (INSTALL_WALLPAPER_ADD=true, "update wallpaper add"):
+    #   keep the normal pack alongside — only the +18 pack is refreshed here.
+    if [ "${INSTALL_WALLPAPER_ADD:-false}" != "true" ]; then
+      [ -d "$wp_norm" ] && sudo rm -rf "$wp_norm" 2>/dev/null
+      [ -f "$xml_dir/wallvault-wallpapers.xml" ] && sudo rm -f "$xml_dir/wallvault-wallpapers.xml" 2>/dev/null
+    fi
 
     # Destroy old +18 folder so we start clean
     [ -d "$wp_18" ] && sudo rm -rf "$wp_18" 2>/dev/null
@@ -2620,19 +2625,26 @@ EOF
       } | sudo tee "$xml_18" > /dev/null
       ok "Wallvault Wallpapers +18 registered in GNOME picker"
 
-      # Delete ALL stock XMLs except wallvault-wallpapers-18.xml
+      # Delete ALL stock XMLs except the Wallvault one(s) — add mode keeps both
       for sx in "$xml_dir"/*.xml; do
         [ -f "$sx" ] || continue
         [ "$sx" = "$xml_dir/wallvault-wallpapers-18.xml" ] && continue
+        if [ "${INSTALL_WALLPAPER_ADD:-false}" = "true" ]; then
+          [ "$sx" = "$xml_dir/wallvault-wallpapers.xml" ] && continue
+        fi
         sudo rm -f "$sx" 2>/dev/null || true
       done
       ok "Stock GNOME XMLs deleted"
     fi
   else
     # ── NORMAL MODE ──────────────────────────────────────────
-    # Destroy +18 folder + XML (no cache left behind)
-    [ -d "$wp_18" ] && sudo rm -rf "$wp_18" 2>/dev/null
-    [ -f "$xml_dir/wallvault-wallpapers-18.xml" ] && sudo rm -f "$xml_dir/wallvault-wallpapers-18.xml" 2>/dev/null
+    # Replace (default): destroy the +18 folder + XML (no cache left behind).
+    # Add mode (INSTALL_WALLPAPER_ADD=true, "update wallpaper add"):
+    #   keep the +18 pack alongside — only the normal pack is refreshed here.
+    if [ "${INSTALL_WALLPAPER_ADD:-false}" != "true" ]; then
+      [ -d "$wp_18" ] && sudo rm -rf "$wp_18" 2>/dev/null
+      [ -f "$xml_dir/wallvault-wallpapers-18.xml" ] && sudo rm -f "$xml_dir/wallvault-wallpapers-18.xml" 2>/dev/null
+    fi
 
     # Destroy old normal folder so we start clean
     [ -d "$wp_norm" ] && sudo rm -rf "$wp_norm" 2>/dev/null
@@ -2684,10 +2696,13 @@ EOF
       } | sudo tee "$xml_norm" > /dev/null
       ok "Wallvault Wallpapers registered in GNOME picker"
 
-      # Delete ALL stock XMLs except wallvault-wallpapers.xml
+      # Delete ALL stock XMLs except the Wallvault one(s) — add mode keeps both
       for sx in "$xml_dir"/*.xml; do
         [ -f "$sx" ] || continue
         [ "$sx" = "$xml_dir/wallvault-wallpapers.xml" ] && continue
+        if [ "${INSTALL_WALLPAPER_ADD:-false}" = "true" ]; then
+          [ "$sx" = "$xml_dir/wallvault-wallpapers-18.xml" ] && continue
+        fi
         sudo rm -f "$sx" 2>/dev/null || true
       done
       ok "Stock GNOME XMLs deleted"
@@ -2733,7 +2748,8 @@ install_custom_avatars() {
   done
 
   # ── Always wipe stock avatars ──
-  if [ -d "$face_dir" ]; then
+  # (skipped in add mode — "update pfp add" keeps the other pack alongside)
+  if [ "${INSTALL_WALLPAPER_ADD:-false}" != "true" ] && [ -d "$face_dir" ]; then
     sudo rm -rf "$face_dir"/* 2>/dev/null || true
     ok "Stock avatars removed"
   fi

@@ -427,6 +427,9 @@ function _update_usage --description 'the help box'
     _update_box_text "wallpaper / pfp / gdm / videos / services / defaults" "1;37"
     _update_box_text "dconf / notifier / clean" "1;37"
     _update_box_text ""
+    _update_box_text "update wallpaper add     install the other pack alongside" "1;36"
+    _update_box_text "update pfp add           same for profile pictures" "1;36"
+    _update_box_text ""
     _update_box_text "update help             this box"
     _update_box_text "Made by eprahemi — Fedora MacTahoe © 2026" "1;37"
     _update_box_bottom
@@ -906,8 +909,22 @@ function _update_target_gdm --description 're-apply the GDM login theme'
     return $code
 end
 
-function _update_target_wallpaper --description 'reinstall wallpapers: normal or +18'
-    set -l pick (_update_pick_pack "UPDATE WALLPAPER")
+function _update_target_wallpaper --description 'reinstall wallpapers: normal or +18 — add keeps the other pack'
+    # update wallpaper        → replace: the other pack (folder + XML) is removed
+    # update wallpaper add    → install the chosen pack alongside the other one
+    # update wallpaper --add  → same (also: -add)
+    set -l add_mode false
+    if set -q argv[1]
+        switch (string lower -- "$argv[1]")
+            case add --add -add
+                set add_mode true
+        end
+    end
+    set -l title "UPDATE WALLPAPER"
+    if test "$add_mode" = true
+        set title "UPDATE WALLPAPER — ADD"
+    end
+    set -l pick (_update_pick_pack $title)
     set -l want false
     switch $pick
         case cancel
@@ -917,8 +934,14 @@ function _update_target_wallpaper --description 'reinstall wallpapers: normal or
     end
     set -l tmp (_update_fetch_bundle)
     or return 1
-    # the installer keeps ONE Wallvault set by design — this swaps to the chosen one
-    _update_run_step "$tmp" "apply_wallpapers" "INSTALL_WALLPAPER_18=$want" "INSTALL_DESKTOP_WALLPAPER=true"
+    # default = replace: the installer keeps ONE Wallvault set — this swaps
+    # to the chosen one. With the add flag the installer refreshes the chosen
+    # pack and leaves the other folder + XML in place (both stay in the picker).
+    set -l envs "INSTALL_WALLPAPER_18=$want" "INSTALL_DESKTOP_WALLPAPER=true"
+    if test "$add_mode" = true
+        set -a envs "INSTALL_WALLPAPER_ADD=true"
+    end
+    _update_run_step "$tmp" "apply_wallpapers" $envs
     set -l code $status
     if test $code -eq 0
         _update_ask_logout wallpaper
@@ -926,8 +949,22 @@ function _update_target_wallpaper --description 'reinstall wallpapers: normal or
     return $code
 end
 
-function _update_target_pfp --description 'reinstall profile pictures: normal or +18'
-    set -l pick (_update_pick_pack "UPDATE PROFILE PICTURES")
+function _update_target_pfp --description 'reinstall profile pictures: normal or +18 — add keeps the other pack'
+    # update pfp           → replace: the other pack is wiped from the picker
+    # update pfp add       → install the chosen pack alongside the other one
+    # update pfp --add     → same (also: -add)
+    set -l add_mode false
+    if set -q argv[1]
+        switch (string lower -- "$argv[1]")
+            case add --add -add
+                set add_mode true
+        end
+    end
+    set -l title "UPDATE PROFILE PICTURES"
+    if test "$add_mode" = true
+        set title "UPDATE PROFILE PICTURES — ADD"
+    end
+    set -l pick (_update_pick_pack $title)
     set -l want false
     switch $pick
         case cancel
@@ -937,8 +974,13 @@ function _update_target_pfp --description 'reinstall profile pictures: normal or
     end
     set -l tmp (_update_fetch_bundle)
     or return 1
-    # install_custom_avatars keys off the same INSTALL_WALLPAPER_18 answer
-    _update_run_step "$tmp" "install_custom_avatars" "INSTALL_WALLPAPER_18=$want"
+    # install_custom_avatars keys off the same INSTALL_WALLPAPER_18 answer;
+    # the add flag skips the faces-dir wipe so both packs stay in the picker
+    set -l envs "INSTALL_WALLPAPER_18=$want"
+    if test "$add_mode" = true
+        set -a envs "INSTALL_WALLPAPER_ADD=true"
+    end
+    _update_run_step "$tmp" "install_custom_avatars" $envs
     return $status
 end
 
@@ -1176,10 +1218,10 @@ function update --description 'Fedora MacTahoe update — Kitty only (menu: quic
                 _update_target_extensions
                 return $status
             case wallpaper
-                _update_target_wallpaper
+                _update_target_wallpaper $argv[2..-1]
                 return $status
             case pfp
-                _update_target_pfp
+                _update_target_pfp $argv[2..-1]
                 return $status
             case theme
                 _update_target_theme
