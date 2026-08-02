@@ -1139,14 +1139,48 @@ function _update_target_videos --description 're-download the optional video edi
 end
 
 function _update_target_services --description 're-apply the RAM-saving services'
-    set -l fw (_update_state_prompt firewalld)
+    # ── firewalld: ALWAYS ask (live state shown, default = OFF) ──
+    # The saved answer is NOT reused here — every run checks the live
+    # state and asks again, so the choice always reflects right now.
+    set -l fw_on false
+    systemctl is-active firewalld >/dev/null 2>&1; and set fw_on true
+    printf "\n"
+    _update_box_top
+    if test "$fw_on" = true
+        _update_box_title "FIREWALLD IS RUNNING" "1;36"
+    else
+        _update_box_title "FIREWALLD IS OFF" "1;36"
+    end
+    _update_box_rule
+    if test "$fw_on" = true
+        _update_box_text "Firewalld is using ~30-50 MB of RAM right" "1;37"
+        _update_box_text "now. Turning it off saves that memory." "1;37"
+        _update_box_text "Your iptables/nftables rules stay in place" "1;37"
+        _update_box_text "— nothing opens up, nothing breaks." "1;37"
+    else
+        _update_box_text "Firewalld is already off — RAM saved." "1;37"
+        _update_box_text "Keep it off for the same benefit, or turn" "1;37"
+        _update_box_text "it back on for the managed security layer." "1;37"
+    end
+    _update_box_text ""
+    _update_box_text "[1] Turn it OFF (save RAM) — DEFAULT" "1;36"
+    _update_box_text "[2] Keep it ON (security)" "1;90"
+    _update_box_text ""
+    _update_box_text "Enter = turn it off (default)" "1;90"
+    _update_box_bottom
+    read -l fw -P "  Your choice [1/2]: "
+    if test $status -ne 0
+        printf "\n  \e[1;31m✘ Cancelled.\e[0m\n" >&2
+        return 1
+    end
+    set -l want true
+    switch "$fw"
+        case 2
+            set want false
+    end
     set -l tmp (_update_fetch_bundle)
     or return 1
-    if test -n "$fw"
-        _update_run_step "$tmp" "optimize_system_resources" "INSTALL_DISABLE_FIREWALLD=$fw"
-    else
-        _update_run_step "$tmp" "optimize_system_resources"
-    end
+    _update_run_step "$tmp" "optimize_system_resources" "INSTALL_DISABLE_FIREWALLD=$want"
     return $status
 end
 

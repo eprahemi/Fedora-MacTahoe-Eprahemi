@@ -2542,11 +2542,11 @@ fw_yn1="    Yes  — Disable firewalld (save RAM)"
 fw_yn2="    no   — Keep/enable firewalld"
     echo -e "  ${YELLOW}║${NC}    ${BOLD}${YELLOW}n${NC}${BOLD}o${NC}   — Keep/enable firewalld$(printf '%*s' $((62 - ${#fw_yn2})) '')${YELLOW}║${NC}"
     echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
-fw7="  Press Enter for default (No)"
+fw7="  Press Enter for default (Yes — disable)"
     echo -e "  ${YELLOW}║${NC}${DIM}${fw7}$(printf '%*s' $((62 - ${#fw7})) '')${NC}${YELLOW}║${NC}"
     echo -e "  ${YELLOW}╚══════════════════════════════════════════════════════════════╝${NC}"
     echo ""
-    if confirm "Disable firewalld? [y/N]: " N; then
+    if confirm "Disable firewalld? [Y/n]: " Y; then
       INSTALL_DISABLE_FIREWALLD="true"
       echo -e "  ${GREEN}→ Firewalld will be disabled (saves ~30-50 MB)${NC}"
     else
