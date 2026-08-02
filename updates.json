@@ -1,7 +1,7 @@
 {
   "latest_version": "2.2",
   "bootstrap_sha256": "a435e91a79f93cc67f99f7adb75656288653f57b9bfa823de23d17a658753966",
-  "update_sha256": "22bd1a7b4e46ea1c5bb9697d6a1c4335d7749ade441a6892c2beb412fb6f638d",
+  "update_sha256": "aacea093cdebb85373eb9409d0239f638ece97d7aa0295358c15a93c391a0636",
   "changelog": [
     {
       "version": "2.2",
@@ -36,7 +36,8 @@
         "Self-healing 'update' command — if update.fish is ever deleted (say, a wiped fish config), the boot + 2-hour updater timer restores it automatically, fingerprint-verified against the pinned sha256 so unverified code is never installed",
         "System-wide rescue copy — the installer keeps a root-owned copy of update.fish outside your home folder: even with the entire fish config wiped, the 'update' command still answers",
         "update configs now refreshes every config location — kitty, fish (config + all 40 functions), starship, GTK, fastfetch, systemd units AND the update notifier (script + timer): every folder is created if missing, every file overwrites if present, and your fish config is auto-backed up before any override",
-        "update configs also keeps the system-wide rescue copy current — done silently, without asking for a password or printing anything extra"
+        "update configs also keeps the system-wide rescue copy current — done silently, without asking for a password or printing anything extra",
+        "update configs no longer leaks ktheme's raw error if the wallpaper file ever goes missing — the live re-theme is fully silent now"
       ]
     },
     {

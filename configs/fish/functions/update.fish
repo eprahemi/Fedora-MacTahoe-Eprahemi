@@ -645,7 +645,7 @@ function _update_configs_mode --description 'refresh kitty, fish, updater, stars
     # live palette re-apply — the copied auto-theme.conf is the seed fallback,
     # the real colors come from the current wallpaper
     if functions -q ktheme
-        ktheme apply --silent 2>/dev/null
+        ktheme apply --silent >/dev/null 2>&1
     end
     for sock in /tmp/kitty-*
         if test -S "$sock"
