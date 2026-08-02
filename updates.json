@@ -1,7 +1,7 @@
 {
   "latest_version": "2.3",
   "bootstrap_sha256": "a435e91a79f93cc67f99f7adb75656288653f57b9bfa823de23d17a658753966",
-  "update_sha256": "99532c8fd8053cde81cc0f733d345ddc1a352c3e34d232a94450f2109f31490d",
+  "update_sha256": "ef59d6f30091539b61e19fbe7ab7b69c3d9b6fcf55908f3c008e31be00cf256b",
   "changelog": [
     {
       "version": "2.3",
