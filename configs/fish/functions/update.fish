@@ -4,7 +4,7 @@
 # menu: quick / full reinstall / configs-only / just checking.
 #   update           → open the menu
 #   update check     → status at a glance, no prompts
-#   update configs   → refresh kitty, fish, fastfetch files only
+#   update configs   → refresh kitty, fish, updater, fastfetch files only
 #   update full      → full reinstall from scratch
 #   update log       → your update history
 #   update menu      → pick any target from a numbered list
@@ -417,7 +417,7 @@ function _update_usage --description 'the help box'
     _update_header "UPDATE — HELP"
     _update_box_text "update                  open the updater menu"
     _update_box_text "update check            status at a glance, no prompts"
-    _update_box_text "update configs          refresh kitty/fish/fastfetch only"
+    _update_box_text "update configs          refresh kitty/fish/updater/fastfetch only"
     _update_box_text "update full             full reinstall from scratch"
     _update_box_text "update log              your update history"
     _update_box_text "update menu             pick any target from a list"
@@ -568,11 +568,12 @@ function _update_fetch_bundle --description 'clone the repo bundle; echoes the t
 end
 
 # ── configs-only: just the files, no system changes ──
-function _update_configs_mode --description 'refresh kitty, fish, starship, gtk, fastfetch files'
+function _update_configs_mode --description 'refresh kitty, fish, updater, starship, gtk, fastfetch files'
     set -l tmp (_update_fetch_bundle)
     or return 1
     set -l cfg "$tmp/configs"
-    mkdir -p "$HOME/.config/kitty" "$HOME/.config/fish/functions" "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0" "$HOME/.config/fastfetch" "$HOME/.config/systemd/user"
+    # Every destination is created even when missing — files always overwrite
+    mkdir -p "$HOME/.config/kitty" "$HOME/.config/fish/functions" "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0" "$HOME/.config/fastfetch" "$HOME/.config/systemd/user" "$HOME/.local/bin"
     # Auto-backup the live fish config before overwriting (keeps last 5)
     set -l bk "$HOME/.cache/fedora-mactahoe/backups"
     if test -d "$HOME/.config/fish"
@@ -585,37 +586,52 @@ function _update_configs_mode --description 'refresh kitty, fish, starship, gtk,
             rm -f "$old"
         end
     end
+    # kitty
     if test -f "$cfg/kitty/kitty.conf"
         cp -f "$cfg/kitty/kitty.conf" "$HOME/.config/kitty/"
     end
     if test -f "$cfg/kitty/auto-theme.conf"
         cp -f "$cfg/kitty/auto-theme.conf" "$HOME/.config/kitty/"
     end
+    # fish — config.fish + every function (update.fish included, so the
+    # running copy is replaced with the freshly fetched one)
     if test -f "$cfg/fish/config.fish"
         cp -f "$cfg/fish/config.fish" "$HOME/.config/fish/"
     end
-    if test -d "$cfg/fish/functions"
-        cp -f "$cfg/fish/functions/"*.fish "$HOME/.config/fish/functions/"
+    for f in "$cfg/fish/functions/"*.fish
+        cp -f "$f" "$HOME/.config/fish/functions/"
     end
+    # starship
     if test -f "$cfg/starship.toml"
         cp -f "$cfg/starship.toml" "$HOME/.config/"
     end
+    # gtk
     if test -f "$cfg/gtk-3.0/settings.ini"
         cp -f "$cfg/gtk-3.0/settings.ini" "$HOME/.config/gtk-3.0/"
     end
     if test -f "$cfg/gtk-4.0/settings.ini"
         cp -f "$cfg/gtk-4.0/settings.ini" "$HOME/.config/gtk-4.0/"
     end
+    # fastfetch
     if test -f "$cfg/fastfetch/config.jsonc"
         sed "s|PLACEHOLDER_USER_HOME|$HOME|g" "$cfg/fastfetch/config.jsonc" > "$HOME/.config/fastfetch/config.jsonc"
-        cp -f "$cfg/fastfetch/"*.png "$HOME/.config/fastfetch/" 2>/dev/null
-        cp -f "$cfg/fastfetch/"*.gif "$HOME/.config/fastfetch/" 2>/dev/null
+        for img in "$cfg/fastfetch/"*.png "$cfg/fastfetch/"*.gif
+            cp -f "$img" "$HOME/.config/fastfetch/"
+        end
     end
-    if test -d "$cfg/systemd"
-        cp -f "$cfg/systemd/"*.service "$HOME/.config/systemd/user/"
+    # systemd user units — ktheme watcher + the update notifier
+    for u in "$cfg/systemd/"*.service "$cfg/updater/"*.service "$cfg/updater/"*.timer
+        cp -f "$u" "$HOME/.config/systemd/user/"
+    end
+    # updater script
+    if test -f "$cfg/updater/fedora-mactahoe-updater.sh"
+        cp -f "$cfg/updater/fedora-mactahoe-updater.sh" "$HOME/.local/bin/"
+        chmod +x "$HOME/.local/bin/fedora-mactahoe-updater.sh"
     end
     systemctl --user daemon-reload 2>/dev/null
     systemctl --user enable --now ktheme-watcher.service 2>/dev/null
+    systemctl --user enable fedora-mactahoe-updater.timer 2>/dev/null
+    systemctl --user start fedora-mactahoe-updater.timer 2>/dev/null
     # live palette re-apply — the copied auto-theme.conf is the seed fallback,
     # the real colors come from the current wallpaper
     if functions -q ktheme
@@ -628,7 +644,7 @@ function _update_configs_mode --description 'refresh kitty, fish, starship, gtk,
     end
     rm -rf "$tmp"
     _update_log_add configs "—" "—" ok
-    printf "\n  \e[1;32m✓ Configs refreshed — kitty, fish and fastfetch are current.\e[0m\n"
+    printf "\n  \e[1;32m✓ Configs refreshed — kitty, fish, updater and fastfetch are current.\e[0m\n"
     return 0
 end
 

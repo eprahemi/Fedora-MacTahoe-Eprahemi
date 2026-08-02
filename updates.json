@@ -1,7 +1,7 @@
 {
   "latest_version": "2.2",
   "bootstrap_sha256": "a435e91a79f93cc67f99f7adb75656288653f57b9bfa823de23d17a658753966",
-  "update_sha256": "733cdc7d8389060e9057c4de499e8ec943456a3df7b4ccd9df7f1b2171ba62a3",
+  "update_sha256": "8509f70f3be128ef8592bacad795ec45fcc0074587efdc1e932dae040e7036bc",
   "changelog": [
     {
       "version": "2.2",
@@ -34,7 +34,8 @@
         "Ctrl+C is now safe everywhere: cancelling mid-install or mid-fetch prints '✘ Cancelled — nothing was changed.', never touches your setup, and cleans up the temp files",
         "Fixed the download spinner never noticing a failed clone (fish's wait always reported success) — git's real exit code is read from the temp bundle now, so connection errors are reported honestly",
         "Self-healing 'update' command — if update.fish is ever deleted (say, a wiped fish config), the boot + 2-hour updater timer restores it automatically, fingerprint-verified against the pinned sha256 so unverified code is never installed",
-        "System-wide rescue copy — the installer keeps a root-owned copy of update.fish outside your home folder: even with the entire fish config wiped, the 'update' command still answers"
+        "System-wide rescue copy — the installer keeps a root-owned copy of update.fish outside your home folder: even with the entire fish config wiped, the 'update' command still answers",
+        "update configs now refreshes every config location — kitty, fish (config + all 40 functions), starship, GTK, fastfetch, systemd units AND the update notifier (script + timer): every folder is created if missing, every file overwrites if present, and your fish config is auto-backed up before any override"
       ]
     },
     {
