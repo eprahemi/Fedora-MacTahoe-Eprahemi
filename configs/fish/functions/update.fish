@@ -477,7 +477,9 @@ function _update_usage --description 'the help box'
     _update_box_tag "EXTRA FLAGS"
     _update_box_text ""
     _update_box_cmd "update wallpaper add" "install the other pack alongside"
+    _update_box_cmd "update wallpaper both" "wipe both, fresh install of both"
     _update_box_cmd "update pfp add" "same for profile pictures"
+    _update_box_cmd "update pfp both" "wipe both packs, fresh install"
     _update_box_cmd "update help" "this box"
     _update_box_text ""
     _update_box_rule
@@ -852,9 +854,9 @@ except Exception:
     pass' "$st" "$argv[1]" 2>/dev/null
 end
 
-# ── shared normal / +18 picker for wallpaper + pfp; echoes normal|18|cancel ──
+# ── shared normal / +18 / both picker for wallpaper + pfp; echoes normal|18|both|cancel ──
 # box goes to stderr — stdout is ONLY the choice (command substitution).
-function _update_pick_pack --description 'picker: normal / +18 / cancel'
+function _update_pick_pack --description 'picker: normal / +18 / both / cancel'
     begin
         printf "\n"
         _update_box_top
@@ -862,12 +864,13 @@ function _update_pick_pack --description 'picker: normal / +18 / cancel'
         _update_box_rule
         _update_box_text "[1] Normal pack" "1;36"
         _update_box_text "[2] +18 pack" "1;36"
-        _update_box_text "[3] Cancel" "1;37"
+        _update_box_text "[3] Both — wipe both, fresh install" "1;36"
+        _update_box_text "[4] Cancel" "1;37"
         _update_box_text ""
         _update_box_text "Made by eprahemi — Fedora MacTahoe © 2026" "1;37"
         _update_box_bottom
     end >&2
-    read -l pick -P "  Your choice [1-3]: "
+    read -l pick -P "  Your choice [1-4]: "
     if test $status -ne 0
         printf "\n  \e[1;31m✘ Cancelled.\e[0m\n" >&2
         echo cancel
@@ -878,10 +881,12 @@ function _update_pick_pack --description 'picker: normal / +18 / cancel'
             echo normal
         case 2
             echo 18
-        case 3 q 0
+        case 3
+            echo both
+        case 4 q 0
             echo cancel
         case '*'
-            printf "  \e[1;31m✘ Invalid — choose 1, 2 or 3.\e[0m\n" >&2
+            printf "  \e[1;31m✘ Invalid — choose 1, 2, 3 or 4.\e[0m\n" >&2
             _update_pick_pack $argv[1]
     end
     return 0
@@ -1033,10 +1038,11 @@ function _update_target_gdm --description 're-apply the GDM login theme'
     return $code
 end
 
-function _update_target_wallpaper --description 'reinstall wallpapers: normal or +18 — add keeps the other pack'
+function _update_target_wallpaper --description 'reinstall wallpapers: normal, +18 or both — add keeps the other pack'
     # update wallpaper        → replace: the other pack (folder + XML) is removed
     # update wallpaper add    → install the chosen pack alongside the other one
     # update wallpaper --add  → same (also: -add)
+    # update wallpaper both   → wipe BOTH packs and re-download them fresh
     set -l add_mode false
     if set -q argv[1]
         switch (string lower -- "$argv[1]")
@@ -1050,20 +1056,28 @@ function _update_target_wallpaper --description 'reinstall wallpapers: normal or
     end
     set -l pick (_update_pick_pack $title)
     set -l want false
+    set -l both_mode false
     switch $pick
         case cancel
             return 1
         case 18
             set want true
+        case both
+            set want true
+            set both_mode true
     end
     set -l tmp (_update_fetch_bundle)
     or return 1
     # default = replace: the installer keeps ONE Wallvault set — this swaps
     # to the chosen one. With the add flag the installer refreshes the chosen
     # pack and leaves the other folder + XML in place (both stay in the picker).
+    # With "both" the installer wipes both packs and re-downloads them fresh.
     set -l envs "INSTALL_WALLPAPER_18=$want" "INSTALL_DESKTOP_WALLPAPER=true"
     if test "$add_mode" = true
         set -a envs "INSTALL_WALLPAPER_ADD=true"
+    end
+    if test "$both_mode" = true
+        set -a envs "INSTALL_WALLPAPER_BOTH=true"
     end
     _update_run_step "$tmp" "apply_wallpapers" $envs
     set -l code $status
@@ -1073,10 +1087,11 @@ function _update_target_wallpaper --description 'reinstall wallpapers: normal or
     return $code
 end
 
-function _update_target_pfp --description 'reinstall profile pictures: normal or +18 — add keeps the other pack'
+function _update_target_pfp --description 'reinstall profile pictures: normal, +18 or both — add keeps the other pack'
     # update pfp           → replace: the other pack is wiped from the picker
     # update pfp add       → install the chosen pack alongside the other one
     # update pfp --add     → same (also: -add)
+    # update pfp both      → wipe BOTH packs and re-download them fresh
     set -l add_mode false
     if set -q argv[1]
         switch (string lower -- "$argv[1]")
@@ -1090,19 +1105,27 @@ function _update_target_pfp --description 'reinstall profile pictures: normal or
     end
     set -l pick (_update_pick_pack $title)
     set -l want false
+    set -l both_mode false
     switch $pick
         case cancel
             return 1
         case 18
             set want true
+        case both
+            set want true
+            set both_mode true
     end
     set -l tmp (_update_fetch_bundle)
     or return 1
     # install_custom_avatars keys off the same INSTALL_WALLPAPER_18 answer;
-    # the add flag skips the faces-dir wipe so both packs stay in the picker
+    # the add flag skips the faces-dir wipe so both packs stay in the picker,
+    # "both" wipes the dir and installs normal + 18+ faces together
     set -l envs "INSTALL_WALLPAPER_18=$want"
     if test "$add_mode" = true
         set -a envs "INSTALL_WALLPAPER_ADD=true"
+    end
+    if test "$both_mode" = true
+        set -a envs "INSTALL_WALLPAPER_BOTH=true"
     end
     _update_run_step "$tmp" "install_custom_avatars" $envs
     return $status

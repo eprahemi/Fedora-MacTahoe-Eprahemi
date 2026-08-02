@@ -2576,17 +2576,15 @@ apply_wallpapers() {
   local count_18=0
 
   # ══════════════════════════════════════════════════════════════════
-  # BRANCH: user chose +18 wallpapers
-  #   → Only "Wallvault Wallpapers +18" folder + XML survive
-  # BRANCH: user skipped +18 wallpapers
-  #   → Only "Wallvault Wallpapers" folder + XML survive
+  # +18 BRANCH — runs when INSTALL_WALLPAPER_18=true (+18-only or "both")
+  #   +18-only: destroys the normal folder + XML (no cache left behind).
+  #   Add mode / both: keeps the normal pack — "both" installs it after.
   # ══════════════════════════════════════════════════════════════════
   if [ "${INSTALL_WALLPAPER_18:-false}" = "true" ]; then
-    # ── +18 MODE ──────────────────────────────────────────────
     # Replace (default): destroy the normal folder + XML (no cache left behind).
-    # Add mode (INSTALL_WALLPAPER_ADD=true, "update wallpaper add"):
-    #   keep the normal pack alongside — only the +18 pack is refreshed here.
-    if [ "${INSTALL_WALLPAPER_ADD:-false}" != "true" ]; then
+    # Add mode / both (INSTALL_WALLPAPER_ADD=true / INSTALL_WALLPAPER_BOTH=true):
+    #   keep the normal pack alongside — "both" refreshes it below.
+    if [ "${INSTALL_WALLPAPER_ADD:-false}" != "true" ] && [ "${INSTALL_WALLPAPER_BOTH:-false}" != "true" ]; then
       [ -d "$wp_norm" ] && sudo rm -rf "$wp_norm" 2>/dev/null
       [ -f "$xml_dir/wallvault-wallpapers.xml" ] && sudo rm -f "$xml_dir/wallvault-wallpapers.xml" 2>/dev/null
     fi
@@ -2672,23 +2670,28 @@ EOF
       } | sudo tee "$xml_18" > /dev/null
       ok "Wallvault Wallpapers +18 registered in GNOME picker"
 
-      # Delete ALL stock XMLs except the Wallvault one(s) — add mode keeps both
+      # Delete ALL stock XMLs except the Wallvault one(s) — add/both mode keeps both
       for sx in "$xml_dir"/*.xml; do
         [ -f "$sx" ] || continue
         [ "$sx" = "$xml_dir/wallvault-wallpapers-18.xml" ] && continue
-        if [ "${INSTALL_WALLPAPER_ADD:-false}" = "true" ]; then
+        if [ "${INSTALL_WALLPAPER_ADD:-false}" = "true" ] || [ "${INSTALL_WALLPAPER_BOTH:-false}" = "true" ]; then
           [ "$sx" = "$xml_dir/wallvault-wallpapers.xml" ] && continue
         fi
         sudo rm -f "$sx" 2>/dev/null || true
       done
       ok "Stock GNOME XMLs deleted"
     fi
-  else
-    # ── NORMAL MODE ──────────────────────────────────────────
+  fi
+
+  # ══════════════════════════════════════════════════════════════════
+  # NORMAL BRANCH — runs when NOT +18-only (normal-only or "both")
+  #   normal-only: destroys the +18 folder + XML (no cache left behind).
+  #   Add mode / both: keeps the +18 pack — "both" already installed it above.
+  # ══════════════════════════════════════════════════════════════════
+  if [ "${INSTALL_WALLPAPER_18:-false}" != "true" ] || [ "${INSTALL_WALLPAPER_BOTH:-false}" = "true" ]; then
     # Replace (default): destroy the +18 folder + XML (no cache left behind).
-    # Add mode (INSTALL_WALLPAPER_ADD=true, "update wallpaper add"):
-    #   keep the +18 pack alongside — only the normal pack is refreshed here.
-    if [ "${INSTALL_WALLPAPER_ADD:-false}" != "true" ]; then
+    # Add mode / both: keep the +18 pack alongside — only the normal pack is refreshed here.
+    if [ "${INSTALL_WALLPAPER_ADD:-false}" != "true" ] && [ "${INSTALL_WALLPAPER_BOTH:-false}" != "true" ]; then
       [ -d "$wp_18" ] && sudo rm -rf "$wp_18" 2>/dev/null
       [ -f "$xml_dir/wallvault-wallpapers-18.xml" ] && sudo rm -f "$xml_dir/wallvault-wallpapers-18.xml" 2>/dev/null
     fi
@@ -2743,11 +2746,11 @@ EOF
       } | sudo tee "$xml_norm" > /dev/null
       ok "Wallvault Wallpapers registered in GNOME picker"
 
-      # Delete ALL stock XMLs except the Wallvault one(s) — add mode keeps both
+      # Delete ALL stock XMLs except the Wallvault one(s) — add/both mode keeps both
       for sx in "$xml_dir"/*.xml; do
         [ -f "$sx" ] || continue
         [ "$sx" = "$xml_dir/wallvault-wallpapers.xml" ] && continue
-        if [ "${INSTALL_WALLPAPER_ADD:-false}" = "true" ]; then
+        if [ "${INSTALL_WALLPAPER_ADD:-false}" = "true" ] || [ "${INSTALL_WALLPAPER_BOTH:-false}" = "true" ]; then
           [ "$sx" = "$xml_dir/wallvault-wallpapers-18.xml" ] && continue
         fi
         sudo rm -f "$sx" 2>/dev/null || true
@@ -2802,8 +2805,9 @@ install_custom_avatars() {
   fi
 
   # ── Normal faces ──
+  # Runs when NOT +18-only, or in "both" mode (normal + 18+ together)
   local count=0
-  if [ "${INSTALL_WALLPAPER_18:-false}" != "true" ] && [ -d "$src" ] && [ -n "$(ls -A "$src" 2>/dev/null)" ]; then
+  if { [ "${INSTALL_WALLPAPER_18:-false}" != "true" ] || [ "${INSTALL_WALLPAPER_BOTH:-false}" = "true" ]; } && [ -d "$src" ] && [ -n "$(ls -A "$src" 2>/dev/null)" ]; then
     sudo mkdir -p "$face_dir"
 
     # Copy custom avatars — convert to exact 512x512 JPEG
@@ -2840,6 +2844,7 @@ install_custom_avatars() {
   fi
 
   # ── 18+ faces (optional zip download) → replaces normal avatars ──
+  # Runs in +18-only mode AND in "both" mode (after normal faces above)
   if [ "${INSTALL_WALLPAPER_18:-false}" = "true" ]; then
     log "Downloading 18+ profile pictures…"
     local zip_tmp="/tmp/faces-18-$$.zip"

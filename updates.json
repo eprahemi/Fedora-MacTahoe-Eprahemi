@@ -1,8 +1,16 @@
 {
-  "latest_version": "2.8",
+  "latest_version": "2.9",
   "bootstrap_sha256": "a435e91a79f93cc67f99f7adb75656288653f57b9bfa823de23d17a658753966",
-  "update_sha256": "b6987ea8e51e1c642afc7f60ae12ec0deb3d03222e5e347f956ccc26d76663af",
+  "update_sha256": "e470a0d3cc7d9fd9c7160ed22e649e1d87a3fcdb4237a926842e05de84d9d375",
   "changelog": [
+    {
+      "version": "2.9",
+      "changes": [
+        "update wallpaper and update pfp now offer a Both option: pick 3 in the pack picker to wipe BOTH packs (normal + +18 folders and XMLs) and re-download them fresh in one go",
+        "update wallpaper both also works as update wallpaper both — same for pfp",
+        "help box gained update wallpaper both / update pfp both rows"
+      ]
+    },
     {
       "version": "2.8",
       "changes": [
