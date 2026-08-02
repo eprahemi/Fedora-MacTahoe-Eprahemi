@@ -570,6 +570,42 @@ function _update_fetch_bundle --description 'clone the repo bundle; echoes the t
     return 0
 end
 
+# ── system-wide fish helpers: /etc/fish/functions ──
+# The rescue detector ('update' when the user copy is gone) and the
+# did-you-mean handler for unknown commands. Both are tiny and standalone,
+# so they survive a wiped fish config. Warm sudo refreshes them silently;
+# cold sudo pops the polkit password dialog once (pkexec) and copies them
+# anyway, so configs never silently skips the system-wide copies again.
+function _update_sync_system_fish --description 'refresh the root-owned fish helpers in /etc/fish/functions'
+    set -l src_dir "$argv[1]"
+    set -l sys_fish_dir /etc/fish/functions
+    set -l detector "$src_dir/updater/update-rescue.fish"
+    set -l handler "$src_dir/fish/functions/__fish_default_command_not_found_handler.fish"
+    if not test -f "$detector"
+        and not test -f "$handler"
+        return 0
+    end
+    if command -q sudo
+        and sudo -n true 2>/dev/null
+        sudo mkdir -p "$sys_fish_dir" 2>/dev/null
+        sudo cp -f "$detector" "$sys_fish_dir/update.fish" 2>/dev/null
+        and sudo chmod 644 "$sys_fish_dir/update.fish" 2>/dev/null
+        and sudo cp -f "$handler" "$sys_fish_dir/" 2>/dev/null
+        and printf '\n  \e[1;32m✓ System-wide fish helpers updated (rescue detector + did-you-mean handler).\e[0m\n'
+        return 0
+    end
+    if command -q pkexec
+        printf '\n  \e[1;33mSystem-wide fish helpers need your password — a dialog will pop up once.\e[0m\n'
+        pkexec mkdir -p "$sys_fish_dir" 2>/dev/null
+        and pkexec cp -f "$detector" "$sys_fish_dir/update.fish" 2>/dev/null
+        and pkexec chmod 644 "$sys_fish_dir/update.fish" 2>/dev/null
+        and pkexec cp -f "$handler" "$sys_fish_dir/__fish_default_command_not_found_handler.fish" 2>/dev/null
+        and printf '\n  \e[1;32m✓ System-wide fish helpers updated (rescue detector + did-you-mean handler).\e[0m\n'
+        or printf '\n  \e[1;31m✘ System-wide fish helpers skipped — authorization cancelled.\e[0m\n'
+    end
+    return 0
+end
+
 # ── configs-only: just the files, no system changes ──
 function _update_configs_mode --description 'refresh kitty, fish, updater, starship, gtk, fastfetch files'
     set -l tmp (_update_fetch_bundle)
@@ -604,21 +640,11 @@ function _update_configs_mode --description 'refresh kitty, fish, updater, stars
     for f in "$cfg/fish/functions/"*.fish
         cp -f "$f" "$HOME/.config/fish/functions/"
     end
-    # system-wide rescue DETECTOR — a tiny standalone 'update' function
-    # (not the full updater: that lives only in the user config). Kept
-    # current too, but only when sudo needs no prompt, so configs stays
-    # silent and never blocks on a password (a full install always
-    # refreshes it regardless). The confirmation prints only when the
-    # copy really happened.
-    if command -q sudo
-        and sudo -n true 2>/dev/null
-        set -l sys_fish_dir /etc/fish/functions
-        sudo mkdir -p "$sys_fish_dir" 2>/dev/null
-        if sudo cp -f "$cfg/updater/update-rescue.fish" "$sys_fish_dir/update.fish"
-            sudo chmod 644 "$sys_fish_dir/update.fish" 2>/dev/null
-            printf '\n  \e[1;32m✓ Rescue detector (system-wide) updated.\e[0m\n'
-        end
-    end
+    # system-wide fish helpers — the rescue detector (tiny standalone
+    # 'update' when the user copy is gone) + the did-you-mean handler.
+    # Warm sudo: silent refresh. Cold sudo: one polkit password dialog
+    # (pkexec) pops up and both files are copied anyway — no silent skips.
+    _update_sync_system_fish "$cfg"
     # starship
     if test -f "$cfg/starship.toml"
         cp -f "$cfg/starship.toml" "$HOME/.config/"

@@ -3277,14 +3277,20 @@ install_updater() {
   #      (NOT the full updater — that lives only in ~/.config/fish/functions/).
   #      If the user copy is ever wiped, fish autoloads this one from the
   #      system dir and it restores the latest verified update.fish from
-  #      GitHub interactively. Refreshed on every full install; 'update
-  #      configs' keeps it current in between.
+  #      GitHub interactively. The did-you-mean command handler rides along
+  #      so a wiped fish config still suggests command fixes. Refreshed on
+  #      every full install; 'update configs' keeps both current in between.
+  local sys_fish_dir="/etc/fish/functions"
+  sudo mkdir -p "$sys_fish_dir" 2>/dev/null
   if [ -f "$BUNDLE/configs/updater/update-rescue.fish" ]; then
-    local sys_fish_dir="/etc/fish/functions"
-    sudo mkdir -p "$sys_fish_dir" 2>/dev/null
     sudo cp "$BUNDLE/configs/updater/update-rescue.fish" "$sys_fish_dir/update.fish"
     sudo chmod 644 "$sys_fish_dir/update.fish"
     log "Rescue detector installed (root-owned, outside the home folder)"
+  fi
+  if [ -f "$BUNDLE/configs/fish/functions/__fish_default_command_not_found_handler.fish" ]; then
+    sudo cp "$BUNDLE/configs/fish/functions/__fish_default_command_not_found_handler.fish" "$sys_fish_dir/"
+    sudo chmod 644 "$sys_fish_dir/__fish_default_command_not_found_handler.fish"
+    log "Did-you-mean handler installed (root-owned, outside the home folder)"
   fi
 
   # 3. Reload, enable, start
