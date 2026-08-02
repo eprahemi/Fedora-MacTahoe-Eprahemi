@@ -1,7 +1,7 @@
 {
   "latest_version": "2.2",
   "bootstrap_sha256": "a435e91a79f93cc67f99f7adb75656288653f57b9bfa823de23d17a658753966",
-  "update_sha256": "aacea093cdebb85373eb9409d0239f638ece97d7aa0295358c15a93c391a0636",
+  "update_sha256": "e0206311bd752f18847d95755f4af2cd2fa60a350c109f71c087924e2eb138d2",
   "changelog": [
     {
       "version": "2.2",
@@ -37,7 +37,8 @@
         "System-wide rescue copy — the installer keeps a root-owned copy of update.fish outside your home folder: even with the entire fish config wiped, the 'update' command still answers",
         "update configs now refreshes every config location — kitty, fish (config + all 40 functions), starship, GTK, fastfetch, systemd units AND the update notifier (script + timer): every folder is created if missing, every file overwrites if present, and your fish config is auto-backed up before any override",
         "update configs also keeps the system-wide rescue copy current — done silently, without asking for a password or printing anything extra",
-        "update configs no longer leaks ktheme's raw error if the wallpaper file ever goes missing — the live re-theme is fully silent now"
+        "update configs no longer leaks ktheme's raw error if the wallpaper file ever goes missing — the live re-theme is fully silent now",
+        "update configs confirms with '✓ Rescue copy (system-wide) updated.' only when the system-wide copy was actually refreshed (warm sudo window); with no cached credentials it stays silent and skips"
       ]
     },
     {
