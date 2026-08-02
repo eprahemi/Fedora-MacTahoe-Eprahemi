@@ -2007,6 +2007,15 @@ if test -d "$HOME/.cache/fedora-mactahoe"; and not test -f "$HOME/.config/fish/f
     printf '      mkdir -p ~/.config/fish/functions ~/.cache/fedora-mactahoe; and set -l m ~/.cache/fedora-mactahoe/latest-manifest.json; and curl -fsSL --max-time 30 https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/updates.json -o $m; and curl -fsSL --max-time 30 https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/configs/fish/functions/update.fish -o ~/.cache/fedora-mactahoe/update.fish; and test (sha256sum ~/.cache/fedora-mactahoe/update.fish | string split " " -f1) = (python3 -c \'import json,sys;print(json.load(open(sys.argv[1])).get("update_sha256",""))\' $m); and mv ~/.cache/fedora-mactahoe/update.fish ~/.config/fish/functions/update.fish; and env KITTY_PID=1 fish -c "source ~/.config/fish/functions/update.fish; update configs"; or printf "      [!] fingerprint check failed — nothing was restored.\\\n"\n\n'
     printf '      (update.fish is fingerprint-checked before it is restored)\n'
 end
+# ── Fedora MacTahoe did-you-mean fallback (fedora-mactahoe-handler) ──
+# fish does not autoload event handlers from /etc, so the system-wide
+# handler needs an explicit source here; it stays quiet whenever the
+# user's own copy exists (that one autoloads normally).
+if not test -f "$HOME/.config/fish/functions/__fish_default_command_not_found_handler.fish"
+    and test -f /etc/fish/functions/__fish_default_command_not_found_handler.fish
+    source /etc/fish/functions/__fish_default_command_not_found_handler.fish
+end
+# ── end of fedora-mactahoe-handler ──
 # ── end of fedora-mactahoe-guard ──
 EOF
     fi

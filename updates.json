@@ -1,7 +1,7 @@
 {
   "latest_version": "2.3",
   "bootstrap_sha256": "a435e91a79f93cc67f99f7adb75656288653f57b9bfa823de23d17a658753966",
-  "update_sha256": "70261ab8c98482c4c96f6f2844faf55e1fbc719a44c736a9e53e1ce651dae4ef",
+  "update_sha256": "7c10010f6fff4fce8de3ab9494692a52153cc2a96d8d32c38fabd43092f9617c",
   "changelog": [
     {
       "version": "2.3",
@@ -9,7 +9,8 @@
         "- A tiny system-wide rescue detector now guards 'update': if ~/.config/fish/functions/update.fish is ever deleted, the /etc copy detects it, explains the missing dependencies and offers to download the latest update function (yes is the default, 5 tries, fingerprint-verified) — the updater never runs until the user copy is restored",
         "update configs replaces the old system-wide copy with the rescue detector — /etc/fish/functions/update.fish is now the tiny detector, the full updater lives only in ~/.config/fish/functions/",
         "- update configs now refreshes the did-you-mean command handler in /etc too — a wiped fish config still suggests command fixes (it was the only nice thing missing after a reset)",
-        "- no more silent skips: when the sudo cache is cold, update configs pops the polkit password dialog (pkexec) once and copies the system-wide fish helpers (rescue detector + did-you-mean handler) anyway — cancel and it tells you it skipped"
+        "- no more silent skips: when the sudo cache is cold, update configs pops the polkit password dialog (pkexec) once and copies the system-wide fish helpers (rescue detector + did-you-mean handler) anyway — cancel and it tells you it skipped",
+        "- the did-you-mean fallback loads from /etc/fish/config.fish whenever your own handler file is gone (fish won't autoload event handlers from /etc by itself) — wiped configs still suggest command fixes"
       ]
     },
     {

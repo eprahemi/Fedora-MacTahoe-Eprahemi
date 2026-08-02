@@ -603,6 +603,19 @@ function _update_sync_system_fish --description 'refresh the root-owned fish hel
         and printf '\n  \e[1;32m✓ System-wide fish helpers updated (rescue detector + did-you-mean handler).\e[0m\n'
         or printf '\n  \e[1;31m✘ System-wide fish helpers skipped — authorization cancelled.\e[0m\n'
     end
+    # /etc/fish/config.fish — the did-you-mean fallback source block (once).
+    # fish does not autoload event handlers from /etc, so the system-wide
+    # handler needs an explicit source here; it stays quiet whenever the
+    # user's own copy exists (that one autoloads normally).
+    if not grep -q 'fedora-mactahoe-handler' /etc/fish/config.fish 2>/dev/null
+        set -l block "\n# ── Fedora MacTahoe did-you-mean fallback (fedora-mactahoe-handler) ──\nif not test -f \"\$HOME/.config/fish/functions/__fish_default_command_not_found_handler.fish\"\n    and test -f /etc/fish/functions/__fish_default_command_not_found_handler.fish\n    source /etc/fish/functions/__fish_default_command_not_found_handler.fish\nend\n# ── end of fedora-mactahoe-handler ──\n"
+        if command -q sudo
+            and sudo -n true 2>/dev/null
+            printf '%b' "$block" | sudo tee -a /etc/fish/config.fish >/dev/null 2>/dev/null
+        else if command -q pkexec
+            printf '%b' "$block" | pkexec tee -a /etc/fish/config.fish >/dev/null 2>/dev/null
+        end
+    end
     return 0
 end
 
