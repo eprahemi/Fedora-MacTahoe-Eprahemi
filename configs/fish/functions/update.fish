@@ -640,7 +640,7 @@ with open(path, "w") as fh:
     fh.write(content)
 '
         set -l tmp_block (mktemp /tmp/mactahoe-guard.XXXXXX)
-        printf '%s' "$gblock" > "$tmp_block"
+        printf '%b' "$gblock" > "$tmp_block"
         if command -q sudo
             and sudo -n true 2>/dev/null
             sudo python3 -c "$py" "$sys_cfg" "$gstart" "$gend" "$tmp_block"
