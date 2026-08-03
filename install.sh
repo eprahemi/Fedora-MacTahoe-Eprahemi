@@ -1397,7 +1397,8 @@ install_rpm_packages() {
     adwaita-icon-theme adwaita-icon-theme-legacy \
     ImageMagick fzf ripgrep jq unzip curl wget git \
     bat cmatrix qrencode podman python3-pip speedtest-cli xdg-utils \
-    libreoffice-writer libreoffice-calc libreoffice-impress"
+    libreoffice-writer libreoffice-calc libreoffice-impress \
+    libheif-freeworld libheif-tools"
 
   sudo dnf install -y $pkgs
 

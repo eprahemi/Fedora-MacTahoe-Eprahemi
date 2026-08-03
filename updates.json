@@ -1,8 +1,14 @@
 {
-  "latest_version": "2.9",
+  "latest_version": "3.0",
   "bootstrap_sha256": "a435e91a79f93cc67f99f7adb75656288653f57b9bfa823de23d17a658753966",
   "update_sha256": "e470a0d3cc7d9fd9c7160ed22e649e1d87a3fcdb4237a926842e05de84d9d375",
   "changelog": [
+    {
+      "version": "3.0",
+      "changes": [
+        "HEIC image support — now built in. Fedora MacTahoe 3.0 introduces native HEIC/HEIF decoding: open Apple's photo format directly in your GNOME Image Viewer, see thumbnails in Files, and convert anytime with heif-convert. No new apps, no viewer changes — your iPhone photos just work. Powered by libheif-freeworld (RPM Fusion free, already enabled by the installer) plus the heif-tools conversion suite. Fresh installs get it out of the box; existing setups can grab it with: sudo dnf install libheif-freeworld libheif-tools"
+      ]
+    },
     {
       "version": "2.9",
       "changes": [
