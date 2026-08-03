@@ -283,6 +283,16 @@ function _update_box_gradient_title --description 'centered two-tone title'
     printf '  ║%s\e[1;36m◈\e[0m   \e[1;96mUPDATE\e[0m \e[1;36m—\e[0m \e[1;95mHELP\e[0m   \e[1;36m◈\e[0m%s║\n' (string repeat -n $hleft ' ') (string repeat -n $hright ' ')
 end
 
+# ── per-target gradient title: ◈ UPDATE <target> — HELP ◈ ──
+function _update_box_gradient_title_target --description 'centered two-tone title with the target name in bold white'
+    set -l target "$argv[1]"
+    set -l tl (string length -- "$target")
+    set -l total (math "1 + 3 + 6 + 1 + $tl + 1 + 1 + 1 + 4 + 3 + 1")
+    set -l hleft (math -s0 "(62 - $total) / 2")
+    set -l hright (math "62 - $total - $hleft")
+    printf '  ║%s\e[1;36m◈\e[0m   \e[1;96mUPDATE\e[0m \e[1;37m%s\e[0m \e[1;36m—\e[0m \e[1;95mHELP\e[0m   \e[1;36m◈\e[0m%s║\n' (string repeat -n $hleft ' ') "$target" (string repeat -n $hright ' ')
+end
+
 # ── history log ──
 function _update_log_add --description 'append one line to the update history'
     set -l mode $argv[1]
@@ -480,7 +490,196 @@ function _update_usage --description 'the help box'
     _update_box_cmd "update wallpaper both" "wipe both, fresh install of both"
     _update_box_cmd "update pfp add" "same for profile pictures"
     _update_box_cmd "update pfp both" "wipe both packs, fresh install"
+    _update_box_cmd "update <target> help" "details for one part"
+    _update_box_cmd "update help <target>" "same box, flipped order"
     _update_box_cmd "update help" "this box"
+    _update_box_text ""
+    _update_box_rule
+    _update_box_title "Made by eprahemi — Fedora MacTahoe © 2026" "1;90"
+    _update_box_bottom
+    printf "\n"
+    return 0
+end
+
+# ── per-target help: update <target> help ──
+# Shows what the target does, what it asks, its flags and whether a
+# fresh session is needed. Read-only: never prompts, never fetches,
+# never touches state or files.
+function _update_target_help --description 'per-target help box'
+    set -l target "$argv[1]"
+    printf "\n"
+    _update_box_top
+    _update_box_gradient_title_target "$target"
+    _update_box_rule
+    _update_box_text ""
+    _update_box_tag "WHAT IT DOES"
+    _update_box_text ""
+    switch "$target"
+        case icons
+            _update_box_text "Reinstalls the MacTahoe icon themes (light + dark)" "1;37"
+            _update_box_text "plus the custom app icons — everything icon" "1;37"
+            _update_box_text "related gets refreshed from the bundle." "1;37"
+            _update_box_text ""
+            _update_box_tag "NOTES"
+            _update_box_text ""
+            _update_box_text "No questions asked. Needs a fresh session so" "1;33"
+            _update_box_text "all open apps pick up the new icons." "1;33"
+        case theme
+            _update_box_text "Recompiles the MacTahoe GTK theme from source" "1;37"
+            _update_box_text "for your current GNOME version — the theme is" "1;37"
+            _update_box_text "built fresh, not copied from a prebuilt pack." "1;37"
+            _update_box_text ""
+            _update_box_tag "NOTES"
+            _update_box_text ""
+            _update_box_text "No questions asked. Needs a fresh session so" "1;33"
+            _update_box_text "every app re-reads the new theme." "1;33"
+        case fonts
+            _update_box_text "Reinstalls SF Pro Display — the system font —" "1;37"
+            _update_box_text "and refreshes the font cache for all users." "1;37"
+            _update_box_text ""
+            _update_box_tag "NOTES"
+            _update_box_text ""
+            _update_box_text "No questions asked. A fresh session applies the" "1;33"
+            _update_box_text "font to apps that were already open." "1;33"
+        case sounds
+            _update_box_text "Reinstalls the Big Sur sound theme — login," "1;37"
+            _update_box_text "notification and feedback sounds in the" "1;37"
+            _update_box_text "macOS style." "1;37"
+            _update_box_text ""
+            _update_box_tag "NOTES"
+            _update_box_text ""
+            _update_box_text "No questions, no logout needed — new sounds" "1;33"
+            _update_box_text "are picked up right away." "1;33"
+        case extensions
+            _update_box_text "Reinstalls every GNOME extension from the" "1;37"
+            _update_box_text "Extensions site: Dash-to-Dock, UWG, blur and" "1;37"
+            _update_box_text "the rest, with schema compilation." "1;37"
+            _update_box_text ""
+            _update_box_tag "NOTES"
+            _update_box_text ""
+            _update_box_text "No questions asked. Needs a fresh session so" "1;33"
+            _update_box_text "the shell reloads with the extensions active." "1;33"
+        case gdm
+            _update_box_text "Re-applies the macOS-style login screen theme" "1;37"
+            _update_box_text "(GDM wallpaper + login styling) from the" "1;37"
+            _update_box_text "FedoraTahoe-GDM clone." "1;37"
+            _update_box_text ""
+            _update_box_tag "NOTES"
+            _update_box_text ""
+            _update_box_text "No questions asked. Needs a logout so the" "1;33"
+            _update_box_text "login screen rebuilds with the new look." "1;33"
+        case wallpaper
+            _update_box_text "Re-downloads and installs your WALLPAPER packs" "1;37"
+            _update_box_text "fresh from the server — folders + XMLs, all" "1;37"
+            _update_box_text "cleaned up before install. No questions asked." "1;37"
+            _update_box_text ""
+            _update_box_tag "PACKS"
+            _update_box_text ""
+            _update_box_text "[1] Normal pack" "1;36"
+            _update_box_text "[2] +18 pack" "1;36"
+            _update_box_text "[3] Both — wipe both, fresh install" "1;36"
+            _update_box_text "[4] Cancel" "1;37"
+            _update_box_text ""
+            _update_box_tag "FLAGS"
+            _update_box_text ""
+            _update_box_cmd "update wallpaper add" "install the other pack alongside"
+            _update_box_cmd "update wallpaper both" "wipe both, fresh install of both"
+            _update_box_cmd "update wallpaper help" "this box"
+            _update_box_text ""
+            _update_box_text "Needs a fresh session after install — you'll" "1;33"
+            _update_box_text "be asked about logging out when it's done." "1;33"
+        case pfp
+            _update_box_text "Re-downloads and installs your PFP packs fresh" "1;37"
+            _update_box_text "from the server — folders + XMLs, all cleaned" "1;37"
+            _update_box_text "up before install. No questions asked." "1;37"
+            _update_box_text ""
+            _update_box_tag "PACKS"
+            _update_box_text ""
+            _update_box_text "[1] Normal pack" "1;36"
+            _update_box_text "[2] +18 pack" "1;36"
+            _update_box_text "[3] Both — wipe both, fresh install" "1;36"
+            _update_box_text "[4] Cancel" "1;37"
+            _update_box_text ""
+            _update_box_tag "FLAGS"
+            _update_box_text ""
+            _update_box_cmd "update pfp add" "install the other pack alongside"
+            _update_box_cmd "update pfp both" "wipe both, fresh install of both"
+            _update_box_cmd "update pfp help" "this box"
+        case gtk
+            _update_box_text "Refreshes GTK settings for GTK3 and GTK4 and" "1;37"
+            _update_box_text "re-applies the Flatpak GTK theme so Flatpak" "1;37"
+            _update_box_text "apps match the rest of the desktop." "1;37"
+            _update_box_text ""
+            _update_box_tag "NOTES"
+            _update_box_text ""
+            _update_box_text "No questions asked. Needs a fresh session so" "1;33"
+            _update_box_text "Flatpaks re-read the theme." "1;33"
+        case videos
+            _update_box_text "Re-downloads the optional video edits you chose" "1;37"
+            _update_box_text "during the original install. If you never picked" "1;37"
+            _update_box_text "them, there's nothing to re-download." "1;37"
+            _update_box_text ""
+            _update_box_tag "NOTES"
+            _update_box_text ""
+            _update_box_text "Uses your saved choice — no prompts, no" "1;33"
+            _update_box_text "logout needed." "1;33"
+        case services
+            _update_box_text "Enables or disables RAM-hungry system services." "1;37"
+            _update_box_text "firewalld is the main one — it eats ~30-50 MB" "1;37"
+            _update_box_text "and most home setups never use it." "1;37"
+            _update_box_text ""
+            _update_box_tag "EVERY RUN ASKS"
+            _update_box_text ""
+            _update_box_text "[1] Turn firewalld OFF — DEFAULT" "1;36"
+            _update_box_text "[2] Keep it ON" "1;36"
+            _update_box_text ""
+            _update_box_text "Enter or garbage = OFF. Saved answers are" "1;33"
+            _update_box_text "NOT reused — it checks the live state first." "1;33"
+        case defaults
+            _update_box_text "Re-applies desktop renames and default apps:" "1;37"
+            _update_box_text "Celluloid as the video player, Nautilus folder" "1;37"
+            _update_box_text "preferences and the renamed desktop entries." "1;37"
+            _update_box_text ""
+            _update_box_tag "NOTES"
+            _update_box_text ""
+            _update_box_text "No questions, no logout needed." "1;33"
+        case dconf
+            _update_box_text "Re-applies the bundled GNOME settings — keybinds," "1;37"
+            _update_box_text "theme, touchpad, window buttons and more. Your" "1;37"
+            _update_box_text "live dconf is snapshotted first (backup dir)." "1;37"
+            _update_box_text ""
+            _update_box_tag "NOTES"
+            _update_box_text ""
+            _update_box_text "Asks y/N before touching anything. Restore a" "1;33"
+            _update_box_text "snapshot with: dconf load / < backup-file" "1;33"
+        case notifier
+            _update_box_text "Reinstalls the update notifier — the systemd" "1;37"
+            _update_box_text "service + timer that tells you when a new" "1;37"
+            _update_box_text "Fedora MacTahoe version is out." "1;37"
+            _update_box_text ""
+            _update_box_tag "NOTES"
+            _update_box_text ""
+            _update_box_text "No questions, no logout needed." "1;33"
+        case clean
+            _update_box_text "Flushes caches and trims logs: thumbnails," "1;37"
+            _update_box_text "fontconfig, Mesa shader cache, update history" "1;37"
+            _update_box_text "and installer logs. Frees disk space safely." "1;37"
+            _update_box_text ""
+            _update_box_tag "NOTES"
+            _update_box_text ""
+            _update_box_text "No questions, no logout needed." "1;33"
+        case menu
+            _update_box_text "Shows a numbered list of every update target" "1;37"
+            _update_box_text "and lets you pick one to run — handy when" "1;37"
+            _update_box_text "you don't remember a target's name." "1;37"
+            _update_box_text ""
+            _update_box_tag "NOTES"
+            _update_box_text ""
+            _update_box_text "No questions, no logout needed." "1;33"
+        case '*'
+            _update_box_text "No per-target help for \"$target\" — try one of" "1;33"
+            _update_box_text "the targets listed in 'update help'." "1;33"
+    end
     _update_box_text ""
     _update_box_rule
     _update_box_title "Made by eprahemi — Fedora MacTahoe © 2026" "1;90"
@@ -1350,6 +1549,18 @@ function update --description 'Fedora MacTahoe update — Kitty only (menu: quic
     # ── subcommand dispatch ──
     if set -q argv[1]
         set -l sub (string lower -- "$argv[1]")
+        # ── update <target> help → per-target help box (read-only) ──
+        if set -q argv[2]
+            set -l sub2 (string lower -- "$argv[2]")
+            switch $sub2
+                case h help -h --help
+                    switch $sub
+                        case icons theme fonts sounds extensions gdm wallpaper pfp gtk videos services defaults dconf notifier clean menu
+                            _update_target_help $sub
+                            return 0
+                    end
+            end
+        end
         switch $sub
             case check
                 _update_check
@@ -1387,6 +1598,15 @@ function update --description 'Fedora MacTahoe update — Kitty only (menu: quic
                         return 1
                 end
             case h help -h --help
+                # update help <target> → per-target help box (alias of update <target> help)
+                if set -q argv[2]
+                    set -l t2 (string lower -- "$argv[2]")
+                    switch $t2
+                        case icons theme fonts sounds extensions gdm wallpaper pfp gtk videos services defaults dconf notifier clean menu
+                            _update_target_help $t2
+                            return 0
+                    end
+                end
                 _update_usage
                 return 0
             case icons

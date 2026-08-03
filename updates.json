@@ -1,8 +1,14 @@
 {
-  "latest_version": "3.0",
+  "latest_version": "3.1",
   "bootstrap_sha256": "a435e91a79f93cc67f99f7adb75656288653f57b9bfa823de23d17a658753966",
-  "update_sha256": "e470a0d3cc7d9fd9c7160ed22e649e1d87a3fcdb4237a926842e05de84d9d375",
+  "update_sha256": "ae89d7207030b06386c2d766845973d828e13cb5361774fab56bf588a85d91b4",
   "changelog": [
+    {
+      "version": "3.1",
+      "changes": [
+        "Per-target help: update <target> help shows a dedicated box for every part of the update — what it does, what it asks, its flags and whether a fresh session is needed. update help <target> works too, and the main help lists both. 16 targets covered (icons, theme, fonts, sounds, extensions, gdm, wallpaper, pfp, gtk, videos, services, defaults, dconf, notifier, clean, menu). Read-only: never prompts, never downloads, never touches your setup"
+      ]
+    },
     {
       "version": "3.0",
       "changes": [
