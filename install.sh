@@ -1435,12 +1435,17 @@ install_rpm_packages() {
   local pkgs="fish kitty fastfetch figlet lolcat eza \
     celluloid vlc \
     kdenlive pavucontrol alacarte \
-    nautilus-python gnome-tweaks \
+    nautilus-python gnome-tweaks gnome-characters \
     adwaita-icon-theme adwaita-icon-theme-legacy \
     ImageMagick fzf ripgrep jq unzip curl wget git \
     bat cmatrix qrencode podman python3-pip speedtest-cli xdg-utils \
     libreoffice-writer libreoffice-calc libreoffice-impress \
-    libheif-freeworld libheif-tools"
+    libheif-freeworld libheif-tools \
+    intel-media-driver mesa-va-drivers \
+    gstreamer1-libav gstreamer1-plugins-good-extra gstreamer1-plugins-bad gstreamer1-plugins-ugly \
+    mozilla-openh264 alsa-sof-firmware \
+    ntfs-3g samba-client cifs-utils \
+    cups-filters hplip"
 
   sudo dnf install -y $pkgs
 
@@ -2013,6 +2018,11 @@ apply_configs() {
   if [ -f "$cfg/kitty/kitty.conf" ]; then
     mkdir -p "$HOME/.config/kitty"
     cp "$cfg/kitty/kitty.conf" "$HOME/.config/kitty/"
+    # User overrides file — created empty on first install, NEVER overwritten.
+    # kitty.conf ends with `include user.conf`, so user settings always win.
+    if [ ! -f "$HOME/.config/kitty/user.conf" ]; then
+      : > "$HOME/.config/kitty/user.conf"
+    fi
     # ktheme auto-theme palette file — kitty.conf ends with `include auto-theme.conf`,
     # so the file MUST exist or kitty logs an include error and skips it.
     if [ -f "$cfg/kitty/auto-theme.conf" ]; then
@@ -2038,6 +2048,24 @@ apply_configs() {
       ls -1t "$HOME/.cache/fedora-mactahoe/backups"/fish-*.tar.gz 2>/dev/null | tail -n +6 | xargs -r rm -f 2>/dev/null || true
     fi
     mkdir -p "$HOME/.config/fish/functions"
+
+    # ── Preserve user PATH setup (merge-not-replace) ──
+    # Older installs overwrote config.fish wholesale, wiping any PATH the user
+    # had added (e.g. `set -gx PATH ~/.npm-global/bin $PATH` or `fish_add_path`).
+    # On first install those lines are migrated into conf.d/50-user-path.fish,
+    # which fish sources automatically and which we never touch. No lines, no file.
+    if [ -f "$HOME/.config/fish/config.fish" ] && [ ! -f "$HOME/.config/fish/conf.d/50-user-path.fish" ]; then
+      mkdir -p "$HOME/.config/fish/conf.d"
+      grep -E '^\s*(set\s+-[a-zA-Z]+\s+(PATH|fish_user_paths)\b|fish_add_path\b)' \
+        "$HOME/.config/fish/config.fish" > "$HOME/.config/fish/conf.d/50-user-path.fish" 2>/dev/null || true
+      if [ -s "$HOME/.config/fish/conf.d/50-user-path.fish" ]; then
+        printf '\n# Preserved by Fedora MacTahoe — moved from config.fish on first\n# install so your PATH survives every config refresh. Edit freely.\n' >> "$HOME/.config/fish/conf.d/50-user-path.fish"
+        ok "Preserved $(grep -c . "$HOME/.config/fish/conf.d/50-user-path.fish" 2>/dev/null || true) user PATH line(s) → conf.d/50-user-path.fish"
+      else
+        rm -f "$HOME/.config/fish/conf.d/50-user-path.fish"
+      fi
+    fi
+
     cp "$cfg/fish/config.fish" "$HOME/.config/fish/"
     if [ -d "$cfg/fish/functions" ]; then
       cp -f "$cfg/fish/functions/"*.fish "$HOME/.config/fish/functions/" 2>/dev/null || true
@@ -2209,7 +2237,7 @@ apply_dconf() {
   # Free Super+N from GNOME Shell's focus-active-notification (conflict)
   gsettings set org.gnome.shell.keybindings focus-active-notification "[]" 2>/dev/null || true
 
-  gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom4/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom5/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom6/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom7/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom8/']" 2>/dev/null || true
+  gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom4/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom5/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom6/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom7/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom8/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom9/']" 2>/dev/null || true
   gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ name 'Kitty' 2>/dev/null || true
   gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ binding '<Super>t' 2>/dev/null || true
   gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ command 'kitty' 2>/dev/null || true
@@ -2237,6 +2265,9 @@ apply_dconf() {
   gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom8/ name 'Settings' 2>/dev/null || true
   gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom8/ binding '<Control>i' 2>/dev/null || true
   gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom8/ command 'gnome-control-center' 2>/dev/null || true
+  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom9/ name 'Emoji Picker' 2>/dev/null || true
+  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom9/ binding '<Super>period' 2>/dev/null || true
+  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom9/ command 'gnome-characters' 2>/dev/null || true
 
   # ── Nautilus ──
   gsettings set org.gnome.nautilus.icon-view default-zoom-level "'large'" 2>/dev/null || true

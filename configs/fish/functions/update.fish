@@ -926,11 +926,27 @@ function _update_configs_mode --description 'refresh kitty, fish, updater, stars
     if test -f "$cfg/kitty/kitty.conf"
         cp -f "$cfg/kitty/kitty.conf" "$HOME/.config/kitty/"
     end
+    # user.conf — created empty on first run, NEVER overwritten; user settings win
+    if not test -f "$HOME/.config/kitty/user.conf"
+        touch "$HOME/.config/kitty/user.conf"
+    end
     if test -f "$cfg/kitty/auto-theme.conf"
         cp -f "$cfg/kitty/auto-theme.conf" "$HOME/.config/kitty/"
     end
     # fish — config.fish + every function (update.fish included, so the
     # running copy is replaced with the freshly fetched one)
+    # Preserve user PATH lines (merge-not-replace): migrate once into
+    # conf.d/50-user-path.fish, which fish sources automatically and which
+    # is never touched by refresh. No matching lines, no file.
+    if test -f "$HOME/.config/fish/config.fish"; and not test -f "$HOME/.config/fish/conf.d/50-user-path.fish"
+        mkdir -p "$HOME/.config/fish/conf.d"
+        grep -E '^\s*(set\s+-[a-zA-Z]+\s+(PATH|fish_user_paths)\b|fish_add_path\b)' "$HOME/.config/fish/config.fish" > "$HOME/.config/fish/conf.d/50-user-path.fish" 2>/dev/null
+        if test -s "$HOME/.config/fish/conf.d/50-user-path.fish"
+            printf '\n# Preserved by Fedora MacTahoe — moved from config.fish on first\n# refresh so your PATH survives every update. Edit freely.\n' >> "$HOME/.config/fish/conf.d/50-user-path.fish"
+        else
+            rm -f "$HOME/.config/fish/conf.d/50-user-path.fish"
+        end
+    end
     if test -f "$cfg/fish/config.fish"
         cp -f "$cfg/fish/config.fish" "$HOME/.config/fish/"
     end
