@@ -289,6 +289,32 @@ confirm() {
   done
 }
 
+# ── confirm() variant for the FINAL restart prompt ──
+# Same y/n loop, but a 60-second timeout here does NOT abort the install:
+# by this point everything is already done, so we finish gracefully — the
+# log gets saved and the user is simply told to restart when ready.
+# Returns: 0 = yes, 1 = no, 2 = timed out (no answer).
+# (The first prompts keep the abort behavior above — they are unchanged.)
+confirm_final() {
+  local prompt="$1" default="${2:-}"
+  local reply=""
+  local _rc=0
+  while true; do
+    echo -en "  ${DIM}${prompt}${NC} " >/dev/tty
+    _rc=0
+    read -t 60 -r reply </dev/tty || _rc=$?
+    if [ "$_rc" -eq 142 ]; then
+      return 2
+    fi
+    case "${reply,,}" in
+      y|yes) return 0 ;;
+      n|no)  return 1 ;;
+      '')    [ "$default" = "Y" ] && return 0 || return 1 ;;
+      *)     warn "Type y/yes or n/no" ;;
+    esac
+  done
+}
+
 # ── Helpers ──
 # Check if a file is a valid ZIP by magic bytes (more reliable than `file --mime-type`)
 # Returns 0 if valid, 1 otherwise
@@ -3932,9 +3958,16 @@ reboot_txt="  ⚡  Reboot now — changes kick in after restart"
   echo -e "  ${YELLOW}╚══════════════════════════════════════════════════════════════╝${NC}"
   echo ""
   echo ""
-  if confirm "Reboot now? [y/N]: " N; then
+  confirm_final "Reboot now? [y/N]: " N
+  local _rrc=$?
+  if [ "$_rrc" -eq 0 ]; then
     echo -e "  ${GREEN}See you on the other side! Rebooting...${NC}"
     sudo reboot
+  elif [ "$_rrc" -eq 2 ]; then
+    # 60s no answer — install IS done, finish gracefully, keep the log.
+    echo ""
+    echo -e "  ${YELLOW}◆${NC}  No answer — the install is complete."
+    echo -e "  ${YELLOW}◆${NC}  Restart when you're ready — everything kicks in after reboot."
   else
     echo -e ""
     local r1="╔══════════════════════════════════════════════════════════════╗"
@@ -3971,7 +4004,9 @@ reboot_txt="  ⚡  Reboot now — changes kick in after restart"
     local r19="╚══════════════════════════════════════════════════════════════╝"
     echo -e "  ${BOLD}${RED}${r19}${NC}"
     echo -e ""
-    if confirm "  Restart now to apply changes? [y/N]: " N; then
+    confirm_final "  Restart now to apply changes? [y/N]: " N
+    local _rrc2=$?
+    if [ "$_rrc2" -eq 0 ]; then
       echo -e "  ${GREEN}See you on the other side! Rebooting...${NC}"
       sudo reboot
     else
