@@ -1,8 +1,20 @@
 {
-  "latest_version": "3.1",
+  "latest_version": "3.2",
   "bootstrap_sha256": "a435e91a79f93cc67f99f7adb75656288653f57b9bfa823de23d17a658753966",
-  "update_sha256": "ae89d7207030b06386c2d766845973d828e13cb5361774fab56bf588a85d91b4",
+  "update_sha256": "707ccc8e8ee0d5885316d26a0bce55a3fa86dda403fc141e8b7af14b080c4e08",
   "changelog": [
+    {
+      "version": "3.2",
+      "changes": [
+        "Your settings are safe forever — installs and updates no longer overwrite your personal config: PATH lines you added to fish (set -gx PATH, fish_add_path, fish_user_paths) are migrated once into conf.d/50-user-path.fish and never touched again. The opencode-style path wipe is gone",
+        "Kitty gained user.conf — a file of your own that installs and updates never touch; put anything you like there and it survives every refresh, always winning over the theme",
+        "Media & hardware drivers built in: Intel Media Driver + VA-API (hardware video on Intel/AMD), the full GStreamer codec suite (libav + good-extra + bad + ugly), Mozilla OpenH264, ALSA SOF firmware for modern laptops",
+        "Storage & sharing: NTFS-3G read/write for Windows drives, Samba client + CIFS utils so the smb function works out of the box",
+        "Printing: cups-filters + HPLIP driver stack",
+        "Emoji picker: Super+. opens GNOME Characters — pick emoji anywhere, no setup needed",
+        "update.fish re-pinned with a fresh fingerprint"
+      ]
+    },
     {
       "version": "3.1",
       "changes": [
@@ -226,7 +238,7 @@
     "remove_gnome_weather": "1.0",
     "install_rpmfusion": "1.0",
     "install_nvidia": "1.0",
-    "install_rpm_packages": "1.0",
+    "install_rpm_packages": "1.1",
     "install_browsers": "1.0",
     "install_flatpaks": "1.0",
     "install_mactahoe_theme": "1.0",
@@ -234,8 +246,8 @@
     "apply_desktop_entries": "1.0",
     "ensure_celluloid_default": "1.0",
     "configure_nautilus_defaults": "1.0",
-    "apply_configs": "1.11",
-    "apply_dconf": "1.1",
+    "apply_configs": "1.12",
+    "apply_dconf": "1.2",
     "optimize_system_resources": "1.1",
     "apply_wallpapers": "1.1",
     "install_custom_avatars": "1.0",

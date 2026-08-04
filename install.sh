@@ -2059,8 +2059,10 @@ apply_configs() {
       grep -E '^\s*(set\s+-[a-zA-Z]+\s+(PATH|fish_user_paths)\b|fish_add_path\b)' \
         "$HOME/.config/fish/config.fish" > "$HOME/.config/fish/conf.d/50-user-path.fish" 2>/dev/null || true
       if [ -s "$HOME/.config/fish/conf.d/50-user-path.fish" ]; then
+        local _n_paths
+        _n_paths=$(grep -c . "$HOME/.config/fish/conf.d/50-user-path.fish" 2>/dev/null || true)
         printf '\n# Preserved by Fedora MacTahoe — moved from config.fish on first\n# install so your PATH survives every config refresh. Edit freely.\n' >> "$HOME/.config/fish/conf.d/50-user-path.fish"
-        ok "Preserved $(grep -c . "$HOME/.config/fish/conf.d/50-user-path.fish" 2>/dev/null || true) user PATH line(s) → conf.d/50-user-path.fish"
+        ok "Preserved $_n_paths user PATH line(s) → conf.d/50-user-path.fish"
       else
         rm -f "$HOME/.config/fish/conf.d/50-user-path.fish"
       fi
