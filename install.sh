@@ -449,6 +449,10 @@ _load_prompt_answers() {
     ans="${PR_ANS['firewalld']:-}"
     [ -n "$ans" ] && INSTALL_DISABLE_FIREWALLD="$ans"
   fi
+  if [ -z "${INSTALL_REMOVE_OLD_TERMINAL:-}" ] && ! _prompt_should_ask "old_terminal"; then
+    ans="${PR_ANS['old_terminal']:-}"
+    [ -n "$ans" ] && INSTALL_REMOVE_OLD_TERMINAL="$ans"
+  fi
 }
 
 # ── Save a single prompt answer to state ──
@@ -1225,7 +1229,19 @@ gnome_cmd3="    sudo reboot"
 # ── PTYXIS REMOVAL ───────────────────────────────────────────
 
 remove_ptyxis() {
-  next_step "Remove Ptyxis (system terminal)"
+  next_step "Remove Old Terminal (system terminal)"
+
+  # Honor the old-terminal prompt: a decline keeps the app fully untouched.
+  # Unset means the prompt never ran (no old terminal installed) — nothing
+  # to remove anyway, so the checks below report cleanly.
+  if [ "${INSTALL_REMOVE_OLD_TERMINAL:-false}" != "true" ]; then
+    if rpm -q ptyxis &>/dev/null || command -v ptyxis &>/dev/null || flatpak info org.gnome.Ptyxis &>/dev/null; then
+      ok "Old terminal kept — you declined removal"
+    else
+      ok "Old terminal not installed — nothing to remove"
+    fi
+    return 0
+  fi
 
   if rpm -q ptyxis &>/dev/null; then
     log "Removing Ptyxis package..."
@@ -2557,6 +2573,54 @@ fw7="  Press Enter for default (Yes — disable)"
   fi
   return 0
 }
+
+prompt_remove_old_terminal() {
+  # Only ask when the old terminal app is actually installed — if it's not
+  # there, there is nothing to remove and no reason to show this prompt.
+  local _present=0
+  if rpm -q ptyxis &>/dev/null; then _present=1; fi
+  if command -v ptyxis &>/dev/null; then _present=1; fi
+  if flatpak info org.gnome.Ptyxis &>/dev/null; then _present=1; fi
+  if [ "$_present" -eq 0 ]; then
+    return 1
+  fi
+
+  if [ -z "${INSTALL_REMOVE_OLD_TERMINAL:-}" ]; then
+    echo ""
+    echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+ot_t="          ◆  REMOVE OLD TERMINAL?  ◆"
+    echo -e "  ${CYAN}║${NC}${ot_t}$(printf '%*s' $((62 - ${#ot_t})) '')${CYAN}║${NC}"
+    echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+ot1="  The old terminal app that came with Fedora is installed."
+    echo -e "  ${CYAN}║${NC}${ot1}$(printf '%*s' $((62 - ${#ot1})) '')${CYAN}║${NC}"
+ot2="  Remove it together with its settings and cache so you"
+    echo -e "  ${CYAN}║${NC}${ot2}$(printf '%*s' $((62 - ${#ot2})) '')${CYAN}║${NC}"
+ot3="  start completely fresh with Kitty as your only terminal."
+    echo -e "  ${CYAN}║${NC}${ot3}$(printf '%*s' $((62 - ${#ot3})) '')${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+ot4="    Yes  — Remove old terminal, its cache and settings"
+    echo -e "  ${CYAN}║${NC}    ${BOLD}${GREEN}Y${NC}${BOLD}es${NC}  — Remove old terminal, its cache and settings$(printf '%*s' $((62 - ${#ot4})) '')${CYAN}║${NC}"
+ot5="    no   — Keep it, don't delete anything"
+    echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}n${NC}${BOLD}o${NC}   — Keep it, don't delete anything$(printf '%*s' $((62 - ${#ot5})) '')${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+ot6="  Press Enter for default (No — keep it)"
+    echo -e "  ${CYAN}║${NC}${DIM}${ot6}$(printf '%*s' $((62 - ${#ot6})) '')${NC}${CYAN}║${NC}"
+ot7="  Tip: set INSTALL_REMOVE_OLD_TERMINAL=true to skip this"
+    echo -e "  ${CYAN}║${NC}${DIM}${ot7}$(printf '%*s' $((62 - ${#ot7})) '')${NC}${CYAN}║${NC}"
+    echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    if confirm "Remove the old terminal app + its cache? [y/N]: " N; then
+      INSTALL_REMOVE_OLD_TERMINAL="true"
+      echo -e "  ${GREEN}→ Old terminal will be removed — fresh start with Kitty${NC}"
+    else
+      INSTALL_REMOVE_OLD_TERMINAL="false"
+      echo -e "  ${DIM}→ Old terminal will be kept — nothing gets deleted${NC}"
+    fi
+  fi
+  return 0
+}
+
 apply_wallpapers() {
   next_step "Wallpaper + Login Screen"
 
@@ -3996,10 +4060,6 @@ fi
 # ── Preflight (always runs) ──
 _run_step "preflight" preflight
 
-# ── System cleanup steps ──
-_run_step "remove_ptyxis" remove_ptyxis
-_run_step "remove_gnome_weather" remove_gnome_weather
-
 # ── Interactive prompts (gated by saved answers) ──
 if _prompt_should_ask "discord"; then
   prompt_discord
@@ -4027,7 +4087,21 @@ if _prompt_should_ask "firewalld"; then
   fi
 fi
 
+# Old terminal — asked up front with the other first prompts. The prompt
+# only appears if the old terminal app is actually installed; declining
+# keeps it fully untouched (remove_ptyxis below honors the answer).
+if _prompt_should_ask "old_terminal"; then
+  if prompt_remove_old_terminal; then
+    _save_prompt_answer "old_terminal" "${INSTALL_REMOVE_OLD_TERMINAL:-false}"
+  fi
+fi
+
 prompt_sudoers_entry
+
+# ── System cleanup steps (after prompts — remove_ptyxis honors the
+#    old-terminal answer; remove_gnome_weather has no prompt) ──
+_run_step "remove_ptyxis" remove_ptyxis
+_run_step "remove_gnome_weather" remove_gnome_weather
 
 phase_divider "PHASE 1 : SYSTEM FOUNDATIONS" 3 4
 _run_step "install_rpmfusion" install_rpmfusion
