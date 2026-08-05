@@ -1,8 +1,18 @@
 {
-  "latest_version": "3.2",
+  "latest_version": "3.3",
   "bootstrap_sha256": "a435e91a79f93cc67f99f7adb75656288653f57b9bfa823de23d17a658753966",
-  "update_sha256": "707ccc8e8ee0d5885316d26a0bce55a3fa86dda403fc141e8b7af14b080c4e08",
+  "update_sha256": "7e28a81a28c548746228d86c57104733bc4e59ce151a56ee54d0633473f3e78c",
   "changelog": [
+    {
+      "version": "3.3",
+      "changes": [
+        "New: update wallvault (aliases: update wall, update w) — the 500+ wallpaper vault, downloaded right from your terminal",
+        "Free and private: a one-time 6-digit code is shown in the terminal (no email, no account), you type it and the ~623 MB vault downloads behind a live braille spinner — then it's verified, unzipped and landed in ~/Downloads/Wallvault-Pack, temp files cleaned up",
+        "Safe by design: 3 code attempts with a 10-minute expiry, Ctrl+C aborts the download and leaves nothing behind",
+        "Custom link: update wallvault <google-drive-link> points the vault at any file you own — the link is saved in your private cache (chmod 600) and used for every future download",
+        "update wallvault help box added to per-target help, the usage box and the menu ([16] wallvault)"
+      ]
+    },
     {
       "version": "3.2",
       "changes": [
