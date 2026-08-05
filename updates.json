@@ -1,321 +1,330 @@
 {
-  "latest_version": "3.5.3",
-  "bootstrap_sha256": "447d511166596db254cc20156736056e3e6d48c5286422e07cffed79464e85ee",
-  "update_sha256": "297f7cccb2276f0e35683bd569a8b8919c2c2007a931d5529c77e7f54cbacb52",
-  "changelog": [
-    {
-      "version": "3.5.3",
-      "changes": [
-        "update wallvault: the archive decryption key is now baked in and applied automatically in the background — the user is never asked for it and never sees it; the one-time authorization code remains the only credential",
-        "Download now shows a live progress bar (curl --progress-bar) instead of the braille spinner",
-        "Encryption is detected via 7z listing (no password round-trip); plain archives verify with no key at all",
-        "Help/usage copy cleaned up (no key language); 'update wallvault pass <key>' remains as an optional override for custom endpoints",
-        "Fixed 1-char overflow on the 'update wallvault <url>' help row (was <link>, 23 chars > 22-col name column)"
-      ]
-    },
-    {
-      "version": "3.5.2",
-      "changes": [
-        "HOTFIX — update wallvault is repaired: the vault archive is AES-256 encrypted (compression method 99), which Info-ZIP's unzip cannot verify or extract — every run died with 'The download is not a valid zip' even though the payload was intact. The deployment now uses the 7-Zip backend (7z): full integrity verification, decryption with the archive key, and extraction are handled natively",
-        "New: update wallvault pass <key> stores the archive decryption key in ~/.cache/fedora-mactahoe/wallvault.conf (chmod 600); without a stored key the tool prompts silently (no echo) at run time. update wallvault <link> [key] registers a custom endpoint and optionally the key in one call",
-        "Hardened transfer: HTTP errors now fail the download (curl -f), transient interruptions auto-retry (3 attempts) plus one full automatic retry of the entire transfer, and a truncated payload is caught by the 7z integrity test instead of producing misleading errors",
-        "Clear failure diagnostics: wrong decryption key vs corrupt payload vs missing 7zip backend are now reported as distinct errors with the exact remedy",
-        "Professional-grade output: all wallvault UI copy was rewritten in a corporate/data-center register — asset bundle, authorized transfer, integrity verification, staging, credentials persisted, operation aborted",
-        "7zip added to the RPM Packages step (step bumped so every machine installs it on the next update)"
-      ]
-    },
-    {
-      "version": "3.5.1",
-      "changes": [
-        "HOTFIX — the ( TAG ) now lands in the log filename on EVERY path. 3.5 stamped install.sh-created logs, but the bootstrap one-liner (curl|bash) creates the log itself and hands it to the installer — so those files came out untagged. Bootstrap now computes the same tag (BASH for the one-liner, UPDATE-FULL / UPDATE-QUICK when the updater drives it) and stamps it into its own log name, keeping filename and installer header consistent",
-        "update quick dropped its 8-second loading ritual — quick means quick. It now runs exactly like menu [1]: straight to the incremental update, no prompts, no spinner",
-        "Both fingerprints re-pinned (bootstrap.sh and update.fish changed)"
-      ]
-    },
-    {
-      "version": "3.5",
-      "changes": [
-        "Every install/update run now stamps WHO ran it into the log filename: FedoraTahoe_log.<date>.<time>.<ID> ( TAG ).txt — ( BASH ) for the curl|bash one-liner, ( MANUAL ) for running install.sh directly, ( UPDATE-QUICK ) / ( UPDATE-FULL ) / ( UPDATE-CONFIG ) and one tag per target (UPDATE-ICONS, UPDATE-THEME, UPDATE-FONTS, UPDATE-SOUNDS, UPDATE-EXTENSIONS, UPDATE-GDM, UPDATE-WALLPAPER, UPDATE-PFP, UPDATE-GTK, UPDATE-VIDEOS, UPDATE-SERVICES, UPDATE-DEFAULTS, UPDATE-DCONF, UPDATE-NOTIFIER, UPDATE-CLEAN, UPDATE-WALLVAULT) for the updater",
-        "The same tag appears in the log header box (new Method row), is saved into install-state.json (source field) and shows up in the update log history — one quick look tells you how every run was started",
-        "New command: update quick — the incremental update with your saved answers, no prompts, straight from the shell (identical to menu [1])"
-      ]
-    },
-    {
-      "version": "3.4",
-      "changes": [
-        "HOTFIX — installs no longer die at 'RPM Packages'. Two codec package names in the v3.2 driver batch did not exist on Fedora 44 (gstreamer1-plugins-good-extra and gstreamer1-plugins-bad): dnf rejected the whole 43-package transaction, so every fresh install and every update rerun of that step stopped with 'No match for argument'. They're replaced with the real packages — gstreamer1-plugins-good and gstreamer1-plugins-bad-free (with -freeworld and -free-extras already installed from the RPM Fusion step) — and the full transaction was dry-run verified to resolve: 43 names, all found, zero errors",
-        "Step version bumped so every machine re-runs the repaired RPM Packages step on the next update"
-      ]
-    },
-    {
-      "version": "3.3",
-      "changes": [
-        "New: update wallvault (aliases: update wall, update w) — the 500+ wallpaper vault, downloaded right from your terminal",
-        "Free and private: a one-time 6-digit code is shown in the terminal (no email, no account), you type it and the ~623 MB vault downloads behind a live braille spinner — then it's verified, unzipped and landed in ~/Downloads/Wallvault-Pack, temp files cleaned up",
-        "Safe by design: 3 code attempts with a 10-minute expiry, Ctrl+C aborts the download and leaves nothing behind",
-        "Custom link: update wallvault <google-drive-link> points the vault at any file you own — the link is saved in your private cache (chmod 600) and used for every future download",
-        "update wallvault help box added to per-target help, the usage box and the menu ([16] wallvault)"
-      ]
-    },
-    {
-      "version": "3.2",
-      "changes": [
-        "Your settings are safe forever — installs and updates no longer overwrite your personal config: PATH lines you added to fish (set -gx PATH, fish_add_path, fish_user_paths) are migrated once into conf.d/50-user-path.fish and never touched again. The opencode-style path wipe is gone",
-        "Kitty gained user.conf — a file of your own that installs and updates never touch; put anything you like there and it survives every refresh, always winning over the theme",
-        "Media & hardware drivers built in: Intel Media Driver + VA-API (hardware video on Intel/AMD), the full GStreamer codec suite (libav + good-extra + bad + ugly), Mozilla OpenH264, ALSA SOF firmware for modern laptops",
-        "Storage & sharing: NTFS-3G read/write for Windows drives, Samba client + CIFS utils so the smb function works out of the box",
-        "Printing: cups-filters + HPLIP driver stack",
-        "Emoji picker: Super+. opens GNOME Characters — pick emoji anywhere, no setup needed",
-        "update.fish re-pinned with a fresh fingerprint"
-      ]
-    },
-    {
-      "version": "3.1",
-      "changes": [
-        "Per-target help: update <target> help shows a dedicated box for every part of the update — what it does, what it asks, its flags and whether a fresh session is needed. update help <target> works too, and the main help lists both. 16 targets covered (icons, theme, fonts, sounds, extensions, gdm, wallpaper, pfp, gtk, videos, services, defaults, dconf, notifier, clean, menu). Read-only: never prompts, never downloads, never touches your setup"
-      ]
-    },
-    {
-      "version": "3.0",
-      "changes": [
-        "HEIC image support — now built in. Fedora MacTahoe 3.0 introduces native HEIC/HEIF decoding: open Apple's photo format directly in your GNOME Image Viewer, see thumbnails in Files, and convert anytime with heif-convert. No new apps, no viewer changes — your iPhone photos just work. Powered by libheif-freeworld (RPM Fusion free, already enabled by the installer) plus the heif-tools conversion suite. Fresh installs get it out of the box; existing setups can grab it with: sudo dnf install libheif-freeworld libheif-tools"
-      ]
-    },
-    {
-      "version": "2.9",
-      "changes": [
-        "update wallpaper and update pfp now offer a Both option: pick 3 in the pack picker to wipe BOTH packs (normal + +18 folders and XMLs) and re-download them fresh in one go",
-        "update wallpaper both also works as update wallpaper both — same for pfp",
-        "help box gained update wallpaper both / update pfp both rows"
-      ]
-    },
-    {
-      "version": "2.8",
-      "changes": [
-        "update services now ALWAYS asks about firewalld — it checks the live state first (FIREWALLD IS RUNNING / FIREWALLD IS OFF box) and asks every time instead of silently reusing the saved answer",
-        "turning firewalld OFF is now the default everywhere: pressing Enter in update services or the installer's firewalld question disables it (was No/keep before)",
-        "the installer's firewalld prompt now defaults to Yes — press Enter to disable and save ~30-50 MB"
-      ]
-    },
-    {
-      "version": "2.7",
-      "changes": [
-        "fix update wallpaper / update pfp ignoring your pick: the saved answer from the original install (+18) was overriding the choice you make in the picker, so picking Normal still downloaded the +18 pack. Env vars passed by update <target> now always win over saved answers (saved answers still apply on full installs and when the target passes nothing)",
-        "same fix protects update gdm, update videos and update services — their forced settings can no longer be overridden by an old saved answer"
-      ]
-    },
-    {
-      "version": "2.6",
-      "changes": [
-        "fix incremental updates getting stuck: a machine installed on an older version stored per-step versions as that overall version (e.g. 2.2), which is higher than today's per-step manifest values (1.x) — every step was skipped and the version never moved. Now an older overall version forces all steps to re-run, then normal per-step gating resumes"
-      ]
-    },
-    {
-      "version": "2.5",
-      "changes": [
-        "update help redesigned: gradient title, diamond section tags, aligned two-column command table (bold white names, bold gray descriptions), tag-cloud toolbox, divider footer",
-        "all help text is now bold so it stays readable on light auto-theme backgrounds",
-        "fixed command-row width so the box right edge is a straight line"
-      ]
-    },
-    {
-      "version": "2.4",
-      "changes": [
-        "the recovery warning is now BIG and bold: a red ERROR/RESCUE/WARNING banner replaces the fish welcome when the config is missing, and the instructions are bold",
-        "the guard message is refreshed on existing machines automatically via update configs (same marker-replace mechanism)"
-      ]
-    },
-    {
-      "version": "2.3",
-      "changes": [
-        "- A tiny system-wide rescue detector now guards 'update': if ~/.config/fish/functions/update.fish is ever deleted, the /etc copy detects it, explains the missing dependencies and offers to download the latest update function (yes is the default, 5 tries, fingerprint-verified) — the updater never runs until the user copy is restored",
-        "update configs replaces the old system-wide copy with the rescue detector — /etc/fish/functions/update.fish is now the tiny detector, the full updater lives only in ~/.config/fish/functions/",
-        "- update configs now refreshes the did-you-mean command handler in /etc too — a wiped fish config still suggests command fixes (it was the only nice thing missing after a reset)",
-        "- no more silent skips: when the sudo cache is cold, update configs pops the polkit password dialog (pkexec) once and copies the system-wide fish helpers (rescue detector + did-you-mean handler) anyway — cancel and it tells you it skipped",
-        "- the did-you-mean fallback loads from /etc/fish/config.fish whenever your own handler file is gone (fish won't autoload event handlers from /etc by itself) — wiped configs still suggest command fixes",
-        "- the recovery warning in every terminal is now plain language: 'type update, press Enter' — no more wall-of-text one-liner (update configs refreshes it on existing machines too)"
-      ]
-    },
-    {
-      "version": "2.2",
-      "changes": [
-        "Quick updates are now truly quiet — no more questions: your saved answers are reused (Discord, wallpapers, videos) once you've answered them once",
-        "- Picker validation messages (Invalid/Cancelled) now go to stderr, keeping command-substitution output pure",
-        "- update wallpaper add / update pfp add (also --add, -add) install the other pack alongside — without the flag the chosen pack replaces the other (folder + XML)",
-        "All setup prompts moved from bootstrap into the installer — bootstrap is just the start button now: splash, verify, download, hand off",
-        "Discord's answer is now saved too (it was the only prompt without persistence)",
-        "Bootstrap no longer prints its own system-info box — the dashboard shows once, from the installer",
-        "Bootstrap no longer prints its own SECURE TUNNEL box — the tunnel shows once, from the installer",
-        "Tunnel location is hidden — a generic 'Location: Secure' row instead of fake CDN node details",
-        "The installer download now shows a live progress bar — the clone runs quietly in the background, no more raw git text",
-        "The download progress bar now matches the updater's loader — braille spinner, rotating status, [███░░░] bar with real percent (re-pinned bootstrap fingerprint)",
-        "Fixed the download progress bar crashing on the first tick (grep no-match tripped the ERR trap under set -euo pipefail); percent now only moves forward",
-        "Fish config backups keep the same 5-snapshot limit as dconf (was 10) — 6th and older auto-deleted on every config apply",
-        "The start screen waits 60 seconds max — no key press and bootstrap closes itself (just run it again when you're ready)",
-        "Closing bootstrap early (Ctrl+C forced exit or the 60s auto-close) leaves no log behind — the temp log is deleted, since nothing ran",
-        "Running install.sh directly now behaves the same: every wait and yes/no question auto-closes after 60s of silence, and closing it early (Ctrl+C twice or the timeout) deletes the log too",
-        "A closed installer is no longer reported as a failure — the updater says 'closed before finishing' and you just run it again when ready",
-        "Fixed the crooked log-header box (blank rows and data rows now line up with the 62-wide border) and the 'More from Eprahemi' box (links no longer poke past the right edge)",
-        "The kitty one-liner no longer bursts out of its box — it's now shown as a clean code line under both warning boxes (bootstrap + installer)",
-        "Deep-scan cleanup: removed dead code (unused _save_prompt_answers_all, stray _rc captures, unused PINK color in bootstrap) and re-pinned the bootstrap fingerprint",
-        "Fixed kitty terminal boxes: ✦/⚠ title rows padded correctly for narrow glyphs; removed leftover over-padding on the \"Press any key\" rows",
-        "The update menu no longer lists every step that will re-run — just what's new, then the choice. Cleaner.",
-        "Fixed the progress bar showing '�' blocks — the bar builder used tr (byte-based, mangles multi-byte █); now built with string concat like install.sh's sed bars, byte-perfect in any locale",
-        "MacTahoe GTK source is now vendored in the repo (vendor/MacTahoe-gtk-theme) — if the upstream repo is ever deleted or unreachable, the theme still compiles fresh for your GNOME version, and GDM + Firefox theming still work via the vendored tweaks.sh",
-        "The firewalld question moved up front — it now appears with the Discord/wallpaper/video prompts before Phase 1, so the installation never pauses mid-flow; the actual disable (or keep/enable) still happens in the 'Disable RAM-wasting Services' step, and your answer is saved like the others",
-        "update menu — per-target toolbox: re-run a single part of the setup with update <target> (icons, gtk, extensions, wallpaper, pfp, theme, fonts, sounds, videos, services, gdm, defaults, dconf, notifier, clean) — no full reinstall needed",
-        "update <target> asks about logging out when the change needs a fresh session — per-target reason in the box (theme/gtk/extensions/gdm/wallpaper/icons/fonts), strict y/n with no default so Enter alone never logs you out",
-        "Every update fetch now shows a live braille spinner while cloning — same style as the installer's loader, no more static 'Fetching...' text",
-        "Ctrl+C is now safe everywhere: cancelling mid-install or mid-fetch prints '✘ Cancelled — nothing was changed.', never touches your setup, and cleans up the temp files",
-        "Fixed the download spinner never noticing a failed clone (fish's wait always reported success) — git's real exit code is read from the temp bundle now, so connection errors are reported honestly",
-        "Self-healing 'update' command — if update.fish is ever deleted (say, a wiped fish config), the boot + 2-hour updater timer restores it automatically, fingerprint-verified against the pinned sha256 so unverified code is never installed",
-        "System-wide rescue copy — the installer keeps a root-owned copy of update.fish outside your home folder: even with the entire fish config wiped, the 'update' command still answers",
-        "update configs now refreshes every config location — kitty, fish (config + all 40 functions), starship, GTK, fastfetch, systemd units AND the update notifier (script + timer): every folder is created if missing, every file overwrites if present, and your fish config is auto-backed up before any override",
-        "update configs also keeps the system-wide rescue copy current — done silently, without asking for a password or printing anything extra",
-        "update configs no longer leaks ktheme's raw error if the wallpaper file ever goes missing — the live re-theme is fully silent now",
-        "update configs confirms with '✓ Rescue copy (system-wide) updated.' only when the system-wide copy was actually refreshed (warm sudo window); with no cached credentials it stays silent and skips"
-      ]
-    },
-    {
-      "version": "2.1",
-      "changes": [
-        "Security hardening pass — the full audit is in:",
-        "Verified update chain — installs are fingerprint-checked, tamper-proof downloads, a trust prompt the first time, hard refusal on any mismatch",
-        "Your settings are safe — a full dconf snapshot is saved before anything touches your GNOME settings (restore with one command)",
-        "gdm wallpaper switching no longer uses shared /tmp — everything stays in your private cache",
-        "Kitty control sockets are private now — no other user can connect to your terminal",
-        "Automatic security downloads — patches download in the background nightly (never installed without your say-so)",
-        "Backup snapshots are private too — folder and files locked to you only"
-      ]
-    },
-    {
-      "version": "2.0",
-      "changes": [
-        "Fish config safety net — every config refresh auto-backups your live fish folder first (last 10 snapshots kept)",
-        "The can't-lose-it guard — a root-owned warning in the system fish config: if your fish config is ever deleted, every terminal shows the exact one-line recovery"
-      ]
-    },
-    {
-      "version": "1.9",
-      "changes": [
-        "Kitty follows your wallpaper — ktheme pulls the colors out of your desktop picture and re-themes every kitty window, live. A quiet background watcher does it automatically every time the wallpaper changes (ktheme on/off to control it)",
-        "Kitty Colorful Edition — a fresh full palette, interactive kittens (ctrl+shift+f4 themes, ctrl+shift+d diff) and remote control from any terminal",
-        "hint — a little teacher in your terminal: shortcuts, functions, the palette, and live demos, all in one menu",
-        "fastfetch shows your terminal; old kitty/fastfetch config backups cleaned up"
-      ]
-    },
-    {
-      "version": "1.8",
-      "changes": [
-        "New Fish function: smb — full Samba file sharing manager (setup, users, shares, passwords, data export, service control)",
-        "Updated 18+ wallpaper pack with new backgrounds"
-      ]
-    },
-    {
-      "version": "1.7",
-      "changes": [
-        "Window Title Pro Topbar v8 — separator dropdown, font size control, smart row sensitivity, readable shortcuts (Super+Y)",
-        "New Fish functions: kit (Kitty theme toggle), ghlogin (GitHub auth + git config with auto-fetch), pfp (profile picture with cropped preview)",
-        "install.sh: 28 proper steps — Celluloid default player + Nautilus per-folder defaults now tracked steps",
-        "Kitty close warning enabled (confirm_os_window_close 1)"
-      ]
-    },
-    {
-      "version": "1.6",
-      "changes": [
-        "Window Title Pro now installs from GNOME Extensions (EGO) instead of GitHub releases — extension #10319 approved and active"
-      ]
-    },
-    {
-      "version": "1.5",
-      "changes": [
-        "Window Title Pro updated to v4 — fixed-width default now off (set <default>false</default> in gschema)"
-      ]
-    },
-    {
-      "version": "1.4",
-      "changes": [
-        "Window Title Pro updated to v3 — EGO review fixes (destroy(), no try-catch, no gschemas.compiled, no donations)"
-      ]
-    },
-    {
-      "version": "1.3",
-      "changes": [
-        "WTP v2 URL fix: asset is window-title-pro-v2.zip (not window-title-pro.zip)"
-      ]
-    },
-    {
-      "version": "1.2",
-      "changes": [
-        "Window Title Pro v2 — show-title now defaults to off (set <default>false</default> in gschema)",
-        "update.fish ANSI escape fix: replaced echo with printf (Fish echo ignores \\033)",
-        "update.fish read prompt fix: plain text in -P instead of \\e codes",
-        "Update check timer: OnBootSec reduced from 5min to 2min",
-        "Fix 'Update Now' not opening Kitty: replaced nohup+inline with temp launcher script"
-      ]
-    },
-    {
-      "version": "1.1",
-      "changes": [
-        "FRESH START — consolidated baseline for all Fedora MacTahoe features",
-        "Full re-install: bash bootstrap.sh deletes state and runs all 27 steps fresh",
-        "Incremental update: update.fish + 'Update Now' use UPDATE_MODE=incremental",
-        "Version-only updater: notification fires on version bumps, not every commit",
-        "install-state.json: per-step versions + overall install version, atomic writes",
-        "GTK theme compiles for GNOME 47/48, per-step caching",
-        "SF Pro fonts, Big Sur sounds, GDM theme, Firefox userChrome",
-        "Flatpak GTK runtime, Kitty terminal, Fish shell, Dash-to-Dock, UWG, blur",
-        "Kitty-only updater with boot-aware two-cache persistence",
-        "Prompt persistence: answers saved once, never re-asked",
-        "Step versions: apply_configs 1.1, install_updater 1.1, finalize 1.1"
-      ]
-    },
-    {
-      "version": "1.0",
-      "changes": [
-        "INITIAL: Complete Fedora MacTahoe setup — all steps",
-        "GTK theme compiles for GNOME 47/48",
-        "SF Pro fonts, Big Sur sounds, GDM theme, Firefox userChrome",
-        "Flatpak GTK runtime, Kitty terminal, Fish shell",
-        "Dash-to-Dock, UWG, blur extensions",
-        "Update notifier with two-cache persistence (boot-aware)",
-        "MATE terminal family fix (single-string -e syntax)",
-        "Kitty-first terminal detection",
-        "Refresh.fish --chrome flag (Singleton lock clearance)",
-        "Window Title Pro crash fix (a99d9489)"
-      ]
-    }
-  ],
-  "steps": {
-    "preflight": "1.0",
-    "remove_ptyxis": "1.1",
-    "remove_gnome_weather": "1.0",
-    "install_rpmfusion": "1.0",
-    "install_nvidia": "1.0",
-    "install_rpm_packages": "1.3",
-    "install_browsers": "1.0",
-    "install_flatpaks": "1.0",
-    "install_mactahoe_theme": "1.0",
-    "install_font": "1.0",
-    "apply_desktop_entries": "1.0",
-    "ensure_celluloid_default": "1.0",
-    "configure_nautilus_defaults": "1.0",
-    "apply_configs": "1.12",
-    "apply_dconf": "1.2",
-    "optimize_system_resources": "1.1",
-    "apply_wallpapers": "1.1",
-    "install_custom_avatars": "1.0",
-    "download_optional_videos": "1.0",
-    "setup_gdm": "1.0",
-    "setup_firefox_theme": "1.0",
-    "setup_flatpak_theme": "1.0",
-    "install_sounds": "1.0",
-    "install_updater": "1.3",
-    "install_ktheme_watcher": "1.0",
-    "setup_terminal": "1.0",
-    "setup_shell": "1.0",
-    "install_extensions": "1.7",
-    "mirror_flatpak_icons": "1.0",
-    "finalize": "1.9"
+ "latest_version": "3.5.4",
+ "bootstrap_sha256": "447d511166596db254cc20156736056e3e6d48c5286422e07cffed79464e85ee",
+ "update_sha256": "ea5a1f1002fba76a7d8540db9b73959689ee55ed4af74410e5e4c2d602dd2c73",
+ "changelog": [
+  {
+   "version": "3.5.4",
+   "changes": [
+    "update wallvault: hand-rolled boxed progress bar replaces curl --progress-bar — animated 'Downloading…' title, 52-char bar with real percent, MB-of-MB totals from a HEAD size probe, and live MB/s; painted only on a real terminal (piped runs stay clean)",
+    "New Apple-style flow: Wallvault. intro box (with a +18 heads-up), spaced big-digit YOUR CODE gate, and a 'WALLVAULT — READY' outro with the wallpaper count and path — closer: 'Enjoy the view.'",
+    "UI copy no longer mentions mechanics (no 'progress bar'/'authorization code' language) in help or usage rows",
+    "Fixed fish math fractions breaking the bar fill (string repeat: invalid integer) — all bar math now truncates with math -s0"
+   ]
+  },
+  {
+   "version": "3.5.3",
+   "changes": [
+    "update wallvault: the archive decryption key is now baked in and applied automatically in the background — the user is never asked for it and never sees it; the one-time authorization code remains the only credential",
+    "Download now shows a live progress bar (curl --progress-bar) instead of the braille spinner",
+    "Encryption is detected via 7z listing (no password round-trip); plain archives verify with no key at all",
+    "Help/usage copy cleaned up (no key language); 'update wallvault pass <key>' remains as an optional override for custom endpoints",
+    "Fixed 1-char overflow on the 'update wallvault <url>' help row (was <link>, 23 chars > 22-col name column)"
+   ]
+  },
+  {
+   "version": "3.5.2",
+   "changes": [
+    "HOTFIX — update wallvault is repaired: the vault archive is AES-256 encrypted (compression method 99), which Info-ZIP's unzip cannot verify or extract — every run died with 'The download is not a valid zip' even though the payload was intact. The deployment now uses the 7-Zip backend (7z): full integrity verification, decryption with the archive key, and extraction are handled natively",
+    "New: update wallvault pass <key> stores the archive decryption key in ~/.cache/fedora-mactahoe/wallvault.conf (chmod 600); without a stored key the tool prompts silently (no echo) at run time. update wallvault <link> [key] registers a custom endpoint and optionally the key in one call",
+    "Hardened transfer: HTTP errors now fail the download (curl -f), transient interruptions auto-retry (3 attempts) plus one full automatic retry of the entire transfer, and a truncated payload is caught by the 7z integrity test instead of producing misleading errors",
+    "Clear failure diagnostics: wrong decryption key vs corrupt payload vs missing 7zip backend are now reported as distinct errors with the exact remedy",
+    "Professional-grade output: all wallvault UI copy was rewritten in a corporate/data-center register — asset bundle, authorized transfer, integrity verification, staging, credentials persisted, operation aborted",
+    "7zip added to the RPM Packages step (step bumped so every machine installs it on the next update)"
+   ]
+  },
+  {
+   "version": "3.5.1",
+   "changes": [
+    "HOTFIX — the ( TAG ) now lands in the log filename on EVERY path. 3.5 stamped install.sh-created logs, but the bootstrap one-liner (curl|bash) creates the log itself and hands it to the installer — so those files came out untagged. Bootstrap now computes the same tag (BASH for the one-liner, UPDATE-FULL / UPDATE-QUICK when the updater drives it) and stamps it into its own log name, keeping filename and installer header consistent",
+    "update quick dropped its 8-second loading ritual — quick means quick. It now runs exactly like menu [1]: straight to the incremental update, no prompts, no spinner",
+    "Both fingerprints re-pinned (bootstrap.sh and update.fish changed)"
+   ]
+  },
+  {
+   "version": "3.5",
+   "changes": [
+    "Every install/update run now stamps WHO ran it into the log filename: FedoraTahoe_log.<date>.<time>.<ID> ( TAG ).txt — ( BASH ) for the curl|bash one-liner, ( MANUAL ) for running install.sh directly, ( UPDATE-QUICK ) / ( UPDATE-FULL ) / ( UPDATE-CONFIG ) and one tag per target (UPDATE-ICONS, UPDATE-THEME, UPDATE-FONTS, UPDATE-SOUNDS, UPDATE-EXTENSIONS, UPDATE-GDM, UPDATE-WALLPAPER, UPDATE-PFP, UPDATE-GTK, UPDATE-VIDEOS, UPDATE-SERVICES, UPDATE-DEFAULTS, UPDATE-DCONF, UPDATE-NOTIFIER, UPDATE-CLEAN, UPDATE-WALLVAULT) for the updater",
+    "The same tag appears in the log header box (new Method row), is saved into install-state.json (source field) and shows up in the update log history — one quick look tells you how every run was started",
+    "New command: update quick — the incremental update with your saved answers, no prompts, straight from the shell (identical to menu [1])"
+   ]
+  },
+  {
+   "version": "3.4",
+   "changes": [
+    "HOTFIX — installs no longer die at 'RPM Packages'. Two codec package names in the v3.2 driver batch did not exist on Fedora 44 (gstreamer1-plugins-good-extra and gstreamer1-plugins-bad): dnf rejected the whole 43-package transaction, so every fresh install and every update rerun of that step stopped with 'No match for argument'. They're replaced with the real packages — gstreamer1-plugins-good and gstreamer1-plugins-bad-free (with -freeworld and -free-extras already installed from the RPM Fusion step) — and the full transaction was dry-run verified to resolve: 43 names, all found, zero errors",
+    "Step version bumped so every machine re-runs the repaired RPM Packages step on the next update"
+   ]
+  },
+  {
+   "version": "3.3",
+   "changes": [
+    "New: update wallvault (aliases: update wall, update w) — the 500+ wallpaper vault, downloaded right from your terminal",
+    "Free and private: a one-time 6-digit code is shown in the terminal (no email, no account), you type it and the ~623 MB vault downloads behind a live braille spinner — then it's verified, unzipped and landed in ~/Downloads/Wallvault-Pack, temp files cleaned up",
+    "Safe by design: 3 code attempts with a 10-minute expiry, Ctrl+C aborts the download and leaves nothing behind",
+    "Custom link: update wallvault <google-drive-link> points the vault at any file you own — the link is saved in your private cache (chmod 600) and used for every future download",
+    "update wallvault help box added to per-target help, the usage box and the menu ([16] wallvault)"
+   ]
+  },
+  {
+   "version": "3.2",
+   "changes": [
+    "Your settings are safe forever — installs and updates no longer overwrite your personal config: PATH lines you added to fish (set -gx PATH, fish_add_path, fish_user_paths) are migrated once into conf.d/50-user-path.fish and never touched again. The opencode-style path wipe is gone",
+    "Kitty gained user.conf — a file of your own that installs and updates never touch; put anything you like there and it survives every refresh, always winning over the theme",
+    "Media & hardware drivers built in: Intel Media Driver + VA-API (hardware video on Intel/AMD), the full GStreamer codec suite (libav + good-extra + bad + ugly), Mozilla OpenH264, ALSA SOF firmware for modern laptops",
+    "Storage & sharing: NTFS-3G read/write for Windows drives, Samba client + CIFS utils so the smb function works out of the box",
+    "Printing: cups-filters + HPLIP driver stack",
+    "Emoji picker: Super+. opens GNOME Characters — pick emoji anywhere, no setup needed",
+    "update.fish re-pinned with a fresh fingerprint"
+   ]
+  },
+  {
+   "version": "3.1",
+   "changes": [
+    "Per-target help: update <target> help shows a dedicated box for every part of the update — what it does, what it asks, its flags and whether a fresh session is needed. update help <target> works too, and the main help lists both. 16 targets covered (icons, theme, fonts, sounds, extensions, gdm, wallpaper, pfp, gtk, videos, services, defaults, dconf, notifier, clean, menu). Read-only: never prompts, never downloads, never touches your setup"
+   ]
+  },
+  {
+   "version": "3.0",
+   "changes": [
+    "HEIC image support — now built in. Fedora MacTahoe 3.0 introduces native HEIC/HEIF decoding: open Apple's photo format directly in your GNOME Image Viewer, see thumbnails in Files, and convert anytime with heif-convert. No new apps, no viewer changes — your iPhone photos just work. Powered by libheif-freeworld (RPM Fusion free, already enabled by the installer) plus the heif-tools conversion suite. Fresh installs get it out of the box; existing setups can grab it with: sudo dnf install libheif-freeworld libheif-tools"
+   ]
+  },
+  {
+   "version": "2.9",
+   "changes": [
+    "update wallpaper and update pfp now offer a Both option: pick 3 in the pack picker to wipe BOTH packs (normal + +18 folders and XMLs) and re-download them fresh in one go",
+    "update wallpaper both also works as update wallpaper both — same for pfp",
+    "help box gained update wallpaper both / update pfp both rows"
+   ]
+  },
+  {
+   "version": "2.8",
+   "changes": [
+    "update services now ALWAYS asks about firewalld — it checks the live state first (FIREWALLD IS RUNNING / FIREWALLD IS OFF box) and asks every time instead of silently reusing the saved answer",
+    "turning firewalld OFF is now the default everywhere: pressing Enter in update services or the installer's firewalld question disables it (was No/keep before)",
+    "the installer's firewalld prompt now defaults to Yes — press Enter to disable and save ~30-50 MB"
+   ]
+  },
+  {
+   "version": "2.7",
+   "changes": [
+    "fix update wallpaper / update pfp ignoring your pick: the saved answer from the original install (+18) was overriding the choice you make in the picker, so picking Normal still downloaded the +18 pack. Env vars passed by update <target> now always win over saved answers (saved answers still apply on full installs and when the target passes nothing)",
+    "same fix protects update gdm, update videos and update services — their forced settings can no longer be overridden by an old saved answer"
+   ]
+  },
+  {
+   "version": "2.6",
+   "changes": [
+    "fix incremental updates getting stuck: a machine installed on an older version stored per-step versions as that overall version (e.g. 2.2), which is higher than today's per-step manifest values (1.x) — every step was skipped and the version never moved. Now an older overall version forces all steps to re-run, then normal per-step gating resumes"
+   ]
+  },
+  {
+   "version": "2.5",
+   "changes": [
+    "update help redesigned: gradient title, diamond section tags, aligned two-column command table (bold white names, bold gray descriptions), tag-cloud toolbox, divider footer",
+    "all help text is now bold so it stays readable on light auto-theme backgrounds",
+    "fixed command-row width so the box right edge is a straight line"
+   ]
+  },
+  {
+   "version": "2.4",
+   "changes": [
+    "the recovery warning is now BIG and bold: a red ERROR/RESCUE/WARNING banner replaces the fish welcome when the config is missing, and the instructions are bold",
+    "the guard message is refreshed on existing machines automatically via update configs (same marker-replace mechanism)"
+   ]
+  },
+  {
+   "version": "2.3",
+   "changes": [
+    "- A tiny system-wide rescue detector now guards 'update': if ~/.config/fish/functions/update.fish is ever deleted, the /etc copy detects it, explains the missing dependencies and offers to download the latest update function (yes is the default, 5 tries, fingerprint-verified) — the updater never runs until the user copy is restored",
+    "update configs replaces the old system-wide copy with the rescue detector — /etc/fish/functions/update.fish is now the tiny detector, the full updater lives only in ~/.config/fish/functions/",
+    "- update configs now refreshes the did-you-mean command handler in /etc too — a wiped fish config still suggests command fixes (it was the only nice thing missing after a reset)",
+    "- no more silent skips: when the sudo cache is cold, update configs pops the polkit password dialog (pkexec) once and copies the system-wide fish helpers (rescue detector + did-you-mean handler) anyway — cancel and it tells you it skipped",
+    "- the did-you-mean fallback loads from /etc/fish/config.fish whenever your own handler file is gone (fish won't autoload event handlers from /etc by itself) — wiped configs still suggest command fixes",
+    "- the recovery warning in every terminal is now plain language: 'type update, press Enter' — no more wall-of-text one-liner (update configs refreshes it on existing machines too)"
+   ]
+  },
+  {
+   "version": "2.2",
+   "changes": [
+    "Quick updates are now truly quiet — no more questions: your saved answers are reused (Discord, wallpapers, videos) once you've answered them once",
+    "- Picker validation messages (Invalid/Cancelled) now go to stderr, keeping command-substitution output pure",
+    "- update wallpaper add / update pfp add (also --add, -add) install the other pack alongside — without the flag the chosen pack replaces the other (folder + XML)",
+    "All setup prompts moved from bootstrap into the installer — bootstrap is just the start button now: splash, verify, download, hand off",
+    "Discord's answer is now saved too (it was the only prompt without persistence)",
+    "Bootstrap no longer prints its own system-info box — the dashboard shows once, from the installer",
+    "Bootstrap no longer prints its own SECURE TUNNEL box — the tunnel shows once, from the installer",
+    "Tunnel location is hidden — a generic 'Location: Secure' row instead of fake CDN node details",
+    "The installer download now shows a live progress bar — the clone runs quietly in the background, no more raw git text",
+    "The download progress bar now matches the updater's loader — braille spinner, rotating status, [███░░░] bar with real percent (re-pinned bootstrap fingerprint)",
+    "Fixed the download progress bar crashing on the first tick (grep no-match tripped the ERR trap under set -euo pipefail); percent now only moves forward",
+    "Fish config backups keep the same 5-snapshot limit as dconf (was 10) — 6th and older auto-deleted on every config apply",
+    "The start screen waits 60 seconds max — no key press and bootstrap closes itself (just run it again when you're ready)",
+    "Closing bootstrap early (Ctrl+C forced exit or the 60s auto-close) leaves no log behind — the temp log is deleted, since nothing ran",
+    "Running install.sh directly now behaves the same: every wait and yes/no question auto-closes after 60s of silence, and closing it early (Ctrl+C twice or the timeout) deletes the log too",
+    "A closed installer is no longer reported as a failure — the updater says 'closed before finishing' and you just run it again when ready",
+    "Fixed the crooked log-header box (blank rows and data rows now line up with the 62-wide border) and the 'More from Eprahemi' box (links no longer poke past the right edge)",
+    "The kitty one-liner no longer bursts out of its box — it's now shown as a clean code line under both warning boxes (bootstrap + installer)",
+    "Deep-scan cleanup: removed dead code (unused _save_prompt_answers_all, stray _rc captures, unused PINK color in bootstrap) and re-pinned the bootstrap fingerprint",
+    "Fixed kitty terminal boxes: ✦/⚠ title rows padded correctly for narrow glyphs; removed leftover over-padding on the \"Press any key\" rows",
+    "The update menu no longer lists every step that will re-run — just what's new, then the choice. Cleaner.",
+    "Fixed the progress bar showing '�' blocks — the bar builder used tr (byte-based, mangles multi-byte █); now built with string concat like install.sh's sed bars, byte-perfect in any locale",
+    "MacTahoe GTK source is now vendored in the repo (vendor/MacTahoe-gtk-theme) — if the upstream repo is ever deleted or unreachable, the theme still compiles fresh for your GNOME version, and GDM + Firefox theming still work via the vendored tweaks.sh",
+    "The firewalld question moved up front — it now appears with the Discord/wallpaper/video prompts before Phase 1, so the installation never pauses mid-flow; the actual disable (or keep/enable) still happens in the 'Disable RAM-wasting Services' step, and your answer is saved like the others",
+    "update menu — per-target toolbox: re-run a single part of the setup with update <target> (icons, gtk, extensions, wallpaper, pfp, theme, fonts, sounds, videos, services, gdm, defaults, dconf, notifier, clean) — no full reinstall needed",
+    "update <target> asks about logging out when the change needs a fresh session — per-target reason in the box (theme/gtk/extensions/gdm/wallpaper/icons/fonts), strict y/n with no default so Enter alone never logs you out",
+    "Every update fetch now shows a live braille spinner while cloning — same style as the installer's loader, no more static 'Fetching...' text",
+    "Ctrl+C is now safe everywhere: cancelling mid-install or mid-fetch prints '✘ Cancelled — nothing was changed.', never touches your setup, and cleans up the temp files",
+    "Fixed the download spinner never noticing a failed clone (fish's wait always reported success) — git's real exit code is read from the temp bundle now, so connection errors are reported honestly",
+    "Self-healing 'update' command — if update.fish is ever deleted (say, a wiped fish config), the boot + 2-hour updater timer restores it automatically, fingerprint-verified against the pinned sha256 so unverified code is never installed",
+    "System-wide rescue copy — the installer keeps a root-owned copy of update.fish outside your home folder: even with the entire fish config wiped, the 'update' command still answers",
+    "update configs now refreshes every config location — kitty, fish (config + all 40 functions), starship, GTK, fastfetch, systemd units AND the update notifier (script + timer): every folder is created if missing, every file overwrites if present, and your fish config is auto-backed up before any override",
+    "update configs also keeps the system-wide rescue copy current — done silently, without asking for a password or printing anything extra",
+    "update configs no longer leaks ktheme's raw error if the wallpaper file ever goes missing — the live re-theme is fully silent now",
+    "update configs confirms with '✓ Rescue copy (system-wide) updated.' only when the system-wide copy was actually refreshed (warm sudo window); with no cached credentials it stays silent and skips"
+   ]
+  },
+  {
+   "version": "2.1",
+   "changes": [
+    "Security hardening pass — the full audit is in:",
+    "Verified update chain — installs are fingerprint-checked, tamper-proof downloads, a trust prompt the first time, hard refusal on any mismatch",
+    "Your settings are safe — a full dconf snapshot is saved before anything touches your GNOME settings (restore with one command)",
+    "gdm wallpaper switching no longer uses shared /tmp — everything stays in your private cache",
+    "Kitty control sockets are private now — no other user can connect to your terminal",
+    "Automatic security downloads — patches download in the background nightly (never installed without your say-so)",
+    "Backup snapshots are private too — folder and files locked to you only"
+   ]
+  },
+  {
+   "version": "2.0",
+   "changes": [
+    "Fish config safety net — every config refresh auto-backups your live fish folder first (last 10 snapshots kept)",
+    "The can't-lose-it guard — a root-owned warning in the system fish config: if your fish config is ever deleted, every terminal shows the exact one-line recovery"
+   ]
+  },
+  {
+   "version": "1.9",
+   "changes": [
+    "Kitty follows your wallpaper — ktheme pulls the colors out of your desktop picture and re-themes every kitty window, live. A quiet background watcher does it automatically every time the wallpaper changes (ktheme on/off to control it)",
+    "Kitty Colorful Edition — a fresh full palette, interactive kittens (ctrl+shift+f4 themes, ctrl+shift+d diff) and remote control from any terminal",
+    "hint — a little teacher in your terminal: shortcuts, functions, the palette, and live demos, all in one menu",
+    "fastfetch shows your terminal; old kitty/fastfetch config backups cleaned up"
+   ]
+  },
+  {
+   "version": "1.8",
+   "changes": [
+    "New Fish function: smb — full Samba file sharing manager (setup, users, shares, passwords, data export, service control)",
+    "Updated 18+ wallpaper pack with new backgrounds"
+   ]
+  },
+  {
+   "version": "1.7",
+   "changes": [
+    "Window Title Pro Topbar v8 — separator dropdown, font size control, smart row sensitivity, readable shortcuts (Super+Y)",
+    "New Fish functions: kit (Kitty theme toggle), ghlogin (GitHub auth + git config with auto-fetch), pfp (profile picture with cropped preview)",
+    "install.sh: 28 proper steps — Celluloid default player + Nautilus per-folder defaults now tracked steps",
+    "Kitty close warning enabled (confirm_os_window_close 1)"
+   ]
+  },
+  {
+   "version": "1.6",
+   "changes": [
+    "Window Title Pro now installs from GNOME Extensions (EGO) instead of GitHub releases — extension #10319 approved and active"
+   ]
+  },
+  {
+   "version": "1.5",
+   "changes": [
+    "Window Title Pro updated to v4 — fixed-width default now off (set <default>false</default> in gschema)"
+   ]
+  },
+  {
+   "version": "1.4",
+   "changes": [
+    "Window Title Pro updated to v3 — EGO review fixes (destroy(), no try-catch, no gschemas.compiled, no donations)"
+   ]
+  },
+  {
+   "version": "1.3",
+   "changes": [
+    "WTP v2 URL fix: asset is window-title-pro-v2.zip (not window-title-pro.zip)"
+   ]
+  },
+  {
+   "version": "1.2",
+   "changes": [
+    "Window Title Pro v2 — show-title now defaults to off (set <default>false</default> in gschema)",
+    "update.fish ANSI escape fix: replaced echo with printf (Fish echo ignores \\033)",
+    "update.fish read prompt fix: plain text in -P instead of \\e codes",
+    "Update check timer: OnBootSec reduced from 5min to 2min",
+    "Fix 'Update Now' not opening Kitty: replaced nohup+inline with temp launcher script"
+   ]
+  },
+  {
+   "version": "1.1",
+   "changes": [
+    "FRESH START — consolidated baseline for all Fedora MacTahoe features",
+    "Full re-install: bash bootstrap.sh deletes state and runs all 27 steps fresh",
+    "Incremental update: update.fish + 'Update Now' use UPDATE_MODE=incremental",
+    "Version-only updater: notification fires on version bumps, not every commit",
+    "install-state.json: per-step versions + overall install version, atomic writes",
+    "GTK theme compiles for GNOME 47/48, per-step caching",
+    "SF Pro fonts, Big Sur sounds, GDM theme, Firefox userChrome",
+    "Flatpak GTK runtime, Kitty terminal, Fish shell, Dash-to-Dock, UWG, blur",
+    "Kitty-only updater with boot-aware two-cache persistence",
+    "Prompt persistence: answers saved once, never re-asked",
+    "Step versions: apply_configs 1.1, install_updater 1.1, finalize 1.1"
+   ]
+  },
+  {
+   "version": "1.0",
+   "changes": [
+    "INITIAL: Complete Fedora MacTahoe setup — all steps",
+    "GTK theme compiles for GNOME 47/48",
+    "SF Pro fonts, Big Sur sounds, GDM theme, Firefox userChrome",
+    "Flatpak GTK runtime, Kitty terminal, Fish shell",
+    "Dash-to-Dock, UWG, blur extensions",
+    "Update notifier with two-cache persistence (boot-aware)",
+    "MATE terminal family fix (single-string -e syntax)",
+    "Kitty-first terminal detection",
+    "Refresh.fish --chrome flag (Singleton lock clearance)",
+    "Window Title Pro crash fix (a99d9489)"
+   ]
   }
+ ],
+ "steps": {
+  "preflight": "1.0",
+  "remove_ptyxis": "1.1",
+  "remove_gnome_weather": "1.0",
+  "install_rpmfusion": "1.0",
+  "install_nvidia": "1.0",
+  "install_rpm_packages": "1.3",
+  "install_browsers": "1.0",
+  "install_flatpaks": "1.0",
+  "install_mactahoe_theme": "1.0",
+  "install_font": "1.0",
+  "apply_desktop_entries": "1.0",
+  "ensure_celluloid_default": "1.0",
+  "configure_nautilus_defaults": "1.0",
+  "apply_configs": "1.12",
+  "apply_dconf": "1.2",
+  "optimize_system_resources": "1.1",
+  "apply_wallpapers": "1.1",
+  "install_custom_avatars": "1.0",
+  "download_optional_videos": "1.0",
+  "setup_gdm": "1.0",
+  "setup_firefox_theme": "1.0",
+  "setup_flatpak_theme": "1.0",
+  "install_sounds": "1.0",
+  "install_updater": "1.3",
+  "install_ktheme_watcher": "1.0",
+  "setup_terminal": "1.0",
+  "setup_shell": "1.0",
+  "install_extensions": "1.7",
+  "mirror_flatpak_icons": "1.0",
+  "finalize": "1.9"
+ }
 }

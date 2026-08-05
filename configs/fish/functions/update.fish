@@ -600,12 +600,12 @@ function _update_target_help --description 'per-target help box'
             _update_box_text "Needs a fresh session after install — you'll" "1;33"
             _update_box_text "be asked about logging out when it's done." "1;33"
         case wallvault wall w
-            _update_box_text "Deploys the Wallvault asset bundle — 500+" "1;37"
+            _update_box_text "Deploys the Wallvault bundle — 500+" "1;37"
             _update_box_text "wallpapers — into ~/Downloads/Wallvault-Pack." "1;37"
-            _update_box_text "Gated by a one-time authorization code," "1;37"
-            _update_box_text "transfer with a live progress bar, and" "1;37"
-            _update_box_text "automatic open-on-deploy; the temp" "1;37"
-            _update_box_text "workspace is removed on success/abort." "1;37"
+            _update_box_text "A one-time code unlocks it, and the drop" "1;37"
+            _update_box_text "lands in Downloads ready to browse." "1;37"
+            _update_box_text ""
+            _update_box_text "Some of the set is +18. We trust you." "1;33"
             _update_box_text ""
             _update_box_tag "FLAGS"
             _update_box_text ""
@@ -1612,15 +1612,16 @@ end
 # ══════════════════════════════════════════════════════════════
 # update wallvault | update wall | update w
 # Flow: yes/no → one-time authorization code (no account needed) →
-# resilient transfer with a live progress bar (curl --progress-bar)
-# → integrity verification + background decryption via 7zip (the
-# archive key is baked in — never prompted, never displayed) →
-# staged into ~/Downloads/Wallvault-Pack → temp removed (also on
-# abort). The default endpoint is baked in; a custom one can be set
-# with `update wallvault <google-drive-link>` and an optional key
-# override with `update wallvault pass <key>` — stored in
+# boxed live transfer with a hand-rolled progress bar (curl runs in
+# the background; the size comes from a HEAD probe) → decryption via
+# 7zip with the baked-in key (never prompted, never displayed, only
+# touched when the archive is genuinely encrypted) → staged into
+# ~/Downloads/Wallvault-Pack → temp removed (also on abort). The
+# default endpoint is baked in; a custom one can be set with
+# `update wallvault <google-drive-link>` and an optional key override
+# with `update wallvault pass <key>` — stored in
 # ~/.cache/fedora-mactahoe/wallvault.conf (chmod 600).
-function _update_target_wallvault --description 'Wallvault asset vault — authorized, decrypted, integrity-verified deployment to Downloads'
+function _update_target_wallvault --description 'Wallvault asset vault — gated bundle, boxed live transfer, decrypted, staged into Downloads'
     set -l cfg_dir "$HOME/.cache/fedora-mactahoe"
     set -l cfg "$cfg_dir/wallvault.conf"
     set -l default_url "https://drive.usercontent.google.com/download?id=1JOG25rsQKL-e4yx86HLsue8gkzsp9QHW&export=download&confirm=t"
@@ -1715,15 +1716,17 @@ function _update_target_wallvault --description 'Wallvault asset vault — autho
     end
 
     printf "\n"
-    _update_header "WALLVAULT — 500+ WALLPAPER ASSET VAULT"
+    _update_box_top
+    _update_box_title "Wallvault." "1;36"
     _update_box_text ""
-    _update_box_text "Deploys the Wallvault asset bundle — 500+" "1;37"
-    _update_box_text "wallpapers — into your Downloads directory." "1;37"
-    _update_box_text "Gated by a one-time authorization code," "1;37"
-    _update_box_text "with a live transfer progress bar." "1;37"
-    _update_box_text "The bundle is opened on deploy." "1;37"
+    _update_box_text "500+ wallpapers, hand-picked with questionable" "1;37"
+    _update_box_text "taste. Every theme, every vibe — all in one" "1;37"
+    _update_box_text "drop. Your desktop will never be this cool." "1;37"
     _update_box_text ""
-    _update_box_text "Proceed?   y = confirm   n = abort (default)" "1;37"
+    _update_box_text "Heads up: some are +18. You're an adult." "1;33"
+    _update_box_text "We trust you. Sort of." "1;33"
+    _update_box_text ""
+    _update_box_text "Proceed?   y = yes   n = no (boring)" "1;37"
     _update_box_bottom
     read -l yn -P "  Your choice [y/N]: "
     if test $status -ne 0
@@ -1741,15 +1744,13 @@ function _update_target_wallvault --description 'Wallvault asset vault — autho
     set -l code (random 100000 999999)
     set -l code_start (date +%s)
     set -l attempts 3
-    set -l cpad (math "61 - 20 - "(string length -- "$code"))
     printf "\n"
     _update_box_top
-    _update_box_title "ACCESS AUTHORIZATION" "1;37"
+    _update_box_title "YOUR CODE" "1;37"
     _update_box_text ""
-    printf '  ║ \e[1;33mAuthorization code:\e[0m \e[1;36m%s\e[0m%*s║\n' $code $cpad ""
+    _update_box_title (string join ' ' (string split '' -- $code)) "1;36"
     _update_box_text ""
-    _update_box_text "Enter the code below to authorize the transfer." "1;37"
-    _update_box_text "Validity: 10 minutes — attempts permitted: 3." "1;33"
+    _update_box_text "Enter your code to begin." "1;37"
     _update_box_bottom
     while test $attempts -gt 0
         read -l got -P "  Authorization code: "
@@ -1788,25 +1789,101 @@ function _update_target_wallvault --description 'Wallvault asset vault — autho
         set -g __wv_abort 1
     end
 
-    # ── transfer: curl progress bar, one automatic retry, Ctrl+C safe ──
+    # ── transfer: boxed live progress, one automatic retry, Ctrl+C safe ──
     set -l zip "$tmp/wallvault.zip"
+    # probe the size up front (HEAD) so the bar can show real totals
+    set -l total_bytes ""
+    set -l hl (curl -sIL --max-time 20 "$vault_url" 2>/dev/null | command grep -i '^content-length:' | string replace -ri '^content-length:\s*' '' | string trim)
+    if set -q hl[1]; and string match -qr '^[0-9]+$' -- "$hl[1]"
+        set total_bytes "$hl[1]"
+    end
     set -l attempt 0
     while test $attempt -lt 2
         set attempt (math $attempt + 1)
         if test $attempt -gt 1
-            printf "\r  \e[1;33mTransfer interrupted — retrying...\e[0m\n"
+            printf "\n  \e[1;33mTransfer got interrupted — rounding it up again.\e[0m\n"
         end
-        curl -fL --progress-bar --retry 3 --retry-delay 2 --max-time 900 -o "$zip" "$vault_url" &
+        curl -fL --retry 3 --retry-delay 2 --max-time 900 -o "$zip" "$vault_url" &
         set -l cpid $last_pid
+        # live boxed bar — painted only on a real terminal (captured/piped
+        # runs stay clean and just poll silently)
+        set -l frame 0
+        set -l last_bytes 0
+        set -l last_t (date +%s%N)
+        set -l speed 0
+        functions -e __wv_paint 2>/dev/null
+        function __wv_paint --no-scope-shadowing
+            set -l got 0
+            if test -e "$zip"
+                set got (command stat -c %s "$zip" 2>/dev/null; or echo 0)
+            end
+            set -l now (date +%s%N)
+            set -l dt (math "$now - $last_t")
+            if test $dt -gt 0
+                set -l db (math "$got - $last_bytes")
+                if test $db -gt 0
+                    set speed (math -s0 "$db * 1000000000 / $dt")
+                end
+            end
+            set frame (math "$frame + 1")
+            set last_bytes $got
+            set last_t $now
+            set -l dots (string repeat -n (math "1 + ($frame % 3)") '.')
+            set -l fillpct 0
+            if test -n "$total_bytes"; and test "$total_bytes" -gt 0
+                set fillpct (math -s0 "$got * 100 / $total_bytes")
+            end
+            if test $fillpct -gt 100
+                set fillpct 100
+            end
+            set -l filled (math -s0 "$fillpct * 52 / 100")
+            if test $filled -gt 52
+                set filled 52
+            end
+            set -l pcs (printf '%3d%%' $fillpct)
+            set -l barfill (string repeat -n $filled '█')
+            set -l barempty (string repeat -n (math -s0 "52 - $filled") '░')
+            set -l gotmb (math -s1 "$got / 1048576.0")
+            set -l spdmb (math -s1 "$speed / 1048576.0")
+            set -l statsln "  $gotmb MB"
+            if test -n "$total_bytes"; and test "$total_bytes" -gt 0
+                set -l totmb (math -s1 "$total_bytes / 1048576.0")
+                set statsln "$statsln of $totmb MB"
+            end
+            set statsln "$statsln · $spdmb MB/s"
+            printf '\e[4A'
+            _update_box_title "Downloading$dots" "1;36"
+            _update_box_text "  $barfill$barempty $pcs" "1;36"
+            _update_box_text "$statsln" "1;37"
+            _update_box_bottom
+        end
+        if test -t 1
+            printf "\n"
+            _update_box_top
+            _update_box_title "Downloading…" "1;36"
+            _update_box_text (string join '' '  ' (string repeat -n 52 '░') ' ' '  0%') "1;90"
+            _update_box_text "  0.0 MB · 0.0 MB/s" "1;37"
+            _update_box_bottom
+        end
         while kill -0 $cpid 2>/dev/null
             if test $__wv_abort -eq 1
                 kill $cpid 2>/dev/null
                 break
             end
-            sleep 0.2
+            if test -t 1
+                sleep 0.25
+                __wv_paint
+            else
+                sleep 0.2
+            end
         end
         wait $cpid 2>/dev/null
         set -l dl_rc $status
+        # one final refresh with the real numbers
+        if test -t 1; and test $__wv_abort -eq 0
+            __wv_paint
+        end
+        functions -e __wv_paint 2>/dev/null
         if test $__wv_abort -eq 1
             rm -rf "$tmp" 2>/dev/null
             functions -e __wv_cleanup 2>/dev/null
@@ -1878,11 +1955,18 @@ function _update_target_wallvault --description 'Wallvault asset vault — autho
         printf "\n  \e[1;31m✘ Staging failed — unable to deploy the bundle into the target directory.\e[0m\n"
         return 1
     end
-    set -l count (find "$dest/$name" -type f 2>/dev/null | wc -l)
+    set -l count (string trim -- (find "$dest/$name" -type f 2>/dev/null | wc -l))
     rm -rf "$tmp" 2>/dev/null
-    printf "\n  \e[1;32m✓ Deployment complete — Wallvault asset bundle staged.\e[0m\n"
-    printf "  \e[1;37m    Location: %s\e[0m\n" "$dest/$name"
-    printf "  \e[1;37m    Files: %d\e[0m\n" (string trim -- $count)
+    printf "\n"
+    _update_box_top
+    _update_box_title "WALLVAULT — READY" "1;36"
+    _update_box_text ""
+    _update_box_text "✓  $count wallpapers. Delivered." "1;32"
+    _update_box_text ""
+    _update_box_text "$dest/$name" "1;37"
+    _update_box_text ""
+    _update_box_text "Enjoy the view." "1;33"
+    _update_box_bottom
     return 0
 end
 
