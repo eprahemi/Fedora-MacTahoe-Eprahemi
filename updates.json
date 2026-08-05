@@ -1,8 +1,15 @@
 {
-  "latest_version": "3.3",
+  "latest_version": "3.4",
   "bootstrap_sha256": "a435e91a79f93cc67f99f7adb75656288653f57b9bfa823de23d17a658753966",
   "update_sha256": "7e28a81a28c548746228d86c57104733bc4e59ce151a56ee54d0633473f3e78c",
   "changelog": [
+    {
+      "version": "3.4",
+      "changes": [
+        "HOTFIX — installs no longer die at 'RPM Packages'. Two codec package names in the v3.2 driver batch did not exist on Fedora 44 (gstreamer1-plugins-good-extra and gstreamer1-plugins-bad): dnf rejected the whole 43-package transaction, so every fresh install and every update rerun of that step stopped with 'No match for argument'. They're replaced with the real packages — gstreamer1-plugins-good and gstreamer1-plugins-bad-free (with -freeworld and -free-extras already installed from the RPM Fusion step) — and the full transaction was dry-run verified to resolve: 43 names, all found, zero errors",
+        "Step version bumped so every machine re-runs the repaired RPM Packages step on the next update"
+      ]
+    },
     {
       "version": "3.3",
       "changes": [
@@ -248,7 +255,7 @@
     "remove_gnome_weather": "1.0",
     "install_rpmfusion": "1.0",
     "install_nvidia": "1.0",
-    "install_rpm_packages": "1.1",
+    "install_rpm_packages": "1.2",
     "install_browsers": "1.0",
     "install_flatpaks": "1.0",
     "install_mactahoe_theme": "1.0",

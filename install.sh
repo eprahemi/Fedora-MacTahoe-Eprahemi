@@ -1442,7 +1442,7 @@ install_rpm_packages() {
     libreoffice-writer libreoffice-calc libreoffice-impress \
     libheif-freeworld libheif-tools \
     intel-media-driver mesa-va-drivers \
-    gstreamer1-libav gstreamer1-plugins-good-extra gstreamer1-plugins-bad gstreamer1-plugins-ugly \
+    gstreamer1-libav gstreamer1-plugins-good gstreamer1-plugins-bad-free gstreamer1-plugins-ugly \
     mozilla-openh264 alsa-sof-firmware \
     ntfs-3g samba-client cifs-utils \
     cups-filters hplip"
