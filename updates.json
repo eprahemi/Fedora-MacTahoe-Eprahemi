@@ -1,8 +1,18 @@
 {
-  "latest_version": "3.5.2",
+  "latest_version": "3.5.3",
   "bootstrap_sha256": "447d511166596db254cc20156736056e3e6d48c5286422e07cffed79464e85ee",
-  "update_sha256": "2ba36c4d4cdad02d867b9f30731dc0ff7b965d136d5867da9d158952cb089b98",
+  "update_sha256": "297f7cccb2276f0e35683bd569a8b8919c2c2007a931d5529c77e7f54cbacb52",
   "changelog": [
+    {
+      "version": "3.5.3",
+      "changes": [
+        "update wallvault: the archive decryption key is now baked in and applied automatically in the background — the user is never asked for it and never sees it; the one-time authorization code remains the only credential",
+        "Download now shows a live progress bar (curl --progress-bar) instead of the braille spinner",
+        "Encryption is detected via 7z listing (no password round-trip); plain archives verify with no key at all",
+        "Help/usage copy cleaned up (no key language); 'update wallvault pass <key>' remains as an optional override for custom endpoints",
+        "Fixed 1-char overflow on the 'update wallvault <url>' help row (was <link>, 23 chars > 22-col name column)"
+      ]
+    },
     {
       "version": "3.5.2",
       "changes": [

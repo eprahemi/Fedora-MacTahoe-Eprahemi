@@ -497,8 +497,8 @@ function _update_usage --description 'the help box'
     _update_box_cmd "update wallpaper add" "install the other pack alongside"
     _update_box_cmd "update wallpaper both" "wipe both, fresh install of both"
     _update_box_cmd "update wallvault" "deploy the 500+ wallpaper vault"
-    _update_box_cmd "update wallvault <link>" "register a custom endpoint"
-    _update_box_cmd "update wallvault pass" "store the archive decryption key"
+    _update_box_cmd "update wallvault <url>" "register a custom endpoint"
+    _update_box_cmd "update wallvault pass" "store an archive key (optional)"
     _update_box_cmd "update pfp add" "same for profile pictures"
     _update_box_cmd "update pfp both" "wipe both packs, fresh install"
     _update_box_cmd "update <target> help" "details for one part"
@@ -602,15 +602,16 @@ function _update_target_help --description 'per-target help box'
         case wallvault wall w
             _update_box_text "Deploys the Wallvault asset bundle — 500+" "1;37"
             _update_box_text "wallpapers — into ~/Downloads/Wallvault-Pack." "1;37"
-            _update_box_text "Authorized transfer, integrity verification," "1;37"
-            _update_box_text "local decryption and staging; the temp" "1;37"
-            _update_box_text "workspace is removed on success and abort." "1;37"
+            _update_box_text "Gated by a one-time authorization code," "1;37"
+            _update_box_text "transfer with a live progress bar, and" "1;37"
+            _update_box_text "automatic open-on-deploy; the temp" "1;37"
+            _update_box_text "workspace is removed on success/abort." "1;37"
             _update_box_text ""
             _update_box_tag "FLAGS"
             _update_box_text ""
             _update_box_cmd "update wallvault" "deploy the 500+ wallpaper vault"
-            _update_box_cmd "update wallvault <link>" "register a custom endpoint"
-            _update_box_cmd "update wallvault pass" "store the archive decryption key"
+            _update_box_cmd "update wallvault <url>" "register a custom endpoint"
+            _update_box_cmd "update wallvault pass" "store an archive key (optional)"
             _update_box_cmd "update wallvault help" "this box"
             _update_box_text ""
             _update_box_text "Aliases: update wall, update w." "1;37"
@@ -1607,24 +1608,31 @@ function _update_target_menu --description 'pick any target from a numbered list
 end
 
 # ══════════════════════════════════════════════════════════════
-# wallvault — Wallvault asset vault (authorized, encrypted bundle)
+# wallvault — Wallvault asset vault (authorized bundle)
 # ══════════════════════════════════════════════════════════════
 # update wallvault | update wall | update w
 # Flow: yes/no → one-time authorization code (no account needed) →
-# decryption key (stored or silent prompt) → resilient transfer →
-# integrity verification + decryption via 7zip (AES) → staged into
-# ~/Downloads/Wallvault-Pack → temp workspace removed (also on abort).
-# The default endpoint is baked in; a custom one can be set with
-# `update wallvault <google-drive-link> [key]` and the decryption key
-# alone with `update wallvault pass <key>` — stored in
+# resilient transfer with a live progress bar (curl --progress-bar)
+# → integrity verification + background decryption via 7zip (the
+# archive key is baked in — never prompted, never displayed) →
+# staged into ~/Downloads/Wallvault-Pack → temp removed (also on
+# abort). The default endpoint is baked in; a custom one can be set
+# with `update wallvault <google-drive-link>` and an optional key
+# override with `update wallvault pass <key>` — stored in
 # ~/.cache/fedora-mactahoe/wallvault.conf (chmod 600).
 function _update_target_wallvault --description 'Wallvault asset vault — authorized, decrypted, integrity-verified deployment to Downloads'
     set -l cfg_dir "$HOME/.cache/fedora-mactahoe"
     set -l cfg "$cfg_dir/wallvault.conf"
     set -l default_url "https://drive.usercontent.google.com/download?id=1JOG25rsQKL-e4yx86HLsue8gkzsp9QHW&export=download&confirm=t"
+    # baked-in archive decryption key — applied automatically in the background;
+    # the user is never asked for it and never sees it (authorization code is
+    # the only interactive credential).
+    set -l default_key "hentailover"
 
-    # ── subcommand: store the archive decryption key ──
+    # ── subcommand: store an optional archive decryption key ──
     # update wallvault pass <key> — key optional; silent prompt if omitted
+    # (only used when the archive is genuinely encrypted; plain zips
+    #  never touch the key — the authorization code is the only gate)
     if set -q argv[1]; and string match -q 'pass' -- $argv[1]
         set -l key ""
         if set -q argv[2]
@@ -1701,15 +1709,19 @@ function _update_target_wallvault --description 'Wallvault asset vault — autho
             set vault_pass "$stored_pass"
         end
     end
+    # silent background default — no prompt, no display
+    if test -z "$vault_pass"
+        set vault_pass "$default_key"
+    end
 
     printf "\n"
     _update_header "WALLVAULT — 500+ WALLPAPER ASSET VAULT"
     _update_box_text ""
     _update_box_text "Deploys the Wallvault asset bundle — 500+" "1;37"
     _update_box_text "wallpapers — into your Downloads directory." "1;37"
-    _update_box_text "Transfer is gated by a one-time authorization" "1;37"
-    _update_box_text "code; the payload is integrity-verified and" "1;37"
-    _update_box_text "staged automatically. No account required." "1;37"
+    _update_box_text "Gated by a one-time authorization code," "1;37"
+    _update_box_text "with a live transfer progress bar." "1;37"
+    _update_box_text "The bundle is opened on deploy." "1;37"
     _update_box_text ""
     _update_box_text "Proceed?   y = confirm   n = abort (default)" "1;37"
     _update_box_bottom
@@ -1761,18 +1773,6 @@ function _update_target_wallvault --description 'Wallvault asset vault — autho
         end
     end
 
-    # ── archive decryption key: stored config, else silent prompt ──
-    if test -z "$vault_pass"
-        printf "\n  \e[1;33mThe asset bundle is encrypted — a decryption key is required.\e[0m\n"
-        printf "  \e[1;37m    (persist it for future runs: update wallvault pass <key>)\e[0m\n"
-        read -s vault_pass -P "  Archive decryption key: "
-        if test -z "$vault_pass"
-            printf "\n  \e[1;31m✘ No key provided — operation aborted.\e[0m\n"
-            return 1
-        end
-        printf "\n"
-    end
-
     # ── workspace allocation + Ctrl+C safety ──
     set -l tbase /tmp
     if set -q TMPDIR; and test -n "$TMPDIR"
@@ -1788,36 +1788,25 @@ function _update_target_wallvault --description 'Wallvault asset vault — autho
         set -g __wv_abort 1
     end
 
-    # ── transfer: resilient download with one automatic retry ──
+    # ── transfer: curl progress bar, one automatic retry, Ctrl+C safe ──
     set -l zip "$tmp/wallvault.zip"
     set -l attempt 0
     while test $attempt -lt 2
         set attempt (math $attempt + 1)
-        curl -sfL --retry 3 --retry-delay 2 --max-time 900 -o "$zip" "$vault_url" &
-        set -l cpid $last_pid
-        set -l frames ⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏
-        set -l msgs "Contacting endpoint..." "Transferring asset bundle..." "Almost there..."
         if test $attempt -gt 1
-            set msgs "Retrying transfer..." "Contacting endpoint..." "Finalizing..."
+            printf "\r  \e[1;33mTransfer interrupted — retrying...\e[0m\n"
         end
-        printf '\e[?25l'
-        set -l i 1
-        set -l j 1
+        curl -fL --progress-bar --retry 3 --retry-delay 2 --max-time 900 -o "$zip" "$vault_url" &
+        set -l cpid $last_pid
         while kill -0 $cpid 2>/dev/null
             if test $__wv_abort -eq 1
                 kill $cpid 2>/dev/null
                 break
             end
-            printf '\r  \e[1;36m%s\e[0m  \e[1;37m%s\e[0m' $frames[$i] $msgs[$j]
             sleep 0.2
-            set i (math "$i % 10 + 1")
-            if test $j -lt (count $msgs)
-                set j (math "$j + 1")
-            end
         end
         wait $cpid 2>/dev/null
         set -l dl_rc $status
-        printf '\e[?25h\r  %*s\r' 80 ''
         if test $__wv_abort -eq 1
             rm -rf "$tmp" 2>/dev/null
             functions -e __wv_cleanup 2>/dev/null
@@ -1829,7 +1818,6 @@ function _update_target_wallvault --description 'Wallvault asset vault — autho
             break
         end
         rm -f "$zip" 2>/dev/null
-        printf "\r  \e[1;33mTransfer interrupted — retrying...\e[0m\n"
     end
     functions -e __wv_cleanup 2>/dev/null
     set -e __wv_abort
@@ -1839,29 +1827,41 @@ function _update_target_wallvault --description 'Wallvault asset vault — autho
         return 1
     end
 
-    # ── integrity verification + decryption (7zip backend for AES) ──
+    # ── integrity verification (7zip backend; silent background decryption) ──
     if command -q 7z
-        set -l t_out (7z t -p"$vault_pass" "$zip" 2>&1)
-        if test $status -ne 0
-            rm -rf "$tmp" 2>/dev/null
-            if string match -qi '*wrong password*' -- $t_out
-                printf "\n  \e[1;31m✘ Authentication failed — archive decryption key is incorrect.\e[0m\n"
-                printf "  \e[1;37m    Store the correct key: update wallvault pass <key>\e[0m\n"
-            else
-                printf "\n  \e[1;31m✘ Integrity verification failed — payload is not a valid archive.\e[0m\n"
+        # detect encryption via listing — no password needed, never prompts
+        set -l enc (7z l -slt "$zip" 2>/dev/null | grep -c "Encrypted = +")
+        if test "$enc" -gt 0
+            # archive is genuinely encrypted — decrypt in the background with the
+            # baked-in key (never prompted, never displayed)
+            set -l t_out (7z t -p"$vault_pass" "$zip" 2>&1)
+            if test $status -ne 0
+                rm -rf "$tmp" 2>/dev/null
+                printf "\n  \e[1;31m✘ Decryption failed — the bundle could not be opened.\e[0m\n"
+                return 1
             end
-            return 1
+        else
+            # plain archive: verify without any password
+            if not 7z t "$zip" >/dev/null 2>&1
+                rm -rf "$tmp" 2>/dev/null
+                printf "\n  \e[1;31m✘ Integrity verification failed — payload is not a valid archive.\e[0m\n"
+                return 1
+            end
         end
     else
         rm -rf "$tmp" 2>/dev/null
-        printf "\n  \e[1;31m✘ Decryption backend unavailable — the 7zip package is required.\e[0m\n"
+        printf "\n  \e[1;31m✘ Archive backend unavailable — the 7zip package is required.\e[0m\n"
         printf "  \e[1;37m    Run update (full / services) to install it, then retry.\e[0m\n"
         return 1
     end
 
     # ── extraction + staging into Downloads ──
     mkdir -p "$tmp/extract"
-    7z x -y -o"$tmp/extract" -p"$vault_pass" "$zip" >/dev/null 2>&1
+    if test -n "$vault_pass"
+        7z x -y -o"$tmp/extract" -p"$vault_pass" "$zip" >/dev/null 2>&1
+    else
+        7z x -y -o"$tmp/extract" "$zip" >/dev/null 2>&1
+    end
     set -l folder (find "$tmp/extract" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | head -1)
     if test -z "$folder"
         set folder "$tmp/extract"
