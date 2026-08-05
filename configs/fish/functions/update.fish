@@ -482,12 +482,14 @@ function _update_usage --description 'the help box'
     _update_box_text ""
     _update_box_cloud "icons · theme · fonts · sounds · gtk · extensions"
     _update_box_cloud "wallpaper · pfp · gdm · videos · services · defaults"
-    _update_box_cloud "dconf · notifier · clean"
+    _update_box_cloud "dconf · notifier · clean · wallvault"
     _update_box_text ""
     _update_box_tag "EXTRA FLAGS"
     _update_box_text ""
     _update_box_cmd "update wallpaper add" "install the other pack alongside"
     _update_box_cmd "update wallpaper both" "wipe both, fresh install of both"
+    _update_box_cmd "update wallvault" "500+ wallpaper vault, code-gated"
+    _update_box_cmd "update wallvault <link>" "set a custom vault link"
     _update_box_cmd "update pfp add" "same for profile pictures"
     _update_box_cmd "update pfp both" "wipe both packs, fresh install"
     _update_box_cmd "update <target> help" "details for one part"
@@ -588,6 +590,20 @@ function _update_target_help --description 'per-target help box'
             _update_box_text ""
             _update_box_text "Needs a fresh session after install — you'll" "1;33"
             _update_box_text "be asked about logging out when it's done." "1;33"
+        case wallvault wall w
+            _update_box_text "Downloads the 500+ wallpaper vault zip to" "1;37"
+            _update_box_text "your Downloads folder, unzipped and ready." "1;37"
+            _update_box_text "Shows a one-time code in the terminal (no" "1;37"
+            _update_box_text "email needed), downloads with a spinner," "1;37"
+            _update_box_text "verifies + unzips, cleans the temp dir." "1;37"
+            _update_box_text ""
+            _update_box_tag "FLAGS"
+            _update_box_text ""
+            _update_box_cmd "update wallvault" "download the vault (code-gated)"
+            _update_box_cmd "update wallvault <link>" "set a custom Google Drive link"
+            _update_box_cmd "update wallvault help" "this box"
+            _update_box_text ""
+            _update_box_text "Aliases: update wall, update w." "1;37"
         case pfp
             _update_box_text "Re-downloads and installs your PFP packs fresh" "1;37"
             _update_box_text "from the server — folders + XMLs, all cleaned" "1;37"
@@ -1509,11 +1525,12 @@ function _update_target_menu --description 'pick any target from a numbered list
     _update_box_text "[5]  pfp           [13] dconf" "1;36"
     _update_box_text "[6]  theme         [14] notifier" "1;36"
     _update_box_text "[7]  fonts         [15] clean" "1;36"
-    _update_box_text "[8]  sounds        [0]  exit" "1;36"
+    _update_box_text "[8]  sounds        [16] wallvault" "1;36"
+    _update_box_text "[0]  exit" "1;36"
     _update_box_text ""
     _update_box_text "Made by eprahemi — Fedora MacTahoe © 2026" "1;37"
     _update_box_bottom
-    read -l t -P "  Your choice [0-15]: "
+    read -l t -P "  Your choice [0-16]: "
     if test $status -ne 0
         printf "\n  \e[1;31m✘ Cancelled.\e[0m\n"
         return 1
@@ -1534,6 +1551,7 @@ function _update_target_menu --description 'pick any target from a numbered list
         case 13; _update_target_dconf
         case 14; _update_target_notifier
         case 15; _update_target_clean
+        case 16; _update_target_wallvault
         case 0 q
             printf "\n  \e[1;32m✓ Nothing changed.\e[0m\n"
             return 0
@@ -1542,6 +1560,189 @@ function _update_target_menu --description 'pick any target from a numbered list
             return 1
     end
     return $status
+end
+
+# ══════════════════════════════════════════════════════════════
+# wallvault — 500+ wallpaper vault (code-gated download)
+# ══════════════════════════════════════════════════════════════
+# update wallvault | update wall | update w
+# Flow: yes/no → one-time code shown in the terminal (no email, no account)
+# → visual download to a private temp dir → zip verified + unzipped → folder
+# moved to ~/Downloads → temp cleaned up (also on Ctrl+C).
+# The default link is baked in; a custom one can be set with
+# `update wallvault <google-drive-link>` (stored in
+# ~/.cache/fedora-mactahoe/wallvault.conf, chmod 600).
+function _update_target_wallvault --description '500+ wallpaper vault — code-gated download to Downloads'
+    set -l cfg_dir "$HOME/.cache/fedora-mactahoe"
+    set -l cfg "$cfg_dir/wallvault.conf"
+    set -l default_url "https://drive.usercontent.google.com/download?id=1JOG25rsQKL-e4yx86HLsue8gkzsp9QHW&export=download&confirm=t"
+    set -l vault_url "$default_url"
+
+    # ── set a custom link: update wallvault <google-drive-link> ──
+    if set -q argv[1]
+        set -l id (string match -r 'id=([A-Za-z0-9_-]{20,})' -- "$argv[1]")
+        if set -q id[2]
+            mkdir -p "$cfg_dir"
+            printf 'URL=%s\n' "https://drive.usercontent.google.com/download?id=$id[2]&export=download&confirm=t" > "$cfg"
+            chmod 600 "$cfg"
+            printf "\n  \e[1;32m✓ Wallvault link saved (chmod 600).\e[0m\n"
+            return 0
+        end
+        printf "\n  \e[1;31m✘ Could not find a Google Drive file id in that link.\e[0m\n"
+        printf "  \e[1;37m    Paste the full share link (contains id=…).\e[0m\n"
+        return 1
+    end
+
+    # custom link from config overrides the baked-in default
+    if test -f "$cfg"
+        set -l stored (command grep '^URL=' "$cfg" 2>/dev/null | string replace -r '^URL=' '')
+        if test -n "$stored"
+            set vault_url "$stored"
+        end
+    end
+
+    printf "\n"
+    _update_header "WALLVAULT — 500+ WALLPAPER VAULT"
+    _update_box_text ""
+    _update_box_text "Downloads the wallpaper vault zip into your" "1;37"
+    _update_box_text "Downloads folder, unzipped and ready. A" "1;37"
+    _update_box_text "one-time code gates the download — it is" "1;37"
+    _update_box_text "shown right here, no email needed." "1;37"
+    _update_box_text ""
+    _update_box_text "Continue?   y = yes   n = no (default)" "1;37"
+    _update_box_bottom
+    read -l yn -P "  Your choice [y/N]: "
+    if test $status -ne 0
+        printf "\n  \e[1;31m✘ Cancelled.\e[0m\n"
+        return 1
+    end
+    switch $yn
+        case y Y yes Yes YES
+        case '*'
+            printf "\n  \e[1;31m✘ Cancelled.\e[0m\n"
+            return 1
+    end
+
+    # ── one-time code: shown here, must be re-typed ──
+    set -l code (random 100000 999999)
+    set -l code_start (date +%s)
+    set -l attempts 3
+    set -l cpad (math "61 - 16 - "(string length -- "$code"))
+    printf "\n"
+    _update_box_top
+    _update_box_title "ONE-TIME CODE" "1;37"
+    _update_box_text ""
+    printf '  ║ \e[1;33mone-time code:\e[0m \e[1;36m%s\e[0m%*s║\n' $code $cpad ""
+    _update_box_text ""
+    _update_box_text "Type it below to unlock the download." "1;37"
+    _update_box_text "Valid for 10 minutes — 3 attempts." "1;33"
+    _update_box_bottom
+    while test $attempts -gt 0
+        read -l got -P "  Enter the code: "
+        if test $status -ne 0
+            printf "\n  \e[1;31m✘ Cancelled.\e[0m\n"
+            return 1
+        end
+        if test (math (date +%s) - $code_start) -gt 600
+            printf "\n  \e[1;31m✘ Code expired — run update wallvault again.\e[0m\n"
+            return 1
+        end
+        if test "$got" = "$code"
+            break
+        end
+        set attempts (math $attempts - 1)
+        if test $attempts -gt 0
+            printf "\n  \e[1;31m✘ Wrong code — %d attempt(s) left.\e[0m\n" $attempts
+        else
+            printf "\n  \e[1;31m✘ Wrong code — vault locked. Run again for a new code.\e[0m\n"
+            return 1
+        end
+    end
+
+    # ── temp workspace + Ctrl+C safety ──
+    set -l tbase /tmp
+    if set -q TMPDIR; and test -n "$TMPDIR"
+        set tbase "$TMPDIR"
+    end
+    set -l tmp (mktemp -d "$tbase/wallvault.XXXXXX") 2>/dev/null
+    if test -z "$tmp"; or not test -d "$tmp"
+        printf "\n  \e[1;31m✘ Could not create a temp folder.\e[0m\n"
+        return 1
+    end
+    set -g __wv_abort 0
+    function __wv_cleanup --on-signal INT
+        set -g __wv_abort 1
+    end
+
+    # ── visual download: spinner while curl works ──
+    set -l zip "$tmp/wallvault.zip"
+    curl -sL --max-time 900 -o "$zip" "$vault_url" &
+    set -l cpid $last_pid
+    set -l frames ⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏
+    set -l msgs "Contacting Google Drive..." "Downloading wallpaper vault..." "Almost there..."
+    printf '\e[?25l'
+    set -l i 1
+    set -l j 1
+    while kill -0 $cpid 2>/dev/null
+        if test $__wv_abort -eq 1
+            kill $cpid 2>/dev/null
+            break
+        end
+        printf '\r  \e[1;36m%s\e[0m  \e[1;37m%s\e[0m' $frames[$i] $msgs[$j]
+        sleep 0.2
+        set i (math "$i % 10 + 1")
+        if test $j -lt (count $msgs)
+            set j (math "$j + 1")
+        end
+    end
+    wait $cpid 2>/dev/null
+    set -l dl_rc $status
+    printf '\e[?25h\r  %*s\r' 80 ''
+    if test $__wv_abort -eq 1
+        rm -rf "$tmp" 2>/dev/null
+        functions -e __wv_cleanup 2>/dev/null
+        set -e __wv_abort
+        printf "\n  \e[1;31m✘ Cancelled — nothing was saved.\e[0m\n"
+        return 1
+    end
+    functions -e __wv_cleanup 2>/dev/null
+    set -e __wv_abort
+    if test $dl_rc -ne 0; or not test -s "$zip"
+        rm -rf "$tmp" 2>/dev/null
+        printf "\n  \e[1;31m✘ Download failed — check the link or your connection.\e[0m\n"
+        return 1
+    end
+
+    # ── verify the zip, unzip, move folder to Downloads, clean up ──
+    if not unzip -tqq "$zip" 2>/dev/null
+        rm -rf "$tmp" 2>/dev/null
+        printf "\n  \e[1;31m✘ The download is not a valid zip — link may be wrong.\e[0m\n"
+        return 1
+    end
+    mkdir -p "$tmp/extract"
+    unzip -q "$zip" -d "$tmp/extract" 2>/dev/null
+    set -l folder (find "$tmp/extract" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | head -1)
+    if test -z "$folder"
+        set folder "$tmp/extract"
+    end
+    set -l name "Wallvault-Pack"
+    set -l dest "$HOME/Downloads"
+    mkdir -p "$dest"
+    if test -e "$dest/$name"
+        set name "Wallvault-Pack-"(date +%Y%m%d-%H%M%S)
+    end
+    mv -- "$folder" "$dest/$name" 2>/dev/null
+    if not test -d "$dest/$name"
+        rm -rf "$tmp" 2>/dev/null
+        printf "\n  \e[1;31m✘ Could not move the folder into Downloads.\e[0m\n"
+        return 1
+    end
+    set -l count (find "$dest/$name" -type f 2>/dev/null | wc -l)
+    rm -rf "$tmp" 2>/dev/null
+    printf "\n  \e[1;32m✓ Wallpaper vault ready!\e[0m\n"
+    printf "  \e[1;37m  %s\e[0m\n" "$dest/$name"
+    printf "  \e[1;37m  %s files\e[0m\n" (string trim -- $count)
+    return 0
 end
 
 # ══════════════════════════════════════════════════════════════
@@ -1571,7 +1772,7 @@ function update --description 'Fedora MacTahoe update — Kitty only (menu: quic
             switch $sub2
                 case h help -h --help
                     switch $sub
-                        case icons theme fonts sounds extensions gdm wallpaper pfp gtk videos services defaults dconf notifier clean menu
+                        case icons theme fonts sounds extensions gdm wallpaper pfp gtk videos services defaults dconf notifier clean menu wallvault wall w
                             _update_target_help $sub
                             return 0
                     end
@@ -1618,7 +1819,7 @@ function update --description 'Fedora MacTahoe update — Kitty only (menu: quic
                 if set -q argv[2]
                     set -l t2 (string lower -- "$argv[2]")
                     switch $t2
-                        case icons theme fonts sounds extensions gdm wallpaper pfp gtk videos services defaults dconf notifier clean menu
+                        case icons theme fonts sounds extensions gdm wallpaper pfp gtk videos services defaults dconf notifier clean menu wallvault wall w
                             _update_target_help $t2
                             return 0
                     end
@@ -1669,6 +1870,9 @@ function update --description 'Fedora MacTahoe update — Kitty only (menu: quic
                 return $status
             case clean
                 _update_target_clean
+                return $status
+            case wallvault wall w
+                _update_target_wallvault $argv[2..-1]
                 return $status
             case menu
                 _update_target_menu
