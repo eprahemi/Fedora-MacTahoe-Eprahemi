@@ -2,7 +2,10 @@
 
 # ── Unique installation log ──
 # Generates a unique 8-char session ID and logs ALL output to
-# ~/FedoraTahoe_log.<date>.<time>.<ID>.txt  (sorts chronologically)
+# ~/FedoraTahoe_log.<date>.<time>.<ID> ( TAG ).txt  (sorts chronologically)
+# TAG = who ran this: BASH / MANUAL / UPDATE-QUICK / UPDATE-FULL /
+# UPDATE-<target> — same tag logic as bootstrap.sh (which creates the log
+# first on the curl|bash path and hands it over via _FED_LOG).
 #
 # If bootstrap.sh already created a log (env _FED_LOG is set), skip this
 # block so running via bootstrap.sh → one .txt file, not two.
