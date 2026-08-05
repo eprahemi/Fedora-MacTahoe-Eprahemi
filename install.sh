@@ -1473,7 +1473,7 @@ install_rpm_packages() {
     kdenlive pavucontrol alacarte \
     nautilus-python gnome-tweaks gnome-characters \
     adwaita-icon-theme adwaita-icon-theme-legacy \
-    ImageMagick fzf ripgrep jq unzip curl wget git \
+    ImageMagick fzf ripgrep jq 7zip unzip curl wget git \
     bat cmatrix qrencode podman python3-pip speedtest-cli xdg-utils \
     libreoffice-writer libreoffice-calc libreoffice-impress \
     libheif-freeworld libheif-tools \

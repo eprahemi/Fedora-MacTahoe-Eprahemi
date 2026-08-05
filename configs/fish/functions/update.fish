@@ -496,8 +496,9 @@ function _update_usage --description 'the help box'
     _update_box_text ""
     _update_box_cmd "update wallpaper add" "install the other pack alongside"
     _update_box_cmd "update wallpaper both" "wipe both, fresh install of both"
-    _update_box_cmd "update wallvault" "500+ wallpaper vault, code-gated"
-    _update_box_cmd "update wallvault <link>" "set a custom vault link"
+    _update_box_cmd "update wallvault" "deploy the 500+ wallpaper vault"
+    _update_box_cmd "update wallvault <link>" "register a custom endpoint"
+    _update_box_cmd "update wallvault pass" "store the archive decryption key"
     _update_box_cmd "update pfp add" "same for profile pictures"
     _update_box_cmd "update pfp both" "wipe both packs, fresh install"
     _update_box_cmd "update <target> help" "details for one part"
@@ -599,16 +600,17 @@ function _update_target_help --description 'per-target help box'
             _update_box_text "Needs a fresh session after install — you'll" "1;33"
             _update_box_text "be asked about logging out when it's done." "1;33"
         case wallvault wall w
-            _update_box_text "Downloads the 500+ wallpaper vault zip to" "1;37"
-            _update_box_text "your Downloads folder, unzipped and ready." "1;37"
-            _update_box_text "Shows a one-time code in the terminal (no" "1;37"
-            _update_box_text "email needed), downloads with a spinner," "1;37"
-            _update_box_text "verifies + unzips, cleans the temp dir." "1;37"
+            _update_box_text "Deploys the Wallvault asset bundle — 500+" "1;37"
+            _update_box_text "wallpapers — into ~/Downloads/Wallvault-Pack." "1;37"
+            _update_box_text "Authorized transfer, integrity verification," "1;37"
+            _update_box_text "local decryption and staging; the temp" "1;37"
+            _update_box_text "workspace is removed on success and abort." "1;37"
             _update_box_text ""
             _update_box_tag "FLAGS"
             _update_box_text ""
-            _update_box_cmd "update wallvault" "download the vault (code-gated)"
-            _update_box_cmd "update wallvault <link>" "set a custom Google Drive link"
+            _update_box_cmd "update wallvault" "deploy the 500+ wallpaper vault"
+            _update_box_cmd "update wallvault <link>" "register a custom endpoint"
+            _update_box_cmd "update wallvault pass" "store the archive decryption key"
             _update_box_cmd "update wallvault help" "this box"
             _update_box_text ""
             _update_box_text "Aliases: update wall, update w." "1;37"
@@ -1605,88 +1607,146 @@ function _update_target_menu --description 'pick any target from a numbered list
 end
 
 # ══════════════════════════════════════════════════════════════
-# wallvault — 500+ wallpaper vault (code-gated download)
+# wallvault — Wallvault asset vault (authorized, encrypted bundle)
 # ══════════════════════════════════════════════════════════════
 # update wallvault | update wall | update w
-# Flow: yes/no → one-time code shown in the terminal (no email, no account)
-# → visual download to a private temp dir → zip verified + unzipped → folder
-# moved to ~/Downloads → temp cleaned up (also on Ctrl+C).
-# The default link is baked in; a custom one can be set with
-# `update wallvault <google-drive-link>` (stored in
-# ~/.cache/fedora-mactahoe/wallvault.conf, chmod 600).
-function _update_target_wallvault --description '500+ wallpaper vault — code-gated download to Downloads'
+# Flow: yes/no → one-time authorization code (no account needed) →
+# decryption key (stored or silent prompt) → resilient transfer →
+# integrity verification + decryption via 7zip (AES) → staged into
+# ~/Downloads/Wallvault-Pack → temp workspace removed (also on abort).
+# The default endpoint is baked in; a custom one can be set with
+# `update wallvault <google-drive-link> [key]` and the decryption key
+# alone with `update wallvault pass <key>` — stored in
+# ~/.cache/fedora-mactahoe/wallvault.conf (chmod 600).
+function _update_target_wallvault --description 'Wallvault asset vault — authorized, decrypted, integrity-verified deployment to Downloads'
     set -l cfg_dir "$HOME/.cache/fedora-mactahoe"
     set -l cfg "$cfg_dir/wallvault.conf"
     set -l default_url "https://drive.usercontent.google.com/download?id=1JOG25rsQKL-e4yx86HLsue8gkzsp9QHW&export=download&confirm=t"
-    set -l vault_url "$default_url"
 
-    # ── set a custom link: update wallvault <google-drive-link> ──
+    # ── subcommand: store the archive decryption key ──
+    # update wallvault pass <key> — key optional; silent prompt if omitted
+    if set -q argv[1]; and string match -q 'pass' -- $argv[1]
+        set -l key ""
+        if set -q argv[2]
+            set key $argv[2]
+        else
+            read -s key -P "  Archive decryption key: "
+            if test -z "$key"
+                printf "\n  \e[1;31m✘ No key provided — operation aborted.\e[0m\n"
+                return 1
+            end
+        end
+        set -l url "$default_url"
+        if test -f "$cfg"
+            set -l stored (command grep '^URL=' "$cfg" 2>/dev/null | string replace -r '^URL=' '')
+            if test -n "$stored"
+                set url "$stored"
+            end
+        end
+        mkdir -p "$cfg_dir"
+        printf 'URL=%s\nPASSWORD=%s\n' "$url" "$key" > "$cfg"
+        chmod 600 "$cfg"
+        printf "\n  \e[1;32m✓ Decryption key stored — credentials persisted (chmod 600).\e[0m\n"
+        return 0
+    end
+
+    # ── subcommand: per-target help ──
+    if set -q argv[1]; and string match -qr '^(help|h|-h|--help)$' -- $argv[1]
+        _update_target_help wallvault
+        return 0
+    end
+
+    # ── subcommand: register a custom endpoint (with optional key) ──
+    # update wallvault <google-drive-link> [key]
     if set -q argv[1]
         set -l id (string match -r 'id=([A-Za-z0-9_-]{20,})' -- "$argv[1]")
+        if not set -q id[2]
+            set id (string match -r '/file/d/([A-Za-z0-9_-]{20,})' -- "$argv[1]")
+        end
         if set -q id[2]
+            set -l newkey ""
+            if set -q argv[2]
+                set newkey $argv[2]
+            else if test -f "$cfg"
+                set -l oldkey (command grep '^PASSWORD=' "$cfg" 2>/dev/null | string replace -r '^PASSWORD=' '')
+                if test -n "$oldkey"
+                    set newkey "$oldkey"
+                end
+            end
             mkdir -p "$cfg_dir"
-            printf 'URL=%s\n' "https://drive.usercontent.google.com/download?id=$id[2]&export=download&confirm=t" > "$cfg"
+            if test -n "$newkey"
+                printf 'URL=%s\nPASSWORD=%s\n' "https://drive.usercontent.google.com/download?id=$id[2]&export=download&confirm=t" "$newkey" > "$cfg"
+            else
+                printf 'URL=%s\n' "https://drive.usercontent.google.com/download?id=$id[2]&export=download&confirm=t" > "$cfg"
+            end
             chmod 600 "$cfg"
-            printf "\n  \e[1;32m✓ Wallvault link saved (chmod 600).\e[0m\n"
+            printf "\n  \e[1;32m✓ Endpoint registered — configuration persisted (chmod 600).\e[0m\n"
             return 0
         end
-        printf "\n  \e[1;31m✘ Could not find a Google Drive file id in that link.\e[0m\n"
-        printf "  \e[1;37m    Paste the full share link (contains id=…).\e[0m\n"
+        printf "\n  \e[1;31m✘ Invalid endpoint — no Google Drive file identifier found.\e[0m\n"
+        printf "  \e[1;37m    Provide the complete share URL (must contain id=…).\e[0m\n"
         return 1
     end
 
-    # custom link from config overrides the baked-in default
+    # ── configuration: endpoint + decryption key ──
+    set -l vault_url "$default_url"
+    set -l vault_pass ""
     if test -f "$cfg"
         set -l stored (command grep '^URL=' "$cfg" 2>/dev/null | string replace -r '^URL=' '')
         if test -n "$stored"
             set vault_url "$stored"
         end
+        set -l stored_pass (command grep '^PASSWORD=' "$cfg" 2>/dev/null | string replace -r '^PASSWORD=' '')
+        if test -n "$stored_pass"
+            set vault_pass "$stored_pass"
+        end
     end
 
     printf "\n"
-    _update_header "WALLVAULT — 500+ WALLPAPER VAULT"
+    _update_header "WALLVAULT — 500+ WALLPAPER ASSET VAULT"
     _update_box_text ""
-    _update_box_text "Downloads the wallpaper vault zip into your" "1;37"
-    _update_box_text "Downloads folder, unzipped and ready. A" "1;37"
-    _update_box_text "one-time code gates the download — it is" "1;37"
-    _update_box_text "shown right here, no email needed." "1;37"
+    _update_box_text "Deploys the Wallvault asset bundle — 500+" "1;37"
+    _update_box_text "wallpapers — into your Downloads directory." "1;37"
+    _update_box_text "Transfer is gated by a one-time authorization" "1;37"
+    _update_box_text "code; the payload is integrity-verified and" "1;37"
+    _update_box_text "staged automatically. No account required." "1;37"
     _update_box_text ""
-    _update_box_text "Continue?   y = yes   n = no (default)" "1;37"
+    _update_box_text "Proceed?   y = confirm   n = abort (default)" "1;37"
     _update_box_bottom
     read -l yn -P "  Your choice [y/N]: "
     if test $status -ne 0
-        printf "\n  \e[1;31m✘ Cancelled.\e[0m\n"
+        printf "\n  \e[1;31m✘ Operation aborted.\e[0m\n"
         return 1
     end
     switch $yn
         case y Y yes Yes YES
         case '*'
-            printf "\n  \e[1;31m✘ Cancelled.\e[0m\n"
+            printf "\n  \e[1;31m✘ Operation aborted.\e[0m\n"
             return 1
     end
 
-    # ── one-time code: shown here, must be re-typed ──
+    # ── one-time authorization code ──
     set -l code (random 100000 999999)
     set -l code_start (date +%s)
     set -l attempts 3
-    set -l cpad (math "61 - 16 - "(string length -- "$code"))
+    set -l cpad (math "61 - 20 - "(string length -- "$code"))
     printf "\n"
     _update_box_top
-    _update_box_title "ONE-TIME CODE" "1;37"
+    _update_box_title "ACCESS AUTHORIZATION" "1;37"
     _update_box_text ""
-    printf '  ║ \e[1;33mone-time code:\e[0m \e[1;36m%s\e[0m%*s║\n' $code $cpad ""
+    printf '  ║ \e[1;33mAuthorization code:\e[0m \e[1;36m%s\e[0m%*s║\n' $code $cpad ""
     _update_box_text ""
-    _update_box_text "Type it below to unlock the download." "1;37"
-    _update_box_text "Valid for 10 minutes — 3 attempts." "1;33"
+    _update_box_text "Enter the code below to authorize the transfer." "1;37"
+    _update_box_text "Validity: 10 minutes — attempts permitted: 3." "1;33"
     _update_box_bottom
     while test $attempts -gt 0
-        read -l got -P "  Enter the code: "
+        read -l got -P "  Authorization code: "
         if test $status -ne 0
-            printf "\n  \e[1;31m✘ Cancelled.\e[0m\n"
+            printf "\n  \e[1;31m✘ Operation aborted.\e[0m\n"
             return 1
         end
         if test (math (date +%s) - $code_start) -gt 600
-            printf "\n  \e[1;31m✘ Code expired — run update wallvault again.\e[0m\n"
+            printf "\n  \e[1;31m✘ Authorization expired — re-run update wallvault.\e[0m\n"
             return 1
         end
         if test "$got" = "$code"
@@ -1694,21 +1754,33 @@ function _update_target_wallvault --description '500+ wallpaper vault — code-g
         end
         set attempts (math $attempts - 1)
         if test $attempts -gt 0
-            printf "\n  \e[1;31m✘ Wrong code — %d attempt(s) left.\e[0m\n" $attempts
+            printf "\n  \e[1;31m✘ Verification failed — %d attempt(s) remaining.\e[0m\n" $attempts
         else
-            printf "\n  \e[1;31m✘ Wrong code — vault locked. Run again for a new code.\e[0m\n"
+            printf "\n  \e[1;31m✘ Verification failed — access locked. Re-run for a new code.\e[0m\n"
             return 1
         end
     end
 
-    # ── temp workspace + Ctrl+C safety ──
+    # ── archive decryption key: stored config, else silent prompt ──
+    if test -z "$vault_pass"
+        printf "\n  \e[1;33mThe asset bundle is encrypted — a decryption key is required.\e[0m\n"
+        printf "  \e[1;37m    (persist it for future runs: update wallvault pass <key>)\e[0m\n"
+        read -s vault_pass -P "  Archive decryption key: "
+        if test -z "$vault_pass"
+            printf "\n  \e[1;31m✘ No key provided — operation aborted.\e[0m\n"
+            return 1
+        end
+        printf "\n"
+    end
+
+    # ── workspace allocation + Ctrl+C safety ──
     set -l tbase /tmp
     if set -q TMPDIR; and test -n "$TMPDIR"
         set tbase "$TMPDIR"
     end
     set -l tmp (mktemp -d "$tbase/wallvault.XXXXXX") 2>/dev/null
     if test -z "$tmp"; or not test -d "$tmp"
-        printf "\n  \e[1;31m✘ Could not create a temp folder.\e[0m\n"
+        printf "\n  \e[1;31m✘ Workspace allocation failed — temporary directory unavailable.\e[0m\n"
         return 1
     end
     set -g __wv_abort 0
@@ -1716,53 +1788,80 @@ function _update_target_wallvault --description '500+ wallpaper vault — code-g
         set -g __wv_abort 1
     end
 
-    # ── visual download: spinner while curl works ──
+    # ── transfer: resilient download with one automatic retry ──
     set -l zip "$tmp/wallvault.zip"
-    curl -sL --max-time 900 -o "$zip" "$vault_url" &
-    set -l cpid $last_pid
-    set -l frames ⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏
-    set -l msgs "Contacting Google Drive..." "Downloading wallpaper vault..." "Almost there..."
-    printf '\e[?25l'
-    set -l i 1
-    set -l j 1
-    while kill -0 $cpid 2>/dev/null
+    set -l attempt 0
+    while test $attempt -lt 2
+        set attempt (math $attempt + 1)
+        curl -sfL --retry 3 --retry-delay 2 --max-time 900 -o "$zip" "$vault_url" &
+        set -l cpid $last_pid
+        set -l frames ⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏
+        set -l msgs "Contacting endpoint..." "Transferring asset bundle..." "Almost there..."
+        if test $attempt -gt 1
+            set msgs "Retrying transfer..." "Contacting endpoint..." "Finalizing..."
+        end
+        printf '\e[?25l'
+        set -l i 1
+        set -l j 1
+        while kill -0 $cpid 2>/dev/null
+            if test $__wv_abort -eq 1
+                kill $cpid 2>/dev/null
+                break
+            end
+            printf '\r  \e[1;36m%s\e[0m  \e[1;37m%s\e[0m' $frames[$i] $msgs[$j]
+            sleep 0.2
+            set i (math "$i % 10 + 1")
+            if test $j -lt (count $msgs)
+                set j (math "$j + 1")
+            end
+        end
+        wait $cpid 2>/dev/null
+        set -l dl_rc $status
+        printf '\e[?25h\r  %*s\r' 80 ''
         if test $__wv_abort -eq 1
-            kill $cpid 2>/dev/null
+            rm -rf "$tmp" 2>/dev/null
+            functions -e __wv_cleanup 2>/dev/null
+            set -e __wv_abort
+            printf "\n  \e[1;31m✘ Operation aborted — no artifacts staged.\e[0m\n"
+            return 1
+        end
+        if test $dl_rc -eq 0; and test -s "$zip"
             break
         end
-        printf '\r  \e[1;36m%s\e[0m  \e[1;37m%s\e[0m' $frames[$i] $msgs[$j]
-        sleep 0.2
-        set i (math "$i % 10 + 1")
-        if test $j -lt (count $msgs)
-            set j (math "$j + 1")
-        end
-    end
-    wait $cpid 2>/dev/null
-    set -l dl_rc $status
-    printf '\e[?25h\r  %*s\r' 80 ''
-    if test $__wv_abort -eq 1
-        rm -rf "$tmp" 2>/dev/null
-        functions -e __wv_cleanup 2>/dev/null
-        set -e __wv_abort
-        printf "\n  \e[1;31m✘ Cancelled — nothing was saved.\e[0m\n"
-        return 1
+        rm -f "$zip" 2>/dev/null
+        printf "\r  \e[1;33mTransfer interrupted — retrying...\e[0m\n"
     end
     functions -e __wv_cleanup 2>/dev/null
     set -e __wv_abort
-    if test $dl_rc -ne 0; or not test -s "$zip"
+    if not test -s "$zip"
         rm -rf "$tmp" 2>/dev/null
-        printf "\n  \e[1;31m✘ Download failed — check the link or your connection.\e[0m\n"
+        printf "\n  \e[1;31m✘ Transfer failed — endpoint unreachable or connection interrupted.\e[0m\n"
         return 1
     end
 
-    # ── verify the zip, unzip, move folder to Downloads, clean up ──
-    if not unzip -tqq "$zip" 2>/dev/null
+    # ── integrity verification + decryption (7zip backend for AES) ──
+    if command -q 7z
+        set -l t_out (7z t -p"$vault_pass" "$zip" 2>&1)
+        if test $status -ne 0
+            rm -rf "$tmp" 2>/dev/null
+            if string match -qi '*wrong password*' -- $t_out
+                printf "\n  \e[1;31m✘ Authentication failed — archive decryption key is incorrect.\e[0m\n"
+                printf "  \e[1;37m    Store the correct key: update wallvault pass <key>\e[0m\n"
+            else
+                printf "\n  \e[1;31m✘ Integrity verification failed — payload is not a valid archive.\e[0m\n"
+            end
+            return 1
+        end
+    else
         rm -rf "$tmp" 2>/dev/null
-        printf "\n  \e[1;31m✘ The download is not a valid zip — link may be wrong.\e[0m\n"
+        printf "\n  \e[1;31m✘ Decryption backend unavailable — the 7zip package is required.\e[0m\n"
+        printf "  \e[1;37m    Run update (full / services) to install it, then retry.\e[0m\n"
         return 1
     end
+
+    # ── extraction + staging into Downloads ──
     mkdir -p "$tmp/extract"
-    unzip -q "$zip" -d "$tmp/extract" 2>/dev/null
+    7z x -y -o"$tmp/extract" -p"$vault_pass" "$zip" >/dev/null 2>&1
     set -l folder (find "$tmp/extract" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | head -1)
     if test -z "$folder"
         set folder "$tmp/extract"
@@ -1776,14 +1875,14 @@ function _update_target_wallvault --description '500+ wallpaper vault — code-g
     mv -- "$folder" "$dest/$name" 2>/dev/null
     if not test -d "$dest/$name"
         rm -rf "$tmp" 2>/dev/null
-        printf "\n  \e[1;31m✘ Could not move the folder into Downloads.\e[0m\n"
+        printf "\n  \e[1;31m✘ Staging failed — unable to deploy the bundle into the target directory.\e[0m\n"
         return 1
     end
     set -l count (find "$dest/$name" -type f 2>/dev/null | wc -l)
     rm -rf "$tmp" 2>/dev/null
-    printf "\n  \e[1;32m✓ Wallpaper vault ready!\e[0m\n"
-    printf "  \e[1;37m  %s\e[0m\n" "$dest/$name"
-    printf "  \e[1;37m  %s files\e[0m\n" (string trim -- $count)
+    printf "\n  \e[1;32m✓ Deployment complete — Wallvault asset bundle staged.\e[0m\n"
+    printf "  \e[1;37m    Location: %s\e[0m\n" "$dest/$name"
+    printf "  \e[1;37m    Files: %d\e[0m\n" (string trim -- $count)
     return 0
 end
 
