@@ -5,6 +5,7 @@
 #   update           → open the menu
 #   update check     → status at a glance, no prompts
 #   update configs   → refresh kitty, fish, updater, fastfetch files only
+#   update quick     → incremental update, saved answers, no prompts
 #   update full      → full reinstall from scratch
 #   update log       → your update history
 #   update menu      → pick any target from a numbered list
@@ -299,9 +300,15 @@ function _update_log_add --description 'append one line to the update history'
     set -l frm $argv[2]
     set -l to $argv[3]
     set -l res $argv[4]
+    set -l tagl ""
+    # optional 5th arg: the entry-method tag (UPDATE-QUICK, UPDATE-FULL,
+    # UPDATE-CONFIG, UPDATE-ICONS, ...) — same marker as the log filename
+    if set -q argv[5]
+        set tagl " ( "$argv[5]" )"
+    end
     set -l logf "$HOME/.cache/fedora-mactahoe/update-history.log"
     mkdir -p "$HOME/.cache/fedora-mactahoe"
-    printf '%s | %s | %s → %s | %s\n' (date "+%Y-%m-%d %H:%M") $mode $frm $to $res >> "$logf"
+    printf '%s | %s%s | %s → %s | %s\n' (date "+%Y-%m-%d %H:%M") $mode $tagl $frm $to $res >> "$logf"
 end
 
 function _update_last_update --description 'the most recent history line, if any'
@@ -474,6 +481,7 @@ function _update_usage --description 'the help box'
     _update_box_cmd "update" "open the updater menu"
     _update_box_cmd "update check" "status at a glance, no prompts"
     _update_box_cmd "update configs" "kitty · fish · updater · fastfetch"
+    _update_box_cmd "update quick" "incremental, saved answers, no prompts"
     _update_box_cmd "update full" "full reinstall from scratch"
     _update_box_cmd "update log" "your update history"
     _update_box_cmd "update menu" "pick any target from a list"
@@ -761,24 +769,24 @@ function _update_run --description 'fetch + verify + run the real installer; log
     end
 
     if test "$mode" = full
-        env UPDATE_MODE=full bash "$tmpfile"
+        env UPDATE_MODE=full INSTALL_SOURCE=update-$label bash "$tmpfile"
     else
-        env UPDATE_MODE=incremental bash "$tmpfile"
+        env UPDATE_MODE=incremental INSTALL_SOURCE=update-$label bash "$tmpfile"
     end
     set -l code $status
     rm -f "$tmpfile"
     if test $code -eq 0
-        _update_log_add $label $frm $to ok
+        _update_log_add $label $frm $to ok (string upper -- "update-$label")
         echo "$to" > "$HOME/.cache/fedora-mactahoe/last-notified-version"
         printf "\n  \e[1;32m✅ Update complete — you're on version $to.\e[0m\n"
     else if test $code -eq 42; or test $code -eq 130
         # 42 = installer closed itself (60s no-answer auto-close),
         # 130 = user force-closed with Ctrl+C — neither is a failure.
-        _update_log_add $label $frm $to close
+        _update_log_add $label $frm $to close (string upper -- "update-$label")
         printf "\n  \e[1;33m⏹ Installer closed before finishing (exit $code) — nothing was marked done.\e[0m\n"
         printf "  \e[1;33mRun 'update' again when you're ready — it continues where it left off.\e[0m\n"
     else
-        _update_log_add $label $frm $to fail
+        _update_log_add $label $frm $to fail (string upper -- "update-$label")
         printf "\n  \e[1;31m✘ Update failed (exit $code).\e[0m\n"
         printf "  \e[1;33mRun 'update' again — it continues where it left off.\e[0m\n"
     end
@@ -1016,7 +1024,7 @@ function _update_configs_mode --description 'refresh kitty, fish, updater, stars
         end
     end
     rm -rf "$tmp"
-    _update_log_add configs "—" "—" ok
+    _update_log_add configs "—" "—" ok UPDATE-CONFIG
     printf "\n  \e[1;32m✓ Configs refreshed — kitty, fish, updater and fastfetch are current.\e[0m\n"
     return 0
 end
@@ -1043,22 +1051,56 @@ function _update_run_step --description 'run installer steps from a bundle clone
     set -l tmp "$argv[1]"
     set -l steps "$argv[2]"
     set -e argv[1 2]
+    # map the step name(s) to the same entry-method tag used in the log
+    # filename — e.g. install_icons → ( UPDATE-ICONS )
+    set -l tag icons
+    switch $steps
+        case 'install_mactahoe_theme*'
+            set tag theme
+        case 'install_font*'
+            set tag fonts
+        case 'install_sounds*'
+            set tag sounds
+        case 'install_extensions*'
+            set tag extensions
+        case 'setup_gdm*'
+            set tag gdm
+        case 'apply_wallpapers*'
+            set tag wallpaper
+        case 'install_custom_avatars*'
+            set tag pfp
+        case 'setup_flatpak_theme*'
+            set tag gtk
+        case 'download_optional_videos*'
+            set tag videos
+        case 'optimize_system_resources*'
+            set tag services
+        case 'apply_desktop_entries*'
+            set tag defaults
+        case 'apply_dconf*'
+            set tag dconf
+        case 'install_updater*'
+            set tag notifier
+        case 'clean*'
+            set tag clean
+    end
     set -l cmd env UPDATE_STEPS=$steps
     for kv in $argv
         set -a cmd $kv
     end
+    set -a cmd "INSTALL_SOURCE=update-$tag"
     set -a cmd bash "$tmp/install.sh"
     $cmd
     set -l code $status
     if test $code -eq 0
-        _update_log_add $steps "—" "—" ok
+        _update_log_add $steps "—" "—" ok (string upper -- "update-$tag")
         printf "\n  \e[1;32m✓ %s — done.\e[0m\n" $steps
     else if test $code -eq 130
         # Ctrl+C — the installer was interrupted mid-run
-        _update_log_add $steps "—" "—" cancel
+        _update_log_add $steps "—" "—" cancel (string upper -- "update-$tag")
         printf "\n  \e[1;33m✘ Cancelled — nothing was changed.\e[0m\n" $steps
     else
-        _update_log_add $steps "—" "—" fail
+        _update_log_add $steps "—" "—" fail (string upper -- "update-$tag")
         printf "\n  \e[1;31m✘ %s failed (exit $code).\e[0m\n" $steps
     end
     # safety: only ever delete a bundle that really lives in /tmp
@@ -1511,7 +1553,7 @@ function _update_target_clean --description 'flush caches and trim logs'
     _update_box_text "Made by eprahemi — Fedora MacTahoe © 2026" "1;37"
     _update_box_bottom
     printf "\n"
-    _update_log_add clean "—" "—" ok
+    _update_log_add clean "—" "—" ok UPDATE-CLEAN
     return 0
 end
 
@@ -1826,6 +1868,16 @@ function update --description 'Fedora MacTahoe update — Kitty only (menu: quic
                 end
                 _update_usage
                 return 0
+            case quick
+                # same as menu [1] — incremental update with saved answers,
+                # no prompts; logged as ( UPDATE-QUICK )
+                if not _update_loading 8
+                    return 1
+                end
+                set -l current_ver (_update_state_version)
+                set -l latest_ver (_update_latest_version)
+                _update_run incremental quick $current_ver $latest_ver
+                return $status
             case icons
                 _update_target_icons
                 return $status

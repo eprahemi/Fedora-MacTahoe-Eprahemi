@@ -300,6 +300,11 @@ if [ "${UPDATE_MODE:-}" != "incremental" ]; then
     rm -f "$HOME/.cache/fedora-mactahoe/install-state.json"
 fi
 
+# Tag the log with the entry method. Fish update paths already pass
+# INSTALL_SOURCE (update-full / update-quick / update-<target>); anything
+# else reaching bootstrap is the copy-paste route → ( BASH ).
+export INSTALL_SOURCE="${INSTALL_SOURCE:-bash}"
+
 cd "$TMP"
 bash install.sh && _inst_rc=0 || _inst_rc=$?
 # 42 = the installer closed itself (60s no-key/no-answer auto-close) —

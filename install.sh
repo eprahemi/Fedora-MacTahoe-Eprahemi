@@ -6,11 +6,26 @@
 #
 # If bootstrap.sh already created a log (env _FED_LOG is set), skip this
 # block so running via bootstrap.sh → one .txt file, not two.
+#
+# ── Install/update method tag ──
+# Who invoked the installer: the bootstrap one-liner (BASH), a direct
+# ./install.sh run (MANUAL), or an update path (UPDATE-QUICK /
+# UPDATE-FULL / UPDATE-CONFIG / UPDATE-<target>). Stamped into the log
+# filename ( … ( TAG ).txt), the log header and install-state.json.
+_FED_METHOD="${INSTALL_SOURCE:-manual}"
+_FED_TAG=""
+case "$_FED_METHOD" in
+  bash)        _FED_TAG="BASH" ;;
+  manual)      _FED_TAG="MANUAL" ;;
+  update-*)    _FED_TAG=$(printf '%s' "$_FED_METHOD" | tr '[:lower:]' '[:upper:]') ;;
+esac
+_FED_TAG_EXT=""
+[ -n "$_FED_TAG" ] && _FED_TAG_EXT=" ( $_FED_TAG )"
 if [ -z "${_FED_LOG:-}" ]; then
   _FED_ID=$(tr -dc 'a-zA-Z0-9' < /dev/urandom 2>/dev/null | head -c 8)
   [ -z "$_FED_ID" ] && _FED_ID="X$(date +%s 2>/dev/null | sha256sum 2>/dev/null | head -c7 || echo "00000001")"
   _FED_DATE_STAMP=$(date '+%Y-%m-%d.%H-%M-%S' 2>/dev/null || echo "unknown")
-  _FED_LOG="$HOME/FedoraTahoe_log.${_FED_DATE_STAMP}.${_FED_ID}.txt"
+  _FED_LOG="$HOME/FedoraTahoe_log.${_FED_DATE_STAMP}.${_FED_ID}${_FED_TAG_EXT}.txt"
   touch "$_FED_LOG" 2>/dev/null || true
   # Preserve original stdout/stderr, then redirect all output to both terminal and log
   exec 5>&1 6>&2
@@ -94,7 +109,7 @@ _print_log_header() {
   _user=$(whoami 2>/dev/null || echo "?")
   _date=$(date '+%Y-%m-%d %H:%M:%S' 2>/dev/null || echo "?")
   _sid="${_FED_ID:-?}"
-  _log_name="FedoraTahoe_log.${_FED_DATE_STAMP:-?}.${_FED_ID:-?}.txt"
+  _log_name="FedoraTahoe_log.${_FED_DATE_STAMP:-?}.${_FED_ID:-?}${_FED_TAG_EXT:-}.txt"
 
   # OS
   _os="?"
@@ -186,6 +201,7 @@ _print_log_header() {
   _fed_header_row "Uptime"     "$_uptime"
   _fed_header_row "Date"       "$_date"
   _fed_header_row "Session ID" "$_sid"
+  _fed_header_row "Method"     "${_FED_TAG:-(unknown)}"
   _fed_header_row "Log"        "$_log_name"
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
   echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
@@ -396,6 +412,23 @@ for pid, pdata in d.get('prompts', {}).items():
 print('; '.join(lines))
 " 2>/dev/null || true)
     [ -n "$_STATE_EVAL" ] && eval "$_STATE_EVAL" 2>/dev/null || true
+  fi
+fi
+
+# ── Stamp who ran the installer (BASH / MANUAL / UPDATE-*) into state ──
+STATE_JSON=$(echo "$STATE_JSON" | python3 -c '
+import sys, json
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    d = {"version": "0.0", "steps": {}, "prompts": {}}
+d["source"] = "'"$_FED_TAG"'"
+print(json.dumps(d))
+' 2>/dev/null || echo "$STATE_JSON")
+if [ -f "$STATE_FILE" ]; then
+  _SOURCE_TMP=$(mktemp "$STATE_DIR/state.XXXXXX" 2>/dev/null || echo "")
+  if [ -n "$_SOURCE_TMP" ]; then
+    echo "$STATE_JSON" > "$_SOURCE_TMP" 2>/dev/null && mv "$_SOURCE_TMP" "$STATE_FILE" 2>/dev/null || true
   fi
 fi
 

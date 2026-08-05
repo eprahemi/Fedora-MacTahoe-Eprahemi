@@ -1,8 +1,16 @@
 {
-  "latest_version": "3.4",
-  "bootstrap_sha256": "a435e91a79f93cc67f99f7adb75656288653f57b9bfa823de23d17a658753966",
-  "update_sha256": "7e28a81a28c548746228d86c57104733bc4e59ce151a56ee54d0633473f3e78c",
+  "latest_version": "3.5",
+  "bootstrap_sha256": "68e49b7277d931ad8c4bfecb2d2c3470efef2a0d9dcd56cd9e839f5b4788f069",
+  "update_sha256": "c374a5fbccb029c9645dd342d6add62c7a961b2c2ff5534315e456b2ea879e86",
   "changelog": [
+    {
+      "version": "3.5",
+      "changes": [
+        "Every install/update run now stamps WHO ran it into the log filename: FedoraTahoe_log.<date>.<time>.<ID> ( TAG ).txt — ( BASH ) for the curl|bash one-liner, ( MANUAL ) for running install.sh directly, ( UPDATE-QUICK ) / ( UPDATE-FULL ) / ( UPDATE-CONFIG ) and one tag per target (UPDATE-ICONS, UPDATE-THEME, UPDATE-FONTS, UPDATE-SOUNDS, UPDATE-EXTENSIONS, UPDATE-GDM, UPDATE-WALLPAPER, UPDATE-PFP, UPDATE-GTK, UPDATE-VIDEOS, UPDATE-SERVICES, UPDATE-DEFAULTS, UPDATE-DCONF, UPDATE-NOTIFIER, UPDATE-CLEAN, UPDATE-WALLVAULT) for the updater",
+        "The same tag appears in the log header box (new Method row), is saved into install-state.json (source field) and shows up in the update log history — one quick look tells you how every run was started",
+        "New command: update quick — the incremental update with your saved answers, no prompts, straight from the shell (identical to menu [1])"
+      ]
+    },
     {
       "version": "3.4",
       "changes": [
