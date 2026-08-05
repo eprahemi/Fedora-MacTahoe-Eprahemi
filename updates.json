@@ -1,8 +1,16 @@
 {
-  "latest_version": "3.5",
-  "bootstrap_sha256": "68e49b7277d931ad8c4bfecb2d2c3470efef2a0d9dcd56cd9e839f5b4788f069",
-  "update_sha256": "c374a5fbccb029c9645dd342d6add62c7a961b2c2ff5534315e456b2ea879e86",
+  "latest_version": "3.5.1",
+  "bootstrap_sha256": "447d511166596db254cc20156736056e3e6d48c5286422e07cffed79464e85ee",
+  "update_sha256": "1c7e89929acfd8fa56b41ebbd788f998ccaa0ea5faa2b87db4394d0d4a5bde27",
   "changelog": [
+    {
+      "version": "3.5.1",
+      "changes": [
+        "HOTFIX — the ( TAG ) now lands in the log filename on EVERY path. 3.5 stamped install.sh-created logs, but the bootstrap one-liner (curl|bash) creates the log itself and hands it to the installer — so those files came out untagged. Bootstrap now computes the same tag (BASH for the one-liner, UPDATE-FULL / UPDATE-QUICK when the updater drives it) and stamps it into its own log name, keeping filename and installer header consistent",
+        "update quick dropped its 8-second loading ritual — quick means quick. It now runs exactly like menu [1]: straight to the incremental update, no prompts, no spinner",
+        "Both fingerprints re-pinned (bootstrap.sh and update.fish changed)"
+      ]
+    },
     {
       "version": "3.5",
       "changes": [

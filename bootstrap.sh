@@ -7,11 +7,26 @@
 
 # ── Bootstrap log ──
 # Generates a unique 8-char session ID and logs ALL output to
-# ~/FedoraTahoe_log.<date>.<time>.<ID>.txt  (sorts chronologically)
+# ~/FedoraTahoe_log.<date>.<time>.<ID> ( TAG ).txt  (sorts chronologically)
+#
+# The tag stamps WHO ran this — ( BASH ) for the curl|bash one-liner,
+# ( UPDATE-FULL ) / ( UPDATE-QUICK ) when the updater drives it. update.fish
+# already exports INSTALL_SOURCE; anything else reaching bootstrap is the
+# copy-paste route → ( BASH ). Same logic and names as install.sh so the
+# bootstrap-made log and the installer header stay consistent.
+export INSTALL_SOURCE="${INSTALL_SOURCE:-bash}"
+_FED_TAG=""
+case "$INSTALL_SOURCE" in
+  bash)     _FED_TAG="BASH" ;;
+  manual)   _FED_TAG="MANUAL" ;;
+  update-*) _FED_TAG=$(printf '%s' "$INSTALL_SOURCE" | tr '[:lower:]' '[:upper:]') ;;
+esac
+_FED_TAG_EXT=""
+[ -n "$_FED_TAG" ] && _FED_TAG_EXT=" ( $_FED_TAG )"
 _FED_ID=$(tr -dc 'a-zA-Z0-9' < /dev/urandom 2>/dev/null | head -c 8)
 [ -z "$_FED_ID" ] && _FED_ID="X$(date +%s 2>/dev/null | sha256sum 2>/dev/null | head -c7 || echo "00000001")"
 _FED_DATE_STAMP=$(date '+%Y-%m-%d.%H-%M-%S' 2>/dev/null || echo "unknown")
-_FED_LOG="$HOME/FedoraTahoe_log.${_FED_DATE_STAMP}.${_FED_ID}.txt"
+_FED_LOG="$HOME/FedoraTahoe_log.${_FED_DATE_STAMP}.${_FED_ID}${_FED_TAG_EXT}.txt"
 export _FED_ID _FED_DATE_STAMP _FED_LOG
 touch "$_FED_LOG" 2>/dev/null || true
 # Preserve original stdout/stderr, then redirect all output to both terminal and log
@@ -299,11 +314,6 @@ echo ""
 if [ "${UPDATE_MODE:-}" != "incremental" ]; then
     rm -f "$HOME/.cache/fedora-mactahoe/install-state.json"
 fi
-
-# Tag the log with the entry method. Fish update paths already pass
-# INSTALL_SOURCE (update-full / update-quick / update-<target>); anything
-# else reaching bootstrap is the copy-paste route → ( BASH ).
-export INSTALL_SOURCE="${INSTALL_SOURCE:-bash}"
 
 cd "$TMP"
 bash install.sh && _inst_rc=0 || _inst_rc=$?

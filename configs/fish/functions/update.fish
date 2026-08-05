@@ -1870,10 +1870,8 @@ function update --description 'Fedora MacTahoe update — Kitty only (menu: quic
                 return 0
             case quick
                 # same as menu [1] — incremental update with saved answers,
-                # no prompts; logged as ( UPDATE-QUICK )
-                if not _update_loading 8
-                    return 1
-                end
+                # no prompts, no loading ritual (quick means quick);
+                # logged as ( UPDATE-QUICK )
                 set -l current_ver (_update_state_version)
                 set -l latest_ver (_update_latest_version)
                 _update_run incremental quick $current_ver $latest_ver
