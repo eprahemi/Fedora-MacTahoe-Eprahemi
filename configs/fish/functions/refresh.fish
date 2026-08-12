@@ -136,22 +136,38 @@ function refresh --description 'Deep system refresh: cache, services, extensions
     function __refresh_anim
         set -l label $argv[1]
         set -l cmd $argv[2]
+        # optional 3rd arg: hard timeout in seconds (default 300) — a step
+        # that hangs (e.g. flatpak waiting on a stale lock) is killed instead
+        # of spinning forever
+        set -l tmo 300
+        if set -q argv[3]; and string match -qr '^[0-9]+$' -- "$argv[3]"
+            set tmo $argv[3]
+        end
         set __rf_current (math $__rf_current + 1)
 
         # Temp files for stderr and exit code
         set -l errfile (mktemp -t refresh-err-XXXXXXXXXX 2>/dev/null)
         set -l exitfile (mktemp -t refresh-exit-XXXXXXXXXX 2>/dev/null)
 
-        # Start command in background; write exit code to exitfile when done
-        sh -c "($cmd) 2>\"$errfile\"; echo \$? > \"$exitfile\"" &
+        # Start command in its own process group (setsid) so a timeout kill
+        # takes down the whole tree (wrapper shell + the real command);
+        # exit code is written to exitfile when the command completes
+        setsid sh -c "($cmd) 2>\"$errfile\"; echo \$? > \"$exitfile\"" &
         set -l pid $last_pid
 
-        # Spinner while command is running
+        # Spinner while command is running; kill after $tmo seconds
         set -l i 1
+        set -l started (date +%s)
+        set -l timed_out 0
         while kill -0 $pid 2>/dev/null
             printf "\r  \033[1;37m⏳ \033[1;36m%s\033[1;37m... \033[1;33m%s  \033[1;31m[%d/%d]\033[0m" "$label" $__rf_frames[$i] $__rf_current $__rf_total
             set i (math $i % 10 + 1)
             sleep 0.06
+            if test (math (date +%s) - $started) -ge $tmo
+                command kill -- -$pid 2>/dev/null
+                set timed_out 1
+                break
+            end
         end
         wait $pid 2>/dev/null
 
@@ -174,6 +190,9 @@ function refresh --description 'Deep system refresh: cache, services, extensions
             if test (wc -l <"$errfile" 2>/dev/null) -gt 3
                 echo -e "  \033[38;5;244m  (... and more — check the command output)\033[0m"
             end
+        end
+        if test $timed_out -eq 1
+            echo -e "  \033[38;5;244m  ( timed out after $tmo s — process killed )\033[0m"
         end
 
         rm -f "$errfile" "$exitfile" 2>/dev/null
@@ -227,7 +246,12 @@ function refresh --description 'Deep system refresh: cache, services, extensions
 
     if test $do_flatpak -eq 1
         __refresh_section "FLATPAK CLEANUP"
-        __refresh_anim "Unused runtimes" "flatpak uninstall --unused -y 2>/dev/null"
+        # kill any hung leftover uninstall from a previous refresh — it holds
+        # the flatpak transaction lock and would block this step forever
+        pkill -f "flatpak uninstall" 2>/dev/null
+        # stderr is NOT discarded here: real errors now surface in the ❌
+        # preview instead of failing silently
+        __refresh_anim "Unused runtimes" "flatpak uninstall --unused -y"
     end
 
     if test $do_icons -eq 1
