@@ -149,10 +149,14 @@ function refresh --description 'Deep system refresh: cache, services, extensions
         set -l errfile (mktemp -t refresh-err-XXXXXXXXXX 2>/dev/null)
         set -l exitfile (mktemp -t refresh-exit-XXXXXXXXXX 2>/dev/null)
 
-        # Start command in its own process group (setsid) so a timeout kill
-        # takes down the whole tree (wrapper shell + the real command);
-        # exit code is written to exitfile when the command completes
-        setsid sh -c "($cmd) 2>\"$errfile\"; echo \$? > \"$exitfile\"" &
+        # Start command in background; write exit code to exitfile when done.
+        # Plain sh on purpose: $last_pid IS the sh pid, so the spinner and the
+        # exitfile read stay in sync. (setsid was tried here, but in an
+        # interactive shell fish already made the job a process-group leader,
+        # so setsid forks, the tracked pid exits instantly, and every step
+        # falsely reported ❌ — the exitfile was read before the real command
+        # wrote it.)
+        sh -c "($cmd) 2>\"$errfile\"; echo \$? > \"$exitfile\"" &
         set -l pid $last_pid
 
         # Spinner while command is running; kill after $tmo seconds
@@ -164,7 +168,12 @@ function refresh --description 'Deep system refresh: cache, services, extensions
             set i (math $i % 10 + 1)
             sleep 0.06
             if test (math (date +%s) - $started) -ge $tmo
-                command kill -- -$pid 2>/dev/null
+                # kill the whole job tree: process group in interactive fish,
+                # direct children otherwise (pkill -P fallback)
+                command kill -- -$pid 2>/dev/null; or begin
+                    pkill -P $pid 2>/dev/null
+                    command kill $pid 2>/dev/null
+                end
                 set timed_out 1
                 break
             end
