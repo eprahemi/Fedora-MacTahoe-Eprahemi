@@ -29,6 +29,10 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
     # ── Flags ──
     set -l skip_confirm 0
     set -l skip_double_confirm 0
+    # reload/protect state — pre-declared at function scope (a plain `set`
+    # inside a block is block-scoped; these must survive to the apply tail)
+    set -g __gdm_reload 0
+    set -l __rl_info ""
 
     # ── Guard: triple+ dashes (---, ----, ---info) before string match crashes ──
     for arg in $argv
@@ -39,6 +43,8 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
             set -l known_commands \
                 "current" "gdm current" \
                 "default" "gdm default" \
+                "reload"  "gdm reload" \
+                "protect" "gdm protect on|off|status" \
                 "info"    "gdm info" \
                 "save"    "gdm save" \
                 "yes"     "gdm -y  or  gdm --yes" \
@@ -119,6 +125,14 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY║$C  $CY$B$n5c$C$(printf '%*s' (math "60 - "(string length "$n5c")) '')$CY║$C"
         set -l n5c_des "          →  copy wallpaper to ~/Pictures/"
         echo -e "  $CY║$C  $D$n5c_des$C$(printf '%*s' (math "60 - "(string length "$n5c_des")) '')$CY║$C"
+        set -l n5d "    gdm reload"
+        echo -e "  $CY║$C  $CY$B$n5d$C$(printf '%*s' (math "60 - "(string length "$n5d")) '')$CY║$C"
+        set -l n5d_des "          →  re-apply saved wallpaper (update-proof)"
+        echo -e "  $CY║$C  $D$n5d_des$C$(printf '%*s' (math "60 - "(string length "$n5d_des")) '')$CY║$C"
+        set -l n5e "    gdm protect on|off"
+        echo -e "  $CY║$C  $CY$B$n5e$C$(printf '%*s' (math "60 - "(string length "$n5e")) '')$CY║$C"
+        set -l n5e_des "          →  boot auto-restore (survives updates)"
+        echo -e "  $CY║$C  $D$n5e_des$C$(printf '%*s' (math "60 - "(string length "$n5e_des")) '')$CY║$C"
         set -l n6 "    gdm -y|--yes filename.jpg"
         echo -e "  $CY║$C  $CY$B$n6$C$(printf '%*s' (math "60 - "(string length "$n6")) '')$CY║$C"
         set -l n6b "          →  skip confirm, apply directly"
@@ -141,7 +155,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         set -l t1 "  🖼️  GDM WALLPAPER SWITCHER"
-        echo -e "  $CY║$C  $WH$t1$C$(printf '%*s' (math "60 - "(string length "$t1")) '')$CY║$C"
+        echo -e "  $CY║$C  $WH$t1$C$(printf '%*s' (math "61 - "(string length "$t1")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         # ── Figlet "eprahemi" copyright (surprise!) ──
         if command -v figlet &>/dev/null
@@ -162,7 +176,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         set -l s1 "  📋  USAGE"
-        echo -e "  $CY║$C  $WH$s1$C$(printf '%*s' (math "60 - "(string length "$s1")) '')$CY║$C"
+        echo -e "  $CY║$C  $WH$s1$C$(printf '%*s' (math "59 - "(string length "$s1")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         set -l u1 "    gdm filename.jpg"
         echo -e "  $CY║$C  $CY$B$u1$C$(printf '%*s' (math "60 - "(string length "$u1")) '')$CY║$C"
@@ -178,37 +192,45 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY║$C  $CY$B$u6$C$(printf '%*s' (math "60 - "(string length "$u6")) '')$CY║$C"
         set -l u7 "    gdm save"
         echo -e "  $CY║$C  $CY$B$u7$C$(printf '%*s' (math "60 - "(string length "$u7")) '')$CY║$C"
+        set -l u8 "    gdm reload"
+        echo -e "  $CY║$C  $CY$B$u8$C$(printf '%*s' (math "60 - "(string length "$u8")) '')$CY║$C"
+        set -l u9 "    gdm protect on|off|status"
+        echo -e "  $CY║$C  $CY$B$u9$C$(printf '%*s' (math "60 - "(string length "$u9")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         set -l s2 "  🔥  FEATURES"
-        echo -e "  $CY║$C  $WH$s2$C$(printf '%*s' (math "60 - "(string length "$s2")) '')$CY║$C"
+        echo -e "  $CY║$C  $WH$s2$C$(printf '%*s' (math "59 - "(string length "$s2")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         set -l f1 "  🔍  System-wide search across 13 user folders"
-        echo -e "  $CY║$C  $D$f1$C$(printf '%*s' (math "60 - "(string length "$f1")) '')$CY║$C"
+        echo -e "  $CY║$C  $D$f1$C$(printf '%*s' (math "59 - "(string length "$f1")) '')$CY║$C"
         set -l f2 "  🖼️  Kitty inline image preview before applying"
-        echo -e "  $CY║$C  $D$f2$C$(printf '%*s' (math "60 - "(string length "$f2")) '')$CY║$C"
+        echo -e "  $CY║$C  $D$f2$C$(printf '%*s' (math "61 - "(string length "$f2")) '')$CY║$C"
         set -l f3 "  🎨  Optional blur + dark tint (ImageMagick)"
-        echo -e "  $CY║$C  $D$f3$C$(printf '%*s' (math "60 - "(string length "$f3")) '')$CY║$C"
+        echo -e "  $CY║$C  $D$f3$C$(printf '%*s' (math "59 - "(string length "$f3")) '')$CY║$C"
         set -l f4 "  🔄  Blur preview loop — retry until you like it"
-        echo -e "  $CY║$C  $D$f4$C$(printf '%*s' (math "60 - "(string length "$f4")) '')$CY║$C"
+        echo -e "  $CY║$C  $D$f4$C$(printf '%*s' (math "59 - "(string length "$f4")) '')$CY║$C"
         set -l f5 "  🏷️  Multi-match picker — pick 1/2/3 from all results"
-        echo -e "  $CY║$C  $D$f5$C$(printf '%*s' (math "60 - "(string length "$f5")) '')$CY║$C"
+        echo -e "  $CY║$C  $D$f5$C$(printf '%*s' (math "61 - "(string length "$f5")) '')$CY║$C"
         set -l f6 "  ⚡  -y / --yes flag to skip all prompts + blur"
-        echo -e "  $CY║$C  $D$f6$C$(printf '%*s' (math "60 - "(string length "$f6")) '')$CY║$C"
+        echo -e "  $CY║$C  $D$f6$C$(printf '%*s' (math "59 - "(string length "$f6")) '')$CY║$C"
         set -l f7 "  🔁  gdm default — restore Default login wallpaper"
-        echo -e "  $CY║$C  $D$f7$C$(printf '%*s' (math "60 - "(string length "$f7")) '')$CY║$C"
+        echo -e "  $CY║$C  $D$f7$C$(printf '%*s' (math "59 - "(string length "$f7")) '')$CY║$C"
+        set -l f8 "  🛡️  gdm reload — re-apply saved wallpaper after updates"
+        echo -e "  $CY║$C  $D$f8$C$(printf '%*s' (math "61 - "(string length "$f8")) '')$CY║$C"
+        set -l f9 "  🛡️  gdm protect on — boot auto-restore (update-proof)"
+        echo -e "  $CY║$C  $D$f9$C$(printf '%*s' (math "61 - "(string length "$f9")) '')$CY║$C"
         set -l f8 "  🖥️  gdm current — use current desktop wallpaper"
-        echo -e "  $CY║$C  $D$f8$C$(printf '%*s' (math "60 - "(string length "$f8")) '')$CY║$C"
+        echo -e "  $CY║$C  $D$f8$C$(printf '%*s' (math "61 - "(string length "$f8")) '')$CY║$C"
         set -l f9 "  ℹ️   gdm info — show last applied GDM wallpaper details"
-        echo -e "  $CY║$C  $D$f9$C$(printf '%*s' (math "60 - "(string length "$f9")) '')$CY║$C"
-        set -l f10 "  💾  gdm save  — save wallpaper to ~/Pictures/ (16-char encrypted name)"
-        echo -e "  $CY║$C  $D$f10$C$(printf '%*s' (math "60 - "(string length "$f10")) '')$CY║$C"
+        echo -e "  $CY║$C  $D$f9$C$(printf '%*s' (math "61 - "(string length "$f9")) '')$CY║$C"
+        set -l f10 "  💾  gdm save  — save to ~/Pictures/ (16-char enc. name)"
+        echo -e "  $CY║$C  $D$f10$C$(printf '%*s' (math "59 - "(string length "$f10")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         set -l s3 "  🎨  BLUR SYSTEM"
-        echo -e "  $CY║$C  $WH$s3$C$(printf '%*s' (math "60 - "(string length "$s3")) '')$CY║$C"
+        echo -e "  $CY║$C  $WH$s3$C$(printf '%*s' (math "59 - "(string length "$s3")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         set -l bl1 "  Default   → -blur 0x40  +  40% black tint"
         echo -e "  $CY║$C  $D$bl1$C$(printf '%*s' (math "60 - "(string length "$bl1")) '')$CY║$C"
@@ -224,7 +246,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         set -l s4 "  📝  EXAMPLES"
-        echo -e "  $CY║$C  $GR$s4$C$(printf '%*s' (math "60 - "(string length "$s4")) '')$CY║$C"
+        echo -e "  $CY║$C  $GR$s4$C$(printf '%*s' (math "59 - "(string length "$s4")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         set -l e1 "  gdm my-image.jpg"
         echo -e "  $CY║$C  $CY$e1$C$(printf '%*s' (math "60 - "(string length "$e1")) '')$CY║$C"
@@ -246,7 +268,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         set -l s5 "  💡  NOTES"
-        echo -e "  $CY║$C  $WH$s5$C$(printf '%*s' (math "60 - "(string length "$s5")) '')$CY║$C"
+        echo -e "  $CY║$C  $WH$s5$C$(printf '%*s' (math "59 - "(string length "$s5")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         set -l n1 "  • Spaces in names work: gdm HOT PUSS.jpg"
         echo -e "  $CY║$C  $D$n1$C$(printf '%*s' (math "60 - "(string length "$n1")) '')$CY║$C"
@@ -258,7 +280,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY║$C  $D$n4$C$(printf '%*s' (math "60 - "(string length "$n4")) '')$CY║$C"
         set -l n5 "  • Kitty + ImageMagick are optional, not required"
         echo -e "  $CY║$C  $D$n5$C$(printf '%*s' (math "60 - "(string length "$n5")) '')$CY║$C"
-        set -l n6 "  • Auto-detects missing git, curl, ImageMagick — offers install"
+        set -l n6 "  • Auto-detects missing git, curl, ImageMagick"
         echo -e "  $CY║$C  $D$n6$C$(printf '%*s' (math "60 - "(string length "$n6")) '')$CY║$C"
         set -l n7 "  • Zero hardcoded paths — 100% portable"
         echo -e "  $CY║$C  $D$n7$C$(printf '%*s' (math "60 - "(string length "$n7")) '')$CY║$C"
@@ -325,7 +347,7 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         set -l cc1 "  🖼️  CURRENT DESKTOP WALLPAPER"
-        echo -e "  $CY║$C  $WH$cc1$C$(printf '%*s' (math "60 - "(string length "$cc1")) '')$CY║$C"
+        echo -e "  $CY║$C  $WH$cc1$C$(printf '%*s' (math "61 - "(string length "$cc1")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
@@ -441,6 +463,310 @@ except: sys.exit(1)
         return $status
     end
 
+    # ── "reload" subcommand: re-apply the saved wallpaper (update-proof) ──
+    # Fedora gnome-shell updates overwrite the login theme bundle, which wipes
+    # the login wallpaper. reload re-applies exactly what gdm relies on
+    # (~/.local/share/mactahoe-gdm/.gdm-undo-copy.jpg — pixel-exact, blur baked
+    # in), falling back to the Himeno login wallpaper if the saved copy is gone.
+    if set -q argv[1]; and contains -- "$argv[1]" "reload" "--reload"
+        set -e argv[1]
+        set -l C  (printf "\e[0m")
+        set -l CY (printf "\e[1;36m")
+        set -l GR (printf "\e[1;32m")
+        set -l YE (printf "\e[1;33m")
+        set -l RE (printf "\e[1;31m")
+        set -l WH (printf "\e[1;37m")
+        set -l GY (printf "\e[38;5;248m")
+        set -l D  (printf "\e[2m")
+        set -l repo_dir "$HOME/.local/share/mactahoe-gdm"
+        set -l rl_img ""
+        set -l rl_note ""
+        # Cool factor: terminal-transcript header + animated search
+        echo -e "  $D❯  gdm reload$C"
+        if test -t 1
+            for _f in ⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏
+                printf "\r  $CY$_f$C  $WH Searching for saved wallpaper...$C"
+                sleep 0.05
+            end
+            set -l _pad (printf '%*s' 64 '')
+            printf "\r$_pad\r"
+        else
+            echo -e "  $CY⠿$C  Searching for saved wallpaper..."
+        end
+        # 1) the saved wallpaper gdm relies on (pixel-exact from the last apply)
+        if test -f "$repo_dir/.gdm-undo-copy.jpg"; and test -s "$repo_dir/.gdm-undo-copy.jpg"
+            set rl_img "$repo_dir/.gdm-undo-copy.jpg"
+        # 2) himeno — bundled login wallpaper in the backgrounds folder
+        else if test -f "$HOME/.local/share/backgrounds/Himeno Fedora LoginScreen.jpg"
+            set rl_img "$HOME/.local/share/backgrounds/Himeno Fedora LoginScreen.jpg"
+            set rl_note "saved copy missing — falling back to Himeno login wallpaper"
+        # 3) himeno — engine default copy
+        else if test -f "$repo_dir/himeno-login.jpg"
+            set rl_img "$repo_dir/himeno-login.jpg"
+            set rl_note "saved copy missing — falling back to Himeno login wallpaper"
+        # 4) last resort: fetch himeno (same net fallback as gdm default)
+        else
+            set -l wp_url "https://raw.githubusercontent.com/eprahemi/FedoraTahoe-GDM/main/himeno-login.jpg"
+            set -l dl_ok 0
+            __loading "Downloading the himeno login wallpaper" "mkdir -p '$repo_dir'; for a in 1 2 3; do curl -fsSL --connect-timeout 5 '$wp_url' -o '$repo_dir/himeno-login.jpg' && exit 0; sleep 1; done; exit 1"
+            if test $status -eq 0
+                set dl_ok 1
+            end
+            set -e __loading_result
+            if test $dl_ok -eq 1
+                set rl_img "$repo_dir/himeno-login.jpg"
+                set rl_note "saved copy missing — Himeno login wallpaper downloaded"
+            end
+        end
+        if test -z "$rl_img"; or not test -f "$rl_img"
+            printf "\n"
+            echo -e "  $RE┌────────────────────────────────────────────────────────────┐$C"
+            echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
+            set -l rl1 "  NOTHING TO RELOAD"
+            echo -e "  $RE│$C     $WH$rl1$C$(printf '%*s' (math "55 - "(string length "$rl1")) '')$RE│$C"
+            echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
+            echo -e "  $RE│$C  $D  The saved wallpaper and the Himeno default$C$RE   │$C"
+            echo -e "  $RE│$C  $D  are both missing, and no download was$C$RE        │$C"
+            echo -e "  $RE│$C  $D  possible.$C$RE                                    │$C"
+            echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
+            echo -e "  $RE│$C     $D──────────────────────────────────────────$C$RE      │$C"
+            echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
+            echo -e "  $RE│$C     $YE  Connect to the internet and try$C$RE             │$C"
+            echo -e "  $RE│$C     $YE  again, or apply any wallpaper first:$C$RE        │$C"
+            echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
+            echo -e "  $RE│$C       $CY  gdm /path/to/your/image.jpg$C$RE               │$C"
+            echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
+            echo -e "  $RE└────────────────────────────────────────────────────────────┘$C"
+            printf "\n"
+            return 1
+        end
+        # Cool factor: report the find before applying
+        set -l rl_name (string split -r -m1 / -- "$rl_img")[-1]
+        set -l rl_size ""
+        set -l rl_dims ""
+        if test -f "$rl_img"
+            set -l _bytes (stat -c %s "$rl_img" 2>/dev/null)
+            if test -n "$_bytes"
+                set rl_size (math -s0 "$_bytes / 1024")" KB"
+            end
+            set rl_dims (identify -format '%wx%h' "$rl_img" 2>/dev/null)
+        end
+        echo -e "  $GR✓$C  $WH Found:$C  $B$rl_name$C"
+        if test -n "$rl_note"
+            echo -e "  $D     $rl_note$C"
+        end
+        if test -n "$rl_dims"
+            echo -e "  $D     · $rl_size · $rl_dims$C"
+        else if test -n "$rl_size"
+            echo -e "  $D     · $rl_size$C"
+        end
+        echo ""
+        # Keep the previous metadata — the saved image already carries its
+        # blur/source info and reload re-applies it verbatim.
+        if test -f "$repo_dir/.gdm-info.txt"
+            set __rl_info (mktemp "$gdm_tmp/rl-XXXXXX.txt")
+            cp "$repo_dir/.gdm-info.txt" "$__rl_info"
+        end
+        # Non-interactive fall-through: full path bypasses search; both skip
+        # flags → no confirm, no blur prompts (the blur is baked into the file).
+        set skip_confirm 1
+        set skip_double_confirm 1
+        set -g __gdm_reload 1
+        set argv[1] "$rl_img"
+        # fall through → engine setup → metadata → apply → success box
+    end
+
+    # ── "protect" subcommand: auto-restore GDM wallpaper after updates ──
+    # Installs a systemd oneshot that recompiles the login theme at boot
+    # (BEFORE gdm.service) whenever a Fedora gnome-shell update replaced it
+    # with the stock bundle. Uses the engine's restore.sh — never installs
+    # packages, never touches the network.
+    if set -q argv[1]; and contains -- "$argv[1]" "protect" "--protect"
+        set -e argv[1]
+        set -l C  (printf "\e[0m")
+        set -l CY (printf "\e[1;36m")
+        set -l GR (printf "\e[1;32m")
+        set -l YE (printf "\e[1;33m")
+        set -l RE (printf "\e[1;31m")
+        set -l WH (printf "\e[1;37m")
+        set -l GY (printf "\e[38;5;248m")
+        set -l D  (printf "\e[2m")
+        set -l unit_name "mactahoe-gdm-restore"
+        set -l unit_path "/etc/systemd/system/$unit_name.service"
+        set -l wrapper "/usr/local/sbin/mactahoe-gdm-restore.sh"
+        set -l repo_dir "$HOME/.local/share/mactahoe-gdm"
+        set -l action "status"
+        if set -q argv[1]
+            set action (string lower -- "$argv[1]")
+        end
+        switch $action
+            case on
+                if not test -x "$repo_dir/restore.sh"
+                    printf "\n"
+                    echo -e "  $RE┌────────────────────────────────────────────────────────────┐$C"
+                    echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
+                    set -l pe1 "  WALLPAPER ENGINE REQUIRED"
+                    echo -e "  $RE│$C     $WH$pe1$C$(printf '%*s' (math "55 - "(string length "$pe1")) '')$RE│$C"
+                    echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
+                    echo -e "  $RE│$C  $D  Protection needs the restore engine$C$RE          │$C"
+                    echo -e "  $RE│$C  $D  (restore.sh) from the FedoraTahoe-GDM$C$RE       │$C"
+                    echo -e "  $RE│$C  $D  clone, which is not present yet.$C$RE            │$C"
+                    echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
+                    echo -e "  $RE│$C     $D──────────────────────────────────────────$C$RE      │$C"
+                    echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
+                    echo -e "  $RE│$C     $YE  Run  $WH$B gdm reload$C$RE  $YE  or apply any$C$RE      │$C"
+                    echo -e "  $RE│$C     $YE  wallpaper first — that fetches the$C$RE     │$C"
+                    echo -e "  $RE│$C     $YE  engine and then try protect again:$C$RE     │$C"
+                    echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
+                    echo -e "  $RE│$C       $CY  gdm protect on$C$RE                       │$C"
+                    echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
+                    echo -e "  $RE└────────────────────────────────────────────────────────────┘$C"
+                    printf "\n"
+                    return 1
+                end
+                # Root wrapper: finds the first user's engine clone at boot
+                set -l wrapper_tmp "$gdm_tmp/protect-wrapper.sh"
+                printf '%s\n' \
+                    '#!/usr/bin/env bash' \
+                    '#' \
+                    '# Fedora MacTahoe — GDM wallpaper auto-restore wrapper (root)' \
+                    '# Generated by:  gdm protect on   —  do not edit by hand.' \
+                    '#' \
+                    'for _d in /home/*/; do' \
+                    '    _r="${_d}.local/share/mactahoe-gdm/restore.sh"' \
+                    '    if test -x "$_r"; then' \
+                    '        exec "$_r" --boot' \
+                    '    fi' \
+                    'done' \
+                    'exit 0' > "$wrapper_tmp"
+                sudo install -m 755 "$wrapper_tmp" "$wrapper"
+                # systemd oneshot — runs at boot, BEFORE the login greeter
+                set -l unit_tmp "$gdm_tmp/protect-unit.service"
+                printf '%s\n' \
+                    '[Unit]' \
+                    'Description=Fedora MacTahoe — restore GDM wallpaper after package updates' \
+                    'After=local-fs.target' \
+                    'Before=gdm.service' \
+                    'ConditionPathIsReadWrite=/usr/share/gnome-shell/gnome-shell-theme.gresource' \
+                    '' \
+                    '[Service]' \
+                    'Type=oneshot' \
+                    'ExecStart=/usr/local/sbin/mactahoe-gdm-restore.sh' \
+                    '' \
+                    '[Install]' \
+                    'WantedBy=multi-user.target' > "$unit_tmp"
+                sudo install -m 644 "$unit_tmp" "$unit_path"
+                sudo systemctl daemon-reload
+                if not sudo systemctl enable --now "$unit_name.service"
+                    printf "\n"
+                    echo -e "  $RE✘  Failed to enable protection.$C"
+                    return 1
+                end
+                # Remove the temp copies — the installed files are already in place
+                rm -f "$wrapper_tmp" "$unit_tmp"
+                printf "\n"
+                echo -e "  $GR╔══════════════════════════════════════════════════════════════╗$C"
+                echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
+                set -l po1 "  🛡️  GDM WALLPAPER PROTECTION ACTIVE"
+                echo -e "  $GR║$C  $WH$po1$C$(printf '%*s' (math "61 - "(string length "$po1")) '')$GR║$C"
+                echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
+                echo -e "  $GR╠══════════════════════════════════════════════════════════════╣$C"
+                echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
+                set -l po2 "  The login wallpaper is now restored at every"
+                set -l po3 "  boot. gnome-shell updates can't wipe it again."
+                echo -e "  $GR║$C  $D$po2$C$(printf '%*s' (math "60 - "(string length "$po2")) '')$GR║$C"
+                echo -e "  $GR║$C  $D$po3$C$(printf '%*s' (math "60 - "(string length "$po3")) '')$GR║$C"
+                echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
+                set -l po4 "  gdm protect status"
+                echo -e "  $GR║$C  $CY$po4$C$(printf '%*s' (math "60 - "(string length "$po4")) '')$GR║$C"
+                set -l po5 "  gdm protect off"
+                echo -e  "  $GR║$C  $CY$po5$C$(printf '%*s' (math "60 - "(string length "$po5")) '')$GR║$C"
+                echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
+                echo -e "  $GR║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$GR║$C"
+                echo -e "  $GR╚══════════════════════════════════════════════════════════════╝$C"
+                printf "\n"
+                return 0
+            case off
+                sudo systemctl disable --now "$unit_name.service" 2>/dev/null
+                sudo rm -f "$wrapper" "$unit_path"
+                sudo systemctl daemon-reload
+                printf "\n"
+                echo -e "  $GY╔══════════════════════════════════════════════════════════════╗$C"
+                echo -e "  $GY║$C$(printf '%*s' 62 '')$GY║$C"
+                set -l pf1 "  🛡️  GDM WALLPAPER PROTECTION OFF"
+                echo -e "  $GY║$C  $WH$pf1$C$(printf '%*s' (math "61 - "(string length "$pf1")) '')$GY║$C"
+                echo -e "  $GY║$C$(printf '%*s' 62 '')$GY║$C"
+                echo -e "  $GY╠══════════════════════════════════════════════════════════════╣$C"
+                echo -e "  $GY║$C$(printf '%*s' 62 '')$GY║$C"
+                set -l pf2 "  The auto-restore service is disabled and"
+                set -l pf3 "  removed. gnome-shell updates may wipe the"
+                set -l pf4 "  login wallpaper again — use  gdm reload  to"
+                set -l pf5 "  bring it back manually."
+                echo -e "  $GY║$C  $D$pf2$C$(printf '%*s' (math "60 - "(string length "$pf2")) '')$GY║$C"
+                echo -e "  $GY║$C  $D$pf3$C$(printf '%*s' (math "60 - "(string length "$pf3")) '')$GY║$C"
+                echo -e "  $GY║$C  $D$pf4$C$(printf '%*s' (math "60 - "(string length "$pf4")) '')$GY║$C"
+                echo -e "  $GY║$C  $D$pf5$C$(printf '%*s' (math "60 - "(string length "$pf5")) '')$GY║$C"
+                echo -e "  $GY║$C$(printf '%*s' 62 '')$GY║$C"
+                echo -e "  $GY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$GY║$C"
+                echo -e "  $GY╚══════════════════════════════════════════════════════════════╝$C"
+                printf "\n"
+                return 0
+            case status
+                set -l st_enabled (systemctl is-enabled "$unit_name.service" 2>/dev/null)
+                if test -z "$st_enabled"
+                    set st_enabled "not-found"
+                end
+                set -l st_result "-"
+                if test "$st_enabled" = "enabled"
+                    set st_result (systemctl show -p Result --value "$unit_name.service" 2>/dev/null)
+                    if test -z "$st_result"
+                        set st_result "-"
+                    end
+                    if test "$st_result" = "success"
+                        set st_result "success (restored/verified)"
+                    end
+                end
+                set -l st_state ""
+                switch $st_enabled
+                    case enabled
+                        set st_state "🛡️  PROTECTED — auto-restored at boot"
+                    case not-found
+                        set st_state "✘  OFF — not installed (run  gdm protect on)"
+                    case '*'
+                        set st_state "⚠️  INSTALLED BUT DISABLED — no auto-restore"
+                end
+                printf "\n"
+                echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
+                echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                set -l ps1 "  🛡️  GDM WALLPAPER PROTECTION"
+                echo -e "  $CY║$C  $WH$ps1$C$(printf '%*s' (math "61 - "(string length "$ps1")) '')$CY║$C"
+                echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
+                echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                echo -e "  $CY║$C  $st_state$C$(printf '%*s' (math "61 - "(string length "$st_state")) '')$CY║$C"
+                echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                set -l st_engine (test -x "$repo_dir/restore.sh"; and echo "✓ present"; or echo "✘ missing")
+                set -l st_saved (test -s "$repo_dir/.gdm-undo-copy.jpg"; and echo "✓ saved"; or echo "✘ none")
+                echo -e "  $CY║$C  $D$(printf '%-22s' "Restore engine")$C $WH$st_engine$C$(printf '%*s' (math "37 - "(string length "$st_engine")) '')$CY║$C"
+                echo -e "  $CY║$C  $D$(printf '%-22s' "Saved wallpaper")$C $WH$st_saved$C$(printf '%*s' (math "37 - "(string length "$st_saved")) '')$CY║$C"
+                echo -e "  $CY║$C  $D$(printf '%-22s' "Boot-time service")$C $WH$st_enabled$C$(printf '%*s' (math "37 - "(string length "$st_enabled")) '')$CY║$C"
+                echo -e "  $CY║$C  $D$(printf '%-22s' "Last restore result")$C $WH$st_result$C$(printf '%*s' (math "37 - "(string length "$st_result")) '')$CY║$C"
+                echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
+                echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
+                echo -e "  $CY╚══════════════════════════════════════════════════════════════╝$C"
+                printf "\n"
+                return 0
+            case '*'
+                printf "\n"
+                echo -e "  $YE  gdm protect$C $WH on | off | status$C"
+                echo -e "  $D  on     — install + enable the boot-time auto-restore$C"
+                echo -e "  $D  off    — disable and remove it$C"
+                echo -e "  $D  status — show service state + last result$C"
+                printf "\n"
+                return 1
+        end
+    end
+
     # ── "save" subcommand: save current wallpaper to ~/Pictures/ ──
     if set -q argv[1]; and contains -- "$argv[1]" "save" "--save" "-save"
         set -e argv[1]
@@ -478,7 +804,7 @@ except: sys.exit(1)
             echo -e "  $RE╔══════════════════════════════════════════════════════════════╗$C"
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
             set -l sv_c1 "  ⚠️  WALLPAPER FILE IS EMPTY"
-            echo -e "  $RE║$C  $WH$sv_c1$C$(printf '%*s' (math "60 - "(string length "$sv_c1")) '')$RE║$C"
+            echo -e "  $RE║$C  $WH$sv_c1$C$(printf '%*s' (math "61 - "(string length "$sv_c1")) '')$RE║$C"
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
             echo -e "  $RE╠══════════════════════════════════════════════════════════════╣$C"
             echo -e "  $RE║$C$(printf '%*s' 62 '')$RE║$C"
@@ -565,13 +891,13 @@ print(''.join(secrets.choice(string.ascii_letters + string.digits) for _ in rang
         echo -e "  $GR╔══════════════════════════════════════════════════════════════╗$C"
         echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
         set -l sv1 "  💾  WALLPAPER SAVED"
-        echo -e "  $GR║$C  $WH$sv1$C$(printf '%*s' (math "60 - "(string length "$sv1")) '')$GR║$C"
+        echo -e "  $GR║$C  $WH$sv1$C$(printf '%*s' (math "59 - "(string length "$sv1")) '')$GR║$C"
         echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
         echo -e "  $GR╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $GR║$C$(printf '%*s' 62 '')$GR║$C"
 
         set -l sv2 "  📁  Saved to:"
-        echo -e "  $GR║$C  $D$sv2$C$(printf '%*s' (math "60 - "(string length "$sv2")) '')$GR║$C"
+        echo -e "  $GR║$C  $D$sv2$C$(printf '%*s' (math "59 - "(string length "$sv2")) '')$GR║$C"
         set -l sv3 "  "(string replace -- "$HOME" '~' "$dest_file")
         set -l sv3_len (string length -- "$sv3")
         if test $sv3_len -gt 54
@@ -727,7 +1053,7 @@ except:
         echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         set -l i_title "  🖼️  LAST APPLIED GDM WALLPAPER"
-        echo -e "  $CY║$C  $WH$i_title$C$(printf '%*s' (math "60 - "(string length "$i_title")) '')$CY║$C"
+        echo -e "  $CY║$C  $WH$i_title$C$(printf '%*s' (math "61 - "(string length "$i_title")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
@@ -740,7 +1066,7 @@ except:
         set -l fn_label "📎  "
         set -l fn_line "$fn_label$f_name"
         set -l fn_len (string length -- "$fn_line")
-        set -l fn_pad (math "50 - $fn_len - 1")
+        set -l fn_pad (math "50 - $fn_len + 1")
         if test $fn_pad -lt 0; set fn_pad 0; end
         echo -e "  $CY║$C    $D│$C  $fn_label$GR$B$f_name$C$(printf '%*s' $fn_pad '')$D│$C  $CY║$C"
 
@@ -749,7 +1075,7 @@ except:
         set -l dr_val "Local storage"
         set -l dr_line "$dr_label$dr_val"
         set -l dr_len (string length -- "$dr_line")
-        set -l dr_pad (math "50 - $dr_len - 1")
+        set -l dr_pad (math "50 - $dr_len + 1")
         if test $dr_pad -lt 0; set dr_pad 0; end
         echo -e "  $CY║$C    $D│$C  $D$dr_label$C$GY$dr_val$C$(printf '%*s' $dr_pad '')$D│$C  $CY║$C"
 
@@ -758,7 +1084,7 @@ except:
         set -l sd_content "$sd_label$GR$gdm_size$C  $D🕒$C  $gdm_date"
         set -l sd_plain  "$sd_label$gdm_size  🕒  $gdm_date"
         set -l sd_len    (string length -- "$sd_plain")
-        set -l sd_pad    (math "50 - $sd_len - 2")
+        set -l sd_pad    (math "50 - $sd_len")
         if test $sd_pad -lt 0; set sd_pad 0; end
         echo -e "  $CY║$C    $D│$C  $sd_content$(printf '%*s' $sd_pad '')$D│$C  $CY║$C"
 
@@ -775,7 +1101,7 @@ except:
         set -l fc_content "$fc_label$CY$fmt$C    $D🎨$C  $csp    $D🔲$C  $dep_str"
         set -l fc_plain  "$fc_label$fmt  🎨  $csp  🔲  $dep_str"
         set -l fc_len    (string length -- "$fc_plain")
-        set -l fc_pad    (math "50 - $fc_len - 2")
+        set -l fc_pad    (math "50 - $fc_len - 3")
         if test $fc_pad -lt 0; set fc_pad 0; end
         echo -e "  $CY║$C    $D│$C  $fc_content$(printf '%*s' $fc_pad '')$D│$C  $CY║$C"
 
@@ -785,7 +1111,7 @@ except:
         set -l am_content "$am_label$CY$aspect$C    $D📐$C  $mp_str    $D🔳$C  $dpi"
         set -l am_plain  "$am_label$aspect  📐  $mp_str  🔳  $dpi"
         set -l am_len    (string length -- "$am_plain")
-        set -l am_pad    (math "50 - $am_len - 3")
+        set -l am_pad    (math "50 - $am_len - 5")
         if test $am_pad -lt 0; set am_pad 0; end
         echo -e "  $CY║$C    $D│$C  $am_content$(printf '%s%*s' '' $am_pad '')$D│$C  $CY║$C"
 
@@ -793,7 +1119,7 @@ except:
         set -l bl_label "🌀  "
         set -l bl_content "$bl_label$blur"
         set -l bl_len   (string length -- "$bl_content")
-        set -l bl_pad   (math "50 - $bl_len - 1")
+        set -l bl_pad   (math "50 - $bl_len + 1")
         if test $bl_pad -lt 0; set bl_pad 0; end
         echo -e "  $CY║$C    $D│$C  $bl_content$(printf '%*s' $bl_pad '')$D│$C  $CY║$C"
 
@@ -837,7 +1163,7 @@ except Exception:
             set sr_plain "$sr_label$sr_val"
             set sr_len (string length -- "$sr_plain")
         end
-        set -l sr_pad    (math "50 - $sr_len - 1")
+        set -l sr_pad    (math "50 - $sr_len + 1")
         if test $sr_pad -lt 0; set sr_pad 0; end
         echo -e "  $CY║$C    $D│$C  $D$sr_label$C$GY$sr_val$C$(printf '%*s' $sr_pad '')$D│$C  $CY║$C"
 
@@ -1158,7 +1484,7 @@ except Exception:
                 echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                 set -l c1 "  🖼️  DO YOU MEAN THIS?"
-                echo -e "  $CY║$C  $WH$c1$C$(printf '%*s' (math "60 - "(string length "$c1")) '')$CY║$C"
+                echo -e "  $CY║$C  $WH$c1$C$(printf '%*s' (math "61 - "(string length "$c1")) '')$CY║$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                 echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
@@ -1213,7 +1539,7 @@ except Exception:
             echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
             echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
             set -l m1 "  🖼️  MULTIPLE MATCHES"
-            echo -e "  $CY║$C  $WH$m1$C$(printf '%*s' (math "60 - "(string length "$m1")) '')$CY║$C"
+            echo -e "  $CY║$C  $WH$m1$C$(printf '%*s' (math "61 - "(string length "$m1")) '')$CY║$C"
             echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
             echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
             echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
@@ -1416,7 +1742,7 @@ except Exception:
                 echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                 set -l b1 "  🎨  BLUR BACKGROUND?"
-                echo -e "  $CY║$C  $WH$b1$C$(printf '%*s' (math "60 - "(string length "$b1")) '')$CY║$C"
+                echo -e "  $CY║$C  $WH$b1$C$(printf '%*s' (math "59 - "(string length "$b1")) '')$CY║$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                 echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
@@ -1469,7 +1795,7 @@ except Exception:
                     echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
                     echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                     set -l cu1 "  🎨  CUSTOM BLUR"
-                    echo -e "  $CY║$C  $WH$cu1$C$(printf '%*s' (math "60 - "(string length "$cu1")) '')$CY║$C"
+                    echo -e "  $CY║$C  $WH$cu1$C$(printf '%*s' (math "59 - "(string length "$cu1")) '')$CY║$C"
                     echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                     echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
                     echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
@@ -1534,7 +1860,7 @@ except Exception:
                             echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
                             echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                             set -l l1 "  👍  LIKE THE RESULT?"
-                            echo -e "  $CY║$C  $WH$l1$C$(printf '%*s' (math "60 - "(string length "$l1")) '')$CY║$C"
+                            echo -e "  $CY║$C  $WH$l1$C$(printf '%*s' (math "59 - "(string length "$l1")) '')$CY║$C"
                             echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                             echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
                             echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
@@ -1648,7 +1974,7 @@ except Exception:
             echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
             echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
             set -l mi1 "  ⚠️  IMAGEMAGICK NOT INSTALLED"
-            echo -e "  $CY║$C  $WH$mi1$C$(printf '%*s' (math "60 - "(string length "$mi1")) '')$CY║$C"
+            echo -e "  $CY║$C  $WH$mi1$C$(printf '%*s' (math "61 - "(string length "$mi1")) '')$CY║$C"
             echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
             echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
             echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
@@ -1704,7 +2030,8 @@ except Exception:
         "$repo/gdm-wallpaper.sh" \
         "$repo/libs/lib-core.sh" \
         "$repo/libs/lib-install.sh" \
-        "$repo/other/gdm/gnome-shell-theme.gresource.xml"
+        "$repo/other/gdm/gnome-shell-theme.gresource.xml" \
+        "$repo/restore.sh"
 
     set -l need_clone 0
     if not test -d "$repo"
@@ -1769,6 +2096,7 @@ except Exception:
         # Preserve runtime state files before replacing the repo
         set -l saved_undo ""
         set -l saved_info ""
+        set -l saved_last ""
         if test -f "$repo/.gdm-undo-copy.jpg"
             set saved_undo (mktemp $gdm_tmp/undo-XXXXXX.jpg)
             cp "$repo/.gdm-undo-copy.jpg" "$saved_undo"
@@ -1776,6 +2104,10 @@ except Exception:
         if test -f "$repo/.gdm-info.txt"
             set saved_info (mktemp $gdm_tmp/info-XXXXXX.txt)
             cp "$repo/.gdm-info.txt" "$saved_info"
+        end
+        if test -f "$repo/.last-gdm.gresource"
+            set saved_last (mktemp $gdm_tmp/last-XXXXXX.gresource)
+            cp "$repo/.last-gdm.gresource" "$saved_last"
         end
         rm -rf "$repo"
 
@@ -1856,6 +2188,10 @@ except Exception:
         if test -n "$saved_info"; and test -f "$saved_info"
             cp "$saved_info" "$repo/.gdm-info.txt"
             rm -f "$saved_info"
+        end
+        if test -n "$saved_last"; and test -f "$saved_last"
+            cp "$saved_last" "$repo/.last-gdm.gresource"
+            rm -f "$saved_last"
         end
     end
 
@@ -2136,6 +2472,12 @@ except Exception:
         echo "SIZE: $f_size"       >> "$repo/.gdm-info.txt"
         echo "DATE: $f_date"       >> "$repo/.gdm-info.txt"
         echo -e "  $D  🛡️  Cache written with Unknown — info display will handle gracefully.$C"
+    # reload: keep the previous metadata — its blur/source lines describe
+        # this exact image; the pipeline above can't know them (confirm skipped)
+        if test $__gdm_reload -eq 1; and test -n "$__rl_info"; and test -f "$__rl_info"
+            cp "$__rl_info" "$repo/.gdm-info.txt"
+            rm -f "$__rl_info"
+        end
     end
 
     # ── Apply the wallpaper ──
@@ -2145,16 +2487,27 @@ except Exception:
         echo -e "  $GY  Install it and try again.$C"
         return 1
     end
-    # Save a copy for 'gdm info'
-    cp "$image" "$repo/.gdm-undo-copy.jpg"
+    # Save a copy for 'gdm info' (skip when reloading the very same file)
+    if test "$image" != "$repo/.gdm-undo-copy.jpg"
+        cp "$image" "$repo/.gdm-undo-copy.jpg"
+    end
     # Clean up the private cache — original name + source path now in metadata cache
     rm -rf $gdm_tmp
     echo -e "  $CY🖼️  Applying GDM wallpaper...$C$C"
     cd "$repo"
     sudo ./gdm-wallpaper.sh -g -nb -nd -b "$image"
+    set -l __engine_rc $status
     cd -
 
-    if string match -q '*himeno-login*' "$image"
+    if test $__engine_rc -eq 0
+        # Record the installed login bundle so the boot-time restore knows it
+        # is up to date (sudo — the file is root-owned after a restore.sh run)
+        if test -f /usr/share/gnome-shell/gnome-shell-theme.gresource
+            sudo cp /usr/share/gnome-shell/gnome-shell-theme.gresource "$repo/.last-gdm.gresource" 2>/dev/null
+        end
+    end
+
+    if string match -q '*himeno-login*' "$image"; and test $__gdm_reload -eq 0
         echo -e "  $D  ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣤⣶⣶⣶⣶⣶⣄⣠⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀$C"
         echo -e "  $D  ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣤⣖⣯⣿⣶⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣶⣶⣶⣦⣤⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀$C"
         echo -e "  $D  ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣶⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣶⣄⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀$C"
