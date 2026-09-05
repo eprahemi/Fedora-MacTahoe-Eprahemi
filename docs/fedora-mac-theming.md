@@ -530,7 +530,7 @@ magick "$png" -trim +repage -resize 256x256 \
 
 ## 5. 🐟 Fish Shell Functions
 
-> **40 custom functions** in `configs/fish/functions/`. Every function uses
+> **41 custom functions** in `configs/fish/functions/`. Every function uses
 > **dynamic username resolution** — zero hardcoded names.
 
 ### 🏆 Complete Feature Matrix
@@ -568,13 +568,18 @@ magick "$png" -trim +repage -resize 256x256 \
 │                    │              │                       │ folder        │
 │  getdata.fish      │ 📊 Info      │ —                     │ system data   │
 │                    │              │                       │ snapshot      │
+│  doctor.fish       │ 🩺 Health    │ $HOME/.cache/fedora-  │ manifest vs   │
+│                    │              │ mactahoe (manifest,   │ installed,    │
+│                    │              │ install-state)        │ step drift,   │
+│                    │              │                       │ artifact check│
 
-> The matrix above covers the classics — the full set is **40 files**, including the
+> The matrix above covers the classics — the full set is **41 files**, including the
 > power tools: `update` (menu / quick / full / config / 16 per-target updates +
-> `update wallvault`), `gdm` (wallpaper manager + `gdm protect`), `pfp`, `smb`,
-> `ktheme`, `refresh`, `extract`, `calc`, `passgen`, `qr`, `myip`, `kernels`,
-> `ghlogin`, `getdata`, `testdrive`, `stayawake`, plus the one-letter aliases
-> (`l`, `v`, `c`, `n`, `p`) and `logout` / `reboot` / `shutdown` wrappers.
+> `update wallvault`), `doctor` (manifest / drift / artifacts health check), `gdm`
+> (wallpaper manager + `gdm protect`), `pfp`, `smb`, `ktheme`, `refresh`, `extract`,
+> `calc`, `passgen`, `qr`, `myip`, `kernels`, `ghlogin`, `getdata`, `testdrive`,
+> `stayawake`, plus the one-letter aliases (`l`, `v`, `c`, `n`, `p`) and
+> `logout` / `reboot` / `shutdown` wrappers.
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -1451,7 +1456,8 @@ gsettings set org.gnome.desktop.sound event-sounds true
 │  │   │       ├── hollywood.fish      #     Hollywood terminal              │
 │  │   │       ├── weather.fish        #     curl wttr.in                   │
 │  │   │       ├── clean.fish          #     DNF cache cleanup               │
-│  │   │       └── getdata.fish        #     System data collector           │
+│  │   │       ├── getdata.fish        #     System data collector           │
+│  │   │       └── doctor.fish         #     Install health check            │
 │  │   ├── 📁 kitty/                   # Kitty terminal configuration        │
 │  │   │   └── 📄 kitty.conf          #  → Liquid engine, no window memory  │
 │  │   ├── 📁 fastfetch/               # Fastfetch system info display       │
