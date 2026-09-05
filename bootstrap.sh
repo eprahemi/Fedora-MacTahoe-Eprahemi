@@ -315,7 +315,32 @@ if [ "${UPDATE_MODE:-}" != "incremental" ]; then
     rm -f "$HOME/.cache/fedora-mactahoe/install-state.json"
 fi
 
+# ── Verify install.sh against the pin in the same clone before running ──
+# updates.json and install.sh come from the same commit, so the pinned hash
+# is always the expected hash for the file about to run. This catches a
+# truncated or tampered installer between clone and execution.
 cd "$TMP"
+_inst_pin=""
+if command -v python3 &>/dev/null && [ -f "updates.json" ]; then
+  _inst_pin=$(python3 -c 'import json,sys
+try:
+    print(json.load(open("updates.json", encoding="utf-8")).get("install_sha256", ""))
+except Exception:
+    pass' 2>/dev/null || true)
+fi
+if [ -n "$_inst_pin" ]; then
+  _inst_got=$(sha256sum install.sh 2>/dev/null | awk '{print $1}' || true)
+  if [ "$_inst_got" != "$_inst_pin" ]; then
+    echo -e "  ${RED}◆${NC}  ${BOLD}Installer verification failed${NC} — the downloaded install.sh"
+    echo -e "  ${RED}◆${NC}  does not match the fingerprint pinned in updates.json."
+    echo -e "  ${RED}◆${NC}  This usually means a corrupted download or a tampered file."
+    echo -e "  ${RED}◆${NC}  Nothing was run. Re-run the bootstrap to fetch it fresh."
+    echo -e "  ${RED}◆${NC}  got:  ${_inst_got:-<unreadable>}"
+    echo -e "  ${RED}◆${NC}  want: ${_inst_pin}"
+    exit 1
+  fi
+fi
+
 bash install.sh && _inst_rc=0 || _inst_rc=$?
 # 42 = the installer closed itself (60s no-key/no-answer auto-close) —
 # passed through as-is, it is NOT a failure. Everything else propagates.
