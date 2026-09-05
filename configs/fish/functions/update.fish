@@ -7,6 +7,7 @@
 #   update configs   → refresh kitty, fish, updater, fastfetch files only
 #   update quick     → incremental update, saved answers, no prompts
 #   update full      → full reinstall from scratch
+#   update uninstall → guarded full removal (typed word + 30s countdown)
 #   update log       → your update history
 #   update menu      → pick any target from a numbered list
 #   update help      → this box
@@ -483,6 +484,7 @@ function _update_usage --description 'the help box'
     _update_box_cmd "update configs" "kitty · fish · updater · fastfetch"
     _update_box_cmd "update quick" "incremental, saved answers, no prompts"
     _update_box_cmd "update full" "full reinstall from scratch"
+    _update_box_cmd "update uninstall" "guarded full removal — typed word + countdown"
     _update_box_cmd "update log" "your update history"
     _update_box_cmd "update menu" "pick any target from a list"
     _update_box_text ""
@@ -703,6 +705,24 @@ function _update_target_help --description 'per-target help box'
             _update_box_tag "NOTES"
             _update_box_text ""
             _update_box_text "No questions, no logout needed." "1;33"
+        case uninstall
+            _update_box_text "Removes everything Fedora MacTahoe installed," "1;37"
+            _update_box_text "using uninstall.sh from the repo. Your old" "1;37"
+            _update_box_text "dconf/fish snapshots, stock wallpapers and" "1;37"
+            _update_box_text "system services are restored." "1;37"
+            _update_box_text ""
+            _update_box_tag "GUARDS"
+            _update_box_text ""
+            _update_box_text "1. Type the word REMOVE exactly (2 tries)" "1;33"
+            _update_box_text "2. 30-second countdown — ANY key cancels" "1;33"
+            _update_box_text "3. uninstall.sh confirms each phase (60s)" "1;33"
+            _update_box_text ""
+            _update_box_tag "NOTES"
+            _update_box_text ""
+            _update_box_text "Bundle is downloaded fresh from GitHub and" "1;33"
+            _update_box_text "its fingerprint shown before anything runs." "1;33"
+            _update_box_text "--purge also removes RPMs, Flatpaks, repos." "1;33"
+            _update_box_text "Cancel at any step = everything stays." "1;33"
         case '*'
             _update_box_text "No per-target help for \"$target\" — try one of" "1;33"
             _update_box_text "the targets listed in 'update help'." "1;33"
@@ -1971,6 +1991,126 @@ function _update_target_wallvault --description 'Wallvault asset vault — gated
 end
 
 # ══════════════════════════════════════════════════════════════
+# update uninstall — guarded full removal
+# ══════════════════════════════════════════════════════════════
+# Three gates, so a stray keystroke can never remove anything:
+#   1. the word REMOVE typed exactly (case-sensitive, 2 tries)
+#   2. a live 30-second countdown — press ANY key to cancel
+#   3. uninstall.sh's own per-phase confirmations (60s each)
+# Flag: --purge   also removes RPMs, Flatpaks and third-party repos
+function _update_target_uninstall --description 'guarded full removal via uninstall.sh'
+    set -l purge 0
+    for a in $argv
+        switch (string lower -- "$a")
+            case purge --purge --purge-packages -p
+                set purge 1
+            case h help -h --help
+                _update_target_help uninstall
+                return 0
+        end
+    end
+
+    # ── gate 1: typed word — exact, case-sensitive ──
+    printf "\n"
+    _update_box_top
+    _update_box_title "UNINSTALL — EVERYTHING WILL BE REMOVED" "1;31"
+    _update_box_rule
+    _update_box_text "Themes, icons, fonts, sounds, extensions, GDM," "1;37"
+    _update_box_text "wallpapers and services are removed; your old" "1;37"
+    _update_box_text "dconf/fish snapshots and stock Fedora defaults" "1;37"
+    _update_box_text "are restored to pre-MacTahoe state." "1;37"
+    _update_box_text ""
+    _update_box_text "Type the word below EXACTLY to continue." "1;33"
+    _update_box_text "Anything else cancels and keeps everything." "1;33"
+    _update_box_bottom
+
+    set -l tries 0
+    set -l typed ""
+    while test $tries -lt 2
+        printf "\n"
+        read typed -P "  Type  REMOVE  (case-sensitive): "
+        if test $status -ne 0 -o -z "$typed"
+            printf "\n  \e[1;31m✘ Cancelled — everything stays.\e[0m\n"
+            return 1
+        end
+        if test "$typed" = "REMOVE"
+            break
+        end
+        set tries (math $tries + 1)
+        if test $tries -lt 2
+            printf "\n  \e[1;33m⚠  Not the word — one more try, then it cancels.\e[0m\n"
+        end
+    end
+    if not test "$typed" = "REMOVE"
+        printf "\n  \e[1;31m✘ Cancelled — everything stays.\e[0m\n"
+        return 1
+    end
+
+    # ── gate 2: 30-second countdown — ANY key cancels ──
+    printf "\n"
+    _update_box_top
+    _update_box_text "REMOVE accepted. Uninstall starts in 30 seconds." "1;31"
+    _update_box_text "Press  Ctrl+C  or ANY key to cancel it now." "1;37"
+    _update_box_bottom
+    printf "\n  \e[1;37mStarting in:\e[0m "
+    for i in (seq 30 -1 1)
+        if read -t 1 -n 1 -s cancel_key 2>/dev/null
+            printf "\n\n  \e[1;31m✘ Cancelled — everything stays.\e[0m\n"
+            return 1
+        end
+        if test $i -le 10
+            printf "\e[1;31m%2ds\e[0m  " $i
+        else
+            printf "\e[1;36m%2ds\e[0m  " $i
+        end
+    end
+    printf "\n"
+
+    # ── gate 3: fresh bundle + fingerprint, then run ──
+    printf "\n  \e[1;37mDownloading the MacTahoe bundle from GitHub...\e[0m\n"
+    set -l tmpdir (mktemp -d /tmp/mactahoe-uninstall.XXXXXX 2>/dev/null)
+    if test -z "$tmpdir"; or not test -d "$tmpdir"
+        printf "\n  \e[1;31m✘ Could not create a temp folder.\e[0m\n"
+        return 1
+    end
+    curl -fsSL --max-time 120 "https://codeload.github.com/eprahemi/Fedora-MacTahoe-Eprahemi/tar.gz/refs/heads/main" -o "$tmpdir/bundle.tar.gz" 2>/dev/null
+    if test $status -ne 0
+        rm -rf "$tmpdir"
+        printf "\n  \e[1;31m✘ Could not download the bundle — check your connection.\e[0m\n"
+        return 1
+    end
+    tar -xzf "$tmpdir/bundle.tar.gz" -C "$tmpdir" 2>/dev/null
+    if test $status -ne 0
+        rm -rf "$tmpdir"
+        printf "\n  \e[1;31m✘ Could not extract the bundle.\e[0m\n"
+        return 1
+    end
+    set -l bundle_dir "$tmpdir/Fedora-MacTahoe-Eprahemi-main"
+    if not test -f "$bundle_dir/uninstall.sh"
+        rm -rf "$tmpdir"
+        printf "\n  \e[1;31m✘ Bundle is missing uninstall.sh — aborting.\e[0m\n"
+        return 1
+    end
+
+    set -l got_hash (string match -r '^[0-9a-f]+' (sha256sum "$bundle_dir/uninstall.sh" 2>/dev/null))
+    printf "\n"
+    _update_box_top
+    _update_box_text "uninstall.sh fingerprint" "1;37"
+    _update_box_text "  "(string sub -l 32 -- $got_hash)"…" "1;31"
+    _update_box_bottom
+    printf "\n"
+
+    if test $purge -eq 1
+        bash "$bundle_dir/uninstall.sh" --purge-packages
+    else
+        bash "$bundle_dir/uninstall.sh"
+    end
+    set -l rc $status
+    rm -rf "$tmpdir" 2>/dev/null
+    return $rc
+end
+
+# ══════════════════════════════════════════════════════════════
 # update — the entry point
 # ══════════════════════════════════════════════════════════════
 function update --description 'Fedora MacTahoe update — Kitty only (menu: quick/full/configs/check)'
@@ -1997,7 +2137,7 @@ function update --description 'Fedora MacTahoe update — Kitty only (menu: quic
             switch $sub2
                 case h help -h --help
                     switch $sub
-                        case icons theme fonts sounds extensions gdm wallpaper pfp gtk videos services defaults dconf notifier clean menu wallvault wall w
+                        case icons theme fonts sounds extensions gdm wallpaper pfp gtk videos services defaults dconf notifier clean menu wallvault wall w uninstall
                             _update_target_help $sub
                             return 0
                     end
@@ -2044,7 +2184,7 @@ function update --description 'Fedora MacTahoe update — Kitty only (menu: quic
                 if set -q argv[2]
                     set -l t2 (string lower -- "$argv[2]")
                     switch $t2
-                        case icons theme fonts sounds extensions gdm wallpaper pfp gtk videos services defaults dconf notifier clean menu wallvault wall w
+                        case icons theme fonts sounds extensions gdm wallpaper pfp gtk videos services defaults dconf notifier clean menu wallvault wall w uninstall
                             _update_target_help $t2
                             return 0
                     end
@@ -2109,6 +2249,9 @@ function update --description 'Fedora MacTahoe update — Kitty only (menu: quic
                 return $status
             case menu
                 _update_target_menu
+                return $status
+            case uninstall
+                _update_target_uninstall $argv[2..-1]
                 return $status
             case '*'
                 printf "\n  \e[1;31m✘ Unknown option: %s\e[0m\n" "$argv[1]"
