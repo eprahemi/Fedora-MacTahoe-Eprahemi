@@ -2217,7 +2217,7 @@ except Exception:
     while test $attempts -lt 3 -a -z "$action"
         printf "\n"
         _update_box_text "[1] Quick update — only what changed" "1;36"
-        _update_box_text "[2] Full reinstall — everything fresh" "1;36"
+        _update_box_text "[2] Full reinstall — everything fresh   (recommended)" "1;32"
         _update_box_text "[3] Configs only — just the files, no system changes" "1;36"
         _update_box_text "[4] Just checking — exit" "1;36"
         _update_box_text ""

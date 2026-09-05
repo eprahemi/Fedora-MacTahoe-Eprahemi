@@ -2,7 +2,7 @@
  "latest_version": "3.5.5",
  "bootstrap_sha256": "c90bf93f19e1fac2a0d0e145689444f9e5b0beb7ce5147c6e1620d3d33a6fb5b",
  "install_sha256": "c4f0d98ee19c6ebfeb346c873710b1e29579f7d5996cc8f32df3411d1ed94270",
- "update_sha256": "ea5a1f1002fba76a7d8540db9b73959689ee55ed4af74410e5e4c2d602dd2c73",
+ "update_sha256": "b690627ccda340ce28e9660cee81be1883ab7fe3a282e854ebc78de862f1f74b",
  "changelog": [
   {
    "version": "3.5.5",
