@@ -1,8 +1,18 @@
 {
- "latest_version": "3.5.4",
+ "latest_version": "3.5.5",
  "bootstrap_sha256": "447d511166596db254cc20156736056e3e6d48c5286422e07cffed79464e85ee",
  "update_sha256": "ea5a1f1002fba76a7d8540db9b73959689ee55ed4af74410e5e4c2d602dd2c73",
  "changelog": [
+  {
+   "version": "3.5.5",
+   "changes": [
+    "GDM WALLPAPER PROTECTION — gdm protect on installs a boot-time auto-restore (systemd unit + system-wide restore wrapper) so your login wallpaper survives every GNOME update and theme refresh. gdm protect status shows restore engine, saved wallpaper, boot service and last restore result; gdm protect off removes it cleanly",
+    "gdm reload — re-apply your saved GDM wallpaper after any update, and gdm info — a full details box for the last applied wallpaper (file, image info, resolution, source) with private paths hidden as 'Local storage'",
+    "Smarter gdm search & preview — searches 13 user folders system-wide, shows a Kitty inline image preview before applying, a picker when several files match, and a blur preview loop you can retry until you like it",
+    "Fixed every emoji box edge in gdm — VS16 emoji rows (protect/info titles) were 1 column short, plain emoji rows (help, save, blur sections) 1 column over, and two lines poked past the box: all boxes now render perfectly aligned",
+    "refresh is far more reliable — per-step hard timeout (300s default) so a hung step can't stall the whole refresh, a stale flatpak-lock preflight, and a fix for a false ❌ on every step (process-group timeout kill)"
+   ]
+  },
   {
    "version": "3.5.4",
    "changes": [
@@ -309,7 +319,7 @@
   "apply_desktop_entries": "1.0",
   "ensure_celluloid_default": "1.0",
   "configure_nautilus_defaults": "1.0",
-  "apply_configs": "1.12",
+  "apply_configs": "1.13",
   "apply_dconf": "1.2",
   "optimize_system_resources": "1.1",
   "apply_wallpapers": "1.1",
