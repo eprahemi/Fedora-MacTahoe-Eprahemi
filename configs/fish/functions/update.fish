@@ -717,11 +717,23 @@ function _update_target_help --description 'per-target help box'
             _update_box_text "2. 30-second countdown — ANY key cancels" "1;33"
             _update_box_text "3. uninstall.sh confirms each phase (60s)" "1;33"
             _update_box_text ""
+            _update_box_tag "RECOMMENDED"
+            _update_box_text ""
+            _update_box_text "Use plain 'update uninstall' — it is the SAFE" "1;32"
+            _update_box_text "path: it only reverses the theming and your" "1;32"
+            _update_box_text "apps, files and profiles are left untouched." "1;32"
+            _update_box_text ""
+            _update_box_tag "RISK"
+            _update_box_text ""
+            _update_box_text "--purge is HIGH RISK and NOT recommended:" "1;31"
+            _update_box_text "it wipes every MacTahoe app, all Flatpaks," "1;31"
+            _update_box_text "Chrome/Edge/VS Code, their repos and ALL" "1;31"
+            _update_box_text "their saved data. Only for a full reset." "1;31"
+            _update_box_text ""
             _update_box_tag "NOTES"
             _update_box_text ""
             _update_box_text "Bundle is downloaded fresh from GitHub and" "1;33"
             _update_box_text "its fingerprint shown before anything runs." "1;33"
-            _update_box_text "--purge also removes RPMs, Flatpaks, repos." "1;33"
             _update_box_text "Cancel at any step = everything stays." "1;33"
         case '*'
             _update_box_text "No per-target help for \"$target\" — try one of" "1;33"
@@ -2011,6 +2023,10 @@ function _update_target_uninstall --description 'guarded full removal via uninst
     end
 
     # ── gate 1: typed word — exact, case-sensitive ──
+    set -l magic "REMOVE"
+    if test $purge -eq 1
+        set magic "REMOVE ALL"
+    end
     printf "\n"
     _update_box_top
     _update_box_title "UNINSTALL — EVERYTHING WILL BE REMOVED" "1;31"
@@ -2022,18 +2038,27 @@ function _update_target_uninstall --description 'guarded full removal via uninst
     _update_box_text ""
     _update_box_text "Type the word below EXACTLY to continue." "1;33"
     _update_box_text "Anything else cancels and keeps everything." "1;33"
+    if test $purge -eq 1
+        _update_box_rule
+        _update_box_text "HIGH RISK — this also wipes every MacTahoe" "1;31"
+        _update_box_text "app, ALL Flatpaks, Chrome/Edge/VS Code," "1;31"
+        _update_box_text "their repos and ALL their saved data." "1;31"
+        _update_box_text ""
+        _update_box_text "For purge mode the word is  REMOVE ALL" "1;33"
+        _update_box_text "not just REMOVE — think twice first." "1;33"
+    end
     _update_box_bottom
 
     set -l tries 0
     set -l typed ""
     while test $tries -lt 2
         printf "\n"
-        read typed -P "  Type  REMOVE  (case-sensitive): "
+        read typed -P "  Type  $magic  (case-sensitive): "
         if test $status -ne 0 -o -z "$typed"
             printf "\n  \e[1;31m✘ Cancelled — everything stays.\e[0m\n"
             return 1
         end
-        if test "$typed" = "REMOVE"
+        if test "$typed" = "$magic"
             break
         end
         set tries (math $tries + 1)
@@ -2041,7 +2066,7 @@ function _update_target_uninstall --description 'guarded full removal via uninst
             printf "\n  \e[1;33m⚠  Not the word — one more try, then it cancels.\e[0m\n"
         end
     end
-    if not test "$typed" = "REMOVE"
+    if not test "$typed" = "$magic"
         printf "\n  \e[1;31m✘ Cancelled — everything stays.\e[0m\n"
         return 1
     end
@@ -2049,7 +2074,11 @@ function _update_target_uninstall --description 'guarded full removal via uninst
     # ── gate 2: 30-second countdown — ANY key cancels ──
     printf "\n"
     _update_box_top
-    _update_box_text "REMOVE accepted. Uninstall starts in 30 seconds." "1;31"
+    if test $purge -eq 1
+        _update_box_text "REMOVE ALL accepted — HIGH RISK. Starts in 30s." "1;31"
+    else
+        _update_box_text "REMOVE accepted. Uninstall starts in 30 seconds." "1;31"
+    end
     _update_box_text "Press  Ctrl+C  or ANY key to cancel it now." "1;37"
     _update_box_bottom
     printf "\n  \e[1;37mStarting in:\e[0m "
