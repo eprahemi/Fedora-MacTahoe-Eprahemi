@@ -2022,6 +2022,23 @@ function _update_target_uninstall --description 'guarded full removal via uninst
         end
     end
 
+    # ── network preflight — offline users should not go through the gates ──
+    printf "\n  \e[1;37mChecking connection to GitHub...\e[0m"
+    if not curl -sfI --max-time 10 "https://codeload.github.com/eprahemi/Fedora-MacTahoe-Eprahemi/tar.gz/refs/heads/main" -o /dev/null 2>/dev/null
+        printf " \e[1;31mOFFLINE\e[0m\n\n"
+        _update_box_top
+        _update_box_title "NO INTERNET" "1;31"
+        _update_box_text ""
+        _update_box_text "update uninstall downloads the removal bundle" "1;37"
+        _update_box_text "from GitHub, and it can't reach it right now." "1;37"
+        _update_box_text ""
+        _update_box_text "Nothing changed — no gate, no countdown, no" "1;33"
+        _update_box_text "download. Connect and run it again when ready." "1;33"
+        _update_box_bottom
+        return 1
+    end
+    printf " \e[1;32mOK\e[0m\n"
+
     # ── gate 1: typed word — exact, case-sensitive ──
     set -l magic "REMOVE"
     if test $purge -eq 1
