@@ -14,10 +14,16 @@
 <h3 align="center">Technical Architecture & Engineering Reference</h3>
 
 <p align="center">
-  <strong>Version:</strong> 1.0 &nbsp;·&nbsp;
-  <strong>Script:</strong> 1,450 lines · 22 steps · Zero hardcoded paths &nbsp;·&nbsp;
+  <strong>Version:</strong> tracks releases (v3.5.5) &nbsp;·&nbsp;
+  <strong>Script:</strong> 4,246 lines · 29 steps · Zero hardcoded paths &nbsp;·&nbsp;
   <strong>License:</strong> Open Source
 </p>
+
+> [!NOTE]
+> **Version drift:** this document's numbered flows, ASCII step diagrams, and step
+> tables predate v3.x — the live source of truth is `install.sh` (`TOTAL_STEPS=29`).
+> Step counts in diagrams are illustrative of phases, not current numbering; the
+> extension UUID list and function count ARE current as of v3.5.5.
 
 ---
 
@@ -524,7 +530,7 @@ magick "$png" -trim +repage -resize 256x256 \
 
 ## 5. 🐟 Fish Shell Functions
 
-> **17 custom functions** in `configs/fish/functions/`. Every function uses
+> **40 custom functions** in `configs/fish/functions/`. Every function uses
 > **dynamic username resolution** — zero hardcoded names.
 
 ### 🏆 Complete Feature Matrix
@@ -558,10 +564,17 @@ magick "$png" -trim +repage -resize 256x256 \
 │  weather.fish      │ 🌤️ Info      │ —                     │ curl wttr.in  │
 │  clean.fish        │ 🧹 System    │ —                     │ DNF cache     │
 │                    │              │                       │ cleanup       │
-│  cleanreset.fish   │ 🧹 System    │ —                     │ deep clean +  │
-│                    │              │                       │ kernel cache  │
+│  extract.fish      │ 📦 Utility   │ —                     │ any archive → │
+│                    │              │                       │ folder        │
 │  getdata.fish      │ 📊 Info      │ —                     │ system data   │
 │                    │              │                       │ snapshot      │
+
+> The matrix above covers the classics — the full set is **40 files**, including the
+> power tools: `update` (menu / quick / full / config / 16 per-target updates +
+> `update wallvault`), `gdm` (wallpaper manager + `gdm protect`), `pfp`, `smb`,
+> `ktheme`, `refresh`, `extract`, `calc`, `passgen`, `qr`, `myip`, `kernels`,
+> `ghlogin`, `getdata`, `testdrive`, `stayawake`, plus the one-letter aliases
+> (`l`, `v`, `c`, `n`, `p`) and `logout` / `reboot` / `shutdown` wrappers.
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -638,7 +651,7 @@ set -l log "$HOME/.local/share/"(whoami)"-bench.log"
 │  │  .gnome.org) │     │              │     │  → ~/.local/share/gnome-  │   │
 │  │              │     │  curl -Lo    │     │    shell/extensions/      │   │
 │  │  Loop over   │────▶│  /tmp/       │────▶│                          │   │
-│  │  14 UUIDs    │     │  ext-*.zip   │     │  Verify dir exists        │   │
+│  │  15 UUIDs    │     │  ext-*.zip   │     │  Verify dir exists        │   │
 │  └──────────────┘     └──────────────┘     └────────────┬─────────────┘   │
 │                                                         │                 │
 │  ┌──────────────────────────────────────────────────────▼──────────────┐  │
@@ -662,29 +675,30 @@ set -l log "$HOME/.local/share/"(whoami)"-bench.log"
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 🔌 Full Extension Catalog (14 Extensions)
+### 🔌 Full Extension Catalog (15 Extensions)
 
 ```
-┌──────┬──────────────────────────────────────────────────────┬──────────┬──────────────────────────────┐
-│  #   │  UUID                                                │ Category │  Purpose                     │
-├──────┼──────────────────────────────────────────────────────┼──────────┼──────────────────────────────┤
+┌──────┬─────────────────────────────────────────────────────┬───────────┬─────────────────────────────┐
+│  #   │  UUID                                               │ Category  │  Purpose                    │
+├──────┼─────────────────────────────────────────────────────┼───────────┼─────────────────────────────┤
 │  1   │  blur-my-shell@aunetx                               │ 🪟 Visual │ Transparent blurred panel   │
 │  2   │  user-theme@gnome-shell-extensions.gcampax          │ 🎨 Theme  │ Load custom shell theme     │
-│      │    .github.com                                      │          │                              │
+│      │    .github.com                                      │           │                             │
 │  3   │  logomenu@aryan_k                                   │ 🍎 Dock   │ macOS-style Apple menu      │
 │  4   │  AlphabeticalAppGrid@stuarthayhurst                 │ 📊 Grid   │ Sort app grid A→Z           │
 │  5   │  pinned-apps-in-appgrid@brunosilva.io               │ 📌 Grid   │ Pin apps inside grid        │
 │  6   │  app-hider@lynith.dev                               │ 🙈 Grid   │ Hide apps from grid         │
 │  7   │  compiz-alike-magic-lamp-effect@hermes83            │ ✨ Anim   │ Genie/minimize animation    │
-│      │    .github.com                                      │          │                              │
-│  8   │  compiz-windows-effect@hermes83.github.com         │ ✨ Anim   │ Window open/close effects   │
+│      │    .github.com                                      │           │                             │
+│  8   │  compiz-windows-effect@hermes83.github.com          │ ✨ Anim   │ Window open/close effects   │
 │  9   │  CoverflowAltTab@palatis.blogspot.com               │ 🔄 AltTab │ CoverFlow window switcher   │
 │  10  │  clipboard-history@alexsaveau.dev                   │ 📋 Util   │ Persistent clipboard mgr    │
 │  11  │  ding@rastersoft.com                                │ 🖥️ Desktop│ Desktop icons               │
 │  12  │  Bluetooth-Battery-Meter@maniacx.github.com         │ 🔋 HW     │ BT device battery levels    │
 │  13  │  dash2dock-lite@icedman.github.com                  │ 🖥️ Dock   │ macOS-style dock            │
 │  14  │  appindicatorsupport@rgcjonas.gmail.com             │ 🔔 Tray   │ System tray / indicators    │
-└──────┴──────────────────────────────────────────────────────┴──────────┴──────────────────────────────┘
+│  15  │  window-title-pro@eprahemi.github.io                │ 🍎 Title  │ Window title on top bar     │
+└──────┴─────────────────────────────────────────────────────┴───────────┴─────────────────────────────┘
 ```
 
 ### 🎛️ dash2dock-lite Configuration
@@ -1437,7 +1451,6 @@ gsettings set org.gnome.desktop.sound event-sounds true
 │  │   │       ├── hollywood.fish      #     Hollywood terminal              │
 │  │   │       ├── weather.fish        #     curl wttr.in                   │
 │  │   │       ├── clean.fish          #     DNF cache cleanup               │
-│  │   │       ├── cleanreset.fish     #     Deep system reset               │
 │  │   │       └── getdata.fish        #     System data collector           │
 │  │   ├── 📁 kitty/                   # Kitty terminal configuration        │
 │  │   │   └── 📄 kitty.conf          #  → Liquid engine, no window memory  │
