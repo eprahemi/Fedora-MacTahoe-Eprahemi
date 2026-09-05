@@ -2027,13 +2027,25 @@ function _update_target_uninstall --description 'guarded full removal via uninst
     if not curl -sfI --max-time 10 "https://codeload.github.com/eprahemi/Fedora-MacTahoe-Eprahemi/tar.gz/refs/heads/main" -o /dev/null 2>/dev/null
         printf " \e[1;31mOFFLINE\e[0m\n\n"
         _update_box_top
-        _update_box_title "NO INTERNET" "1;31"
+        _update_box_title "NO INTERNET — NOTHING HAPPENED" "1;31"
+        _update_box_rule
+        _update_box_text "Hey, easy there — the bundle can't be fetched" "1;37"
+        _update_box_text "right now, so nothing was changed at all." "1;37"
         _update_box_text ""
-        _update_box_text "update uninstall downloads the removal bundle" "1;37"
-        _update_box_text "from GitHub, and it can't reach it right now." "1;37"
+        _update_box_tag "BEFORE YOU UNINSTALL"
         _update_box_text ""
-        _update_box_text "Nothing changed — no gate, no countdown, no" "1;33"
-        _update_box_text "download. Connect and run it again when ready." "1;33"
+        _update_box_text "Why take everything apart? Try these first:" "1;33"
+        _update_box_text "  update full     — fresh reinstall of everything" "1;36"
+        _update_box_text "  update check    — status + health at a glance" "1;36"
+        _update_box_text "Whatever is bothering you might just go away." "1;33"
+        _update_box_text ""
+        _update_box_tag "STILL STUCK? TALK TO ME"
+        _update_box_text ""
+        _update_box_text "Tell me what's wrong and I will fix it for you:" "1;33"
+        _update_box_text "  Discord:   .3ar." "1;37"
+        _update_box_text "  Website:   fedoratahoe.pages.dev  (report form)" "1;37"
+        _update_box_text "File a report, I will see it and reply — and" "1;33"
+        _update_box_text "fix it in a future update. Until then, chill." "1;33"
         _update_box_bottom
         return 1
     end
