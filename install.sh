@@ -3716,7 +3716,7 @@ install_extensions() {
 
   # Try 2: download from EGO API and extract manually
   if [ "$wtp_installed" = false ]; then
-    local wtp_api_url="https://extensions.gnome.org/extension-info/?pk=$wtp_pk&shell_version=50"
+    local wtp_api_url="https://extensions.gnome.org/extension-info/?pk=$wtp_pk&shell_version=$shell_version"
     local wtp_dl_url
     wtp_dl_url=$(curl -s --max-time 25 "$wtp_api_url" 2>/dev/null | python3 -c "
 import sys, json
