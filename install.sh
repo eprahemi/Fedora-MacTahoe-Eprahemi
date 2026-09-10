@@ -1806,6 +1806,8 @@ install_icons() {
   for _homedir in /home/*; do
     _user="$(basename "$_homedir")"
     [ "$_user" = "$(whoami)" ] && continue
+    # Skip home dirs whose user no longer exists (leftover dirs) — sudo would fail
+    id "$_user" >/dev/null 2>&1 || continue
     for icon in MacTahoe MacTahoe-dark; do
       local _udir="$_homedir/.local/share/icons/$icon"
       if [ -d "$_udir" ]; then
