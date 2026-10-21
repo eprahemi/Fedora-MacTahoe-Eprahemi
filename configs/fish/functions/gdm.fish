@@ -97,7 +97,9 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         set -l n1 "  🖼️  GDM WALLPAPER SWITCHER"
-        echo -e "  $CY║$C  $WH$n1$C$(printf '%*s' (math "60 - "(string length "$n1")) '')$CY║$C"
+        # VS16 emoji (🖼️): fish counts 2 codepoints, the terminal renders 2
+        # columns — the row needs 61 so the walls line up at 66 columns.
+        echo -e "  $CY║$C  $WH$n1$C$(printf '%*s' (math "61 - "(string length "$n1")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
@@ -141,7 +143,9 @@ function gdm --description 'Change GDM login screen wallpaper — needs internet
         echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         set -l n7 "  🔍  gdm --help   →  full features + blur"
-        echo -e "  $CY║$C  $D$n7$C$(printf '%*s' (math "60 - "(string length "$n7")) '')$CY║$C"
+        # Plain emoji (🔍): fish counts 1, the terminal renders 2 columns —
+        # the row needs 59 so the walls line up at 66 columns.
+        echo -e "  $CY║$C  $D$n7$C$(printf '%*s' (math "59 - "(string length "$n7")) '')$CY║$C"
         echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
         set -l br "  eprahemi  •  github.com/eprahemi"
         echo -e "  $CY║$C  $D$br$C$(printf '%*s' (math "60 - "(string length "$br")) '')$CY║$C"
@@ -731,13 +735,20 @@ except: sys.exit(1)
                     end
                 end
                 set -l st_state ""
+                # Each state emoji has a different column width (✘ is a narrow
+                # ambiguous-width glyph, 🛡️/⚠️ carry a zero-width variation
+                # selector), so the padding target differs per state.
+                set -l st_pad 60
                 switch $st_enabled
                     case enabled
                         set st_state "🛡️  PROTECTED — auto-restored at boot"
+                        set st_pad 61
                     case not-found
                         set st_state "✘  OFF — not installed (run  gdm protect on)"
+                        set st_pad 60
                     case '*'
                         set st_state "⚠️  INSTALLED BUT DISABLED — no auto-restore"
+                        set st_pad 61
                 end
                 printf "\n"
                 echo -e "  $CY╔══════════════════════════════════════════════════════════════╗$C"
@@ -747,7 +758,7 @@ except: sys.exit(1)
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                 echo -e "  $CY╠══════════════════════════════════════════════════════════════╣$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
-                echo -e "  $CY║$C  $st_state$C$(printf '%*s' (math "61 - "(string length "$st_state")) '')$CY║$C"
+                echo -e "  $CY║$C  $st_state$C$(printf '%*s' (math "$st_pad - "(string length "$st_state")) '')$CY║$C"
                 echo -e "  $CY║$C$(printf '%*s' 62 '')$CY║$C"
                 set -l st_engine (test -x "$repo_dir/restore.sh"; and echo "✓ present"; or echo "✘ missing")
                 set -l st_saved (test -s "$repo_dir/.gdm-undo-copy.jpg"; and echo "✓ saved"; or echo "✘ none")
