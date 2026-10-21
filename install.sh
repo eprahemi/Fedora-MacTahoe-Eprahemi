@@ -3820,7 +3820,13 @@ install_extensions() {
     warn "$ext_fail extension(s) failed — check extensions.gnome.org or your network"
   fi
 
-  # ── Window Title Pro (from GNOME Extensions / EGO) ──
+  # ── Window Title Pro (own extension — GitHub release first, EGO fallback) ──
+  # The GitHub release is the source of truth: it is published together with
+  # the source tag, so it always carries the newest shell-version metadata.
+  # The extensions.gnome.org copy is the fallback and may lag by a release.
+  # This matters for GNOME 51: the shell REFUSES to enable an extension whose
+  # metadata does not list the running shell version, so a stale EGO copy
+  # means a silently disabled extension on Fedora 45.
   local wtp_uuid="window-title-pro@eprahemi.github.io"
   local wtp_target="$HOME/.local/share/gnome-shell/extensions/$wtp_uuid"
   local wtp_pk="10319"
@@ -3829,14 +3835,53 @@ install_extensions() {
   # Always override — clean slate every time
   rm -rf "$wtp_target" 2>/dev/null || true
 
-  # Try 1: install via gnome-extensions CLI with EGO page URL
-  if gnome-extensions install "https://extensions.gnome.org/extension/$wtp_pk/window-title-pro/" --force 2>/dev/null; then
-    ok "Window Title Pro installed from EGO"
-    ext_ok=$((ext_ok + 1))
-    wtp_installed=true
+  # Try 1: the GitHub release asset — always the newest build.
+  # The release tag is resolved from the GitHub API so a new WTP version
+  # ships to every machine WITHOUT this installer changing (and without
+  # another install_sha256 re-pin). The hardcoded version is the fallback
+  # when the API is unreachable or rate-limited.
+  local wtp_version="15"
+  local wtp_api_ver=""
+  wtp_api_ver=$(curl -fsSL --max-time 20 "https://api.github.com/repos/eprahemi/window-title-pro-topbar/releases/latest" 2>/dev/null | grep -oP '"tag_name":\s*"\Kv[0-9.]+' | head -1 | tr -d 'v' 2>/dev/null || true)
+  if [ -n "$wtp_api_ver" ] && [ "$wtp_api_ver" != "$wtp_version" ]; then
+    wtp_version="$wtp_api_ver"
   fi
 
-  # Try 2: download from EGO API and extract manually
+  local wtp_candidates="$wtp_version"
+  if [ "$wtp_version" != "15" ]; then
+    wtp_candidates="$wtp_version 15"
+  fi
+
+  local wtp_version_try
+  for wtp_version_try in $wtp_candidates; do
+    local wtp_gh_url="https://github.com/eprahemi/window-title-pro-topbar/releases/download/v${wtp_version_try}/window-title-pro-v${wtp_version_try}.zip"
+    if curl -fsSL --max-time 40 "$wtp_gh_url" -o /tmp/window-title-pro.zip 2>/dev/null; then
+      if unzip -qo /tmp/window-title-pro.zip -d "$wtp_target" 2>/dev/null; then
+        glib-compile-schemas "$wtp_target/schemas" 2>/dev/null || true
+        wtp_installed=true
+        ok "Window Title Pro v${wtp_version_try} installed from the GitHub release"
+        ext_ok=$((ext_ok + 1))
+        break
+      else
+        warn "Failed to extract Window Title Pro v${wtp_version_try} from the GitHub release"
+      fi
+    fi
+    rm -f /tmp/window-title-pro.zip 2>/dev/null || true
+  done
+  if [ "$wtp_installed" = false ]; then
+    warn "GitHub release download failed for Window Title Pro — falling back to EGO"
+  fi
+
+  # Try 2: install via gnome-extensions CLI with EGO page URL
+  if [ "$wtp_installed" = false ]; then
+    if gnome-extensions install "https://extensions.gnome.org/extension/$wtp_pk/window-title-pro/" --force 2>/dev/null; then
+      ok "Window Title Pro installed from EGO"
+      ext_ok=$((ext_ok + 1))
+      wtp_installed=true
+    fi
+  fi
+
+  # Try 3: download from EGO API and extract manually
   if [ "$wtp_installed" = false ]; then
     local wtp_api_url="https://extensions.gnome.org/extension-info/?pk=$wtp_pk&shell_version=$shell_version"
     local wtp_dl_url

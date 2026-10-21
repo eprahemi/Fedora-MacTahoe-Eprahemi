@@ -1,9 +1,19 @@
 {
- "latest_version": "3.5.7",
+ "latest_version": "3.6",
  "bootstrap_sha256": "c90bf93f19e1fac2a0d0e145689444f9e5b0beb7ce5147c6e1620d3d33a6fb5b",
- "install_sha256": "3cdc83ef724ca81d945b6ddc370899dec1b970369d3db26ba659e61a81eb535f",
+ "install_sha256": "060aa68713a780adeeeabd0103ee99895135677a0528d8d4f6f57e0cd29b6a60",
  "update_sha256": "c3c3ca4916fdb5bee0303d69d22adfe22137c785ab47c6a0fdc790b884854104",
  "changelog": [
+  {
+   "version": "3.6",
+   "changes": [
+    "GNOME 51 SUPPORT (Fedora 45) — Window Title Pro is now installed from its GitHub release instead of extensions.gnome.org. This is the change that makes the extension actually work on GNOME 51: the shell refuses to enable an extension whose metadata does not list the running shell version, and the EGO copy still said 45-50. The GitHub release is published with the source tag, so it always carries the newest shell-version metadata; EGO stays as the fallback.",
+    "Window Title Pro v15 — metadata.json gains shell-version \"51\" (extension version 14 -> 15). Every breaking change in the GNOME 51 porting guide was audited against the source and none of them needed a code change: Shell.GLSLEffect, ui/pointerWatcher.js, the St \"vertical\" property, async disable(), Gio.DBus.makeProxyWrapper(), Clutter.get_default_backend(), St.ButtonMask and the popupMenu open()/close() parameters object are all unused.",
+    "Window Title Pro v15 also honours the GNOME 51 reduced-motion setting (St.Settings.get().reducedMotion vs St.ReducedMotion.REDUCE) — the fade animations are applied instantly when the user asks for reduced motion. St.Settings and St.ReducedMotion do not exist on GNOME 45-50, so the lookup is guarded and older shells animate exactly as before.",
+    "The install_extensions step is bumped 1.7 -> 1.8 so machines re-run it and pick up Window Title Pro v15. Only install.sh changed, so only install_sha256 was re-pinned; bootstrap.sh and update.fish are untouched and keep their hashes.",
+    "EGO note for the owner: the v15 zip still has to be uploaded to extensions.gnome.org by hand (there is no API token on this machine). Until then the GitHub path in install.sh is what delivers GNOME 51 support — it works today, the EGO upload is a redundancy, not a blocker."
+   ]
+  },
   {
    "version": "3.5.7",
    "changes": [
@@ -359,7 +369,7 @@
   "install_ktheme_watcher": "1.0",
   "setup_terminal": "1.0",
   "setup_shell": "1.0",
-  "install_extensions": "1.7",
+  "install_extensions": "1.8",
   "mirror_flatpak_icons": "1.0",
   "finalize": "1.9"
  }
