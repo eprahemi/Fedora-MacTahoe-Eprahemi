@@ -1357,19 +1357,80 @@ remove_gnome_weather() {
 
 # ── PHASE 1: SYSTEM FOUNDATIONS ──────────────────────────────
 
+# ── RPM Fusion mirror fetch ─────────────────────────────────────
+# mirrors.rpmfusion.org now redirects release-RPM downloads to dead
+# mirrors (ftp.cc.uoc.gr times out after 30s, repos.eggycrew.com has no
+# DNS record at all). A single dead mirror aborts the entire dnf
+# transaction, and under `set -e` that kills the installer at step 4 of 29.
+#
+# download1.rpmfusion.org is the canonical origin and stays healthy, so we
+# pull the release RPMs ourselves, verify each one really is a package (a
+# mirror can answer 200 with an HTML error page), and hand dnf a local
+# file. No metalink, no redirect, no dead mirror.
+_rpmfusion_fetch() {
+  # $1 = repo (free|nonfree)   $2 = fedora release
+  local repo="$1" release="$2"
+  local name="rpmfusion-${repo}-release-${release}.noarch.rpm"
+  local dest="/tmp/${name}"
+  local mirror mime
+  for mirror in \
+    "https://download1.rpmfusion.org" \
+    "https://mirrors.rpmfusion.org" \
+    "https://mirror.rpmfusion.org"; do
+    rm -f "$dest"
+    if curl -fsSL --connect-timeout 10 --max-time 60 -o "$dest" \
+         "${mirror}/${repo}/fedora/${name}" 2>/dev/null; then
+      mime=$(file --brief --mime-type "$dest" 2>/dev/null || true)
+      if [ "$mime" = "application/x-rpm" ] || rpm -qp "$dest" &>/dev/null; then
+        echo "$dest"
+        return 0
+      fi
+    fi
+    rm -f "$dest"
+  done
+  return 1
+}
+
+# Mark the RPM Fusion repos skip_if_unavailable so one dead mirror inside
+# the metalink set can never abort a dnf transaction.
+_rpmfusion_harden_repos() {
+  local _f
+  for _f in /etc/yum.repos.d/rpmfusion-*.repo; do
+    [ -f "$_f" ] || continue
+    if ! grep -q '^skip_if_unavailable' "$_f"; then
+      sudo sed -i '/^\[rpmfusion-/a skip_if_unavailable=True' "$_f" 2>/dev/null || true
+    fi
+  done
+}
+
 install_rpmfusion() {
   next_step "RPM Fusion + Codecs"
   log "Tip: If this step hangs on repo metadata, press Ctrl+C once — the script handles it safely"
 
-  local release
+  local release rpm_free rpm_nonfree
   release=$(rpm -E %fedora 2>/dev/null) || release="40"
 
-  sudo dnf install -y \
-    "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${release}.noarch.rpm" \
-    "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${release}.noarch.rpm" \
-    --nogpgcheck 2>/dev/null || sudo dnf install -y \
-    "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${release}.noarch.rpm" \
-    "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${release}.noarch.rpm"
+  # Fetch the release RPMs from a healthy mirror, then install the local
+  # files. Installing straight from a URL lets the mirror service pick a
+  # dead target — that is what broke this step.
+  rpm_free=$(_rpmfusion_fetch free "$release" || true)
+  rpm_nonfree=$(_rpmfusion_fetch nonfree "$release" || true)
+
+  if [ -n "$rpm_free" ] && [ -n "$rpm_nonfree" ]; then
+    if sudo dnf install -y "$rpm_free" "$rpm_nonfree" > /tmp/_rpmfusion-dnf.log 2>&1; then
+      ok "RPM Fusion repos installed"
+    else
+      warn "RPM Fusion repo install failed — continuing without them"
+      tail -3 /tmp/_rpmfusion-dnf.log 2>/dev/null | sed 's/^/      /' || true
+    fi
+    rm -f /tmp/_rpmfusion-dnf.log 2>/dev/null || true
+  else
+    warn "No RPM Fusion mirror reachable — skipping repos (codecs will be limited)"
+  fi
+  [ -n "$rpm_free" ] && rm -f "$rpm_free" 2>/dev/null || true
+  [ -n "$rpm_nonfree" ] && rm -f "$rpm_nonfree" 2>/dev/null || true
+
+  _rpmfusion_harden_repos
 
   timeout 60 sudo dnf check-update 2>/dev/null || true
 
@@ -1381,13 +1442,23 @@ install_rpmfusion() {
       sudo dnf install -y --allowerasing ffmpeg 2>/dev/null || true
   fi
 
-  sudo dnf install -y \
+  # Codecs are a nice-to-have, never a blocker. A theming install must not
+  # die because a third-party repo is unreachable.
+  if sudo dnf install -y \
     ffmpeg ffmpegthumbnailer gstreamer1-plugin-libav gstreamer1-plugins-ugly \
-    gstreamer1-plugins-bad-freeworld gstreamer1-plugins-bad-free-extras
+    gstreamer1-plugins-bad-freeworld gstreamer1-plugins-bad-free-extras \
+    > /tmp/_rpmfusion-dnf.log 2>&1; then
+    ok "Codecs installed"
+  else
+    warn "Codec packages unavailable — skipping (RPM Fusion repos may be unreachable)"
+    tail -3 /tmp/_rpmfusion-dnf.log 2>/dev/null | sed 's/^/      /' || true
+  fi
+  rm -f /tmp/_rpmfusion-dnf.log 2>/dev/null || true
+
   sudo dnf groupinstall -y multimedia 2>/dev/null || true
   rm -rf ~/.cache/thumbnails/
   nautilus -q 2>/dev/null || true
-  ok "RPM Fusion + codecs installed"
+  ok "RPM Fusion + codecs step complete"
 }
 
 install_nvidia() {
@@ -1456,8 +1527,15 @@ n17="  Press any key to continue, or Ctrl+C to update first"
     echo -en "  ${DIM}Press any key to continue...${NC} "
     _wait_or_close
     echo -e "${GREEN}proceeding${NC}"
-    sudo dnf install -y akmod-nvidia xorg-x11-drv-nvidia-cuda nvidia-settings vdpauinfo libva-utils
-    ok "NVIDIA drivers installed — fingers crossed"
+    # A missing driver package must not kill the install — the desktop
+    # still works on the fallback graphics driver.
+    if sudo dnf install -y akmod-nvidia xorg-x11-drv-nvidia-cuda nvidia-settings vdpauinfo libva-utils > /tmp/_nvidia-dnf.log 2>&1; then
+      ok "NVIDIA drivers installed — fingers crossed"
+    else
+      warn "NVIDIA driver packages unavailable — continuing (fallback graphics driver stays)"
+      tail -3 /tmp/_nvidia-dnf.log 2>/dev/null | sed 's/^/      /' || true
+    fi
+    rm -f /tmp/_nvidia-dnf.log 2>/dev/null || true
   else
     warn "No NVIDIA gear found — moving on"
   fi
@@ -1483,7 +1561,41 @@ install_rpm_packages() {
     ntfs-3g samba-client cifs-utils \
     cups-filters hplip"
 
-  sudo dnf install -y $pkgs
+  # Package names change between Fedora releases. One unknown name must
+  # not take the whole transaction — and with it the whole install —
+  # down. Try the full set first; if that fails, retry one by one and
+  # report exactly what was unavailable.
+  local failed_pkgs=""
+  if sudo dnf install -y $pkgs > /tmp/_pkgs-dnf.log 2>&1; then
+    ok "RPM packages installed"
+  else
+    warn "Bulk package install failed — retrying one by one"
+    local _p
+    for _p in $pkgs; do
+      if ! sudo dnf install -y "$_p" >> /tmp/_pkgs-dnf.log 2>&1; then
+        failed_pkgs="${failed_pkgs} $_p"
+      fi
+    done
+    if [ -n "$failed_pkgs" ]; then
+      warn "Unavailable packages:${failed_pkgs}"
+    fi
+    ok "RPM packages installed (with gaps — see above)"
+  fi
+  rm -f /tmp/_pkgs-dnf.log 2>/dev/null || true
+
+  # Load-bearing packages must be present — later steps depend on them
+  # (kitty becomes the default terminal, fish becomes the shell).
+  local _crit="kitty fish fastfetch ImageMagick fzf"
+  local _missing=""
+  local _c
+  for _c in $_crit; do
+    if ! rpm -q "$_c" &>/dev/null && ! command -v "$_c" &>/dev/null; then
+      _missing="${_missing} $_c"
+    fi
+  done
+  if [ -n "$_missing" ]; then
+    warn "Critical packages missing:${_missing}  — later steps may not fully apply"
+  fi
 
   # Starship prompt (not in Fedora repos — install via official script)
   if ! command -v starship &>/dev/null; then
@@ -1500,7 +1612,11 @@ install_browsers() {
 
   # Firefox
   if ! rpm -q firefox &>/dev/null; then
-    sudo dnf install -y firefox
+    if ! sudo dnf install -y firefox > /tmp/_firefox-dnf.log 2>&1; then
+      warn "Firefox unavailable — skipping (Fedora repo may be unreachable)"
+      tail -3 /tmp/_firefox-dnf.log 2>/dev/null | sed 's/^/      /' || true
+    fi
+    rm -f /tmp/_firefox-dnf.log 2>/dev/null || true
   fi
 
   # Chrome — create repo file directly (--from-repofile not supported by Google)
@@ -1555,7 +1671,11 @@ gpgcheck=1
 gpgkey=https://packages.microsoft.com/keys/microsoft.asc
 EOF
     sudo dnf check-update 2>/dev/null || true
-    sudo dnf install -y code
+    if ! sudo dnf install -y code > /tmp/_vscode-dnf.log 2>&1; then
+      warn "VS Code unavailable — skipping (Microsoft repo may be unreachable)"
+      tail -3 /tmp/_vscode-dnf.log 2>/dev/null | sed 's/^/      /' || true
+    fi
+    rm -f /tmp/_vscode-dnf.log 2>/dev/null || true
   fi
 
   ok "Browsers + VS Code installed (Spotify via Flatpak)"

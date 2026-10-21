@@ -1,9 +1,22 @@
 {
- "latest_version": "3.5.5",
+ "latest_version": "3.5.6",
  "bootstrap_sha256": "c90bf93f19e1fac2a0d0e145689444f9e5b0beb7ce5147c6e1620d3d33a6fb5b",
- "install_sha256": "70c53fad2f9f5f6bd0c84ef3c8f5d9ef730ec9b06f53cde8e490180ae62a2770",
- "update_sha256": "1c91d4717d8df149997733300a0f100a55a8343e96fb5cc4d5cef956407b9dc6",
+ "install_sha256": "3cdc83ef724ca81d945b6ddc370899dec1b970369d3db26ba659e61a81eb535f",
+ "update_sha256": "c3c3ca4916fdb5bee0303d69d22adfe22137c785ab47c6a0fdc790b884854104",
  "changelog": [
+  {
+   "version": "3.5.6",
+   "changes": [
+    "HOTFIX — the installer no longer dies at step 4 (RPM Fusion + Codecs). mirrors.rpmfusion.org had started redirecting release-RPM downloads to dead mirrors (ftp.cc.uoc.gr times out, repos.eggycrew.com no longer resolves), and a single dead mirror aborted the whole dnf transaction — which, under set -e, killed the install at 4 of 29",
+    "The release RPMs are now downloaded from a healthy mirror list (download1.rpmfusion.org first), verified to be real packages, and installed as local files — no metalink, no random redirect, no dead mirror",
+    "The RPM Fusion repos are marked skip_if_unavailable, so one broken mirror inside the metalink set can never abort a dnf transaction again",
+    "The step no longer blocks the install: if RPM Fusion or the codec packages are unreachable, the installer warns and continues with the rest of the theming instead of stopping dead",
+    "Hardened every remaining fatal dnf transaction the same way — the NVIDIA driver set, the ~50-package bulk set, Firefox and VS Code now warn and continue instead of stopping the install",
+    "The bulk package set now falls back to a one-by-one retry and names the exact packages that were unavailable (package names change between Fedora releases), and the load-bearing ones (kitty, fish, fastfetch, ImageMagick, fzf) are verified afterwards so a silent gap cannot break later steps",
+    "Fixed two misaligned rows in the main 'update help' box (update quick was 1 column over, update uninstall was 8 over) — every rendered row is exactly 66 columns again",
+    "Step install_rpmfusion bumped to 1.1 so every machine re-runs it on the next update"
+   ]
+  },
   {
    "version": "3.5.5",
    "changes": [
@@ -310,7 +323,7 @@
   "preflight": "1.0",
   "remove_ptyxis": "1.1",
   "remove_gnome_weather": "1.0",
-  "install_rpmfusion": "1.0",
+  "install_rpmfusion": "1.1",
   "install_nvidia": "1.0",
   "install_rpm_packages": "1.3",
   "install_browsers": "1.0",
