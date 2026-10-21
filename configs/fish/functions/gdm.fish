@@ -601,7 +601,7 @@ except: sys.exit(1)
         end
         switch $action
             case on
-                if not test -x "$repo_dir/restore.sh"
+                if not test -f "$repo_dir/restore.sh"
                     printf "\n"
                     echo -e "  $RE┌────────────────────────────────────────────────────────────┐$C"
                     echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
@@ -624,6 +624,10 @@ except: sys.exit(1)
                     printf "\n"
                     return 1
                 end
+                # The restore engine MUST be executable — the boot-time wrapper
+                # runs it as root with 'exec', and git does not always carry
+                # the exec bit through a clone.
+                chmod +x "$repo_dir/restore.sh" "$repo_dir/gdm-wallpaper.sh" 2>/dev/null
                 # Root wrapper: finds the first user's engine clone at boot
                 set -l wrapper_tmp "$gdm_tmp/protect-wrapper.sh"
                 printf '%s\n' \
@@ -1846,7 +1850,7 @@ except Exception:
                         set colorize_pct 30
                     end
 
-                    echo -e "  $D🎨  Applying blur (0x$blur_sigma) + black $colorize_pct%% tint...$C"
+                    echo -e "  $D🎨  Applying blur (0x$blur_sigma) + black $colorize_pct% tint...$C"
                     if magick "$image" -blur "0x$blur_sigma" -fill black -colorize "$colorize_pct%" "$blurred_file" 2>/dev/null
                         # ── Preview blurred result in Kitty ──
                         if test -n "$KITTY_PID"
@@ -1933,7 +1937,7 @@ except Exception:
                     end
 
                 else if test -z "$blur_choice"; or string match -qir '^y' "$blur_choice"
-                    echo -e "  $D🎨  Applying default blur (0x40) + black 40%% tint...$C"
+                    echo -e "  $D🎨  Applying default blur (0x40) + black 40% tint...$C"
                     if magick "$image" -blur 0x40 -fill black -colorize 40% "$blurred_file" 2>/dev/null
                         # ── Preview blurred result in Kitty ──
                         if test -n "$KITTY_PID"
@@ -2025,6 +2029,11 @@ except Exception:
     # ── Persistent FedoraTahoe-GDM repo (first run clones; re-clones if files missing) ──
     set -l repo "$HOME/.local/share/mactahoe-gdm"
 
+    # Engine version marker. The repo is only re-cloned when a file is MISSING,
+    # so without a version marker a fixed engine would never reach a machine
+    # that already has an old copy. Bump this whenever the engine changes.
+    set -l engine_version "3"
+
     # Critical files required for the wallpaper engine to work
     set -l critical_files \
         "$repo/gdm-wallpaper.sh" \
@@ -2033,32 +2042,39 @@ except Exception:
         "$repo/other/gdm/gnome-shell-theme.gresource.xml" \
         "$repo/restore.sh"
 
-    set -l need_clone 0
+    set -l engine_missing 0
+    set -l engine_stale 0
+    set -l engine_have ""
     if not test -d "$repo"
-        set need_clone 1
+        set engine_missing 1
     else
         for __cf in $critical_files
             if not test -f "$__cf"
-                set need_clone 1
+                set engine_missing 1
                 break
             end
         end
+        set engine_have (string trim -- (cat "$repo/other/gdm/ENGINE_VERSION" 2>/dev/null))
+        if test $engine_missing -eq 0; and test "$engine_have" != "$engine_version"
+            # Engine is complete but outdated — refresh it so fixes ship.
+            set engine_stale 1
+        end
     end
 
-    if test $need_clone -eq 1
+    if test $engine_missing -eq 1
         printf "\n"
         echo -e "  $CY┌────────────────────────────────────────────────────────────┐$C"
         echo -e "  $CY│$C$(printf '%*s' 60 '')$CY│$C"
         set -l i1 "  WALLPAPER ENGINE — SETUP REQUIRED"
         echo -e "  $CY│$C     $CY$B$i1$C$(printf '%*s' (math "55 - "(string length "$i1")) '')$CY│$C"
         echo -e "  $CY│$C$(printf '%*s' 60 '')$CY│$C"
-        echo -e "  $CY│$C  $D  The FedoraTahoe-GDM engine needs to be$C$CY           │$C"
-        echo -e "  $CY│$C  $D  downloaded to your system for GDM$C$CY                │$C"
-        echo -e "  $CY│$C  $D  wallpaper support.$C$CY                               │$C"
+        echo -e "  $CY│$C  $D  The FedoraTahoe-GDM engine needs to be$C$CY                  │$C"
+        echo -e "  $CY│$C  $D  downloaded to your system for GDM$C$CY                       │$C"
+        echo -e "  $CY│$C  $D  wallpaper support.$C$CY                                      │$C"
         echo -e "  $CY│$C$(printf '%*s' 60 '')$CY│$C"
-        echo -e "  $CY│$C     $D──────────────────────────────────────────$C$CY      │$C"
+        echo -e "  $CY│$C     $D──────────────────────────────────────────$C$CY             │$C"
         echo -e "  $CY│$C$(printf '%*s' 60 '')$CY│$C"
-        echo -e "  $CY│$C     $YE  Checking internet connection...$C$CY              │$C"
+        echo -e "  $CY│$C     $YE  Checking internet connection...$C$CY                      │$C"
         echo -e "  $CY│$C$(printf '%*s' 60 '')$CY│$C"
         echo -e "  $CY└────────────────────────────────────────────────────────────┘$C"
         printf "\n"
@@ -2109,8 +2125,6 @@ except Exception:
             set saved_last (mktemp $gdm_tmp/last-XXXXXX.gresource)
             cp "$repo/.last-gdm.gresource" "$saved_last"
         end
-        rm -rf "$repo"
-
         # ── Guard: git must be installed ──
         if not command -v git &>/dev/null
             printf "\n"
@@ -2158,8 +2172,14 @@ except Exception:
             end
         end
 
-        __loading "Downloading the wallpaper engine" "git clone --depth 1 https://github.com/eprahemi/FedoraTahoe-GDM.git '$repo'"
+        # Clone into a staging directory first — the live engine is replaced
+        # only after the download actually succeeded, so a failed download
+        # can never destroy a working engine.
+        set -l clone_tmp "$repo.new"
+        rm -rf "$clone_tmp"
+        __loading "Downloading the wallpaper engine" "git clone --depth 1 https://github.com/eprahemi/FedoraTahoe-GDM.git '$clone_tmp'"
         if test $status -ne 0
+            rm -rf "$clone_tmp"
             printf "\n"
             echo -e "  $RE┌────────────────────────────────────────────────────────────┐$C"
             echo -e "  $RE│$C$(printf '%*s' 60 '')$RE│$C"
@@ -2177,7 +2197,13 @@ except Exception:
         end
         set -e __loading_result
         # Remove .git && .gitignore — not needed at runtime, saves ~500 KB
-        rm -rf "$repo/.git" "$repo/.gitignore" 2>/dev/null
+        rm -rf "$clone_tmp/.git" "$clone_tmp/.gitignore" 2>/dev/null
+        rm -rf "$repo"
+        mv "$clone_tmp" "$repo"
+        # The engine scripts MUST be executable — the boot-time restore
+        # wrapper 'exec's restore.sh as root, and git does not always carry
+        # the exec bit through a clone.
+        chmod +x "$repo/restore.sh" "$repo/gdm-wallpaper.sh" 2>/dev/null
         echo -e "  $GR✅  FedoraTahoe-GDM engine ready (works offline from now on)$C$C"
 
         # Restore preserved runtime state files
@@ -2195,6 +2221,40 @@ except Exception:
         end
     end
 
+    # ── Stale engine refresh (best effort — never fatal) ──
+    # The engine repo is only re-cloned when a file is MISSING, so a fix in
+    # FedoraTahoe-GDM would never reach a machine that already has an old
+    # copy. The version marker detects that and pulls the new engine.
+    # Offline (or on any failure) the installed engine simply keeps working.
+    if test $engine_stale -eq 1
+        set -l refresh_tmp "$repo.new"
+        rm -rf "$refresh_tmp"
+        set -l refresh_ok 0
+        if command -v git &>/dev/null
+            __loading "Updating the wallpaper engine" "git clone --depth 1 https://github.com/eprahemi/FedoraTahoe-GDM.git '$refresh_tmp'"
+            if test $status -eq 0
+                set refresh_ok 1
+            end
+            set -e __loading_result
+        end
+        if test $refresh_ok -eq 1
+            rm -rf "$refresh_tmp/.git" "$refresh_tmp/.gitignore" 2>/dev/null
+            # Keep the runtime state files across the swap
+            for __sf in .gdm-undo-copy.jpg .gdm-info.txt .last-gdm.gresource
+                if test -f "$repo/$__sf"
+                    cp -f "$repo/$__sf" "$refresh_tmp/$__sf" 2>/dev/null
+                end
+            end
+            rm -rf "$repo"
+            mv "$refresh_tmp" "$repo"
+            chmod +x "$repo/restore.sh" "$repo/gdm-wallpaper.sh" 2>/dev/null
+            echo -e "  $GR✅  Wallpaper engine updated to v$engine_version$C$C"
+        else
+            rm -rf "$refresh_tmp"
+            echo -e "  $YE  Engine update unavailable — continuing with v$engine_have$C"
+        end
+    end
+
     # ══════════════════════════════════════════════════════════════
     # 🔄  JPEG CONVERSION — ensure GDM-compatible format (any → jpg)
     # ══════════════════════════════════════════════════════════════
@@ -2204,7 +2264,7 @@ except Exception:
             set -l converted "$gdm_tmp/converted.jpg"
             if touch "$gdm_tmp/.write-test" 2>/dev/null
                 rm -f "$gdm_tmp/.write-test"
-                echo -e "  $D🔄  Converting $ext → JPEG 90%% quality...$C"
+                echo -e "  $D🔄  Converting $ext → JPEG 90% quality...$C"
                 if magick "$image" -quality 90 "$converted" 2>/dev/null
                     set image "$converted"
                     echo -e "  $GR✅  Converted to JPEG$C"
@@ -2487,25 +2547,44 @@ except Exception:
         echo -e "  $GY  Install it and try again.$C"
         return 1
     end
-    # Save a copy for 'gdm info' (skip when reloading the very same file)
-    if test "$image" != "$repo/.gdm-undo-copy.jpg"
-        cp "$image" "$repo/.gdm-undo-copy.jpg"
-    end
-    # Clean up the private cache — original name + source path now in metadata cache
-    rm -rf $gdm_tmp
     echo -e "  $CY🖼️  Applying GDM wallpaper...$C$C"
+    # Guard: the engine reads "$image" from disk — the file MUST still exist.
+    # The JPEG-conversion and blur stages both write their result into
+    # "$gdm_tmp", so the private cache may only be cleaned up AFTER the
+    # engine has read the file. Cleaning it up first deleted the image and
+    # the engine silently fell back to the stock login background.
+    if not test -f "$image"
+        echo -e "  $RE✘  The prepared image is missing — nothing was applied.$C"
+        echo -e "  $GY  $image$C"
+        rm -rf $gdm_tmp
+        return 1
+    end
     cd "$repo"
     sudo ./gdm-wallpaper.sh -g -nb -nd -b "$image"
     set -l __engine_rc $status
     cd -
 
     if test $__engine_rc -eq 0
+        # Save a copy for 'gdm info' / 'gdm reload' (skip when reloading the
+        # very same file). Only AFTER a successful apply — the saved copy
+        # must always describe what is actually installed.
+        if test "$image" != "$repo/.gdm-undo-copy.jpg"
+            cp "$image" "$repo/.gdm-undo-copy.jpg" 2>/dev/null
+        end
         # Record the installed login bundle so the boot-time restore knows it
         # is up to date (sudo — the file is root-owned after a restore.sh run)
         if test -f /usr/share/gnome-shell/gnome-shell-theme.gresource
             sudo cp /usr/share/gnome-shell/gnome-shell-theme.gresource "$repo/.last-gdm.gresource" 2>/dev/null
         end
+    else
+        # The engine failed — never report success.
+        echo -e "  $RE✘  The wallpaper engine failed (exit $__engine_rc) — nothing was applied.$C"
+        echo -e "  $GY  The login screen keeps its current wallpaper.$C"
+        rm -rf $gdm_tmp
+        return 1
     end
+    # Clean up the private cache — the engine has read the image by now
+    rm -rf $gdm_tmp
 
     if string match -q '*himeno-login*' "$image"; and test $__gdm_reload -eq 0
         echo -e "  $D  ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣤⣶⣶⣶⣶⣶⣄⣠⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀$C"

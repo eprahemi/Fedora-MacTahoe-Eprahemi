@@ -1,9 +1,21 @@
 {
- "latest_version": "3.5.6",
+ "latest_version": "3.5.7",
  "bootstrap_sha256": "c90bf93f19e1fac2a0d0e145689444f9e5b0beb7ce5147c6e1620d3d33a6fb5b",
  "install_sha256": "3cdc83ef724ca81d945b6ddc370899dec1b970369d3db26ba659e61a81eb535f",
  "update_sha256": "c3c3ca4916fdb5bee0303d69d22adfe22137c785ab47c6a0fdc790b884854104",
  "changelog": [
+  {
+   "version": "3.5.7",
+   "changes": [
+    "THE GDM BUG — 'gdm <image>' and 'gdm current' never changed the login screen. The prepared wallpaper (the JPEG conversion or the blurred copy) was deleted from the private cache three lines BEFORE the wallpaper engine read it, so the engine aborted with \"image file not found\" while gdm still printed \"GDM wallpaper updated!\". The cache is now cleaned only after the engine has read the file",
+    "gdm no longer reports a false success — the engine's exit code is checked, a failed apply reports the error and returns non-zero, and a missing prepared image is caught before the engine is even called",
+    "gdm protect on had never worked on any machine: restore.sh was committed to the FedoraTahoe-GDM repo without the executable bit, so the \"engine required\" check always failed and the boot-time wrapper could not exec it. The bit is fixed in the repo and both engine scripts are made executable after every clone and refresh",
+    "GDM engine v3 — the login theme bundle compile is now verified: a failed compile no longer leaves the stock bundle in place while reporting success. restore.sh also normalises the wallpaper through ImageMagick like the engine does, so a restored bundle is pixel-identical to an applied one",
+    "gdm now detects a stale wallpaper engine (new ENGINE_VERSION marker) and pulls the fix on machines that already have an older clone. The clone is staged and swapped in only after it succeeds, so a failed download can no longer destroy a working engine",
+    "The wallpaper engine quotes every path it passes to ImageMagick and cp — wallpapers with spaces in the name (e.g. \"Wallvault Wallpapers + 18/22.jpg\") were being word-split",
+    "Fixed the stray '%%' in the JPEG-conversion and blur messages"
+   ]
+  },
   {
    "version": "3.5.6",
    "changes": [
@@ -333,7 +345,7 @@
   "apply_desktop_entries": "1.0",
   "ensure_celluloid_default": "1.0",
   "configure_nautilus_defaults": "1.0",
-  "apply_configs": "1.13",
+  "apply_configs": "1.14",
   "apply_dconf": "1.2",
   "optimize_system_resources": "1.1",
   "apply_wallpapers": "1.1",
