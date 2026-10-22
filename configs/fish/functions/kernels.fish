@@ -32,13 +32,13 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
     if set -q _flag_help
         set -l blank (printf '%*s' 62 '')
         printf '\n'
-        printf '  %s╔══════════════════════════════════════════════════════════╗%s\n' $BOLD $N
+        printf '  %s╔══════════════════════════════════════════════════════════════╗%s\n' $BOLD $N
         set -l hdr "KERNELS — HELP"
         set -l hl (string length -- "$hdr")
         set -l hleft (math "(62 - $hl) / 2" | string replace -r '\..*' '')
         set -l hright (math "62 - $hl - $hleft")
         printf '  %s║%s%*s%s%s%s%*s%s║%s\n' $BOLD $N $hleft "" $BOLDG $hdr $N $hright "" $BOLD $N
-        printf '  %s╠══════════════════════════════════════════════════════════╣%s\n' $BOLD $N
+        printf '  %s╠══════════════════════════════════════════════════════════════╣%s\n' $BOLD $N
         printf '  %s║%s%s%s║%s\n' $BOLD $N $blank $BOLD $N
 
         # Tagline
@@ -107,7 +107,7 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
         set -l txt "  Tip: type kernel and get corrected to kernels"
         set -l pad (math "62 - "(string length -- "$txt"))
         printf '  %s║%s%s%s%s%*s%s║%s\n' $BOLD $N $D $txt $N $pad "" $BOLD $N
-        printf '  %s╚══════════════════════════════════════════════════════════╝%s\n' $BOLD $N
+        printf '  %s╚══════════════════════════════════════════════════════════════╝%s\n' $BOLD $N
         printf '\n'
         return 0
     end
@@ -185,13 +185,13 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
         # ── Draw box (62-char inner width) ──
         set -l blank (printf '%*s' 62 '')
         printf '\n'
-        printf '  %s╔══════════════════════════════════════════════════════════╗%s\n' $BOLD $N
+        printf '  %s╔══════════════════════════════════════════════════════════════╗%s\n' $BOLD $N
         set -l hdr "KERNEL STATUS"
         set -l hl (string length -- "$hdr")
         set -l hleft (math "(62 - $hl - 1) / 2")
         set -l hright (math "62 - $hl - $hleft")
         printf '  %s║%s%*s%s%s%s%*s%s║%s\n' $BOLD $N $hleft "" $BOLDG $hdr $N $hright "" $BOLD $N
-        printf '  %s╠══════════════════════════════════════════════════════════╣%s\n' $BOLD $N
+        printf '  %s╠══════════════════════════════════════════════════════════════╣%s\n' $BOLD $N
         printf '  %s║%s%s%s║%s\n' $BOLD $N $blank $BOLD $N
 
         # Running kernel
@@ -275,7 +275,7 @@ function kernels -d "List and clean up old Fedora kernels and GRUB entries"
         set -l pad (math "62 - "(string length -- "$plain"))
         printf '  %s║%s  %s%s%s%*s%s║%s\n' $BOLD $N $D $tip $N $pad "" $BOLD $N
 
-        printf '  %s╚══════════════════════════════════════════════════════════╝%s\n' $BOLD $N
+        printf '  %s╚══════════════════════════════════════════════════════════════╝%s\n' $BOLD $N
         printf '\n'
         return 0
     end

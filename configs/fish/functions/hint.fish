@@ -49,6 +49,11 @@ function hint -d 'Interactive teaching: kitty, fish functions, whats-new + live 
         if test (count $argv) -lt 2
             set col $__hint_W
         end
+        # A row longer than the box breaks the right wall. Truncate it
+        # instead of overflowing (same pattern as the gdm figlet rows).
+        if test (string length -- "$txt") -gt (__hint_bw - 1)
+            set txt (string sub -l (__hint_bw - 4) "$txt")"..."
+        end
         set -l pad (math "$__hint_bw - "(string length -- "$txt"))
         if test $pad -lt 1
             set pad 1
@@ -142,7 +147,7 @@ function hint -d 'Interactive teaching: kitty, fish functions, whats-new + live 
         __hint_line "  • functions          builtin: all loaded functions" $__hint_W
         __hint_line "  • type <name>        quick source peek" $__hint_W
         __hint_line "  • every function supports --help (try: clean --help)" $__hint_W
-        __hint_line "  • recently updated: update, ktheme, kernels, gdm, pfp, kit, hint" $__hint_W
+        __hint_line "  • recently updated: update, gdm, ktheme, hint, kernels" $__hint_W
         __hint_blank
         __hint_line "  Tip: func search smb  — or: func show gdm" $__hint_D
         __hint_line "  Made by eprahemi — Fedora MacTahoe © 2026" $__hint_D

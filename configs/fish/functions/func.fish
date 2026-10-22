@@ -127,7 +127,7 @@ function func --description 'Browse all fish functions'
             case --help -h
                 echo -e "$Y"
                 echo "  ╭──────────────────────────────────────────────────────────╮"
-                echo "  │                   🗃️  FUNCTION  ARCHIVE                  │"
+                echo "  │                   🗃️  FUNCTION  ARCHIVE                   │"
                 echo "  │                    Usage & Commands                      │"
                 echo "  ╰──────────────────────────────────────────────────────────╯"
                 echo -e "$N"

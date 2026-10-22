@@ -37,7 +37,7 @@ function testdrive --description 'System diagnostic and benchmark suite'
     function __td_show_commands --no-scope-shadowing
         echo -e ""
         echo -e "  $B$WH╭──────────────────────────────────────────────────────╮$C"
-        echo -e "  $B$WH│$C  $CY⚡$C  $B\033[1;37mMASTER COMMANDS$C  $B$WH│$C"
+        echo -e "  $B$WH│$C  $CY⚡$C  $B\033[1;37mMASTER COMMANDS$C                                 $B$WH│$C"
         echo -e "  $B$WH├──────────────────────────────────────────────────────┤$C"
         echo -e "  $B$WH│$C  $CY all        $C$D •$C  Full system autopsy — every module"
         echo -e "  $B$WH│$C  $CY disk       $C$D •$C  Internal storage: speed, IOPS, SMART"
