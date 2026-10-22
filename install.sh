@@ -264,6 +264,115 @@ ok()    { echo -e "  ${GREEN}  ┊ ✓ ${NC}  $1"; }
 warn()  { echo -e "  ${YELLOW}  ┊ ⚠ ${NC}  $1"; }
 fail()  { echo -e "  ${RED}  ┊ ✗ ${NC}  $1"; exit 1; }
 
+# ── Step status tracking ────────────────────────────────────────
+# The installer must never fall over because one step failed. A dead
+# mirror, a missing package or a third-party download that times out
+# may not take the remaining steps down with it. Every step records
+# its outcome here; the final summary prints what is missing and the
+# exact command that adds it.
+#
+#   STEP_RESULT_*  — one entry per step: id, status, label
+#                    status is one of: ok | skipped | failed
+#   MISSING_*      — pieces that are absent after the run, each with
+#                    the command that installs it later
+STEP_RESULT_IDS=()
+STEP_RESULT_VALS=()
+STEP_RESULT_LABELS=()
+STEP_FAILED_COUNT=0
+
+MISSING_LABEL=()
+MISSING_FIX=()
+MISSING_COUNT=0
+
+# The label of the step currently running — next_step() sets it, so the
+# report never has to repeat a hardcoded title for every step id.
+CURRENT_STEP_LABEL=""
+
+_step_record() {
+    # _step_record <step_id> <status> <label>
+    # A step id is recorded once — a later record replaces the earlier
+    # one, so a step that reports itself while it is still running can
+    # be corrected afterwards with its real outcome.
+    local _i
+    for _i in ${STEP_RESULT_IDS[@]+"${!STEP_RESULT_IDS[@]}"}; do
+        if [ "${STEP_RESULT_IDS[$_i]}" = "$1" ]; then
+            STEP_RESULT_VALS[$_i]="$2"
+            STEP_RESULT_LABELS[$_i]="$3"
+            return 0
+        fi
+    done
+    STEP_RESULT_IDS+=("$1")
+    STEP_RESULT_VALS+=("$2")
+    STEP_RESULT_LABELS+=("$3")
+}
+
+# The recorded outcome of a step: ok | skipped | failed.
+# Empty when the step never ran.
+_step_status() {
+    local _i
+    for _i in ${STEP_RESULT_IDS[@]+"${!STEP_RESULT_IDS[@]}"}; do
+        if [ "${STEP_RESULT_IDS[$_i]}" = "$1" ]; then
+            echo "${STEP_RESULT_VALS[$_i]}"
+            return 0
+        fi
+    done
+    echo ""
+}
+
+_note_missing() {
+    # _note_missing "<what is missing>" "<how to add it later>"
+    MISSING_LABEL+=("$1")
+    MISSING_FIX+=("$2")
+    MISSING_COUNT=$((MISSING_COUNT + 1))
+}
+
+# The command that adds a failed step's piece to the system later.
+# "bash install.sh" is the universal fallback: a failed step is never
+# written to install-state.json, so a re-run retries exactly that step.
+_step_fix() {
+    case "$1" in
+        install_rpmfusion)            echo "dnf install rpmfusion-{free,nonfree}-release" ;;
+        install_nvidia)               echo "dnf install akmod-nvidia xorg-x11-drv-nvidia-cuda" ;;
+        install_browsers)             echo "flatpak install com.google.Chrome" ;;
+        install_flatpaks)             echo "flatpak install <app-id>" ;;
+        install_mactahoe_theme)       echo "update theme" ;;
+        install_font)                 echo "update fonts" ;;
+        apply_desktop_entries)        echo "update defaults" ;;
+        ensure_celluloid_default)     echo "update defaults" ;;
+        configure_nautilus_defaults)  echo "update defaults" ;;
+        apply_configs)                echo "update configs" ;;
+        apply_dconf)                  echo "update dconf" ;;
+        optimize_system_resources)    echo "update services" ;;
+        apply_wallpapers)             echo "update wallpaper" ;;
+        install_custom_avatars)       echo "update pfp" ;;
+        setup_gdm)                    echo "gdm <image>   # then reboot" ;;
+        setup_firefox_theme)          echo "launch Firefox once, then: update theme" ;;
+        setup_flatpak_theme)          echo "update gtk" ;;
+        install_sounds)               echo "update sounds" ;;
+        install_updater)              echo "update services" ;;
+        install_ktheme_watcher)       echo "update services" ;;
+        setup_terminal)               echo "update configs" ;;
+        setup_shell)                  echo "sudo chsh -s /usr/bin/fish \$USER" ;;
+        install_extensions)           echo "update extensions" ;;
+        download_optional_videos)     echo "update videos" ;;
+        remove_gnome_weather)         echo "dnf remove gnome-weather" ;;
+        remove_ptyxis)                echo "dnf remove ptyxis" ;;
+        *)                            echo "bash install.sh" ;;
+    esac
+}
+
+# A step failed: record it, tell the user, and let the run continue.
+_step_failed() {
+    # _step_failed <step_id> <exit_code>
+    local step_id="$1" rc="$2"
+    local label="${CURRENT_STEP_LABEL:-$step_id}"
+    STEP_FAILED_COUNT=$((STEP_FAILED_COUNT + 1))
+    _step_record "$step_id" "failed" "$label"
+    echo -e "  ${RED}  ┊ ✗ ${NC}  ${BOLD}${RED}Step failed${NC} ${DIM}(${step_id}, exit ${rc})${NC}"
+    echo -e "  ${RED}  ┊   ${NC}  ${DIM}Continuing with the next step — this one is retried on the next run.${NC}"
+    _note_missing "$label" "$(_step_fix "$step_id")"
+}
+
 backup_dconf() {
   # Rollback point before ANY destructive dconf operation (load/reset).
   # Saves a full dump of the user's live dconf database (few KB) to
@@ -594,14 +703,34 @@ _run_step() {
   local step_id="$1"
   local func_name="$2"
   if _step_should_run "$step_id"; then
-    "$func_name"
+    # A failing step must never take the rest of the run down with it.
+    # The `|| _rc=$?` keeps the call out of `set -e`'s kill path: the
+    # step's own failure is captured, recorded and reported later.
+    local _rc=0
+    "$func_name" || _rc=$?
+    if [ "$_rc" -ne 0 ]; then
+      # Preflight is the one step that must stay fatal: if the machine is
+      # not a supported target there is nothing sensible to continue with.
+      if [ "$step_id" = "preflight" ]; then
+        fail "Preflight failed — the machine is not a supported target"
+      fi
+      _step_failed "$step_id" "$_rc"
+      # Deliberately no _update_step_state here: a failed step is NOT
+      # written to install-state.json, so the next run retries it.
+      return 0
+    fi
     _update_step_state "$step_id"
+    _step_record "$step_id" "ok" "${CURRENT_STEP_LABEL:-$step_id}"
   else
+    # A step that does not run has no label of its own — next_step()
+    # lives inside the step function.
+    _step_record "$step_id" "skipped" "$step_id"
     if $_INCREMENTAL_ACTIVE; then
       local uv="${STEP_USR_VERS[$step_id]:-0.0}"
       echo -e "  ${DIM}  ┊ SKIP  ${NC} ${func_name} ${DIM}(v${uv} current)${NC}"
     fi
   fi
+  return 0
 }
 
 # ── Copy saved prompt answers into installer variables ──
@@ -610,6 +739,7 @@ _load_prompt_answers
 next_step() {
   sudo -n -v 2>/dev/null || true  # refresh sudo credential silently
   STEP=$((STEP + 1))
+  CURRENT_STEP_LABEL="$1"
   local pct=$((STEP * 100 / TOTAL_STEPS))
   local filled=$((STEP * 30 / TOTAL_STEPS))
   local empty=$((30 - filled))
@@ -706,6 +836,8 @@ __secure_tunnel() {
 INSTALL_START_EPOCH=""
 INSTALL_FP_OK=0
 INSTALL_FP_FAIL=0
+INSTALL_RPM_OK=0
+INSTALL_RPM_FAIL=0
 
 # ── System dashboard ──
 # Gathers real system info and displays in a polished overview box
@@ -905,8 +1037,6 @@ __install_summary() {
     [ "$em" -gt 0 ] && elapsed="${em}m ${es}s" || elapsed="${es}s"
   fi
 
-  local step_str="${STEP}/${TOTAL_STEPS}"
-
   # Disk used for themes/icons/fonts (approximate)
   local theme_disk=""
   if command -v du &>/dev/null; then
@@ -929,6 +1059,25 @@ __install_summary() {
   fi
   [ -z "$theme_disk" ] && theme_disk="~2 GiB"
 
+  # ── Real numbers ─────────────────────────────────────────────
+  # Every step records its outcome, so the report counts what actually
+  # happened instead of printing a fixed string.
+  local _ran=0 _skip=0 _fail=0 _v
+  for _v in ${STEP_RESULT_VALS[@]+"${STEP_RESULT_VALS[@]}"}; do
+    case "$_v" in
+      ok)      _ran=$((_ran + 1)) ;;
+      skipped) _skip=$((_skip + 1)) ;;
+      failed)  _fail=$((_fail + 1)) ;;
+    esac
+  done
+
+  local _status="Complete"
+  local _status_color="${GREEN}"
+  if [ "$_fail" -gt 0 ]; then
+    _status="Incomplete"
+    _status_color="${RED}"
+  fi
+
   echo ""
   echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
   local summary_t="📋  INSTALLATION SUMMARY  📋"
@@ -936,50 +1085,107 @@ __install_summary() {
   echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
 
-  local i_st="  Status:     Complete  (${step_str} steps)"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}Status:${NC}     Complete  ${DIM}(${step_str} steps)${NC}$(printf '%*s' $((62 - ${#i_st})) '')${CYAN}║${NC}"
+  local i_st="  Status:     ${_status}  (${_ran} ran, ${_skip} skipped, ${_fail} failed)"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Status:${NC}     ${_status_color}${_status}${NC}  ${DIM}(${_ran} ran, ${_skip} skipped, ${_fail} failed)${NC}$(printf '%*s' $((62 - ${#i_st})) '')${CYAN}║${NC}"
 
   local i_dur="  Duration:   ${elapsed}"
   echo -e "  ${CYAN}║${NC}  ${BOLD}Duration:${NC}   ${elapsed}$(printf '%*s' $((62 - ${#i_dur})) '')${CYAN}║${NC}"
 
+  if [ "$MISSING_COUNT" -gt 0 ]; then
+    local i_miss="  Missing:    ${MISSING_COUNT} piece(s) not installed"
+    echo -e "  ${CYAN}║${NC}  ${BOLD}Missing:${NC}    ${YELLOW}${MISSING_COUNT}${NC} piece(s) not installed$(printf '%*s' $((62 - ${#i_miss})) '')${CYAN}║${NC}"
+  fi
+
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
   echo -e "  ${CYAN}║${NC}  ${DIM}──────────────────────────────────────────────────────────${NC}  ${CYAN}║${NC}"
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
 
-  local i_rpm_clean="  RPM:        ~47 packages installed"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}RPM:${NC}        ${DIM}~47 packages installed${NC}$(printf '%*s' $((62 - ${#i_rpm_clean})) '')${CYAN}║${NC}"
+  local i_rpm_clean="  RPM:        ${INSTALL_RPM_OK} installed, ${INSTALL_RPM_FAIL} unavailable"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}RPM:${NC}        ${GREEN}${INSTALL_RPM_OK}${NC} installed, ${YELLOW}${INSTALL_RPM_FAIL}${NC} unavailable$(printf '%*s' $((62 - ${#i_rpm_clean})) '')${CYAN}║${NC}"
 
   local i_fp_clean="  Flatpak:    ${INSTALL_FP_OK} installed, ${INSTALL_FP_FAIL} failed"
   echo -e "  ${CYAN}║${NC}  ${BOLD}Flatpak:${NC}    ${GREEN}${INSTALL_FP_OK}${NC} installed, ${YELLOW}${INSTALL_FP_FAIL}${NC} failed$(printf '%*s' $((62 - ${#i_fp_clean})) '')${CYAN}║${NC}"
 
-  local i_br="  Browsers:   Firefox + Chrome + Edge + VS Code"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}Browsers:${NC}   Firefox + Chrome + Edge + VS Code$(printf '%*s' $((62 - ${#i_br})) '')${CYAN}║${NC}"
-
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
   echo -e "  ${CYAN}║${NC}  ${DIM}──────────────────────────────────────────────────────────${NC}  ${CYAN}║${NC}"
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
 
-  local i_gtk_clean="  GTK Theme:  MacTahoe-Dark (GNOME ${GNOME_VER})"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}GTK Theme:${NC}  MacTahoe-Dark ${DIM}(GNOME ${GNOME_VER})${NC}$(printf '%*s' $((62 - ${#i_gtk_clean})) '')${CYAN}║${NC}"
+  # The headline items follow the steps they came from: a step that
+  # failed must not be reported as installed.
+  local _theme_txt="MacTahoe-Dark (GNOME ${GNOME_VER})"
+  if [ "$(_step_status install_mactahoe_theme)" = "failed" ]; then
+    _theme_txt="not installed"
+  fi
+  local i_gtk_clean="  GTK Theme:  ${_theme_txt}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}GTK Theme:${NC}  ${_theme_txt}$(printf '%*s' $((62 - ${#i_gtk_clean})) '')${CYAN}║${NC}"
 
   local i_ico="  Icon Theme: MacTahoe-dark"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}Icon Theme:${NC} MacTahoe-dark$(printf '%*s' $((62 - ${#i_ico})) '')${CYAN}║${NC}"
+  if [ "$(_step_status install_mactahoe_theme)" = "failed" ]; then
+    i_ico="  Icon Theme: not installed"
+    echo -e "  ${CYAN}║${NC}  ${BOLD}Icon Theme:${NC} not installed$(printf '%*s' $((62 - ${#i_ico})) '')${CYAN}║${NC}"
+  else
+    echo -e "  ${CYAN}║${NC}  ${BOLD}Icon Theme:${NC} MacTahoe-dark$(printf '%*s' $((62 - ${#i_ico})) '')${CYAN}║${NC}"
+  fi
 
-  local i_fnt="  Font:       SF Pro Display"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}Font:${NC}       SF Pro Display$(printf '%*s' $((62 - ${#i_fnt})) '')${CYAN}║${NC}"
+  local _font_txt="SF Pro Display"
+  if [ "$(_step_status install_font)" = "failed" ]; then
+    _font_txt="not installed"
+  fi
+  local i_fnt="  Font:       ${_font_txt}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Font:${NC}       ${_font_txt}$(printf '%*s' $((62 - ${#i_fnt})) '')${CYAN}║${NC}"
 
-  local i_shl_clean="  Shell:      Fish (default after logout)"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}Shell:${NC}      Fish ${DIM}(default after logout)${NC}$(printf '%*s' $((62 - ${#i_shl_clean})) '')${CYAN}║${NC}"
+  local _shell_txt="Fish (default after logout)"
+  if [ "$(_step_status setup_shell)" = "failed" ]; then
+    _shell_txt="not installed"
+  fi
+  local i_shl_clean="  Shell:      ${_shell_txt}"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Shell:${NC}      ${_shell_txt}$(printf '%*s' $((62 - ${#i_shl_clean})) '')${CYAN}║${NC}"
 
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
   echo -e "  ${CYAN}║${NC}  ${DIM}──────────────────────────────────────────────────────────${NC}  ${CYAN}║${NC}"
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
 
-  local i_dsk="  Disk Usage: ~${theme_disk} for themes, icons, fonts"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}Disk Usage:${NC} ~${theme_disk} for themes, icons, fonts$(printf '%*s' $((62 - ${#i_dsk})) '')${CYAN}║${NC}"
+  local i_dsk="  Disk Usage: ${theme_disk} for themes, icons, fonts"
+  echo -e "  ${CYAN}║${NC}  ${BOLD}Disk Usage:${NC} ${theme_disk} for themes, icons, fonts$(printf '%*s' $((62 - ${#i_dsk})) '')${CYAN}║${NC}"
 
   echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
   echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+  echo ""
+
+  _print_missing_pieces
+}
+
+# ── The pieces that are missing, and how to add each one ──────
+# Only pieces that were actually attempted and failed are listed here.
+# An optional extra that was deliberately left out is not "missing" —
+# it was never asked for, so it is never reported as a failure.
+_print_missing_pieces() {
+  if [ "$MISSING_COUNT" -eq 0 ]; then
+    return 0
+  fi
+  local _i
+  echo ""
+  echo -e "  ${YELLOW}╔══════════════════════════════════════════════════════════════╗${NC}"
+  local _mt="  ◆  MISSING PIECES  -  ${MISSING_COUNT} item(s)"
+  echo -e "  ${YELLOW}║${NC}${_mt}$(printf '%*s' $((62 - ${#_mt})) '')${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}╠══════════════════════════════════════════════════════════════╣${NC}"
+  echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
+  for _i in ${MISSING_LABEL[@]+"${!MISSING_LABEL[@]}"}; do
+    local _l="  •  ${MISSING_LABEL[$_i]}"
+    local _f="      add it with:  ${MISSING_FIX[$_i]}"
+    if [ "${#_f}" -gt 62 ]; then
+      _f="      add it with:  ${MISSING_FIX[$_i]:0:48}..."
+    fi
+    echo -e "  ${YELLOW}║${NC}${_l}$(printf '%*s' $((62 - ${#_l})) '')${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}║${NC}${_f}$(printf '%*s' $((62 - ${#_f})) '')${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
+  done
+  local _f1="  A failed step is never marked as done, so a re-run of"
+  local _f2="  'bash install.sh' retries exactly what is missing."
+  echo -e "  ${YELLOW}║${NC}${_f1}$(printf '%*s' $((62 - ${#_f1})) '')${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}${_f2}$(printf '%*s' $((62 - ${#_f2})) '')${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
+  echo -e "  ${YELLOW}╚══════════════════════════════════════════════════════════════╝${NC}"
   echo ""
 }
 
@@ -1566,7 +1772,10 @@ install_rpm_packages() {
   # down. Try the full set first; if that fails, retry one by one and
   # report exactly what was unavailable.
   local failed_pkgs=""
+  INSTALL_RPM_OK=0
+  INSTALL_RPM_FAIL=0
   if sudo dnf install -y $pkgs > /tmp/_pkgs-dnf.log 2>&1; then
+    INSTALL_RPM_OK=$(echo $pkgs | wc -w | tr -d ' ')
     ok "RPM packages installed"
   else
     warn "Bulk package install failed — retrying one by one"
@@ -1574,6 +1783,9 @@ install_rpm_packages() {
     for _p in $pkgs; do
       if ! sudo dnf install -y "$_p" >> /tmp/_pkgs-dnf.log 2>&1; then
         failed_pkgs="${failed_pkgs} $_p"
+        INSTALL_RPM_FAIL=$((INSTALL_RPM_FAIL + 1))
+      else
+        INSTALL_RPM_OK=$((INSTALL_RPM_OK + 1))
       fi
     done
     if [ -n "$failed_pkgs" ]; then
@@ -4124,6 +4336,11 @@ except Exception:
     echo "$STATE_JSON" > "$_TMPFILE" 2>/dev/null && mv "$_TMPFILE" "$STATE_FILE" 2>/dev/null || true
   fi
 
+  # finalize is the step that is running right now — record it so the
+  # summary counts all steps. _run_step replaces this with the real
+  # outcome as soon as this function returns.
+  _step_record "finalize" "ok" "Cleanup & Reboot"
+
   __install_summary
 
   echo ""
@@ -4411,3 +4628,14 @@ phase_divider "PHASE 6 : EXTENSIONS & FINALIZE" 26 28
 _run_step "install_extensions" install_extensions
 _run_step "download_optional_videos" download_optional_videos
 _run_step "finalize" finalize
+
+# ── Exit code ────────────────────────────────────────────────────
+# 0 = every step completed.
+# 1 = at least one step failed. The run itself was NOT aborted — the
+#     summary above lists what is missing and the command that adds it,
+#     and re-running install.sh retries exactly the steps that did not
+#     complete (a failed step is never written to install-state.json).
+if [ "$STEP_FAILED_COUNT" -gt 0 ]; then
+  exit 1
+fi
+exit 0
