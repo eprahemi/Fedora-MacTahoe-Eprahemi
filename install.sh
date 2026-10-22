@@ -453,6 +453,162 @@ is_valid_zip() {
   od -A n -t x1 -N 4 "$f" 2>/dev/null | grep -qi "50 4b 03 04"
 }
 
+# ── Hosted assets (Google Drive) ───────────────────────────────
+# A hosted file that the user asked for but that cannot be
+# downloaded is skipped instead of retried for the rest of the run.
+SKIP_WALLPAPER_18=false
+SKIP_WALLPAPER_18_V2=false
+SKIP_FACES_18=false
+SKIP_VIDEOS=false
+SKIP_GINTAMA=false
+
+# The extra wallpaper packs, the extra avatars and the video edits
+# live on Google Drive. Drive answers a dead link with an HTML
+# error page (404) instead of the file, so the state of a link can
+# be known BEFORE a download is started. The check is a HEAD
+# request — it transfers nothing.
+_drive_probe() {
+  # _drive_probe <url> → "ok" | "dead" | "unknown"
+  local url="$1"
+  local out="" code="" type=""
+  out=$(curl -sIL --max-time 20 -b "download_warning=1" -o /dev/null \
+        -w '%{http_code} %{content_type}' "$url" 2>/dev/null) || out=""
+  code="${out%% *}"
+  type="${out#* }"
+  if [ "$code" = "200" ]; then
+    case "$type" in
+      text/html*) echo "dead" ;;
+      *)          echo "ok" ;;
+    esac
+  elif [ "$code" = "404" ] || [ "$code" = "403" ] || [ "$code" = "410" ]; then
+    echo "dead"
+  else
+    echo "unknown"
+  fi
+}
+
+# Prints the state of one hosted asset.
+# Returns 0 = alive, 1 = dead, 2 = could not be checked.
+_drive_asset() {
+  # _drive_asset "<label>" "<url>"
+  local label="$1" url="$2"
+  local state
+  state="$(_drive_probe "$url")"
+  case "$state" in
+    ok)
+      echo -e "  ${GREEN}  ┊ ✓ ${NC}  ${label} ${DIM}(link alive)${NC}"
+      return 0
+      ;;
+    dead)
+      echo -e "  ${RED}  ┊ ✗ ${NC}  ${label} ${RED}(the hosted link is dead)${NC}"
+      return 1
+      ;;
+    *)
+      echo -e "  ${YELLOW}  ┊ ⚠ ${NC}  ${label} ${DIM}(link could not be checked)${NC}"
+      return 2
+      ;;
+  esac
+}
+
+# ── A hosted asset the user asked for, but whose link is dead ──
+# This is the one place the installer asks about a hosted link: the
+# user asked for the asset explicitly, so the dead link is worth a
+# question. Continuing without it is the default — the install never
+# stops because a third-party file is gone.
+# Returns 0 = continue without it, 1 = try the download anyway.
+_drive_dead_ask() {
+  # _drive_dead_ask "<what>" "<how to add it later>"
+  local what="$1" fix="$2"
+  echo ""
+  echo -e "  ${YELLOW}◆${NC}  ${BOLD}${YELLOW}The hosted file for ${what} is gone${NC}"
+  echo -e "  ${DIM}     it was removed from Google Drive — there is nothing left to download${NC}"
+  if confirm "Continue without it? [Y/n]: " Y; then
+    _drive_failed "$what" "$fix"
+    return 0
+  fi
+  return 1
+}
+
+# ── A hosted asset that could not be delivered ────────────────
+# The step continues; the piece is reported as missing and the
+# command that adds it later is printed right here.
+_drive_failed() {
+  # _drive_failed "<what>" "<how to add it later>"
+  local what="$1" fix="$2"
+  echo -e "  ${RED}  ┊ ✗ ${NC}  ${BOLD}${RED}${what}${NC} ${RED}could not be downloaded${NC}"
+  echo -e "  ${DIM}     the hosted link is dead or unreachable — the install continues without it${NC}"
+  echo -e "  ${DIM}     add it later with:  ${NC}${BOLD}${WHITE}${fix}${NC}"
+  _note_missing "$what" "$fix"
+}
+
+# ── Report the state of the hosted assets this install needs ──
+# Only the assets that are actually going to be downloaded are
+# checked — there is no point in probing a link nobody uses.
+_hosted_assets_status() {
+  local _need_pack=false _need_faces=false _need_videos=false
+  if [ "${INSTALL_WALLPAPER_18:-false}" = "true" ]; then
+    _need_pack=true
+    _need_faces=true
+  fi
+  if [ "${INSTALL_BILLIE_VIDEOS:-false}" = "true" ]; then
+    _need_videos=true
+  fi
+  if [ "$_need_pack" = "false" ] && [ "$_need_videos" = "false" ]; then
+    return 0
+  fi
+
+  echo ""
+  echo -e "  ${BOLD}${WHITE}◆  HOSTED ASSETS — checking the links${NC}"
+  local _dead=0 _st=0
+  if [ "$_need_pack" = "true" ]; then
+    _st=0
+    _drive_asset "extra wallpaper pack" "$WALLPAPER_18_URL" || _st=$?
+    if [ "$_st" -eq 1 ]; then
+      _dead=$((_dead + 1))
+      if _drive_dead_ask "the extra wallpaper pack" "update wallpaper"; then
+        SKIP_WALLPAPER_18=true
+      fi
+    fi
+    _st=0
+    _drive_asset "extra wallpaper pack (v2)" "$WALLPAPER_18_URL_V2" || _st=$?
+    if [ "$_st" -eq 1 ]; then
+      _dead=$((_dead + 1))
+      if _drive_dead_ask "the extra wallpaper pack (v2)" "update wallpaper"; then
+        SKIP_WALLPAPER_18_V2=true
+      fi
+    fi
+    _st=0
+    _drive_asset "extra profile pictures" "$FACES_18_URL" || _st=$?
+    if [ "$_st" -eq 1 ]; then
+      _dead=$((_dead + 1))
+      if _drive_dead_ask "the extra profile pictures" "update pfp"; then
+        SKIP_FACES_18=true
+      fi
+    fi
+  fi
+  if [ "$_need_videos" = "true" ]; then
+    _st=0
+    _drive_asset "video edits" "$DOWNLOADS_URL" || _st=$?
+    if [ "$_st" -eq 1 ]; then
+      _dead=$((_dead + 1))
+      if _drive_dead_ask "the video edits" "update videos"; then
+        SKIP_VIDEOS=true
+      fi
+    fi
+    _st=0
+    _drive_asset "video edit (mp4)" "$GINTAMA_URL" || _st=$?
+    if [ "$_st" -eq 1 ]; then
+      _dead=$((_dead + 1))
+      if _drive_dead_ask "the video edit (mp4)" "update videos"; then
+        SKIP_GINTAMA=true
+      fi
+    fi
+  fi
+  if [ "$_dead" -gt 0 ]; then
+    echo -e "  ${DIM}     ${_dead} dead link(s) — the install continues, the piece is listed at the end${NC}"
+  fi
+}
+
 TOTAL_STEPS=29
 STEP=0
 
@@ -1955,7 +2111,7 @@ _mactahoe_get_source() {
   local vendored="$BUNDLE/vendor/MacTahoe-gtk-theme"
 
   rm -rf "$repo"
-  if git clone --depth 1 https://github.com/vinceliuice/MacTahoe-gtk-theme.git "$repo" 2>/dev/null \
+  if timeout 120 git clone --depth 1 https://github.com/vinceliuice/MacTahoe-gtk-theme.git "$repo" 2>/dev/null \
       && [ -f "$repo/install.sh" ] && [ -f "$repo/tweaks.sh" ] && bash -n "$repo/install.sh" 2>/dev/null; then
     _MCT_SRC="$repo"
     _MCT_FROM="upstream"
@@ -2719,221 +2875,42 @@ prompt_sudoers_entry() {
   fi
 }
 
-# ── Discord optional prompt (only when no saved answer) ──
-prompt_discord() {
-  if [ -z "${INSTALL_DISCORD:-}" ]; then
-    echo ""
-    echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-disc_t="            ◆  INSTALL DISCORD?  ◆"
-    echo -e "  ${CYAN}║${NC}${disc_t}$(printf '%*s' $((62 - ${#disc_t})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-disc1="  Discord via Flatpak — ~214 MB download, ~540 MB installed."
-    echo -e "  ${CYAN}║${NC}${disc1}$(printf '%*s' $((62 - ${#disc1})) '')${CYAN}║${NC}"
-disc2="  Skip it if you don't need it."
-    echo -e "  ${CYAN}║${NC}${disc2}$(printf '%*s' $((62 - ${#disc2})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-disc3="    Yes  — Install Discord"
-    echo -e "  ${CYAN}║${NC}    ${BOLD}${GREEN}Y${NC}${BOLD}es${NC}  — Install Discord$(printf '%*s' $((62 - ${#disc3})) '')${CYAN}║${NC}"
-disc4="    no   — Skip it"
-    echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}n${NC}${BOLD}o${NC}   — Skip it$(printf '%*s' $((62 - ${#disc4})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-disc5="  Press Enter for default (No)"
-    echo -e "  ${CYAN}║${NC}${DIM}${disc5}$(printf '%*s' $((62 - ${#disc5})) '')${NC}${CYAN}║${NC}"
-disc6="  Tip: set INSTALL_DISCORD=false to skip silently"
-    echo -e "  ${CYAN}║${NC}${DIM}${disc6}$(printf '%*s' $((62 - ${#disc6})) '')${NC}${CYAN}║${NC}"
-    echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
-    echo ""
-    if confirm "Discord? [y/N]: " N; then
-      INSTALL_DISCORD="true"
-      echo -e "  ${GREEN}→ Discord will be installed${NC}"
-    else
-      INSTALL_DISCORD="false"
-      echo -e "  ${DIM}→ Skipping Discord${NC}"
-    fi
-  fi
-}
 
-# ── Optional wallpaper prompts (run before Phase 1) ──
 
-prompt_optional_wallpapers() {
-
-  # ── Desktop wallpaper prompt ──
-  if [ -z "${INSTALL_DESKTOP_WALLPAPER:-}" ]; then
-    echo ""
-    echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-desk_t="        ◆  DESKTOP WALLPAPER?  ◆"
-    echo -e "  ${CYAN}║${NC}        ${BOLD}${WHITE}◆  DESKTOP WALLPAPER?${NC}  ${DIM}◆${NC}$(printf '%*s' $((62 - ${#desk_t})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-desk1="  Install the custom Himeno Fedora desktop wallpaper?"
-    echo -e "  ${CYAN}║${NC}${desk1}$(printf '%*s' $((62 - ${#desk1})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-desk2="    no   — Keep current wallpaper"
-    echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}n${NC}${BOLD}o${NC}   — Keep current wallpaper$(printf '%*s' $((62 - ${#desk2})) '')${CYAN}║${NC}"
-desk3="    Yes  — Set Himeno Fedora.jpg as your desktop"
-    echo -e "  ${CYAN}║${NC}    ${BOLD}${GREEN}Y${NC}${BOLD}es${NC}  — Set Himeno Fedora.jpg as your desktop$(printf '%*s' $((62 - ${#desk3})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-desk4="  (Login screen wallpaper has its own prompt below)"
-    echo -e "  ${CYAN}║${NC}${DIM}${desk4}$(printf '%*s' $((62 - ${#desk4})) '')${NC}${CYAN}║${NC}"
-desk5="  Press Enter for default (No)"
-    echo -e "  ${CYAN}║${NC}${DIM}${desk5}$(printf '%*s' $((62 - ${#desk5})) '')${NC}${CYAN}║${NC}"
-    echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
-    echo ""
-    if confirm "Desktop wallpaper? [y/N]: " N; then
-      INSTALL_DESKTOP_WALLPAPER="true"
-      echo -e "  ${GREEN}→ Desktop wallpaper will be installed${NC}"
-    else
-      INSTALL_DESKTOP_WALLPAPER="false"
-      echo -e "  ${DIM}→ Skipping desktop wallpaper${NC}"
-    fi
-  fi
-
-  # ── Login screen wallpaper prompt (separate from desktop) ──
+# ── GDM login screen prompt (the one question that stays) ────
+prompt_gdm_login() {
   if [ -z "${INSTALL_LOGIN_WALLPAPER:-}" ]; then
     echo ""
     echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-login_t="       ◆  LOGIN SCREEN WALLPAPER?  ◆"
+    login_t="       ◆  LOGIN SCREEN WALLPAPER?  ◆"
     echo -e "  ${CYAN}║${NC}       ${BOLD}${WHITE}◆  LOGIN SCREEN WALLPAPER?${NC}  ${DIM}◆${NC}$(printf '%*s' $((62 - ${#login_t})) '')${CYAN}║${NC}"
     echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
     echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-login1="  Override the GDM login screen with the Himeno theme?"
+    login1="  Override the GDM login screen with the Himeno theme?"
     echo -e "  ${CYAN}║${NC}${login1}$(printf '%*s' $((62 - ${#login1})) '')${CYAN}║${NC}"
     echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-login2="  This sets the macOS-style login screen with the"
+    login2="  This sets the macOS-style login screen with the"
     echo -e "  ${CYAN}║${NC}${login2}$(printf '%*s' $((62 - ${#login2})) '')${CYAN}║${NC}"
-login3="  Himeno background, macOS theme, and hides the logo."
+    login3="  Himeno background, macOS theme, and hides the logo."
     echo -e "  ${CYAN}║${NC}${login3}$(printf '%*s' $((62 - ${#login3})) '')${CYAN}║${NC}"
     echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-login4="  Not stuck with just this one — the gdm command"
+    login4="  Not stuck with just this one — the gdm command"
     echo -e "  ${CYAN}║${NC}${login4}$(printf '%*s' $((62 - ${#login4})) '')${CYAN}║${NC}"
-login4b="  lets you swap wallpapers anytime after install."
+    login4b="  lets you swap wallpapers anytime after install."
     echo -e "  ${CYAN}║${NC}${login4b}$(printf '%*s' $((62 - ${#login4b})) '')${CYAN}║${NC}"
     echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-login4c="  If you already have a custom GDM setup, skip this."
+    login4c="  If you already have a custom GDM setup, skip this."
     echo -e "  ${CYAN}║${NC}${DIM}${login4c}$(printf '%*s' $((62 - ${#login4c})) '')${NC}${CYAN}║${NC}"
-login5="  Press Enter for default (Yes)"
+    login5="  Press Enter for default (Yes)"
     echo -e "  ${CYAN}║${NC}${DIM}${login5}$(printf '%*s' $((62 - ${#login5})) '')${NC}${CYAN}║${NC}"
     echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
     echo ""
     if confirm "Override GDM login screen? [Y/n]: " Y; then
-      # ── Second confirmation ──
-      echo ""
-      echo -e "  ${YELLOW}╔══════════════════════════════════════════════════════════════╗${NC}"
-      echo -e "  ${YELLOW}║${NC}        ${BOLD}⚠  ARE YOU ABSOLUTELY SURE?  ⚠${NC}                        ${YELLOW}║${NC}"
-      echo -e "  ${YELLOW}╠══════════════════════════════════════════════════════════════╣${NC}"
-      echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
-      echo -e "  ${YELLOW}║${NC}  This will set the Himeno login screen as your GDM           ${YELLOW}║${NC}"
-      echo -e "  ${YELLOW}║${NC}  background. Don't worry — you can change it anytime!        ${YELLOW}║${NC}"
-      echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
-      echo -e "  ${YELLOW}║${NC}  Just run ${BOLD}gdm${NC} in the terminal to switch to any picture       ${YELLOW}║${NC}"
-      echo -e "  ${YELLOW}║${NC}  you like. The ${BOLD}gdm.fish${NC} function lets you change your        ${YELLOW}║${NC}"
-      echo -e "  ${YELLOW}║${NC}  login screen wallpaper anytime with preview, blur, and      ${YELLOW}║${NC}"
-      echo -e "  ${YELLOW}║${NC}  search — all from the terminal.                             ${YELLOW}║${NC}"
-      echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
-      echo -e "  ${YELLOW}╚══════════════════════════════════════════════════════════════╝${NC}"
-      echo ""
-      if confirm "Are you sure you want the GDM login screen? [Y/n]: " Y; then
-        INSTALL_LOGIN_WALLPAPER="true"
-        echo -e "  ${GREEN}→ GDM login screen will be themed${NC}"
-      else
-        INSTALL_LOGIN_WALLPAPER="false"
-        echo -e "  ${DIM}→ Skipping GDM login screen${NC}"
-      fi
+      INSTALL_LOGIN_WALLPAPER="true"
+      echo -e "  ${GREEN}→ GDM login screen will be themed${NC}"
     else
       INSTALL_LOGIN_WALLPAPER="false"
       echo -e "  ${DIM}→ Skipping GDM login screen${NC}"
-    fi
-  fi
-
-  # ── 18+ wallpaper prompt (separate, always optional) ──
-  if [ -z "${INSTALL_WALLPAPER_18:-}" ]; then
-    echo ""
-    echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-wp18_t="         ◆  18+ WALLPAPERS?  ◆"
-    echo -e "  ${CYAN}║${NC}         ${BOLD}${WHITE}◆  18+ WALLPAPERS?${NC}  ${DIM}◆${NC}$(printf '%*s' $((62 - ${#wp18_t})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-wp18_1="  Download additional 18+ wallpapers from a hosted zip?"
-    echo -e "  ${CYAN}║${NC}${wp18_1}$(printf '%*s' $((62 - ${#wp18_1})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-wp18_2="    yes  — Download and install 18+ wallpapers"
-    echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}y${NC}${BOLD}es${NC}  — Download and install 18+ wallpapers$(printf '%*s' $((62 - ${#wp18_2})) '')${CYAN}║${NC}"
-wp18_3="    No   — Skip them (default)"
-    echo -e "  ${CYAN}║${NC}    ${BOLD}${GREEN}N${NC}${BOLD}o${NC}   — Skip them (default)$(printf '%*s' $((62 - ${#wp18_3})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-wp18_4="  To update: replace the zip — same URL works"
-    echo -e "  ${CYAN}║${NC}${DIM}${wp18_4}$(printf '%*s' $((62 - ${#wp18_4})) '')${NC}${CYAN}║${NC}"
-wp18_5="  Press Enter for default (No)"
-    echo -e "  ${CYAN}║${NC}${DIM}${wp18_5}$(printf '%*s' $((62 - ${#wp18_5})) '')${NC}${CYAN}║${NC}"
-    echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
-    echo ""
-    if confirm "18+ wallpapers? [y/N]: " N; then
-      INSTALL_WALLPAPER_18="true"
-      echo -e "  ${GREEN}→ 18+ wallpapers will be downloaded${NC}"
-    else
-      INSTALL_WALLPAPER_18="false"
-      echo -e "  ${DIM}→ Skipping 18+ wallpapers${NC}"
-    fi
-  fi
-
-}
-
-prompt_billie_videos() {
-  # ── Prompt if not already set (e.g. env var set by the user) ──
-  if [ -z "${INSTALL_BILLIE_VIDEOS:-}" ]; then
-    echo ""
-    echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-bv_t="        ◆  🔥  HOT BILLIE & JINX VIDEO EDITS?  ◆"
-    echo -e "  ${CYAN}║${NC}${bv_t}$(printf '%*s' $((61 - ${#bv_t})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-bv1="  🔥  Sick edits — Billie, Jinx, and cool stuff (~500 MB)"
-    echo -e "  ${CYAN}║${NC}${bv1}$(printf '%*s' $((61 - ${#bv1})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-bv2="    y  — Heck yeah! Drop 'em in ~/Downloads"
-    echo -e "  ${CYAN}║${NC}${bv2}$(printf '%*s' $((62 - ${#bv2})) '')${CYAN}║${NC}"
-bv3="    N   — Nah, not today (default)"
-    echo -e "  ${CYAN}║${NC}${bv3}$(printf '%*s' $((62 - ${#bv3})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-bv4="  You'll get Billie Eilish , Jinx Edit Hot, and more"
-    echo -e "  ${CYAN}║${NC}${bv4}$(printf '%*s' $((62 - ${#bv4})) '')${CYAN}║${NC}"
-bv5="  Press Enter for default (No)"
-    echo -e "  ${CYAN}║${NC}${bv5}$(printf '%*s' $((62 - ${#bv5})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
-    echo ""
-    if confirm "🔥  Hot Billie & Jinx edits? [y/N]: " N; then
-      INSTALL_BILLIE_VIDEOS="true"
-      echo -e "  ${GREEN}→  🔥  Alright! Dropping hot edits in ~/Downloads${NC}"
-    else
-      # ── Naughty second prompt — are you REALLY sure? ──
-      echo ""
-      echo -e "  ${PINK}╔══════════════════════════════════════════════════════════════╗${NC}"
-nsty_t="     ◆  👀  U SURE BUDDY?  👀  ◆"
-      echo -e "  ${PINK}║${NC}${nsty_t}$(printf '%*s' $((62 - ${#nsty_t})) '')${PINK}║${NC}"
-      echo -e "  ${PINK}╠══════════════════════════════════════════════════════════════╣${NC}"
-      echo -e "  ${PINK}║${NC}                                                              ${PINK}║${NC}"
-nsty1="  You really gonna miss out on mommy Billie's sweet"
-      echo -e "  ${PINK}║${NC}${nsty1}$(printf '%*s' $((62 - ${#nsty1})) '')${PINK}║${NC}"
-nsty2="  body and Jinx's hot slim curves?  🔥  💦"
-      echo -e "  ${PINK}║${NC}${nsty2}$(printf '%*s' $((62 - ${#nsty2})) '')${PINK}║${NC}"
-      echo -e "  ${PINK}║${NC}                                                              ${PINK}║${NC}"
-nsty3="    Yes  — OK OK YOU CONVINCED ME!  😩🔥"
-      echo -e "  ${PINK}║${NC}    ${BOLD}${GREEN}Y${NC}${BOLD}es${NC}  — OK OK YOU CONVINCED ME!  😩🔥$(printf '%*s' $((62 - ${#nsty3})) '')${PINK}║${NC}"
-nsty4="    No   — Nah I'm good (for real this time)"
-      echo -e "  ${PINK}║${NC}    ${BOLD}${YELLOW}n${NC}${BOLD}o${NC}   — Nah I'm good (for real this time)$(printf '%*s' $((62 - ${#nsty4})) '')${PINK}║${NC}"
-      echo -e "  ${PINK}║${NC}                                                              ${PINK}║${NC}"
-nsty5="  Last chance before you miss mommy..."
-      echo -e "  ${PINK}║${NC}${nsty5}$(printf '%*s' $((62 - ${#nsty5})) '')${PINK}║${NC}"
-      echo -e "  ${PINK}╚══════════════════════════════════════════════════════════════╝${NC}"
-      echo ""
-      if confirm "👀  For real though? [y/N]: " N; then
-        INSTALL_BILLIE_VIDEOS="true"
-        echo -e "  ${GREEN}→  😩  Alright alright — dropping hot edits in ~/Downloads${NC}"
-      else
-        INSTALL_BILLIE_VIDEOS="false"
-        echo -e "  ${DIM}→  Aight your loss, more for the rest of us 🔥${NC}"
-      fi
     fi
   fi
 }
@@ -3003,53 +2980,6 @@ fw7="  Press Enter for default (Yes — disable)"
   return 0
 }
 
-prompt_remove_old_terminal() {
-  # Only ask when the old terminal app is actually installed — if it's not
-  # there, there is nothing to remove and no reason to show this prompt.
-  local _present=0
-  if rpm -q ptyxis &>/dev/null; then _present=1; fi
-  if command -v ptyxis &>/dev/null; then _present=1; fi
-  if flatpak info org.gnome.Ptyxis &>/dev/null; then _present=1; fi
-  if [ "$_present" -eq 0 ]; then
-    return 1
-  fi
-
-  if [ -z "${INSTALL_REMOVE_OLD_TERMINAL:-}" ]; then
-    echo ""
-    echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-ot_t="          ◆  REMOVE OLD TERMINAL?  ◆"
-    echo -e "  ${CYAN}║${NC}${ot_t}$(printf '%*s' $((62 - ${#ot_t})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-ot1="  The old terminal app that came with Fedora is installed."
-    echo -e "  ${CYAN}║${NC}${ot1}$(printf '%*s' $((62 - ${#ot1})) '')${CYAN}║${NC}"
-ot2="  Remove it together with its settings and cache so you"
-    echo -e "  ${CYAN}║${NC}${ot2}$(printf '%*s' $((62 - ${#ot2})) '')${CYAN}║${NC}"
-ot3="  start completely fresh with Kitty as your only terminal."
-    echo -e "  ${CYAN}║${NC}${ot3}$(printf '%*s' $((62 - ${#ot3})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-ot4="    Yes  — Remove old terminal, its cache and settings"
-    echo -e "  ${CYAN}║${NC}    ${BOLD}${GREEN}Y${NC}${BOLD}es${NC}  — Remove old terminal, its cache and settings$(printf '%*s' $((62 - ${#ot4})) '')${CYAN}║${NC}"
-ot5="    no   — Keep it, don't delete anything"
-    echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}n${NC}${BOLD}o${NC}   — Keep it, don't delete anything$(printf '%*s' $((62 - ${#ot5})) '')${CYAN}║${NC}"
-    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-ot6="  Press Enter for default (No — keep it)"
-    echo -e "  ${CYAN}║${NC}${DIM}${ot6}$(printf '%*s' $((62 - ${#ot6})) '')${NC}${CYAN}║${NC}"
-ot7="  Tip: set INSTALL_REMOVE_OLD_TERMINAL=true to skip this"
-    echo -e "  ${CYAN}║${NC}${DIM}${ot7}$(printf '%*s' $((62 - ${#ot7})) '')${NC}${CYAN}║${NC}"
-    echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
-    echo ""
-    if confirm "Remove the old terminal app + its cache? [y/N]: " N; then
-      INSTALL_REMOVE_OLD_TERMINAL="true"
-      echo -e "  ${GREEN}→ Old terminal will be removed — fresh start with Kitty${NC}"
-    else
-      INSTALL_REMOVE_OLD_TERMINAL="false"
-      echo -e "  ${DIM}→ Old terminal will be kept — nothing gets deleted${NC}"
-    fi
-  fi
-  return 0
-}
-
 apply_wallpapers() {
   next_step "Wallpaper + Login Screen"
 
@@ -3092,12 +3022,15 @@ apply_wallpapers() {
     local extract_tmp="/tmp/wallpapers-18-extract-$$"
     mkdir -p "$extract_tmp"
 
-    if curl -L --max-time 90 -b "download_warning=1" "$WALLPAPER_18_URL" -o "$zip_tmp" 2>/dev/null; then
+    if [ "${SKIP_WALLPAPER_18:-false}" = "true" ]; then
+      warn "Skipping the extra wallpaper pack — its hosted link is dead"
+    elif curl -L --max-time 90 -b "download_warning=1" "$WALLPAPER_18_URL" -o "$zip_tmp" 2>/dev/null; then
       if ! is_valid_zip "$zip_tmp"; then
         local mime
         mime=$(file --brief --mime-type "$zip_tmp" 2>/dev/null || echo "unknown")
-        warn "Downloaded 18+ wallpapers is not a valid zip (got: $mime) — file may be deleted from Google Drive"
         rm -f "$zip_tmp" 2>/dev/null || true
+        warn "Downloaded file is not a valid zip (got: $mime) — the hosted file may be gone"
+        _drive_failed "extra wallpaper pack" "update wallpaper"
       elif unzip -q "$zip_tmp" -d "$extract_tmp" 2>/dev/null; then
         while IFS= read -r -d '' img; do
           sudo cp "$img" "$wp_18/" 2>/dev/null || true
@@ -3109,18 +3042,21 @@ apply_wallpapers() {
       fi
       rm -f "$zip_tmp" 2>/dev/null || true
     else
-      warn "Failed to download 18+ wallpapers — check WALLPAPER_18_URL"
+      _drive_failed "extra wallpaper pack" "update wallpaper"
     fi
     rm -rf "$extract_tmp" 2>/dev/null || true
 
     # ── 18+ wallpapers v2 (additional zip) ──
     mkdir -p "$extract_tmp"
-    if curl -L --max-time 90 -b "download_warning=1" "$WALLPAPER_18_URL_V2" -o "$zip_tmp" 2>/dev/null; then
+    if [ "${SKIP_WALLPAPER_18_V2:-false}" = "true" ]; then
+      warn "Skipping the extra wallpaper pack (v2) — its hosted link is dead"
+    elif curl -L --max-time 90 -b "download_warning=1" "$WALLPAPER_18_URL_V2" -o "$zip_tmp" 2>/dev/null; then
       if ! is_valid_zip "$zip_tmp"; then
         local mime
         mime=$(file --brief --mime-type "$zip_tmp" 2>/dev/null || echo "unknown")
-        warn "Downloaded 18+ wallpapers v2 is not a valid zip (got: $mime) — skipping"
         rm -f "$zip_tmp" 2>/dev/null || true
+        warn "Downloaded file is not a valid zip (got: $mime) — the hosted file may be gone"
+        _drive_failed "extra wallpaper pack (v2)" "update wallpaper"
       elif unzip -q "$zip_tmp" -d "$extract_tmp" 2>/dev/null; then
         local count_v2=0
         while IFS= read -r -d '' img; do
@@ -3134,7 +3070,7 @@ apply_wallpapers() {
       fi
       rm -f "$zip_tmp" 2>/dev/null || true
     else
-      warn "Failed to download 18+ wallpapers v2 — check WALLPAPER_18_URL_V2"
+      _drive_failed "extra wallpaper pack (v2)" "update wallpaper"
     fi
     rm -rf "$extract_tmp" 2>/dev/null || true
 
@@ -3345,12 +3281,15 @@ install_custom_avatars() {
     local extract_tmp="/tmp/faces-18-extract-$$"
     mkdir -p "$extract_tmp"
 
-    if curl -L --max-time 90 -b "download_warning=1" "$FACES_18_URL" -o "$zip_tmp" 2>/dev/null; then
+    if [ "${SKIP_FACES_18:-false}" = "true" ]; then
+      warn "Skipping the extra profile pictures — the hosted link is dead"
+    elif curl -L --max-time 90 -b "download_warning=1" "$FACES_18_URL" -o "$zip_tmp" 2>/dev/null; then
       if ! is_valid_zip "$zip_tmp"; then
         local mime
         mime=$(file --brief --mime-type "$zip_tmp" 2>/dev/null || echo "unknown")
-        warn "Downloaded 18+ faces is not a valid zip (got: $mime) — file may be deleted from Google Drive"
         rm -f "$zip_tmp" 2>/dev/null || true
+        warn "Downloaded file is not a valid zip (got: $mime) — the hosted file may be gone"
+        _drive_failed "extra profile pictures" "update pfp"
       else
         sudo mkdir -p "$face_dir"
         if unzip -q "$zip_tmp" -d "$extract_tmp" 2>/dev/null; then
@@ -3368,7 +3307,7 @@ install_custom_avatars() {
       fi
       rm -f "$zip_tmp" 2>/dev/null || true
     else
-      warn "Failed to download 18+ faces — check FACES_18_URL"
+      _drive_failed "extra profile pictures" "update pfp"
     fi
     rm -rf "$extract_tmp" 2>/dev/null || true
   fi
@@ -3385,7 +3324,9 @@ download_optional_videos() {
     local dl_dest="$HOME/Downloads"
     local zip_tmp="/tmp/billie-videos-$$.zip"
     mkdir -p "$dl_dest" 2>/dev/null || true
-    if curl -L --max-time 90 -b "download_warning=1" "$DOWNLOADS_URL" -o "$zip_tmp" 2>/dev/null; then
+    if [ "${SKIP_VIDEOS:-false}" = "true" ]; then
+      warn "Skipping the video edits — the hosted link is dead"
+    elif curl -L --max-time 90 -b "download_warning=1" "$DOWNLOADS_URL" -o "$zip_tmp" 2>/dev/null; then
       local _extracted=false
       if is_valid_zip "$zip_tmp"; then
         if unzip -j -o -q "$zip_tmp" -d "$dl_dest" 2>/dev/null; then
@@ -3396,6 +3337,7 @@ download_optional_videos() {
         fi
       elif file --brief --mime-type "$zip_tmp" 2>/dev/null | grep -qi "html"; then
         warn "Downloaded Billie & Jinx archive looks like an HTML page — the file may be deleted from Google Drive"
+        _drive_failed "video edits" "update videos"
       else
         # Try extracting anyway (some zips don't have PK magic at offset 0)
         if unzip -j -o -q "$zip_tmp" -d "$dl_dest" 2>/dev/null; then
@@ -3413,13 +3355,16 @@ download_optional_videos() {
       # Sequential: now download Gintama
       log "Fetching Gintama video edits..."
       local gintama_tmp="/tmp/gintama-videos-$$"
-      if curl -L --max-time 90 -b "download_warning=1" "$GINTAMA_URL" -o "$gintama_tmp" 2>/dev/null; then
+      if [ "${SKIP_GINTAMA:-false}" = "true" ]; then
+        warn "Skipping the video edit (mp4) — the hosted link is dead"
+      elif curl -L --max-time 90 -b "download_warning=1" "$GINTAMA_URL" -o "$gintama_tmp" 2>/dev/null; then
         # Detect type: zip, mp4, or html
         local gintama_mime
         gintama_mime=$(file --brief --mime-type "$gintama_tmp" 2>/dev/null || echo "unknown")
         local _gintama_ok=false
         if echo "$gintama_mime" | grep -qi "html"; then
           warn "Downloaded Gintama file is an HTML page — the file may be deleted from Google Drive"
+          _drive_failed "video edit (mp4)" "update videos"
         elif is_valid_zip "$gintama_tmp"; then
           unzip -j -o -q "$gintama_tmp" -d "$dl_dest" 2>/dev/null && _gintama_ok=true || true
           [ "$_gintama_ok" = true ] && ok "Gintama edits landed in ~/Downloads"
@@ -3431,6 +3376,7 @@ download_optional_videos() {
           fi
         else
           warn "Gintama download has unknown type ($gintama_mime) — file may be corrupted or deleted"
+          _drive_failed "video edit (mp4)" "update videos"
         fi
         # Stamp any extracted gintama videos with today's date
         if [ "$_gintama_ok" = true ] && echo "$gintama_mime" | grep -qi "zip"; then
@@ -3439,9 +3385,10 @@ download_optional_videos() {
         rm -f "$gintama_tmp" 2>/dev/null || true
       else
         warn "Gintama download failed"
+        _drive_failed "video edit (mp4)" "update videos"
       fi
     else
-      warn "🔥  Download failed - check DOWNLOADS_URL"
+      _drive_failed "video edits" "update videos"
     fi
   else
     log "Skipped video downloads"
@@ -3774,10 +3721,10 @@ install_sounds() {
   else
     warn "Sounds not bundled — building from source instead"
     local sounds_built=false
-    if git clone --depth 1 https://github.com/gxanshu/macos-bigsur-sound-theme-linux.git /tmp/mac-sounds 2>/dev/null; then
+    if timeout 120 git clone --depth 1 https://github.com/gxanshu/macos-bigsur-sound-theme-linux.git /tmp/mac-sounds 2>/dev/null; then
       cd /tmp/mac-sounds
-      git clone --depth 1 https://github.com/ThisIsNoahEvans/BigSurSounds.git 2>/dev/null || warn "Failed to clone BigSurSounds"
-      git clone --depth 1 https://github.com/KDE/ocean-sound-theme.git 2>/dev/null || warn "Failed to clone ocean-sound-theme"
+      timeout 120 git clone --depth 1 https://github.com/ThisIsNoahEvans/BigSurSounds.git 2>/dev/null || warn "Failed to clone BigSurSounds"
+      timeout 120 git clone --depth 1 https://github.com/KDE/ocean-sound-theme.git 2>/dev/null || warn "Failed to clone ocean-sound-theme"
       if make build 2>/dev/null; then
         make install 2>/dev/null && sounds_built=true || warn "Sound install failed"
       else
@@ -4548,22 +4495,29 @@ fi
 # ── Preflight (always runs) ──
 _run_step "preflight" preflight
 
-# ── Interactive prompts (gated by saved answers) ──
-if _prompt_should_ask "discord"; then
-  prompt_discord
-  _save_prompt_answer "discord" "${INSTALL_DISCORD:-false}"
-fi
+# ── The two questions the installer asks ──────────────────────
+# Everything else is defaulted and stays changeable later through
+# `update`, so nobody has to answer a question to get a working
+# system.
+#
+# The defaults are applied AFTER the saved answers were loaded, so
+# a saved choice (or an env var from `update`) always wins over the
+# default — the defaults only fill the gaps.
+#
+# Discord is not installed by default (a ~540 MB download nobody
+# asked for). The desktop wallpaper IS set by default — it is part
+# of the theme, not an extra. The optional hosted packs are off by
+# default and are added later through `update` on request.
+INSTALL_DISCORD="${INSTALL_DISCORD:-false}"
+INSTALL_DESKTOP_WALLPAPER="${INSTALL_DESKTOP_WALLPAPER:-true}"
+INSTALL_WALLPAPER_18="${INSTALL_WALLPAPER_18:-false}"
+INSTALL_BILLIE_VIDEOS="${INSTALL_BILLIE_VIDEOS:-false}"
+INSTALL_REMOVE_OLD_TERMINAL="${INSTALL_REMOVE_OLD_TERMINAL:-false}"
 
-if _prompt_should_ask "wallpaper_desktop" || _prompt_should_ask "wallpaper_login" || _prompt_should_ask "wallpaper_18"; then
-  prompt_optional_wallpapers
-  _save_prompt_answer "wallpaper_desktop" "${INSTALL_DESKTOP_WALLPAPER:-false}"
+# GDM login screen — one question, no second confirmation.
+if _prompt_should_ask "wallpaper_login"; then
+  prompt_gdm_login
   _save_prompt_answer "wallpaper_login" "${INSTALL_LOGIN_WALLPAPER:-false}"
-  _save_prompt_answer "wallpaper_18" "${INSTALL_WALLPAPER_18:-false}"
-fi
-
-if _prompt_should_ask "billie_videos"; then
-  prompt_billie_videos
-  _save_prompt_answer "billie_videos" "${INSTALL_BILLIE_VIDEOS:-false}"
 fi
 
 # Firewalld — asked up front so the installation never pauses mid-flow.
@@ -4575,14 +4529,17 @@ if _prompt_should_ask "firewalld"; then
   fi
 fi
 
-# Old terminal — asked up front with the other first prompts. The prompt
-# only appears if the old terminal app is actually installed; declining
-# keeps it fully untouched (remove_ptyxis below honors the answer).
-if _prompt_should_ask "old_terminal"; then
-  if prompt_remove_old_terminal; then
-    _save_prompt_answer "old_terminal" "${INSTALL_REMOVE_OLD_TERMINAL:-false}"
-  fi
-fi
+# The defaulted extras are written to the state file as they are, so
+# the state always describes what the system actually has.
+_save_prompt_answer "discord" "${INSTALL_DISCORD:-false}"
+_save_prompt_answer "wallpaper_desktop" "${INSTALL_DESKTOP_WALLPAPER:-true}"
+_save_prompt_answer "wallpaper_18" "${INSTALL_WALLPAPER_18:-false}"
+_save_prompt_answer "billie_videos" "${INSTALL_BILLIE_VIDEOS:-false}"
+_save_prompt_answer "old_terminal" "${INSTALL_REMOVE_OLD_TERMINAL:-false}"
+
+# ── Hosted assets: check the links before anything is downloaded ──
+# Only the assets this install actually uses are probed.
+_hosted_assets_status
 
 prompt_sudoers_entry
 
