@@ -1,9 +1,25 @@
 {
- "latest_version": "3.6",
+ "latest_version": "3.7",
  "bootstrap_sha256": "c90bf93f19e1fac2a0d0e145689444f9e5b0beb7ce5147c6e1620d3d33a6fb5b",
- "install_sha256": "060aa68713a780adeeeabd0103ee99895135677a0528d8d4f6f57e0cd29b6a60",
- "update_sha256": "c3c3ca4916fdb5bee0303d69d22adfe22137c785ab47c6a0fdc790b884854104",
+ "install_sha256": "f05ca0e7094510c057392b814d1025eee9d2c9eb224e5f256303c73341052e72",
+ "update_sha256": "ab7fb4729f7a65fe2ab9f11ef771f0e406f7ddecd174dff2b3c583bed582beb9",
  "changelog": [
+  {
+   "version": "3.7",
+   "changes": [
+    "THE INSTALLER NO LONGER DIES ON A BAD STEP — a failing step is captured instead of aborting the run. The step is recorded as failed, the install continues with the next one, and the piece is listed at the end with the exact command that adds it. A failed step is NOT written to install-state.json, so the next run retries exactly what did not finish. Preflight stays fatal: a machine that is not a supported target has nothing to continue with.",
+    "NINE QUESTIONS BECOME TWO — Discord, the desktop wallpaper, the optional wallpaper packs, the video edits and the removal of the old terminal now have a default instead of a question. The GDM login screen keeps its question (the 'ARE YOU SURE?' box right after it is gone) and firewalld keeps its question, because it changes what the machine does. The defaults are applied after the saved answers are loaded, so a saved choice or an env var from `update` still wins — the defaults only fill the gaps. The optional extras stay reachable through `update`.",
+    "THE SUMMARY TELLS THE TRUTH — Status is Incomplete when a step failed, the step count is the real count (ran / skipped / failed), the RPM and Flatpak numbers are measured instead of hardcoded, and the theme, font and shell lines follow the step they came from: a step that failed is never reported as installed. The unverifiable 'Browsers:' line is gone.",
+    "NEW MISSING PIECES BLOCK — every piece that is absent is listed with the command that adds it later. Only pieces that were actually attempted and failed are listed; an optional extra that was deliberately left out is not 'missing'.",
+    "HOSTED LINKS ARE CHECKED, NOT ASSUMED — the extra wallpaper packs, the extra profile pictures and the video edits live on Google Drive, which answers a dead link with an HTML error page. A HEAD request now reports the state of a link before anything is downloaded. The check is informational and never blocks the install.",
+    "WHEN A HOSTED LINK IS DEAD AND THE USER ASKED FOR THAT ASSET, the installer asks once whether to continue without it, and the download is skipped instead of attempted again. The piece is reported as missing either way.",
+    "A DOWNLOAD THAT CANNOT SUCCEED SAYS SO WHERE IT HAPPENS — what failed, that the hosted file is gone, and the command that adds the piece later. The piece is listed in MISSING PIECES.",
+    "ALL FOUR git clone CALLS GET A 120 SECOND TIMEOUT — a hung clone used to hang the whole install.",
+    "`update videos` ALWAYS ASKS — it used to read a saved answer that the installer no longer creates, so the command was a dead end. It now asks, exactly like `update services` already does for firewalld.",
+    "The installer exits non-zero when a step failed, after the summary has told the user what is missing.",
+    "install.sh and update.fish changed, so install_sha256 and update_sha256 were re-pinned. bootstrap.sh is untouched and keeps its hash."
+   ]
+  },
   {
    "version": "3.6",
    "changes": [
@@ -358,9 +374,9 @@
   "apply_configs": "1.14",
   "apply_dconf": "1.2",
   "optimize_system_resources": "1.1",
-  "apply_wallpapers": "1.1",
-  "install_custom_avatars": "1.0",
-  "download_optional_videos": "1.0",
+  "apply_wallpapers": "1.2",
+  "install_custom_avatars": "1.1",
+  "download_optional_videos": "1.1",
   "setup_gdm": "1.0",
   "setup_firefox_theme": "1.0",
   "setup_flatpak_theme": "1.0",
@@ -371,6 +387,6 @@
   "setup_shell": "1.0",
   "install_extensions": "1.8",
   "mirror_flatpak_icons": "1.0",
-  "finalize": "1.9"
+  "finalize": "1.10"
  }
 }
