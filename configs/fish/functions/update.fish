@@ -1458,9 +1458,35 @@ function _update_target_gtk --description 'refresh GTK settings + Flatpak GTK ru
 end
 
 function _update_target_videos --description 're-download the optional video edits'
-    set -l bv (_update_state_prompt billie_videos)
-    if test -z "$bv"
-        printf "\n  \e[1;33mNo saved choice for the optional videos — nothing to re-download.\e[0m\n"
+    # ── videos: ALWAYS ask ──
+    # The installer does not ask about the optional video edits any
+    # more, so there may be no saved choice to reuse. Every run asks,
+    # exactly like `update services` does for firewalld — the choice
+    # always reflects right now, not what was picked months ago.
+    printf "\n"
+    _update_box_top
+    _update_box_title "OPTIONAL VIDEO EDITS" "1;36"
+    _update_box_rule
+    _update_box_text "A set of video edits (~500 MB) that lands in" "1;37"
+    _update_box_text "~/Downloads. Nothing else on the system changes." "1;37"
+    _update_box_text ""
+    _update_box_text "[1] Download them now" "1;36"
+    _update_box_text "[2] Skip" "1;90"
+    _update_box_text ""
+    _update_box_text "Enter = skip" "1;90"
+    _update_box_bottom
+    read -l v -P "  Your choice [1/2]: "
+    if test $status -ne 0
+        printf "\n  \e[1;31m✘ Cancelled.\e[0m\n" >&2
+        return 1
+    end
+    set -l bv false
+    switch "$v"
+        case 1
+            set bv true
+    end
+    if test "$bv" = false
+        printf "\n  \e[1;33mSkipped — nothing was downloaded.\e[0m\n"
         return 0
     end
     set -l tmp (_update_fetch_bundle)
