@@ -1,9 +1,18 @@
 {
- "latest_version": "3.7.2",
+ "latest_version": "3.7.3",
  "bootstrap_sha256": "c90bf93f19e1fac2a0d0e145689444f9e5b0beb7ce5147c6e1620d3d33a6fb5b",
- "install_sha256": "849e7aabb907b4079d38b1b2f933916c4f837aeb2828996f210cfe03dea344c5",
+ "install_sha256": "d0e4a4baa17fd6dc7f35067d4ef727948bd7bcfad178bc5b16e5e293737f404d",
  "update_sha256": "ad7c74625728617da8b350b7372f9fca9399e7d8aee9d4785a257dd999efa7b9",
  "changelog": [
+  {
+   "version": "3.7.3",
+   "changes": [
+    "FAILED STEPS NOW RETRY — a step that failed was still recorded with the version of an earlier successful run, so once finalize() wrote the overall version the next run skipped it forever. A failed step is now removed from install-state.json, which makes _step_should_run() fall back to 0.0 and retry exactly that step. The overall version, the install date and every saved prompt answer are preserved; a corrupt state file is left untouched and reported instead of being overwritten.",
+    "TWENTY STEPS AND THE FLATPAK ICON MIRROR NO LONGER RETURN A FALSE OK — a broken theme, a missing SF Pro font, a GDM apply that never changed the login screen, a failed Flatpak runtime, missing extensions, an empty wallpaper pack, failed avatar copies, a missing sound theme, a dead updater timer, an inactive wallpaper watcher, a failed chsh, a failed dconf apply, failed desktop-entry copies, failed browser installs, failed RPMs or failed Flatpak installs could still be recorded as installed after printing a warning. Those steps now return non-zero, _run_step() records them as failed, clears their saved version and the next run retries them. The Flatpak icon mirror reports its failures too, but finalize() still warns and completes because icons are cosmetic. Every success path was re-tested, including the deliberate GDM and +18 skip paths.",
+    "UPDATE <TARGET> NOW REPORTS THE TRUTH TOO — update icons, theme, fonts, gdm, gtk, sounds, services, defaults, dconf, notifier, extensions, wallpaper, pfp and videos used to call the step directly and record it as ok no matter what the step returned, then exit 0. The targeted runner now checks the exit code, records a failed step as failed, clears its saved version and exits non-zero, so the updater log and the command result agree with what actually happened.",
+    "install.sh changed, so install_sha256 was re-pinned. update.fish and bootstrap.sh are untouched and keep their hashes. Because latest_version moved to 3.7.3, saved prompt answers are re-asked once on the next run, exactly as the per-release prompt rule says."
+   ]
+  },
   {
    "version": "3.7.2",
    "changes": [

@@ -865,6 +865,50 @@ except Exception:
   fi
 }
 
+# ── Remove a step from state so the next run retries it ──
+# A failed step must not keep the version of an earlier successful run:
+# finalize() still writes the overall version, and _step_should_run()
+# would then skip the step forever. Removing the key makes the gate fall
+# back to "0.0" and re-run exactly that step.
+_clear_step_state() {
+  local sid="$1"
+  STEP_USR_VERS["$sid"]="0.0"
+  local _MERGED _JFILE
+  _JFILE=$(mktemp "$STATE_DIR/state.XXXXXX" 2>/dev/null || echo "")
+  if [ -z "$_JFILE" ]; then
+    return 1
+  fi
+  echo "$STATE_JSON" > "$_JFILE" 2>/dev/null || true
+  _MERGED=$(python3 -c '
+import sys, json
+try:
+    with open(sys.argv[1], "r") as fh:
+        s = json.load(fh)
+except Exception:
+    sys.exit(1)
+try:
+    steps = s.get("steps")
+    if isinstance(steps, dict):
+        steps.pop(sys.argv[2], None)
+    print(json.dumps(s))
+except Exception:
+    sys.exit(1)
+' "$_JFILE" "$sid" 2>/dev/null) || _MERGED=""
+  rm -f "$_JFILE" 2>/dev/null || true
+  if [ -z "$_MERGED" ]; then
+    return 1
+  fi
+  STATE_JSON="$_MERGED"
+  local _TMPFILE
+  _TMPFILE=$(mktemp "$STATE_DIR/state.XXXXXX" 2>/dev/null || echo "")
+  if [ -z "$_TMPFILE" ]; then
+    return 1
+  fi
+  echo "$STATE_JSON" > "$_TMPFILE" 2>/dev/null || { rm -f "$_TMPFILE"; return 1; }
+  mv "$_TMPFILE" "$STATE_FILE" 2>/dev/null || { rm -f "$_TMPFILE"; return 1; }
+  return 0
+}
+
 # ── Step wrapper: only runs if step version is outdated ──
 _run_step() {
   local step_id="$1"
@@ -882,8 +926,11 @@ _run_step() {
         fail "Preflight failed — the machine is not a supported target"
       fi
       _step_failed "$step_id" "$_rc"
-      # Deliberately no _update_step_state here: a failed step is NOT
-      # written to install-state.json, so the next run retries it.
+      # A failed step must be retried on the next run. finalize() still
+      # writes the overall version, so the step key itself must be
+      # removed — an older successful version would make the gate skip it.
+      _clear_step_state "$step_id" || \
+        warn "Could not clear saved state for $step_id — it may be skipped on the next run"
       return 0
     fi
     _update_step_state "$step_id"
@@ -1363,13 +1410,26 @@ _print_missing_pieces() {
 optimize_system_resources() {
   next_step "Disable RAM-wasting Services"
 
+  local _step_fail=0
+
   # ── 1. Tracker (file indexer) ──
   # Saves ~150-300 MB. Only affects GNOME Files full-text search.
   if systemctl --user mask tracker-miner-fs-3 tracker-miner-fs tracker-store 2>/dev/null; then
     systemctl --user stop tracker-miner-fs-3 tracker-miner-fs tracker-store 2>/dev/null || true
     ok "Tracker file indexer disabled (~150-300 MB saved)"
   else
-    warn "Tracker already masked or not installed"
+    local _tr_left=0 _u
+    for _u in tracker-miner-fs-3 tracker-miner-fs tracker-store; do
+      if systemctl --user is-enabled "$_u" 2>/dev/null | grep -Eq '^(enabled|enabled-runtime|linked)'; then
+        _tr_left=1
+      fi
+    done
+    if [ "$_tr_left" -ne 0 ]; then
+      warn "Tracker could not be disabled"
+      _step_fail=1
+    else
+      warn "Tracker already masked or not installed"
+    fi
   fi
 
   # ── 2. ABRT (crash reporter) ──
@@ -1377,7 +1437,18 @@ optimize_system_resources() {
   if sudo systemctl disable --now abrtd abrt-oops abrt-journal-core abrt-xorg 2>/dev/null; then
     ok "ABRT crash reporting disabled (~50-80 MB saved)"
   else
-    warn "ABRT already disabled or not installed"
+    local _abrt_left=0 _u
+    for _u in abrtd abrt-oops abrt-journal-core abrt-xorg; do
+      if systemctl is-enabled "$_u" 2>/dev/null | grep -Eq '^(enabled|enabled-runtime|linked)'; then
+        _abrt_left=1
+      fi
+    done
+    if [ "$_abrt_left" -ne 0 ]; then
+      warn "ABRT could not be disabled"
+      _step_fail=1
+    else
+      warn "ABRT already disabled or not installed"
+    fi
   fi
 
   # ── 3. GNOME Software auto-start ──
@@ -1398,7 +1469,12 @@ optimize_system_resources() {
     sudo systemctl stop packagekit 2>/dev/null || true
     ok "PackageKit background updates disabled (~40-60 MB saved)"
   else
-    warn "PackageKit already masked or not installed"
+    if systemctl is-enabled packagekit 2>/dev/null | grep -Eq '^(enabled|enabled-runtime|linked)'; then
+      warn "PackageKit could not be masked"
+      _step_fail=1
+    else
+      warn "PackageKit already masked or not installed"
+    fi
   fi
 
   # ── 5. Firewalld (decision made up front with the other prompts) ──
@@ -1406,14 +1482,31 @@ optimize_system_resources() {
   # a saved answer. "true" = disable, "false" = keep/enable, unset = firewalld
   # wasn't running at prompt time, so there is nothing to do.
   if [ "${INSTALL_DISABLE_FIREWALLD:-}" = "true" ]; then
-    sudo systemctl disable --now firewalld 2>/dev/null || true
-    ok "Firewalld disabled (~30-50 MB saved)"
+    if sudo systemctl disable --now firewalld 2>/dev/null; then
+      ok "Firewalld disabled (~30-50 MB saved)"
+    elif systemctl is-active --quiet firewalld 2>/dev/null; then
+      warn "Firewalld could not be disabled"
+      _step_fail=1
+    else
+      ok "Firewalld already disabled"
+    fi
   elif [ "${INSTALL_DISABLE_FIREWALLD:-}" = "false" ]; then
-    sudo systemctl enable --now firewalld 2>/dev/null || true
-    ok "Firewalld enabled and active"
+    if sudo systemctl enable --now firewalld 2>/dev/null; then
+      ok "Firewalld enabled and active"
+    elif systemctl is-active --quiet firewalld 2>/dev/null; then
+      ok "Firewalld enabled and active"
+    else
+      warn "Firewalld could not be enabled"
+      _step_fail=1
+    fi
   else
     log "Firewalld not running — nothing to change"
   fi
+
+  if [ "$_step_fail" -ne 0 ]; then
+    return 1
+  fi
+  return 0
 }
 
 # ── PREFLIGHT ────────────────────────────────────────────────
@@ -1680,7 +1773,14 @@ remove_ptyxis() {
 
   if rpm -q ptyxis &>/dev/null; then
     log "Removing Ptyxis package..."
-    sudo dnf remove -y ptyxis 2>&1 | tail -1 || true
+    local _dnf_log="/tmp/_ptyxis-dnf.log" _dnf_rc=0
+    sudo dnf remove -y ptyxis > "$_dnf_log" 2>&1 || _dnf_rc=$?
+    tail -1 "$_dnf_log" 2>/dev/null | sed 's/^/      /' || true
+    rm -f "$_dnf_log" 2>/dev/null || true
+    if [ "$_dnf_rc" -ne 0 ] && rpm -q ptyxis &>/dev/null; then
+      warn "Ptyxis package removal failed (dnf exit $_dnf_rc) — leaving its settings untouched"
+      return 1
+    fi
     ok "Ptyxis package removed"
   else
     ok "Ptyxis not installed — nothing to remove"
@@ -1711,9 +1811,10 @@ remove_ptyxis() {
   leftover_dconf=$(dconf dump /org/gnome/Ptyxis/ 2>/dev/null)
   if [ -z "$leftover_config" ] && [ -z "$leftover_data" ] && [ -z "$leftover_dconf" ]; then
     ok "All Ptyxis traces cleaned"
-  else
-    warn "Some Ptyxis traces may remain — manual check recommended"
+    return 0
   fi
+  warn "Some Ptyxis traces may remain — manual check recommended"
+  return 1
 }
 
 remove_gnome_weather() {
@@ -1721,11 +1822,19 @@ remove_gnome_weather() {
 
   if rpm -q gnome-weather &>/dev/null; then
     log "Removing gnome-weather package..."
-    sudo dnf remove -y gnome-weather 2>&1 | tail -1 || true
+    local _dnf_log="/tmp/_gnome-weather-dnf.log" _dnf_rc=0
+    sudo dnf remove -y gnome-weather > "$_dnf_log" 2>&1 || _dnf_rc=$?
+    tail -1 "$_dnf_log" 2>/dev/null | sed 's/^/      /' || true
+    rm -f "$_dnf_log" 2>/dev/null || true
+    if [ "$_dnf_rc" -ne 0 ] && rpm -q gnome-weather &>/dev/null; then
+      warn "gnome-weather removal failed (dnf exit $_dnf_rc)"
+      return 1
+    fi
     ok "gnome-weather removed"
   else
     ok "gnome-weather not installed — nothing to remove"
   fi
+  return 0
 }
 
 # ── PHASE 1: SYSTEM FOUNDATIONS ──────────────────────────────
@@ -1939,11 +2048,12 @@ install_rpm_packages() {
   # down. Try the full set first; if that fails, retry one by one and
   # report exactly what was unavailable.
   local failed_pkgs=""
+  local _step_fail=0
   INSTALL_RPM_OK=0
   INSTALL_RPM_FAIL=0
   if sudo dnf install -y $pkgs > /tmp/_pkgs-dnf.log 2>&1; then
     INSTALL_RPM_OK=$(echo $pkgs | wc -w | tr -d ' ')
-    ok "RPM packages installed"
+    log "RPM packages installed"
   else
     warn "Bulk package install failed — retrying one by one"
     local _p
@@ -1957,8 +2067,11 @@ install_rpm_packages() {
     done
     if [ -n "$failed_pkgs" ]; then
       warn "Unavailable packages:${failed_pkgs}"
+      _step_fail=1
     fi
-    ok "RPM packages installed (with gaps — see above)"
+    if [ "$INSTALL_RPM_FAIL" -eq 0 ]; then
+      log "RPM packages installed after the one-by-one retry"
+    fi
   fi
   rm -f /tmp/_pkgs-dnf.log 2>/dev/null || true
 
@@ -1974,26 +2087,36 @@ install_rpm_packages() {
   done
   if [ -n "$_missing" ]; then
     warn "Critical packages missing:${_missing}  — later steps may not fully apply"
+    _step_fail=1
   fi
 
   # Starship prompt (not in Fedora repos — install via official script)
   if ! command -v starship &>/dev/null; then
     if ! curl -fsSL --max-time 60 https://starship.rs/install.sh | sh -s -- -y 2>/dev/null; then
       warn "Starship install failed — check network or https://starship.rs"
+      _step_fail=1
     fi
   fi
 
+  if [ "$_step_fail" -ne 0 ]; then
+    warn "RPM package step incomplete — see warnings above"
+    return 1
+  fi
   ok "RPM packages installed"
+  return 0
 }
 
 install_browsers() {
   next_step "Browsers (Firefox, Chrome, Edge, VS Code)"
+
+  local _step_fail=0
 
   # Firefox
   if ! rpm -q firefox &>/dev/null; then
     if ! sudo dnf install -y firefox > /tmp/_firefox-dnf.log 2>&1; then
       warn "Firefox unavailable — skipping (Fedora repo may be unreachable)"
       tail -3 /tmp/_firefox-dnf.log 2>/dev/null | sed 's/^/      /' || true
+      _step_fail=1
     fi
     rm -f /tmp/_firefox-dnf.log 2>/dev/null || true
   fi
@@ -2015,6 +2138,7 @@ EOF
     if ! sudo dnf install -y google-chrome-stable 2>/dev/null && \
        ! sudo dnf install -y https://dl.google.com/linux/direct/google-chrome-stable_current_x86_64.rpm; then
       warn "Chrome installation failed — check network or Google repos"
+      _step_fail=1
     fi
   fi
 
@@ -2033,6 +2157,7 @@ gpgkey=https://packages.microsoft.com/keys/microsoft.asc
 EOF
     if ! sudo dnf install -y microsoft-edge-stable 2>/dev/null; then
       warn "Edge installation failed — check network or Microsoft repos"
+      _step_fail=1
     fi
   fi
 
@@ -2053,11 +2178,17 @@ EOF
     if ! sudo dnf install -y code > /tmp/_vscode-dnf.log 2>&1; then
       warn "VS Code unavailable — skipping (Microsoft repo may be unreachable)"
       tail -3 /tmp/_vscode-dnf.log 2>/dev/null | sed 's/^/      /' || true
+      _step_fail=1
     fi
     rm -f /tmp/_vscode-dnf.log 2>/dev/null || true
   fi
 
-  ok "Browsers + VS Code installed (Spotify via Flatpak)"
+  if [ "$_step_fail" -ne 0 ]; then
+    warn "Browser step incomplete — one or more apps were not installed"
+    return 1
+  fi
+  ok "Browsers + VS Code installed"
+  return 0
 }
 
 install_flatpaks() {
@@ -2100,11 +2231,18 @@ install_flatpaks() {
   if [ "$INSTALL_FP_OK" -gt 0 ]; then
     ok "$INSTALL_FP_OK flatpak apps installed"
   fi
-  [ "$INSTALL_FP_FAIL" -gt 0 ] && warn "$INSTALL_FP_FAIL flatpak(s) failed to install — check network or flathub status"
+  if [ "$INSTALL_FP_FAIL" -gt 0 ]; then
+    warn "$INSTALL_FP_FAIL flatpak(s) failed to install — check network or flathub status"
+  fi
 
   # Always attempt overrides (non-critical)
   sudo flatpak override --filesystem=xdg-config/gtk-3.0 2>/dev/null || true
   sudo flatpak override --filesystem=xdg-config/gtk-4.0 2>/dev/null || true
+
+  if [ "$INSTALL_FP_FAIL" -gt 0 ]; then
+    return 1
+  fi
+  return 0
 }
 
 # ── PHASE 3: THEMES ──────────────────────────────────────────
@@ -2165,7 +2303,7 @@ install_mactahoe_theme() {
       warn "Compilation failed — theme not installed"
       tail -20 "$_compile_log" 2>/dev/null
       rm -f "$_compile_log"
-      return
+      return 1
     fi
     rm -f "$_compile_log"
   else
@@ -2177,10 +2315,10 @@ install_mactahoe_theme() {
       cp -r "$fallback_dir" "$HOME/.local/share/themes/"
       cp -r "$fallback_dir/gtk-4.0/"* "$HOME/.config/gtk-4.0/" 2>/dev/null || true
       ok "Bundled MacTahoe-Dark installed as fallback"
-    else
-      warn "No fallback available — theme not installed"
+      return 0
     fi
-    return
+    warn "No fallback available — theme not installed"
+    return 1
   fi
 
   # XDG compat: also available in ~/.local/share/themes/
@@ -2520,6 +2658,7 @@ install_font() {
     ok "SF Pro Display font installed"
   else
     warn "SF-Pro-Display-Regular.otf not found in bundle — place it in fonts/ manually"
+    return 1
   fi
 }
 
@@ -2537,13 +2676,26 @@ apply_desktop_entries() {
   fi
 
   local desktop_src="$BUNDLE/desktop"
-  if [ -d "$desktop_src" ] && [ "$(ls -A "$desktop_src" 2>/dev/null)" ]; then
-    mkdir -p "$HOME/.local/share/applications"
-    cp "$desktop_src"/*.desktop "$HOME/.local/share/applications/" 2>/dev/null || true
-    ok "Desktop entries applied"
-  else
+  if [ ! -d "$desktop_src" ] || [ -z "$(ls -A "$desktop_src" 2>/dev/null)" ]; then
     warn "No desktop entries found"
+    return 1
   fi
+
+  mkdir -p "$HOME/.local/share/applications"
+  local _copied=0
+  local _desk
+  for _desk in "$desktop_src"/*.desktop; do
+    [ -f "$_desk" ] || continue
+    if cp "$_desk" "$HOME/.local/share/applications/" 2>/dev/null; then
+      _copied=$((_copied + 1))
+    fi
+  done
+  if [ "$_copied" -eq 0 ]; then
+    warn "No desktop entries could be copied"
+    return 1
+  fi
+  ok "Desktop entries applied ($_copied file(s))"
+  return 0
 }
 
 apply_configs() {
@@ -2717,20 +2869,23 @@ apply_dconf() {
   # Rollback point before any gsettings/dconf writes + extension restore
   backup_dconf
 
+  local _core_fail=0
+  local _ini_fail=0
+
   local dconf_file="$BUNDLE/configs/dconf/full-backup.ini"
 
   # ── Theme ──
-  gsettings set org.gnome.desktop.interface gtk-theme "MacTahoe-Dark" 2>/dev/null || true
-  gsettings set org.gnome.desktop.interface icon-theme "MacTahoe-dark" 2>/dev/null || true
-  gsettings set org.gnome.desktop.interface cursor-theme "MacTahoe-dark" 2>/dev/null || true
-  dconf write /org/gnome/shell/extensions/user-theme/name "'MacTahoe-Dark'" 2>/dev/null || true
-  gsettings set org.gnome.desktop.wm.preferences theme "MacTahoe-Dark" 2>/dev/null || true
+  gsettings set org.gnome.desktop.interface gtk-theme "MacTahoe-Dark" 2>/dev/null || _core_fail=1
+  gsettings set org.gnome.desktop.interface icon-theme "MacTahoe-dark" 2>/dev/null || _core_fail=1
+  gsettings set org.gnome.desktop.interface cursor-theme "MacTahoe-dark" 2>/dev/null || _core_fail=1
+  dconf write /org/gnome/shell/extensions/user-theme/name "'MacTahoe-Dark'" 2>/dev/null || _core_fail=1
+  gsettings set org.gnome.desktop.wm.preferences theme "MacTahoe-Dark" 2>/dev/null || _core_fail=1
 
   # ── Interface ──
-  gsettings set org.gnome.desktop.interface font-name "SF Pro Display 11" 2>/dev/null || true
-  gsettings set org.gnome.desktop.interface document-font-name "SF Pro Display 12" 2>/dev/null || true
-  gsettings set org.gnome.desktop.interface monospace-font-name "Adwaita Mono 11" 2>/dev/null || true
-  gsettings set org.gnome.desktop.interface color-scheme "prefer-dark" 2>/dev/null || true
+  gsettings set org.gnome.desktop.interface font-name "SF Pro Display 11" 2>/dev/null || _core_fail=1
+  gsettings set org.gnome.desktop.interface document-font-name "SF Pro Display 12" 2>/dev/null || _core_fail=1
+  gsettings set org.gnome.desktop.interface monospace-font-name "Adwaita Mono 11" 2>/dev/null || _core_fail=1
+  gsettings set org.gnome.desktop.interface color-scheme "prefer-dark" 2>/dev/null || _core_fail=1
   gsettings set org.gnome.desktop.interface font-hinting "slight" 2>/dev/null || true
   gsettings set org.gnome.desktop.interface font-antialiasing "grayscale" 2>/dev/null || true
   gsettings set org.gnome.desktop.interface accent-color "blue" 2>/dev/null || true
@@ -2742,7 +2897,7 @@ apply_dconf() {
   gsettings set org.gnome.desktop.interface enable-animations true 2>/dev/null || true
 
   # ── Window buttons (no double-click toggle) ──
-  gsettings set org.gnome.desktop.wm.preferences button-layout "close,minimize,maximize:appmenu" 2>/dev/null || true
+  gsettings set org.gnome.desktop.wm.preferences button-layout "close,minimize,maximize:appmenu" 2>/dev/null || _core_fail=1
   gsettings set org.gnome.desktop.wm.preferences action-double-click-titlebar "'none'" 2>/dev/null || true
 
   # ── Peripherals ──
@@ -2843,22 +2998,31 @@ apply_dconf() {
 
   # ── Extension dconf restore ──
   if [ -f "$dconf_file" ]; then
-    dconf load /org/gnome/shell/extensions/ < "$dconf_file" 2>/dev/null || true
-    ok "Extension settings restored from backup"
+    if dconf load /org/gnome/shell/extensions/ < "$dconf_file" 2>/dev/null; then
+      ok "Extension settings restored from backup"
+    else
+      warn "Could not restore extension settings from backup"
+      _core_fail=1
+    fi
   fi
 
   # Re-apply GTK settings.ini AFTER dconf/gsettings (GNOME daemon overwrites it)
   local cfg="$BUNDLE/configs"
   if [ -f "$cfg/gtk-3.0/settings.ini" ]; then
     mkdir -p "$HOME/.config/gtk-3.0"
-    cp "$cfg/gtk-3.0/settings.ini" "$HOME/.config/gtk-3.0/" || warn "Failed to copy gtk-3.0 settings.ini"
+    cp "$cfg/gtk-3.0/settings.ini" "$HOME/.config/gtk-3.0/" || { warn "Failed to copy gtk-3.0 settings.ini"; _ini_fail=1; }
   fi
   if [ -f "$cfg/gtk-4.0/settings.ini" ]; then
     mkdir -p "$HOME/.config/gtk-4.0"
-    cp "$cfg/gtk-4.0/settings.ini" "$HOME/.config/gtk-4.0/" || warn "Failed to copy gtk-4.0 settings.ini"
+    cp "$cfg/gtk-4.0/settings.ini" "$HOME/.config/gtk-4.0/" || { warn "Failed to copy gtk-4.0 settings.ini"; _ini_fail=1; }
   fi
 
+  if [ "$_core_fail" -ne 0 ] || [ "$_ini_fail" -ne 0 ]; then
+    warn "Some core GNOME settings could not be applied"
+    return 1
+  fi
   ok "dconf settings applied"
+  return 0
 }
 
 # ── Optional passwordless sudo prompt (run before Phase 1) ──
@@ -3049,6 +3213,13 @@ apply_wallpapers() {
   local xml_dir="/usr/share/gnome-background-properties"
   mkdir -p "$HOME/.local/share/backgrounds"
 
+  if [ ! -d "$wp" ]; then
+    warn "Wallpaper bundle not found at $wp — nothing changed"
+    return 1
+  fi
+
+  local _wp_fail=0
+
   # ── Always wipe stock Fedora backgrounds ──
   # (skipped in add mode — "update wallpaper add" keeps the other pack + XML)
   if [ "${INSTALL_WALLPAPER_ADD:-false}" != "true" ] && [ -d /usr/share/backgrounds ]; then
@@ -3091,10 +3262,12 @@ apply_wallpapers() {
         rm -f "$zip_tmp" 2>/dev/null || true
         warn "Downloaded file is not a valid zip (got: $mime) — the hosted file may be gone"
         _drive_failed "extra wallpaper pack" "update wallpaper"
+        _wp_fail=1
       elif unzip -q "$zip_tmp" -d "$extract_tmp" 2>/dev/null; then
         while IFS= read -r -d '' img; do
-          sudo cp "$img" "$wp_18/" 2>/dev/null || true
-          count_18=$((count_18 + 1))
+          if sudo cp "$img" "$wp_18/" 2>/dev/null; then
+            count_18=$((count_18 + 1))
+          fi
         done < <(find "$extract_tmp" -type f -print0 2>/dev/null)
         [ "$count_18" -gt 0 ] && ok "$count_18 18+ wallpapers installed"
       else
@@ -3103,6 +3276,7 @@ apply_wallpapers() {
       rm -f "$zip_tmp" 2>/dev/null || true
     else
       _drive_failed "extra wallpaper pack" "update wallpaper"
+      _wp_fail=1
     fi
     rm -rf "$extract_tmp" 2>/dev/null || true
 
@@ -3117,11 +3291,13 @@ apply_wallpapers() {
         rm -f "$zip_tmp" 2>/dev/null || true
         warn "Downloaded file is not a valid zip (got: $mime) — the hosted file may be gone"
         _drive_failed "extra wallpaper pack (v2)" "update wallpaper"
+        _wp_fail=1
       elif unzip -q "$zip_tmp" -d "$extract_tmp" 2>/dev/null; then
         local count_v2=0
         while IFS= read -r -d '' img; do
-          sudo cp "$img" "$wp_18/" 2>/dev/null || true
-          count_v2=$((count_v2 + 1))
+          if sudo cp "$img" "$wp_18/" 2>/dev/null; then
+            count_v2=$((count_v2 + 1))
+          fi
         done < <(find "$extract_tmp" -type f -print0 2>/dev/null)
         count_18=$((count_18 + count_v2))
         [ "$count_v2" -gt 0 ] && ok "$count_v2 additional 18+ wallpapers v2 installed"
@@ -3131,8 +3307,18 @@ apply_wallpapers() {
       rm -f "$zip_tmp" 2>/dev/null || true
     else
       _drive_failed "extra wallpaper pack (v2)" "update wallpaper"
+      _wp_fail=1
     fi
     rm -rf "$extract_tmp" 2>/dev/null || true
+
+    if [ "$count_18" -eq 0 ]; then
+      if [ "${SKIP_WALLPAPER_18:-false}" = "true" ] && [ "${SKIP_WALLPAPER_18_V2:-false}" = "true" ]; then
+        warn "Both extra wallpaper packs were skipped"
+      else
+        warn "No 18+ wallpapers were installed"
+        _wp_fail=1
+      fi
+    fi
 
     if [ "$count_18" -gt 0 ]; then
       # Generate +18 XML
@@ -3179,6 +3365,10 @@ EOF
   #   Add mode / both: keeps the +18 pack — "both" already installed it above.
   # ══════════════════════════════════════════════════════════════════
   if [ "${INSTALL_WALLPAPER_18:-false}" != "true" ] || [ "${INSTALL_WALLPAPER_BOTH:-false}" = "true" ]; then
+    if [ ! -d "$wp/background-normal" ] && [ ! -d "$wp/desktop" ]; then
+      warn "Normal wallpaper sources not found in the bundle — keeping the current pack"
+      return 1
+    fi
     # Replace (default): destroy the +18 folder + XML (no cache left behind).
     # Add mode / both: keep the +18 pack alongside — only the normal pack is refreshed here.
     if [ "${INSTALL_WALLPAPER_ADD:-false}" != "true" ] && [ "${INSTALL_WALLPAPER_BOTH:-false}" != "true" ]; then
@@ -3196,17 +3386,24 @@ EOF
         [ -f "$img" ] || continue
         bname="${img##*/}"
         [ "$bname" = "Himeno Fedora.jpg" ] && continue
-        sudo cp "$img" "$wp_norm/" 2>/dev/null || true
-        count_norm=$((count_norm + 1))
+        if sudo cp "$img" "$wp_norm/" 2>/dev/null; then
+          count_norm=$((count_norm + 1))
+        fi
       done
     fi
 
     # Copy all custom background images
     for img in "$wp/background-normal/"*; do
       [ -f "$img" ] || continue
-      sudo cp "$img" "$wp_norm/" 2>/dev/null || true
-      count_norm=$((count_norm + 1))
+      if sudo cp "$img" "$wp_norm/" 2>/dev/null; then
+        count_norm=$((count_norm + 1))
+      fi
     done
+
+    if [ "$count_norm" -eq 0 ]; then
+      warn "No wallpapers were copied — the normal pack is empty"
+      return 1
+    fi
 
     if [ "$count_norm" -gt 0 ]; then
       ok "$count_norm wallpapers installed"
@@ -3258,12 +3455,17 @@ EOF
   # Set active desktop wallpaper only if user opted in
   if [ "${INSTALL_DESKTOP_WALLPAPER:-false}" = "true" ]; then
     if [ -f "$HOME/.local/share/backgrounds/Himeno Fedora.jpg" ]; then
-      gsettings set org.gnome.desktop.background picture-uri "file://$HOME/.local/share/backgrounds/Himeno Fedora.jpg" 2>/dev/null || true
-      gsettings set org.gnome.desktop.background picture-uri-dark "file://$HOME/.local/share/backgrounds/Himeno Fedora.jpg" 2>/dev/null || true
-      gsettings set org.gnome.desktop.background picture-options "zoom" 2>/dev/null || true
-      ok "Desktop wallpaper applied via gsettings"
+      if gsettings set org.gnome.desktop.background picture-uri "file://$HOME/.local/share/backgrounds/Himeno Fedora.jpg" 2>/dev/null; then
+        gsettings set org.gnome.desktop.background picture-uri-dark "file://$HOME/.local/share/backgrounds/Himeno Fedora.jpg" 2>/dev/null || true
+        gsettings set org.gnome.desktop.background picture-options "zoom" 2>/dev/null || true
+        ok "Desktop wallpaper applied via gsettings"
+      else
+        warn "Could not apply the desktop wallpaper"
+        _wp_fail=1
+      fi
     else
       warn "Himeno Fedora.jpg not found in ~/.local/share/backgrounds/"
+      _wp_fail=1
     fi
   fi
 
@@ -3272,6 +3474,11 @@ EOF
     rm "$HOME/.local/share/backgrounds/Himeno Fedora LoginScreen.jpg"
     ok "Removed leftover login wallpaper from ~/.local/share/backgrounds/"
   fi
+
+  if [ "$_wp_fail" -ne 0 ]; then
+    return 1
+  fi
+  return 0
 }
 
 install_custom_avatars() {
@@ -3279,6 +3486,8 @@ install_custom_avatars() {
 
   local face_dir="/usr/share/pixmaps/faces"
   local src="$BUNDLE/assets/normal-faces"
+  local _avatar_fail=0
+  local _avatar_skipped=0
 
   # ── Silently purge any stray face/faces folders (keep only the real one) ──
   for dir in /usr/share/pixmaps/face*; do
@@ -3296,8 +3505,17 @@ install_custom_avatars() {
 
   # ── Normal faces ──
   # Runs when NOT +18-only, or in "both" mode (normal + 18+ together)
+  local _normal_wanted=0
+  if [ "${INSTALL_WALLPAPER_18:-false}" != "true" ] || [ "${INSTALL_WALLPAPER_BOTH:-false}" = "true" ]; then
+    _normal_wanted=1
+    if [ ! -d "$src" ] || [ -z "$(ls -A "$src" 2>/dev/null)" ]; then
+      warn "Normal avatar source not found at $src"
+      _avatar_fail=1
+    fi
+  fi
+
   local count=0
-  if { [ "${INSTALL_WALLPAPER_18:-false}" != "true" ] || [ "${INSTALL_WALLPAPER_BOTH:-false}" = "true" ]; } && [ -d "$src" ] && [ -n "$(ls -A "$src" 2>/dev/null)" ]; then
+  if [ "$_normal_wanted" -eq 1 ] && [ -d "$src" ] && [ -n "$(ls -A "$src" 2>/dev/null)" ]; then
     sudo mkdir -p "$face_dir"
 
     # Copy custom avatars — convert to exact 512x512 JPEG
@@ -3316,11 +3534,11 @@ install_custom_avatars() {
         convert "$img" -resize 512x512^ -gravity center -extent 512x512 -quality 92 "$tmp_out" 2>/dev/null || true
       else
         warn "ImageMagick not found — skipping avatar conversion"
+        _avatar_fail=1
         break
       fi
 
-      if [ -f "$tmp_out" ]; then
-        sudo cp "$tmp_out" "$face_dir/" 2>/dev/null || true
+      if [ -f "$tmp_out" ] && sudo cp "$tmp_out" "$face_dir/" 2>/dev/null; then
         count=$((count + 1))
       fi
     done
@@ -3330,6 +3548,9 @@ install_custom_avatars() {
     if [ "$count" -gt 0 ]; then
       sudo chmod 644 "$face_dir"/*.jpg 2>/dev/null || true
       ok "$count custom avatars installed to $face_dir"
+    else
+      warn "No normal avatars were installed"
+      _avatar_fail=1
     fi
   fi
 
@@ -3343,6 +3564,7 @@ install_custom_avatars() {
 
     if [ "${SKIP_FACES_18:-false}" = "true" ]; then
       warn "Skipping the extra profile pictures — the hosted link is dead"
+      _avatar_skipped=1
     elif curl -L --max-time 90 -b "download_warning=1" "$FACES_18_URL" -o "$zip_tmp" 2>/dev/null; then
       if ! is_valid_zip "$zip_tmp"; then
         local mime
@@ -3350,28 +3572,47 @@ install_custom_avatars() {
         rm -f "$zip_tmp" 2>/dev/null || true
         warn "Downloaded file is not a valid zip (got: $mime) — the hosted file may be gone"
         _drive_failed "extra profile pictures" "update pfp"
+        _avatar_fail=1
       else
         sudo mkdir -p "$face_dir"
         if unzip -q "$zip_tmp" -d "$extract_tmp" 2>/dev/null; then
           local count_18=0
           while IFS= read -r -d '' img; do
             # Install to the standard face dir so GNOME avatar picker finds them
-            sudo cp "$img" "$face_dir/" 2>/dev/null || true
-            count_18=$((count_18 + 1))
+            if sudo cp "$img" "$face_dir/" 2>/dev/null; then
+              count_18=$((count_18 + 1))
+            fi
           done < <(find "$extract_tmp" -type f -print0 2>/dev/null)
           sudo chmod 644 "$face_dir"/* 2>/dev/null || true
-          [ "$count_18" -gt 0 ] && ok "$count_18 18+ profile pictures installed to $face_dir"
+          if [ "$count_18" -gt 0 ]; then
+            ok "$count_18 18+ profile pictures installed to $face_dir"
+          else
+            warn "No 18+ profile pictures were installed"
+            _avatar_fail=1
+          fi
         else
           warn "Failed to extract 18+ faces zip (file may be corrupted)"
+          _avatar_fail=1
         fi
       fi
       rm -f "$zip_tmp" 2>/dev/null || true
     else
       _drive_failed "extra profile pictures" "update pfp"
+      _avatar_fail=1
     fi
     rm -rf "$extract_tmp" 2>/dev/null || true
   fi
 
+  local _avatar_total=$((count + ${count_18:-0}))
+  if [ "$_avatar_fail" -ne 0 ]; then
+    warn "Custom avatar step incomplete — see warnings above"
+    return 1
+  fi
+  if [ "$_avatar_total" -eq 0 ] && [ "$_avatar_skipped" -eq 0 ]; then
+    warn "No custom avatars were installed"
+    return 1
+  fi
+  return 0
 }
 
 # ── 🔥 Billie & Jinx video edits (optional prompt + download, step 22) ──
@@ -3580,6 +3821,7 @@ setup_gdm() {
   local engine="$HOME/.local/share/mactahoe-gdm"
   local engine_script="$engine/gdm-wallpaper.sh"
   local _gdm_ok=0
+  local _gdm_fb_ok=0
 
   if [ ! -f "$engine_script" ]; then
     local _engine_tmp="${engine}.clone.$$"
@@ -3636,6 +3878,7 @@ setup_gdm() {
         ( cd /tmp/mactahoe-gtk && sudo ./tweaks.sh -g -nb -nd ) || _fb_rc=$?
       fi
       if [ "$_fb_rc" -eq 0 ]; then
+        _gdm_fb_ok=1
         ok "GDM login screen themed via upstream tweaks.sh"
       else
         warn "GDM login screen not changed (upstream exit $_fb_rc)"
@@ -3652,6 +3895,11 @@ setup_gdm() {
   echo -e "[org/gnome/login-screen]\nlogo=''" | sudo tee /etc/dconf/db/gdm.d/01-logo > /dev/null
   sudo dconf update
   ok "Fedora logo hidden from GDM login screen"
+
+  if [ "$_gdm_ok" -eq 0 ] && [ "$_gdm_fb_ok" -eq 0 ]; then
+    return 1
+  fi
+  return 0
 }
 
 setup_firefox_theme() {
@@ -3662,7 +3910,8 @@ setup_firefox_theme() {
     warn "MacTahoe source not found — fetching (upstream or vendored)"
     if ! _mactahoe_get_source "$repo"; then
       warn "No MacTahoe source available (upstream + vendored) — Firefox theme not applied"
-      return
+      FIREFOX_THEME_FAILED=1
+      return 1
     fi
   fi
 
@@ -3702,7 +3951,7 @@ setup_firefox_theme() {
         if [ "$reply" = "s" ] || [ "$reply" = "S" ]; then
           warn "Firefox theming skipped by user"
           FIREFOX_THEME_FAILED=1
-          return
+          return 1
         fi
         # Try killing again after user pressed Enter
         killall firefox firefox-bin 2>/dev/null || true
@@ -3718,6 +3967,11 @@ setup_firefox_theme() {
     warn "Firefox theming skipped — not yet initialized"
     FIREFOX_THEME_FAILED=1
   fi
+
+  if [ "${FIREFOX_THEME_FAILED:-0}" = "1" ]; then
+    return 1
+  fi
+  return 0
 }
 
 setup_flatpak_theme() {
@@ -3725,7 +3979,7 @@ setup_flatpak_theme() {
 
   sudo dnf install -y ostree libappstream-glib 2>/dev/null || {
     warn "Could not install ostree/appstream-glib — Flatpak theme skipped"
-    return
+    return 1
   }
 
   local THEME="MacTahoe-Dark"
@@ -3745,7 +3999,7 @@ setup_flatpak_theme() {
 
   if [ -z "$theme_path" ]; then
     warn "Theme '$THEME' not found in any theme directory"
-    return
+    return 1
   fi
 
   rm -rf "$pkg_cache"
@@ -3753,7 +4007,7 @@ setup_flatpak_theme() {
 
   if ! ostree --repo="$repo_dir" init --mode=archive 2>/dev/null; then
     warn "ostree init failed — Flatpak theme runtime not built"
-    return
+    return 1
   fi
   ostree --repo="$repo_dir" config set core.min-free-space-percent 0 2>/dev/null || true
 
@@ -3777,7 +4031,7 @@ EOF
     warn "appstream-compose failed — metadata may be incomplete"
   ostree --repo="$repo_dir" commit -b base --tree=dir="$build_dir" 2>/dev/null || {
     warn "ostree commit failed — Flatpak theme runtime not built"
-    return
+    return 1
   }
 
   local bundles=()
@@ -3803,7 +4057,7 @@ EOF
 
   if [ ${#bundles[@]} -eq 0 ]; then
     warn "No Flatpak architectures found — no runtime bundles built"
-    return
+    return 1
   fi
 
   local installed=0
@@ -3816,9 +4070,10 @@ EOF
 
   if [ "$installed" -gt 0 ]; then
     ok "Flatpak runtime '$app_id' installed ($installed arch(s))"
-  else
-    warn "Flatpak runtime '$app_id' could not be installed — check permissions or ostree"
+    return 0
   fi
+  warn "Flatpak runtime '$app_id' could not be installed — check permissions or ostree"
+  return 1
 }
 
 install_sounds() {
@@ -3832,6 +4087,7 @@ install_sounds() {
     gsettings set org.gnome.desktop.sound theme-name "bigsur" 2>/dev/null || true
     gsettings set org.gnome.desktop.sound event-sounds true 2>/dev/null || true
     ok "macOS Big Sur sounds installed ($(ls "$sound_src/stereo/"*.oga 2>/dev/null | wc -l) files)"
+    return 0
   else
     warn "Sounds not bundled — building from source instead"
     local sounds_built=false
@@ -3853,7 +4109,10 @@ install_sounds() {
       gsettings set org.gnome.desktop.sound theme-name "bigsur" 2>/dev/null || true
       gsettings set org.gnome.desktop.sound event-sounds true 2>/dev/null || true
       ok "macOS Big Sur sounds built from source"
+      return 0
     fi
+    warn "Sounds not installed — build failed"
+    return 1
   fi
 }
 
@@ -3863,9 +4122,10 @@ install_updater() {
   next_step "Fedora MacTahoe Update Notifier"
 
   local updater_src="$BUNDLE/configs/updater"
+  local _step_fail=0
   if [ ! -d "$updater_src" ]; then
     warn "Updater files not found at $updater_src — skipping"
-    return
+    return 1
   fi
 
   # 1. Install the script
@@ -3909,6 +4169,7 @@ install_updater() {
     ok "Update notifier active (checks GitHub every 30 min)"
   else
     warn "Update notifier timer could not be enabled"
+    _step_fail=1
   fi
 
   # 4. Automatic security updates — dnf5-plugin-automatic in download + notify mode.
@@ -3920,13 +4181,14 @@ install_updater() {
       ok "dnf5-plugin-automatic installed"
     else
       warn "dnf5-plugin-automatic install failed — security updates stay manual"
+      _step_fail=1
     fi
   else
     ok "dnf5-plugin-automatic already installed"
   fi
 
   # Explicit config: download yes, apply NO, notify via motd (idempotent)
-  sudo tee /etc/dnf/automatic.conf > /dev/null <<'EOF' || warn "Could not write /etc/dnf/automatic.conf"
+  sudo tee /etc/dnf/automatic.conf > /dev/null <<'EOF' || { warn "Could not write /etc/dnf/automatic.conf"; _step_fail=1; }
 [commands]
 download_updates = yes
 apply_updates = no
@@ -3939,7 +4201,13 @@ EOF
     ok "Auto security updates active (download + notify, never auto-install)"
   else
     warn "dnf5-automatic timer could not be enabled"
+    _step_fail=1
   fi
+
+  if [ "$_step_fail" -ne 0 ]; then
+    return 1
+  fi
+  return 0
 }
 
 # ── PHASE 4c: KTHEME WATCHER ────────────────────────────────
@@ -3950,7 +4218,7 @@ install_ktheme_watcher() {
   local ktheme_src="$BUNDLE/configs/systemd"
   if [ ! -f "$ktheme_src/ktheme-watcher.service" ]; then
     warn "ktheme-watcher.service not found at $ktheme_src — skipping"
-    return
+    return 1
   fi
 
   # 1. Install the unit
@@ -3965,9 +4233,10 @@ install_ktheme_watcher() {
 
   if systemctl --user is-active ktheme-watcher.service &>/dev/null; then
     ok "Auto-theme watcher active — kitty follows your wallpaper"
-  else
-    warn "ktheme watcher could not be started (kitty colors still theme on demand via ktheme)"
+    return 0
   fi
+  warn "ktheme watcher could not be started (kitty colors still theme on demand via ktheme)"
+  return 1
 }
 
 # ── PHASE 5: TERMINAL & SHELL ────────────────────────────────
@@ -4017,10 +4286,12 @@ setup_shell() {
       ok "Default shell changed to fish (next login)"
     else
       warn "fish not set as default shell — run 'sudo chsh -s /usr/bin/fish $USER' manually"
+      return 1
     fi
   else
     ok "Fish is already the default shell"
   fi
+  return 0
 }
 
 # ── PHASE 6: EXTENSIONS ──────────────────────────────────────
@@ -4080,7 +4351,10 @@ install_extensions() {
     fi
   done
   if [ ${#ext_list[@]} -gt 0 ]; then
-    gsettings set org.gnome.shell enabled-extensions "[$(IFS=,; echo "${ext_list[*]}")]" 2>/dev/null || true
+    if ! gsettings set org.gnome.shell enabled-extensions "[$(IFS=,; echo "${ext_list[*]}")]" 2>/dev/null; then
+      warn "Could not enable extensions via gsettings"
+      ext_fail=$((ext_fail + 1))
+    fi
   fi
 
   # Also mark Fedora defaults as disabled
@@ -4194,9 +4468,17 @@ except:
   if [ "$wtp_installed" = true ]; then
     if ! echo "${ext_list[@]}" | grep -q "$wtp_uuid"; then
       ext_list+=("'$wtp_uuid'")
-      gsettings set org.gnome.shell enabled-extensions "[$(IFS=,; echo "${ext_list[*]}")]" 2>/dev/null || true
+      if ! gsettings set org.gnome.shell enabled-extensions "[$(IFS=,; echo "${ext_list[*]}")]" 2>/dev/null; then
+        warn "Could not enable Window Title Pro via gsettings"
+        ext_fail=$((ext_fail + 1))
+      fi
     fi
   fi
+
+  if [ "$ext_fail" -gt 0 ]; then
+    return 1
+  fi
+  return 0
 }
 
 # ── MIRROR FLATPAK ICONS ──────────────────────────────────────
@@ -4209,7 +4491,7 @@ except:
 mirror_flatpak_icons() {
   local user_hicolor="$HOME/.local/share/icons/hicolor"
   local user_48="$user_hicolor/48x48/apps"
-  local mirrored=0 skipped=0
+  local mirrored=0 skipped=0 failed=0
   local bases=()
   local base
 
@@ -4267,9 +4549,12 @@ EOF
       if [ "$ext" = "svg" ]; then
         local target_dir="$user_hicolor/scalable/apps"
         mkdir -p "$target_dir"
-        ln -sf "$f" "$target_dir/$name" 2>/dev/null || \
-          cp -f "$f" "$target_dir/$name" 2>/dev/null || true
-        mirrored=$((mirrored + 1))
+        if ln -sf "$f" "$target_dir/$name" 2>/dev/null || \
+           cp -f "$f" "$target_dir/$name" 2>/dev/null; then
+          mirrored=$((mirrored + 1))
+        else
+          failed=$((failed + 1))
+        fi
         continue
       fi
 
@@ -4286,9 +4571,12 @@ EOF
       [ -z "$best_src" ] && { skipped=$((skipped + 1)); continue; }
 
       # Create symlink (or copy if symlink fails) at 48x48
-      ln -sf "$best_src" "$user_48/$name" 2>/dev/null || \
-        cp -f "$best_src" "$user_48/$name" 2>/dev/null || true
-      mirrored=$((mirrored + 1))
+      if ln -sf "$best_src" "$user_48/$name" 2>/dev/null || \
+         cp -f "$best_src" "$user_48/$name" 2>/dev/null; then
+        mirrored=$((mirrored + 1))
+      else
+        failed=$((failed + 1))
+      fi
     done < <(find "$base" -path '*/apps/*' \( -name '*.png' -o -name '*.svg' \) -print0 2>/dev/null)
   done
 
@@ -4297,7 +4585,11 @@ EOF
     gtk-update-icon-cache "$user_hicolor/" 2>/dev/null || warn "Icon cache update failed for $user_hicolor"
   fi
 
-  log "Mirrored $mirrored icon(s) to $user_hicolor/48x48/apps/ ($skipped already covered)"
+  log "Mirrored $mirrored icon(s) to $user_hicolor/48x48/apps/ ($skipped already covered, $failed failed)"
+  if [ "$failed" -gt 0 ]; then
+    return 1
+  fi
+  return 0
 }
 
 # ── FINALIZE ──────────────────────────────────────────────────
@@ -4346,7 +4638,9 @@ finalize() {
   sudo journalctl --vacuum-time=3d 2>/dev/null || true
 
   # ── 10. Mirror unresolvable app icons (Flatpak + system + user-local) ──
-  mirror_flatpak_icons
+  if ! mirror_flatpak_icons; then
+    warn "Flatpak icon mirror incomplete — some app-grid icons may be missing"
+  fi
 
   # ── 11. Rebuild all icon theme caches (Adwaita + local + Flatpak hicolor) ──
   log "Rebuilding icon caches for all themes..."
@@ -4589,20 +4883,34 @@ if [ -n "${UPDATE_STEPS:-}" ]; then
     install_icons) next_step "MacTahoe Icon Themes + Custom App Icons" ;;
   esac
   _OLD_IFS="$IFS"
+  _target_failed=0
   IFS=','
   for _ustep in $UPDATE_STEPS; do
     IFS="$_OLD_IFS"
     case "$_ustep" in
       install_mactahoe_theme|install_icons|install_font|apply_desktop_entries|ensure_celluloid_default|configure_nautilus_defaults|apply_dconf|optimize_system_resources|apply_wallpapers|install_custom_avatars|setup_gdm|setup_flatpak_theme|install_sounds|install_updater|install_extensions|download_optional_videos)
-        "$_ustep"
-        _update_step_state "$_ustep"
+        CURRENT_STEP_LABEL="$_ustep"
+        _target_rc=0
+        "$_ustep" || _target_rc=$?
+        if [ "$_target_rc" -ne 0 ]; then
+          _step_failed "$_ustep" "$_target_rc"
+          _clear_step_state "$_ustep" || \
+            warn "Could not clear saved state for $_ustep — it may be skipped on the next run"
+          _target_failed=1
+        else
+          _update_step_state "$_ustep"
+        fi
         ;;
       *)
         warn "Unknown update step: $_ustep"
+        _target_failed=1
         ;;
     esac
   done
   IFS="$_OLD_IFS"
+  if [ "$_target_failed" -ne 0 ]; then
+    exit 1
+  fi
   exit 0
 fi
 
