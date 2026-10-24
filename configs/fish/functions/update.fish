@@ -1200,98 +1200,11 @@ function _update_pick_pack --description 'picker: normal / +18 / both / cancel'
     return 0
 end
 
-# ── logout prompt after a target that needs a fresh session ──
-# Strict y/n — NO default: Enter alone does nothing, so nothing logs
-# out by accident. Reason text explains why THIS target needs it.
-function _update_ask_logout --description 'ask whether to log out now (strict y/n, no default)'
-    set -l why (switch "$argv[1]"
-        case theme
-            echo "The GTK theme was recompiled for your GNOME."
-            echo "Every open app still holds the old theme in"
-            echo "memory — themes are only re-read on start."
-            echo "Logging out applies the new theme everywhere."
-        case gtk
-            echo "GTK settings and the Flatpak runtime theme"
-            echo "were refreshed. Open apps and Flatpak apps"
-            echo "keep the old look until they restart — a"
-            echo "logout applies the new look everywhere."
-        case extensions
-            echo "All extensions were reinstalled. GNOME Shell"
-            echo "only loads extensions when a session starts,"
-            echo "so a logout is required for them to appear."
-        case gdm
-            echo "The login screen was re-themed. GDM builds"
-            echo "the login UI fresh for every session — the"
-            echo "new look shows the next time you log out."
-        case wallpaper
-            echo "The desktop wallpaper is already live."
-            echo "The login-screen wallpaper only shows on"
-            echo "the next login screen — log out to see it."
-        case icons
-            echo "New icons are live for new windows; apps"
-            echo "already open keep old icons until restart."
-            echo "Logging out refreshes everything at once."
-        case fonts
-            echo "SF Pro is installed and cached — new apps"
-            echo "use it right away, open apps keep the old"
-            echo "font. Log out to apply it everywhere."
-        case '*'
-    end)
-    if test (count $why) -eq 0
-        return 1
-    end
-    printf "\n"
-    _update_box_top
-    _update_box_title "LOG OUT NOW?" "1;33"
-    _update_box_rule
-    for l in $why
-        _update_box_text "$l" "1;37"
-    end
-    _update_box_text ""
-    _update_box_text "y  — Log out now" "1;36"
-    _update_box_text "n  — Stay here" "1;36"
-    _update_box_text ""
-    _update_box_text "Enter does nothing — your call." "1;33"
-    _update_box_bottom
-    set -l tries 0
-    while true
-        read -l lo -P "  Log out now?  y = yes  n = no: "
-        if test $status -ne 0
-            printf "\n  \e[1;33mOK — staying here. Changes apply when you log out on your own.\e[0m\n"
-            return 1
-        end
-        switch $lo
-            case y Y yes Yes YES
-                printf "\n  \e[1;32mSee you on the other side!\e[0m\n"
-                if command -q gnome-session-quit
-                    gnome-session-quit --logout --no-prompt 2>/dev/null
-                    return 0
-                else
-                    printf "  \e[1;33mCouldn't start a session logout — use the user menu (Log Out).\e[0m\n"
-                    return 1
-                end
-            case n N no No NO
-                printf "\n  \e[1;33mStaying here — changes apply after you log out when you're ready.\e[0m\n"
-                return 1
-            case '*'
-                set tries (math $tries + 1)
-                if test $tries -ge 3
-                    printf "  \e[1;33mNo answer given — staying here. Log out yourself when ready.\e[0m\n"
-                    return 1
-                end
-                printf "  \e[1;33mType y (yes) or n (no) — Enter alone does nothing.\e[0m\n"
-        end
-    end
-end
-
 function _update_target_icons --description 'reinstall icon themes + custom app icons'
     set -l tmp (_update_fetch_bundle)
     or return 1
     _update_run_step "$tmp" "install_icons"
     set -l code $status
-    if test $code -eq 0
-        _update_ask_logout icons
-    end
     return $code
 end
 
@@ -1300,9 +1213,6 @@ function _update_target_theme --description 'recompile the GTK theme for the cur
     or return 1
     _update_run_step "$tmp" "install_mactahoe_theme"
     set -l code $status
-    if test $code -eq 0
-        _update_ask_logout theme
-    end
     return $code
 end
 
@@ -1311,9 +1221,6 @@ function _update_target_fonts --description 'reinstall SF Pro Display'
     or return 1
     _update_run_step "$tmp" "install_font"
     set -l code $status
-    if test $code -eq 0
-        _update_ask_logout fonts
-    end
     return $code
 end
 
@@ -1329,9 +1236,6 @@ function _update_target_extensions --description 'reinstall all GNOME extensions
     or return 1
     _update_run_step "$tmp" "install_extensions"
     set -l code $status
-    if test $code -eq 0
-        _update_ask_logout extensions
-    end
     return $code
 end
 
@@ -1340,9 +1244,6 @@ function _update_target_gdm --description 're-apply the GDM login theme'
     or return 1
     _update_run_step "$tmp" "setup_gdm" "INSTALL_LOGIN_WALLPAPER=true"
     set -l code $status
-    if test $code -eq 0
-        _update_ask_logout gdm
-    end
     return $code
 end
 
@@ -1389,9 +1290,6 @@ function _update_target_wallpaper --description 'reinstall wallpapers: normal, +
     end
     _update_run_step "$tmp" "apply_wallpapers" $envs
     set -l code $status
-    if test $code -eq 0
-        _update_ask_logout wallpaper
-    end
     return $code
 end
 
@@ -1451,9 +1349,6 @@ function _update_target_gtk --description 'refresh GTK settings + Flatpak GTK ru
     end
     _update_run_step "$tmp" "setup_flatpak_theme"
     set -l code $status
-    if test $code -eq 0
-        _update_ask_logout gtk
-    end
     return $code
 end
 

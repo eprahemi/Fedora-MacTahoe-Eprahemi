@@ -1,9 +1,16 @@
 {
- "latest_version": "3.7",
+ "latest_version": "3.7.1",
  "bootstrap_sha256": "c90bf93f19e1fac2a0d0e145689444f9e5b0beb7ce5147c6e1620d3d33a6fb5b",
  "install_sha256": "f05ca0e7094510c057392b814d1025eee9d2c9eb224e5f256303c73341052e72",
- "update_sha256": "ab7fb4729f7a65fe2ab9f11ef771f0e406f7ddecd174dff2b3c583bed582beb9",
+ "update_sha256": "ad7c74625728617da8b350b7372f9fca9399e7d8aee9d4785a257dd999efa7b9",
  "changelog": [
+  {
+   "version": "3.7.1",
+   "changes": [
+    "THE LOGOUT PROMPT IS GONE — update icons, theme, fonts, extensions, gdm, wallpaper and gtk used to end with an 11-line LOG OUT NOW box and a y/n question. The command now finishes and returns. The per-target help still says when a logout helps, so the information is kept and the question is not asked.",
+    "update.fish changed, so update_sha256 was re-pinned. install.sh and bootstrap.sh are untouched and keep their hashes."
+   ]
+  },
   {
    "version": "3.7",
    "changes": [
