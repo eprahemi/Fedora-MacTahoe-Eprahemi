@@ -1,9 +1,19 @@
 {
- "latest_version": "3.7.1",
+ "latest_version": "3.7.2",
  "bootstrap_sha256": "c90bf93f19e1fac2a0d0e145689444f9e5b0beb7ce5147c6e1620d3d33a6fb5b",
- "install_sha256": "f05ca0e7094510c057392b814d1025eee9d2c9eb224e5f256303c73341052e72",
+ "install_sha256": "849e7aabb907b4079d38b1b2f933916c4f837aeb2828996f210cfe03dea344c5",
  "update_sha256": "ad7c74625728617da8b350b7372f9fca9399e7d8aee9d4785a257dd999efa7b9",
  "changelog": [
+  {
+   "version": "3.7.2",
+   "changes": [
+    "THE LOGIN PROMPT NOW DOES WHAT IT SAYS — answering Yes to LOGIN SCREEN WALLPAPER? used to change nothing: the prompt and the step were gated separately, so setup_gdm could be skipped while the box promised it would run. A Yes answer now forces the step, and the login screen is applied with the runtime engine (FedoraTahoe-GDM) instead of upstream tweaks.sh. The engine exit code is checked and the gresource is hashed before and after — no more green OK after a silent failure.",
+    "PROMPTS ASK AGAIN — saved answers were sticky forever because _prompt_should_ask() ignored PR_VER. An answer saved by an older release is now re-asked once per release; a same-version answer stays silent. The login prompt and the firewalld prompt reappear after this update.",
+    "REMOVE OLD TERMINAL? IS BACK — the prompt was deleted in 3.7. It is restored and appears only when Ptyxis is actually installed (rpm, command or flatpak). Answering Yes forces remove_ptyxis to run even when the step is already recorded. No Ptyxis means no prompt.",
+    "gdm default NO LONGER HANGS — the Himeno rainbow flourish was a while-true loop with no exit. It now runs two cycles and returns. The wallpaper was being applied correctly all along; the command just never came back.",
+    "install.sh changed, so install_sha256 was re-pinned. update.fish and bootstrap.sh are untouched and keep their hashes."
+   ]
+  },
   {
    "version": "3.7.1",
    "changes": [

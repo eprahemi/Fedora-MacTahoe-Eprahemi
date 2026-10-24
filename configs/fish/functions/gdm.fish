@@ -2650,12 +2650,16 @@ except Exception:
         set -l r 255 255 255 255 200 100  50  50  50  50 100 200
         set -l g 50  100 180 220 255 220 200 100  50  50  50  50
         set -l b 50  50  50  50  50  50 100 200 255 255 200 100
-        while true
+        # Bounded rainbow flourish — two cycles, then return. The old
+        # `while true` never exited, so `gdm default` hung forever after
+        # applying the wallpaper.
+        for _cycle in (seq 2)
             for i in (seq 12)
                 echo -ne "\r  \033[38;2;$r[$i];$g[$i];$b[$i]m✧  Himeno-chan wallpaper appears! ✧ (ﾉ◕ヮ◕)\033[0m"
                 sleep 0.08
             end
         end
+        printf "\n"
     else
         echo -e "  $GR✅  GDM wallpaper updated!$C"
         echo -e "  $GY┌────────────────────────────────────────────────────┐$C"

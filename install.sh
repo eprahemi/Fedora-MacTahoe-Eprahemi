@@ -740,7 +740,18 @@ _step_should_run() {
 # Answers are sticky: once saved, a prompt is never re-asked.
 _prompt_should_ask() {
   local pid="$1"
-  [ -z "${PR_ANS[$pid]:-}" ]
+  local ans="${PR_ANS[$pid]:-}"
+
+  # No answer yet → ask.
+  if [ -z "$ans" ]; then
+    return 0
+  fi
+
+  # An answer saved by an older installer is re-asked once per release.
+  # Same-version answers stay sticky, so a re-run never nags. This is the
+  # behaviour the comment above _load_prompt_answers always promised —
+  # PR_VER existed but was never consulted.
+  [ "${PR_VER[$pid]:-0.0}" != "$MANIFEST_VERSION" ]
 }
 
 # ── Load saved prompt answers into installer variables ──
@@ -2915,6 +2926,55 @@ prompt_gdm_login() {
   fi
 }
 
+# ── Old terminal prompt (asked up front with the other prompts) ──
+# Only asked when Ptyxis is actually installed. If it is not there, there is
+# nothing to remove and the prompt must not appear. Returns 1 when Ptyxis is
+# absent (caller saves no answer — the default is false anyway).
+prompt_remove_old_terminal() {
+  local _present=0
+  if rpm -q ptyxis &>/dev/null; then _present=1; fi
+  if command -v ptyxis &>/dev/null; then _present=1; fi
+  if flatpak info org.gnome.Ptyxis &>/dev/null; then _present=1; fi
+  if [ "$_present" -eq 0 ]; then
+    return 1
+  fi
+
+  if [ -z "${INSTALL_REMOVE_OLD_TERMINAL:-}" ]; then
+    echo ""
+    echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+    ot_t="          ◆  REMOVE OLD TERMINAL?  ◆"
+    echo -e "  ${CYAN}║${NC}${ot_t}$(printf '%*s' $((62 - ${#ot_t})) '')${CYAN}║${NC}"
+    echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+    ot1="  The old terminal app that came with Fedora is installed."
+    echo -e "  ${CYAN}║${NC}${ot1}$(printf '%*s' $((62 - ${#ot1})) '')${CYAN}║${NC}"
+    ot2="  Remove it together with its settings and cache so you"
+    echo -e "  ${CYAN}║${NC}${ot2}$(printf '%*s' $((62 - ${#ot2})) '')${CYAN}║${NC}"
+    ot3="  start completely fresh with Kitty as your only terminal."
+    echo -e "  ${CYAN}║${NC}${ot3}$(printf '%*s' $((62 - ${#ot3})) '')${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+    ot4="    Yes  — Remove old terminal, its cache and settings"
+    echo -e "  ${CYAN}║${NC}    ${BOLD}${GREEN}Y${NC}${BOLD}es${NC}  — Remove old terminal, its cache and settings$(printf '%*s' $((62 - ${#ot4})) '')${CYAN}║${NC}"
+    ot5="    no   — Keep it, don't delete anything"
+    echo -e "  ${CYAN}║${NC}    ${BOLD}${YELLOW}n${NC}${BOLD}o${NC}   — Keep it, don't delete anything$(printf '%*s' $((62 - ${#ot5})) '')${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+    ot6="  Press Enter for default (No — keep it)"
+    echo -e "  ${CYAN}║${NC}${DIM}${ot6}$(printf '%*s' $((62 - ${#ot6})) '')${NC}${CYAN}║${NC}"
+    ot7="  Tip: set INSTALL_REMOVE_OLD_TERMINAL=true to skip this"
+    echo -e "  ${CYAN}║${NC}${DIM}${ot7}$(printf '%*s' $((62 - ${#ot7})) '')${NC}${CYAN}║${NC}"
+    echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    if confirm "Remove the old terminal app + its cache? [y/N]: " N; then
+      INSTALL_REMOVE_OLD_TERMINAL="true"
+      echo -e "  ${GREEN}→ Old terminal will be removed — fresh start with Kitty${NC}"
+    else
+      INSTALL_REMOVE_OLD_TERMINAL="false"
+      echo -e "  ${DIM}→ Old terminal will be kept — nothing gets deleted${NC}"
+    fi
+  fi
+  return 0
+}
+
 # ── Firewalld prompt (asked up front with the other prompts) ──
 # The actual disable/enable action still runs later in
 # optimize_system_resources (Step: Disable RAM-wasting Services).
@@ -3513,24 +3573,78 @@ setup_gdm() {
     fi
   fi
 
-  # Get MacTahoe source for tweaks.sh (upstream clone → vendored snapshot)
-  if ! _mactahoe_get_source /tmp/mactahoe-gtk; then
-    warn "No MacTahoe source available (upstream + vendored) — GDM theme not applied"
-    warn "Run manually after install:"
-    warn "  git clone https://github.com/vinceliuice/MacTahoe-gtk-theme.git /tmp/mactahoe-gtk"
-    warn "  sudo /tmp/mactahoe-gtk/tweaks.sh -g -nb -nd -b /path/to/wallpaper.jpg"
+  # ── Apply with the runtime engine (FedoraTahoe-GDM) ──
+  # This is the same engine `gdm` uses and the only one verified against the
+  # live GNOME release. Upstream tweaks.sh stays as a fallback for the rare
+  # case where the engine cannot be fetched.
+  local engine="$HOME/.local/share/mactahoe-gdm"
+  local engine_script="$engine/gdm-wallpaper.sh"
+  local _gdm_ok=0
+
+  if [ ! -f "$engine_script" ]; then
+    local _engine_tmp="${engine}.clone.$$"
+    rm -rf "$_engine_tmp"
+    if timeout 120 git clone --depth 1 https://github.com/eprahemi/FedoraTahoe-GDM.git "$_engine_tmp" 2>/dev/null; then
+      mkdir -p "$engine"
+      cp -a "$_engine_tmp/." "$engine/"
+      chmod +x "$engine/gdm-wallpaper.sh" "$engine/restore.sh" 2>/dev/null || true
+    fi
+    rm -rf "$_engine_tmp"
   fi
 
-  if [ -f /tmp/mactahoe-gtk/tweaks.sh ]; then
-    cd /tmp/mactahoe-gtk
-    if [ -n "$bg" ]; then
-      sudo ./tweaks.sh -g -nb -nd -b "$bg"
-      ok "GDM login screen themed via MacTahoe tweaks.sh (-g -nb -nd)"
-    else
-      sudo ./tweaks.sh -g -nb -nd
-      warn "No wallpaper found in bundle — GDM themed without custom background"
+  if [ -f "$engine_script" ]; then
+    local _before="" _after="" _gdm_rc=0
+    if [ -f /usr/share/gnome-shell/gnome-shell-theme.gresource ]; then
+      _before=$(sha256sum /usr/share/gnome-shell/gnome-shell-theme.gresource 2>/dev/null | cut -d' ' -f1)
     fi
-    cd "$BUNDLE"
+    if [ -n "$bg" ]; then
+      sudo bash "$engine_script" -g -nb -nd -b "$bg" || _gdm_rc=$?
+    else
+      sudo bash "$engine_script" -g -nb -nd || _gdm_rc=$?
+    fi
+    if [ -f /usr/share/gnome-shell/gnome-shell-theme.gresource ]; then
+      _after=$(sha256sum /usr/share/gnome-shell/gnome-shell-theme.gresource 2>/dev/null | cut -d' ' -f1)
+    fi
+
+    if [ "$_gdm_rc" -eq 0 ] && [ -n "$_after" ]; then
+      _gdm_ok=1
+      # Same bookkeeping the `gdm` command does: keep the applied image for
+      # `gdm save`, and record the installed bundle for `gdm protect`.
+      if [ -n "$bg" ]; then
+        cp "$bg" "$engine/.gdm-undo-copy.jpg" 2>/dev/null || true
+      fi
+      sudo cp /usr/share/gnome-shell/gnome-shell-theme.gresource "$engine/.last-gdm.gresource" 2>/dev/null || true
+      if [ -n "$_before" ] && [ "$_after" = "$_before" ]; then
+        ok "GDM login screen already up to date"
+      elif [ -n "$bg" ]; then
+        ok "GDM login screen themed — Himeno login wallpaper"
+      else
+        ok "GDM login screen themed"
+      fi
+    else
+      warn "GDM engine failed (exit $_gdm_rc) — login screen not changed"
+    fi
+  fi
+
+  # Fallback: upstream tweaks.sh, only when the runtime engine did not run.
+  if [ "$_gdm_ok" -eq 0 ]; then
+    if _mactahoe_get_source /tmp/mactahoe-gtk && [ -f /tmp/mactahoe-gtk/tweaks.sh ]; then
+      local _fb_rc=0
+      if [ -n "$bg" ]; then
+        ( cd /tmp/mactahoe-gtk && sudo ./tweaks.sh -g -nb -nd -b "$bg" ) || _fb_rc=$?
+      else
+        ( cd /tmp/mactahoe-gtk && sudo ./tweaks.sh -g -nb -nd ) || _fb_rc=$?
+      fi
+      if [ "$_fb_rc" -eq 0 ]; then
+        ok "GDM login screen themed via upstream tweaks.sh"
+      else
+        warn "GDM login screen not changed (upstream exit $_fb_rc)"
+        warn "  Apply it later with: gdm default"
+      fi
+    else
+      warn "No GDM engine available — login screen not changed"
+      warn "  Apply it later with: gdm default"
+    fi
   fi
 
   # Hide Fedora logo on GDM login screen (runs regardless of theme)
@@ -4495,7 +4609,7 @@ fi
 # ── Preflight (always runs) ──
 _run_step "preflight" preflight
 
-# ── The two questions the installer asks ──────────────────────
+# ── The questions the installer asks ──────────────────────────
 # Everything else is defaulted and stays changeable later through
 # `update`, so nobody has to answer a question to get a working
 # system.
@@ -4512,7 +4626,6 @@ INSTALL_DISCORD="${INSTALL_DISCORD:-false}"
 INSTALL_DESKTOP_WALLPAPER="${INSTALL_DESKTOP_WALLPAPER:-true}"
 INSTALL_WALLPAPER_18="${INSTALL_WALLPAPER_18:-false}"
 INSTALL_BILLIE_VIDEOS="${INSTALL_BILLIE_VIDEOS:-false}"
-INSTALL_REMOVE_OLD_TERMINAL="${INSTALL_REMOVE_OLD_TERMINAL:-false}"
 
 # GDM login screen — one question, no second confirmation.
 if _prompt_should_ask "wallpaper_login"; then
@@ -4527,6 +4640,28 @@ if _prompt_should_ask "firewalld"; then
   if prompt_firewalld; then
     _save_prompt_answer "firewalld" "${INSTALL_DISABLE_FIREWALLD:-false}"
   fi
+fi
+
+# Old terminal (Ptyxis) — asked only when it is actually installed.
+# prompt_remove_old_terminal returns 1 when Ptyxis is absent, so no answer
+# is saved and the default below records false.
+if _prompt_should_ask "old_terminal"; then
+  if prompt_remove_old_terminal; then
+    _save_prompt_answer "old_terminal" "${INSTALL_REMOVE_OLD_TERMINAL:-false}"
+  fi
+fi
+
+# Fill the remaining gaps AFTER the prompts.
+INSTALL_REMOVE_OLD_TERMINAL="${INSTALL_REMOVE_OLD_TERMINAL:-false}"
+
+# A "yes" answer must run its step even when that step is already recorded
+# at the current version. Without this, the prompt promises an action that
+# the version gate then silently skips (the 3.7 login-screen bug).
+if [ "${INSTALL_LOGIN_WALLPAPER:-false}" = "true" ]; then
+  STEP_USR_VERS["setup_gdm"]="0.0"
+fi
+if [ "${INSTALL_REMOVE_OLD_TERMINAL:-false}" = "true" ]; then
+  STEP_USR_VERS["remove_ptyxis"]="0.0"
 fi
 
 # The defaulted extras are written to the state file as they are, so
