@@ -46,9 +46,11 @@ function update --description 'rescue detector: restores the real update.fish in
             printf "\n  \e[1;31m✘ Could not fetch the fish config — check your connection and try again.\e[0m\n"
             return 1
         end
-        mkdir -p "$HOME/.config/fish/functions"
-        if test -f "$tmp/configs/fish/config.fish"
-            cp -f "$tmp/configs/fish/config.fish" "$HOME/.config/fish/"
+        mkdir -p "$HOME/.config/fish/functions" "$HOME/.config/fish/conf.d"
+        # config.fish is USER-OWNED: never copy over it. Project settings are
+        # the conf.d snippet, which fish sources before config.fish.
+        if test -f "$tmp/configs/fish/conf.d/50-fedora-mactahoe.fish"
+            cp -f "$tmp/configs/fish/conf.d/50-fedora-mactahoe.fish" "$HOME/.config/fish/conf.d/"
         end
         for f in "$tmp/configs/fish/functions/"*.fish
             cp -f "$f" "$HOME/.config/fish/functions/"

@@ -2707,6 +2707,7 @@ apply_configs() {
   next_step "Config Files (Kitty, Fish, Starship, GTK, Fastfetch)"
 
   local cfg="$BUNDLE/configs"
+  local _fish_fail=0
 
   # Kitty
   if [ -f "$cfg/kitty/kitty.conf" ]; then
@@ -2731,8 +2732,12 @@ apply_configs() {
   fi
 
   # Fish
-  if [ -f "$cfg/fish/config.fish" ]; then
-    # Auto-backup the live fish config before overwriting (keeps last 5)
+  # NEVER write ~/.config/fish/config.fish — it belongs to the user. Project
+  # settings are a conf.d snippet, which fish sources before config.fish, so
+  # user aliases, environment variables, functions and startup commands always
+  # survive an install. (Before 3.7.5 this step overwrote config.fish.)
+  if [ -d "$cfg/fish" ]; then
+    # Auto-backup the live fish config before touching anything (keeps last 5)
     if [ -d "$HOME/.config/fish" ]; then
       mkdir -p "$HOME/.cache/fedora-mactahoe/backups"
       chmod 700 "$HOME/.cache/fedora-mactahoe/backups" 2>/dev/null || true
@@ -2741,30 +2746,28 @@ apply_configs() {
       chmod 600 "$snap" 2>/dev/null || true
       ls -1t "$HOME/.cache/fedora-mactahoe/backups"/fish-*.tar.gz 2>/dev/null | tail -n +6 | xargs -r rm -f 2>/dev/null || true
     fi
-    mkdir -p "$HOME/.config/fish/functions"
+    mkdir -p "$HOME/.config/fish/functions" "$HOME/.config/fish/conf.d"
 
-    # ── Preserve user PATH setup (merge-not-replace) ──
-    # Older installs overwrote config.fish wholesale, wiping any PATH the user
-    # had added (e.g. `set -gx PATH ~/.npm-global/bin $PATH` or `fish_add_path`).
-    # On first install those lines are migrated into conf.d/50-user-path.fish,
-    # which fish sources automatically and which we never touch. No lines, no file.
-    if [ -f "$HOME/.config/fish/config.fish" ] && [ ! -f "$HOME/.config/fish/conf.d/50-user-path.fish" ]; then
-      mkdir -p "$HOME/.config/fish/conf.d"
-      grep -E '^\s*(set\s+-[a-zA-Z]+\s+(PATH|fish_user_paths)\b|fish_add_path\b)' \
-        "$HOME/.config/fish/config.fish" > "$HOME/.config/fish/conf.d/50-user-path.fish" 2>/dev/null || true
-      if [ -s "$HOME/.config/fish/conf.d/50-user-path.fish" ]; then
-        local _n_paths
-        _n_paths=$(grep -c . "$HOME/.config/fish/conf.d/50-user-path.fish" 2>/dev/null || true)
-        printf '\n# Preserved by Fedora MacTahoe — moved from config.fish on first\n# install so your PATH survives every config refresh. Edit freely.\n' >> "$HOME/.config/fish/conf.d/50-user-path.fish"
-        ok "Preserved $_n_paths user PATH line(s) → conf.d/50-user-path.fish"
-      else
-        rm -f "$HOME/.config/fish/conf.d/50-user-path.fish"
+    if [ -f "$cfg/fish/conf.d/50-fedora-mactahoe.fish" ]; then
+      if ! cp -f "$cfg/fish/conf.d/50-fedora-mactahoe.fish" \
+           "$HOME/.config/fish/conf.d/50-fedora-mactahoe.fish"; then
+        warn "Could not install the Fedora MacTahoe fish settings snippet"
+        _fish_fail=1
       fi
+    else
+      warn "Fish settings snippet missing from the bundle"
+      _fish_fail=1
     fi
 
-    cp "$cfg/fish/config.fish" "$HOME/.config/fish/"
     if [ -d "$cfg/fish/functions" ]; then
       cp -f "$cfg/fish/functions/"*.fish "$HOME/.config/fish/functions/" 2>/dev/null || true
+    fi
+
+    # A pre-3.7.5 install may still carry the old project block inside
+    # config.fish. It is left untouched; the snippet is additive. Mention the
+    # duplicate once so a double fastfetch banner is not a mystery.
+    if [ -f "$HOME/.config/fish/config.fish" ] && grep -q 'ANI_CLI_PLAYER vlc' "$HOME/.config/fish/config.fish" 2>/dev/null; then
+      warn "config.fish still contains the old MacTahoe block; project settings now load from conf.d/50-fedora-mactahoe.fish (the duplicate lines are safe to remove)"
     fi
     ok "Fish config ($(ls "$HOME/.config/fish/functions/"*.fish 2>/dev/null | wc -l) functions)"
   fi
@@ -2866,6 +2869,198 @@ EOF
     fi
     ok "systemd-logind overrides"
   fi
+
+  if [ "$_fish_fail" -ne 0 ]; then
+    warn "Fish configuration could not be installed completely"
+    return 1
+  fi
+  return 0
+}
+
+# Merge the MacTahoe custom keybindings into the user's existing list.
+# Existing paths are never removed and an occupied slot is never overwritten.
+# New users get every default. Existing users get only the missing defaults
+# whose key combination is not already in use; conflicts are reported.
+_merge_custom_keybindings() {
+  local plan
+  if ! plan=$(python3 - <<'KEYBINDING_MERGE'
+import ast
+import os
+import subprocess
+import sys
+
+GSETTINGS = os.environ.get('GSETTINGS_BIN', 'gsettings')
+BASE = 'org.gnome.settings-daemon.plugins.media-keys'
+CUSTOM = BASE + '.custom-keybinding:'
+PREFIX = '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/'
+
+DEFAULTS = [
+    ('Kitty', '<Super>t', 'kitty'),
+    ('Nautilus', '<Super>e', 'nautilus'),
+    ('Task Manager', '<Shift><Control>Escape', 'gnome-system-monitor'),
+    ('Volume', '<Control><Alt>v', 'pavucontrol'),
+    ('Notes', '<Super>n', 'gnome-text-editor'),
+    ('Chrome', '<Super>w', 'google-chrome'),
+    ('Firefox', '<Super>f', 'firefox'),
+    ('Spotify', '<Super>z', 'flatpak run com.spotify.Client'),
+    ('Settings', '<Control>i', 'gnome-control-center'),
+    ('Emoji Picker', '<Super>period', 'gnome-characters'),
+]
+
+
+def run_get(schema, key):
+    result = subprocess.run([GSETTINGS, 'get', schema, key],
+                            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            text=True)
+    if result.returncode != 0:
+        raise RuntimeError('gsettings get failed')
+    return result.stdout.strip()
+
+
+def parse_array(text):
+    text = text.strip()
+    if text.startswith('@as '):
+        text = text[4:].strip()
+    value = ast.literal_eval(text)
+    if not isinstance(value, (list, tuple)):
+        raise ValueError('not an array')
+    if not all(isinstance(item, str) for item in value):
+        raise ValueError('non-string entry')
+    return list(value)
+
+
+def parse_string(text):
+    text = text.strip()
+    if text.startswith('@s '):
+        text = text[3:].strip()
+    value = ast.literal_eval(text)
+    if not isinstance(value, str):
+        raise ValueError('not a string')
+    return value
+
+
+def variant_array(items):
+    escaped = []
+    for item in items:
+        escaped.append("'" + item.replace('\\', '\\\\').replace("'", "\\'") + "'")
+    return '[' + ', '.join(escaped) + ']'
+
+
+def clean(text):
+    return ' '.join(str(text).split())
+
+
+def slot_path(number):
+    return PREFIX + 'custom' + str(number) + '/'
+
+
+def read_slot(path):
+    return {
+        'path': path,
+        'name': parse_string(run_get(CUSTOM + path, 'name')),
+        'binding': parse_string(run_get(CUSTOM + path, 'binding')),
+        'command': parse_string(run_get(CUSTOM + path, 'command')),
+    }
+
+
+try:
+    paths = parse_array(run_get(BASE, 'custom-keybindings'))
+    active = [read_slot(path) for path in paths]
+except Exception as error:
+    print('cannot read custom keybindings: ' + str(error), file=sys.stderr)
+    raise SystemExit(1)
+
+used_bindings = {}
+for entry in active:
+    if entry['binding'] and entry['binding'] not in used_bindings:
+        used_bindings[entry['binding']] = entry
+
+plan = []
+conflicts = []
+chosen = []
+slot_cache = {}
+
+
+def cached_slot(number):
+    if number not in slot_cache:
+        slot_cache[number] = read_slot(slot_path(number))
+    return slot_cache[number]
+
+
+for name, binding, command in DEFAULTS:
+    existing = used_bindings.get(binding)
+    if existing is not None:
+        if existing['name'] == name and existing['command'] == command:
+            continue
+        conflicts.append(binding + " is already used by '" + clean(existing['name']) + "'; keeping your binding")
+        continue
+
+    target = None
+    for number in range(100):
+        path = slot_path(number)
+        if path in paths or path in chosen:
+            continue
+        state = cached_slot(number)
+        if state['binding'] == '':
+            target = state
+            break
+        if (state['binding'] == binding and state['name'] == name
+                and state['command'] == command):
+            target = state
+            break
+
+    if target is None:
+        conflicts.append('no free custom keybinding slot for ' + name + ' (' + binding + ')')
+        continue
+
+    plan.append((target['path'], name, binding, command))
+    chosen.append(target['path'])
+    used_bindings[binding] = {
+        'path': target['path'], 'name': name,
+        'binding': binding, 'command': command,
+    }
+
+for path, name, binding, command in plan:
+    print('SET\t' + path + '\t' + name + '\t' + binding + '\t' + command)
+for message in conflicts:
+    print('CONFLICT\t' + message)
+print('LIST\t' + variant_array(paths + chosen))
+KEYBINDING_MERGE
+  ); then
+    warn "Could not read the current custom keybindings"
+    return 1
+  fi
+
+  local kind a b c d rc=0
+  # Write the slot values before publishing the path in the list. If a write
+  # fails the slot stays unlisted; the next run recognises it as our own stale
+  # entry and reuses it instead of creating a duplicate.
+  while IFS=$'\t' read -r kind a b c d; do
+    [ "$kind" = "SET" ] || continue
+    if ! gsettings set "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$a" name "$b" 2>/dev/null ||
+       ! gsettings set "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$a" command "$d" 2>/dev/null ||
+       ! gsettings set "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$a" binding "$c" 2>/dev/null; then
+      warn "Could not write custom keybinding $a"
+      rc=1
+    fi
+  done <<< "$plan"
+
+  if [ "$rc" -eq 0 ]; then
+    while IFS=$'\t' read -r kind a b c d; do
+      [ "$kind" = "LIST" ] || continue
+      if ! gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "$a" 2>/dev/null; then
+        warn "Could not update the custom-keybindings list"
+        rc=1
+      fi
+    done <<< "$plan"
+  fi
+
+  while IFS=$'\t' read -r kind a b c d; do
+    [ "$kind" = "CONFLICT" ] || continue
+    warn "$a"
+  done <<< "$plan"
+
+  return "$rc"
 }
 
 apply_dconf() {
@@ -2936,37 +3131,13 @@ apply_dconf() {
   # Free Super+N from GNOME Shell's focus-active-notification (conflict)
   gsettings set org.gnome.shell.keybindings focus-active-notification "[]" 2>/dev/null || true
 
-  gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom4/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom5/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom6/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom7/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom8/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom9/']" 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ name 'Kitty' 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ binding '<Super>t' 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom0/ command 'kitty' 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/ name 'Nautilus' 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/ binding '<Super>e' 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom1/ command 'nautilus' 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/ name 'Task Manager' 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/ binding '<Shift><Control>Escape' 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom2/ command 'gnome-system-monitor' 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/ name 'Volume' 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/ binding '<Control><Alt>v' 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom3/ command 'pavucontrol' 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom4/ name 'Notes' 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom4/ binding '<Super>n' 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom4/ command 'gnome-text-editor' 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom5/ name 'Chrome' 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom5/ binding '<Super>w' 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom5/ command 'google-chrome' 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom6/ name 'Firefox' 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom6/ binding '<Super>f' 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom6/ command 'firefox' 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom7/ name 'Spotify' 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom7/ binding '<Super>z' 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom7/ command 'flatpak run com.spotify.Client' 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom8/ name 'Settings' 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom8/ binding '<Control>i' 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom8/ command 'gnome-control-center' 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom9/ name 'Emoji Picker' 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom9/ binding '<Super>period' 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom9/ command 'gnome-characters' 2>/dev/null || true
+  # MERGE, never replace: existing custom bindings are preserved. New users
+  # get every MacTahoe default; existing users get only the missing,
+  # nonconflicting ones. A key combination already in use is reported and
+  # left untouched.
+  if ! _merge_custom_keybindings; then
+    _core_fail=1
+  fi
 
   # ── Nautilus ──
   gsettings set org.gnome.nautilus.icon-view default-zoom-level "'large'" 2>/dev/null || true
@@ -4143,6 +4314,110 @@ install_sounds() {
 
 # ── PHASE 4b: UPDATE NOTIFIER ──────────────────────────────
 
+_merge_dnf_automatic() {
+  # Parse before modifying; publish from the same directory atomically. Never
+  # follow an administrator's symlink or replace a concurrently changed file.
+  sudo python3 - /etc/dnf/automatic.conf <<'DNF_AUTOMATIC_MERGE'
+import configparser
+import os
+from pathlib import Path
+import re
+import shutil
+import stat
+import sys
+import tempfile
+
+path = Path(sys.argv[1])
+stage = None
+try:
+    def identity():
+        try:
+            s = path.lstat()
+        except FileNotFoundError:
+            return None
+        if not stat.S_ISREG(s.st_mode):
+            raise ValueError('automatic.conf is not a regular file; preserved')
+        return (s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns)
+
+    original_id = identity()
+    original = path.read_text() if original_id is not None else ''
+    parser = configparser.ConfigParser(interpolation=None, strict=True)
+    parser.read_string(original)
+    required = {'commands': {'upgrade_type': 'security',
+                             'download_updates': 'yes', 'apply_updates': 'no'}}
+    # A notification destination is a default, not an administrator override.
+    if not parser.has_option('emitters', 'emit_via'):
+        required['emitters'] = {'emit_via': 'motd'}
+    pending = {section: dict(values) for section, values in required.items()}
+    output = []
+    section = None
+
+    def finish_section():
+        for key, value in pending.get(section, {}).items():
+            if output and not output[-1].endswith('\n'):
+                output[-1] += '\n'
+            output.append(f'{key} = {value}\n')
+        pending.pop(section, None)
+
+    for line in original.splitlines(keepends=True):
+        header = re.match(r'^\s*\[([^]]+)\]', line)
+        if header:
+            finish_section()
+            section = header.group(1)
+        keyline = re.match(r'^(\s*)([^#;\s][^=:\n]*?)(\s*[=:]\s*)(.*?)(\r?\n)?$', line)
+        if keyline and section in pending:
+            key = keyline.group(2).strip().lower()
+            if key in pending[section]:
+                value = pending[section].pop(key)
+                # Preserve indentation, delimiter and inline comment if present.
+                comment = re.search(r'\s+[;#].*$', keyline.group(4))
+                line = (keyline.group(1) + keyline.group(2) + keyline.group(3)
+                        + value + (comment.group(0) if comment else '')
+                        + (keyline.group(5) or '\n'))
+        output.append(line)
+    finish_section()
+    for name, values in pending.items():
+        if output and not output[-1].endswith('\n'):
+            output[-1] += '\n'
+        output.append(f'\n[{name}]\n')
+        output.extend(f'{key} = {value}\n' for key, value in values.items())
+    result = ''.join(output)
+    # Validate the complete result before any filesystem write.
+    check = configparser.ConfigParser(interpolation=None, strict=True,
+                                      inline_comment_prefixes=('#', ';'))
+    check.read_string(result)
+    for key, value in required['commands'].items():
+        if check.get('commands', key) != value:
+            raise ValueError(f'Could not establish commands.{key}')
+    if result != original:
+        fd, stage = tempfile.mkstemp(prefix='.mactahoe-automatic-', dir=path.parent)
+        with os.fdopen(fd, 'w') as stream:
+            stream.write(result)
+            stream.flush()
+            os.fsync(stream.fileno())
+        if original_id is not None:
+            old = path.stat()
+            os.chown(stage, old.st_uid, old.st_gid)
+            shutil.copystat(path, stage)
+        else:
+            os.chmod(stage, 0o644)
+        if identity() != original_id:
+            raise ValueError('automatic.conf changed during merge; preserved')
+        if original_id is None:
+            # No-clobber first publication, including a concurrent symlink.
+            os.link(stage, path)
+        else:
+            os.replace(stage, path)
+        print('Automatic updates: security downloads only; admin settings preserved')
+except (OSError, ValueError, configparser.Error) as error:
+    print(f'DNF automatic configuration merge failed: {error}', file=sys.stderr)
+    sys.exit(1)
+finally:
+    if stage is not None and os.path.lexists(stage):
+        os.unlink(stage)
+DNF_AUTOMATIC_MERGE
+}
+
 install_updater() {
   next_step "Fedora MacTahoe Update Notifier"
 
@@ -4212,15 +4487,12 @@ install_updater() {
     ok "dnf5-plugin-automatic already installed"
   fi
 
-  # Explicit config: download yes, apply NO, notify via motd (idempotent)
-  sudo tee /etc/dnf/automatic.conf > /dev/null <<'EOF' || { warn "Could not write /etc/dnf/automatic.conf"; _step_fail=1; }
-[commands]
-download_updates = yes
-apply_updates = no
-
-[emitters]
-emit_via = motd
-EOF
+  # Do not start automatic updates unless the security-only policy was saved.
+  # Keep unrelated administrator settings (including their notification choice).
+  if ! _merge_dnf_automatic; then
+    warn "Could not merge /etc/dnf/automatic.conf; automatic timer not enabled"
+    return 1
+  fi
 
   if sudo systemctl enable --now dnf5-automatic.timer 2>/dev/null; then
     ok "Auto security updates active (download + notify, never auto-install)"
@@ -4321,6 +4593,143 @@ setup_shell() {
 
 # ── PHASE 6: EXTENSIONS ──────────────────────────────────────
 
+# Add UUIDs to enabled-extensions / disabled-extensions WITHOUT replacing the
+# user's existing choices. Existing entries are never removed. A UUID the user
+# explicitly disabled is never enabled (and vice versa); the conflict is
+# reported and the user's choice wins.
+_merge_shell_extension_lists() {
+  local mode="$1"
+  shift
+  case "$mode" in
+    enable|disable) ;;
+    *) warn "Internal: invalid extension merge mode '$mode'"; return 1 ;;
+  esac
+  [ "$#" -gt 0 ] || return 0
+
+  local enabled_raw disabled_raw merged
+  if ! enabled_raw=$(gsettings get org.gnome.shell enabled-extensions 2>/dev/null); then
+    warn "Could not read enabled-extensions"
+    return 1
+  fi
+  if ! disabled_raw=$(gsettings get org.gnome.shell disabled-extensions 2>/dev/null); then
+    warn "Could not read disabled-extensions"
+    return 1
+  fi
+
+  # dconf holds only the user's own value. Empty means enabled-extensions is
+  # still the schema default (a fresh account), not a user decision. That
+  # distinction lets "disable" hide the Fedora defaults on a new install
+  # without overriding a user who explicitly enabled one later.
+  local enabled_user_set=1 dconf_enabled
+  if [ "$mode" = "disable" ]; then
+    if dconf_enabled=$(dconf read /org/gnome/shell/enabled-extensions 2>/dev/null); then
+      [ -n "$dconf_enabled" ] || enabled_user_set=0
+    fi
+  fi
+
+  if ! merged=$(python3 - "$mode" "$enabled_user_set" "$enabled_raw" "$disabled_raw" "$@" <<'EXTENSION_MERGE'
+import ast
+import sys
+
+mode = sys.argv[1]
+enabled_user_set = sys.argv[2] == '1'
+raw_enabled = sys.argv[3]
+raw_disabled = sys.argv[4]
+requested = sys.argv[5:]
+
+
+def parse(text):
+    text = text.strip()
+    if text.startswith('@as '):
+        text = text[4:].strip()
+    value = ast.literal_eval(text)
+    if not isinstance(value, (list, tuple)):
+        raise ValueError('not an array')
+    if not all(isinstance(item, str) for item in value):
+        raise ValueError('non-string entry')
+    return list(value)
+
+
+try:
+    enabled = parse(raw_enabled)
+    disabled = parse(raw_disabled)
+except Exception as error:
+    print(f'cannot parse extension lists: {error}', file=sys.stderr)
+    raise SystemExit(1)
+
+original_enabled = list(enabled)
+conflicts = []
+if mode == 'enable':
+    for uuid in requested:
+        if uuid in disabled:
+            conflicts.append(uuid)
+        elif uuid not in enabled:
+            enabled.append(uuid)
+else:
+    for uuid in requested:
+        if uuid in enabled:
+            if enabled_user_set:
+                conflicts.append(uuid)
+            else:
+                enabled.remove(uuid)
+                if uuid not in disabled:
+                    disabled.append(uuid)
+        elif uuid not in disabled:
+            disabled.append(uuid)
+
+
+def variant(items):
+    escaped = []
+    for item in items:
+        escaped.append("'" + item.replace('\\', '\\\\').replace("'", "\\'") + "'")
+    return '[' + ', '.join(escaped) + ']'
+
+
+print('TARGET\t' + variant(enabled if mode == 'enable' else disabled))
+for uuid in conflicts:
+    print('CONFLICT\t' + uuid)
+if mode == 'disable' and enabled != original_enabled:
+    print('ENABLED\t' + variant(enabled))
+EXTENSION_MERGE
+  ); then
+    warn "Could not merge the GNOME extension lists"
+    return 1
+  fi
+
+  local kind value target_list="" enabled_list="" conflicts=()
+  while IFS=$'\t' read -r kind value; do
+    case "$kind" in
+      TARGET) target_list="$value" ;;
+      ENABLED) enabled_list="$value" ;;
+      CONFLICT) conflicts+=("$value") ;;
+    esac
+  done <<< "$merged"
+
+  if [ -z "$target_list" ]; then
+    warn "Could not merge the GNOME extension lists"
+    return 1
+  fi
+  if [ -n "$enabled_list" ]; then
+    if ! gsettings set org.gnome.shell enabled-extensions "$enabled_list" 2>/dev/null; then
+      warn "Could not write enabled-extensions"
+      return 1
+    fi
+  fi
+  if ! gsettings set org.gnome.shell "${mode}d-extensions" "$target_list" 2>/dev/null; then
+    warn "Could not write ${mode}d-extensions"
+    return 1
+  fi
+  local uuid
+  for uuid in "${conflicts[@]}"; do
+    if [ "$mode" = "enable" ]; then
+      warn "Extension $uuid is disabled in your settings — leaving it disabled"
+    else
+      warn "Extension $uuid is enabled in your settings — leaving it enabled"
+    fi
+  done
+  return 0
+}
+
 install_extensions() {
   next_step "GNOME Extensions"
 
@@ -4368,22 +4777,29 @@ install_extensions() {
     rm -f /tmp/ext-"$uuid".zip
   done
 
-  # Enable all installed extensions via direct gsettings (no D-Bus needed)
-  local -a ext_list
+  # Enable all installed extensions via direct gsettings (no D-Bus needed).
+  # MERGE, never replace: the user's enabled/disabled choices are preserved.
+  local -a ext_uuids=()
   for uuid in "${extensions[@]}"; do
     if [ -d "$HOME/.local/share/gnome-shell/extensions/$uuid" ] || [ -d "/usr/share/gnome-shell/extensions/$uuid" ]; then
-      ext_list+=("'$uuid'")
+      ext_uuids+=("$uuid")
     fi
   done
-  if [ ${#ext_list[@]} -gt 0 ]; then
-    if ! gsettings set org.gnome.shell enabled-extensions "[$(IFS=,; echo "${ext_list[*]}")]" 2>/dev/null; then
+  if [ ${#ext_uuids[@]} -gt 0 ]; then
+    if ! _merge_shell_extension_lists enable "${ext_uuids[@]}"; then
       warn "Could not enable extensions via gsettings"
       ext_fail=$((ext_fail + 1))
     fi
   fi
 
-  # Also mark Fedora defaults as disabled
-  gsettings set org.gnome.shell disabled-extensions "['background-logo@fedorahosted.org', 'apps-menu@gnome-shell-extensions.gcampax.github.com']" 2>/dev/null || true
+  # Mark the Fedora defaults as disabled, but never override a user who
+  # explicitly enabled one (the helper reports that conflict).
+  if ! _merge_shell_extension_lists disable \
+      'background-logo@fedorahosted.org' \
+      'apps-menu@gnome-shell-extensions.gcampax.github.com'; then
+    warn "Could not update disabled-extensions via gsettings"
+    ext_fail=$((ext_fail + 1))
+  fi
 
   if [ "$ext_ok" -gt 0 ]; then
     ok "$ext_ok extension(s) installed"
@@ -4489,14 +4905,11 @@ except:
     fi
   fi
 
-  # Add to enabled-extensions list if installed successfully
+  # Enable Window Title Pro without disturbing the merged list.
   if [ "$wtp_installed" = true ]; then
-    if ! echo "${ext_list[@]}" | grep -q "$wtp_uuid"; then
-      ext_list+=("'$wtp_uuid'")
-      if ! gsettings set org.gnome.shell enabled-extensions "[$(IFS=,; echo "${ext_list[*]}")]" 2>/dev/null; then
-        warn "Could not enable Window Title Pro via gsettings"
-        ext_fail=$((ext_fail + 1))
-      fi
+    if ! _merge_shell_extension_lists enable "$wtp_uuid"; then
+      warn "Could not enable Window Title Pro via gsettings"
+      ext_fail=$((ext_fail + 1))
     fi
   fi
 

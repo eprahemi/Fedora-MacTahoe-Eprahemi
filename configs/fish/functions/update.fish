@@ -967,9 +967,10 @@ function _update_configs_mode --description 'refresh kitty, fish, updater, stars
     set -l tmp (_update_fetch_bundle)
     or return 1
     set -l cfg "$tmp/configs"
-    # Every destination is created even when missing — files always overwrite
-    mkdir -p "$HOME/.config/kitty" "$HOME/.config/fish/functions" "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0" "$HOME/.config/fastfetch" "$HOME/.config/systemd/user" "$HOME/.local/bin"
-    # Auto-backup the live fish config before overwriting (keeps last 5)
+    # Every destination is created even when missing — project-owned files
+    # always overwrite; ~/.config/fish/config.fish is never written.
+    mkdir -p "$HOME/.config/kitty" "$HOME/.config/fish/functions" "$HOME/.config/fish/conf.d" "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0" "$HOME/.config/fastfetch" "$HOME/.config/systemd/user" "$HOME/.local/bin"
+    # Auto-backup the live fish config before touching anything (keeps last 5)
     set -l bk "$HOME/.cache/fedora-mactahoe/backups"
     if test -d "$HOME/.config/fish"
         mkdir -p "$bk"
@@ -992,25 +993,21 @@ function _update_configs_mode --description 'refresh kitty, fish, updater, stars
     if test -f "$cfg/kitty/auto-theme.conf"
         cp -f "$cfg/kitty/auto-theme.conf" "$HOME/.config/kitty/"
     end
-    # fish — config.fish + every function (update.fish included, so the
-    # running copy is replaced with the freshly fetched one)
-    # Preserve user PATH lines (merge-not-replace): migrate once into
-    # conf.d/50-user-path.fish, which fish sources automatically and which
-    # is never touched by refresh. No matching lines, no file.
-    if test -f "$HOME/.config/fish/config.fish"; and not test -f "$HOME/.config/fish/conf.d/50-user-path.fish"
-        mkdir -p "$HOME/.config/fish/conf.d"
-        grep -E '^\s*(set\s+-[a-zA-Z]+\s+(PATH|fish_user_paths)\b|fish_add_path\b)' "$HOME/.config/fish/config.fish" > "$HOME/.config/fish/conf.d/50-user-path.fish" 2>/dev/null
-        if test -s "$HOME/.config/fish/conf.d/50-user-path.fish"
-            printf '\n# Preserved by Fedora MacTahoe — moved from config.fish on first\n# refresh so your PATH survives every update. Edit freely.\n' >> "$HOME/.config/fish/conf.d/50-user-path.fish"
-        else
-            rm -f "$HOME/.config/fish/conf.d/50-user-path.fish"
-        end
-    end
-    if test -f "$cfg/fish/config.fish"
-        cp -f "$cfg/fish/config.fish" "$HOME/.config/fish/"
+    # fish — project settings + every function (update.fish included, so the
+    # running copy is replaced with the freshly fetched one).
+    # config.fish is USER-OWNED: never copy over it. Project settings live in
+    # conf.d/50-fedora-mactahoe.fish, which fish sources before config.fish,
+    # so user aliases/env/functions/startup commands survive every refresh.
+    if test -f "$cfg/fish/conf.d/50-fedora-mactahoe.fish"
+        cp -f "$cfg/fish/conf.d/50-fedora-mactahoe.fish" "$HOME/.config/fish/conf.d/"
+    else
+        printf '\n  \e[1;33m⚠ fish settings snippet missing from the bundle — config.fish left untouched.\e[0m\n'
     end
     for f in "$cfg/fish/functions/"*.fish
         cp -f "$f" "$HOME/.config/fish/functions/"
+    end
+    if test -f "$HOME/.config/fish/config.fish"; and grep -q 'ANI_CLI_PLAYER vlc' "$HOME/.config/fish/config.fish" 2>/dev/null
+        printf '\n  \e[1;33m⚠ config.fish still has the old MacTahoe block; project settings now load from conf.d/50-fedora-mactahoe.fish (duplicate lines are safe to remove).\e[0m\n'
     end
     # system-wide fish helpers — the rescue detector (tiny standalone
     # 'update' when the user copy is gone) + the did-you-mean handler.

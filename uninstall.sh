@@ -334,6 +334,13 @@ if [ -f /etc/fish/config.fish ] && grep -q "fedora-mactahoe-guard" /etc/fish/con
   ok "Guard removed from system fish config"
 fi
 
+# ── 2a2. Remove the project-owned conf.d snippet (new in 3.7.5) ──
+# ~/.config/fish/config.fish is user-owned and is never touched here.
+if [ -f "$HOME/.config/fish/conf.d/50-fedora-mactahoe.fish" ]; then
+  log "Removing the Fedora MacTahoe fish settings snippet"
+  run "rm -f '$HOME/.config/fish/conf.d/50-fedora-mactahoe.fish' 2>/dev/null || true"
+fi
+
 # ── 2b. Restore the pre-MacTahoe fish config (recommended mode only) ──
 if [ "$MODE" = "surgical" ]; then
   log "Surgical mode: ~/.config/fish left untouched"
