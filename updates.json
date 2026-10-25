@@ -1,9 +1,16 @@
 {
- "latest_version": "3.7.5",
+ "latest_version": "3.7.6",
  "bootstrap_sha256": "c90bf93f19e1fac2a0d0e145689444f9e5b0beb7ce5147c6e1620d3d33a6fb5b",
- "install_sha256": "c9d15319e215a29c01b3041b4ad33d1d85dc73b824280e0d0db2ef4279e0e922",
+ "install_sha256": "1fe2aeb867875d222b0adf8b6d28c30729d61c417e87a44756c8723142a5f4af",
  "update_sha256": "d0cb648c56faf96f596133e82cc383c6854dfb502521874bb51ef20eb0621175",
  "changelog": [
+  {
+   "version": "3.7.6",
+   "changes": [
+    "THE DESKTOP WALLPAPER IS NOW A QUESTION — install.sh used to set the Himeno desktop wallpaper automatically on every run of the wallpaper step, with no prompt and no way to decline. A new DESKTOP WALLPAPER box asks once per manifest version (default Yes). Answer No and picture-uri is left exactly as it was; the wallpaper files are still installed so the Himeno image stays available in the GNOME picker. `update wallpaper` passes INSTALL_DESKTOP_WALLPAPER explicitly and is never prompted.",
+    "The answer is saved as wallpaper_desktop and only when the question was actually asked, so a targeted update cannot overwrite a saved No. install.sh changed, so install_sha256 was re-pinned; update.fish and bootstrap.sh are untouched. apply_wallpapers was bumped to 1.3 so existing installs re-run it and see the question."
+   ]
+  },
   {
    "version": "3.7.5",
    "changes": [
@@ -419,7 +426,7 @@
   "apply_configs": "1.15",
   "apply_dconf": "1.3",
   "optimize_system_resources": "1.1",
-  "apply_wallpapers": "1.2",
+  "apply_wallpapers": "1.3",
   "install_custom_avatars": "1.1",
   "download_optional_videos": "1.1",
   "setup_gdm": "1.0",

@@ -3248,7 +3248,44 @@ SUDOERS_TEMPLATE
 
 
 
-# ── GDM login screen prompt (the one question that stays) ────
+# ── Desktop wallpaper prompt ─────────────────────────────────
+# Asked once per manifest version. A caller-provided
+# INSTALL_DESKTOP_WALLPAPER (update wallpaper) skips it, so the
+# updater can apply the wallpaper without a second confirmation.
+prompt_desktop_wallpaper() {
+  if [ -z "${INSTALL_DESKTOP_WALLPAPER:-}" ]; then
+    echo ""
+    echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
+    desk_t="       ◆  DESKTOP WALLPAPER?  ◆"
+    echo -e "  ${CYAN}║${NC}       ${BOLD}${WHITE}◆  DESKTOP WALLPAPER?${NC}  ${DIM}◆${NC}$(printf '%*s' $((62 - ${#desk_t})) '')${CYAN}║${NC}"
+    echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+    desk1="  Set the Himeno wallpaper as your desktop background?"
+    echo -e "  ${CYAN}║${NC}${desk1}$(printf '%*s' $((62 - ${#desk1})) '')${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+    desk2="  It is the macOS-style wallpaper that matches the theme."
+    echo -e "  ${CYAN}║${NC}${desk2}$(printf '%*s' $((62 - ${#desk2})) '')${CYAN}║${NC}"
+    desk3="  A wallpaper you picked yourself is kept if you answer No."
+    echo -e "  ${CYAN}║${NC}${desk3}$(printf '%*s' $((62 - ${#desk3})) '')${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+    desk4="  Change it anytime with: update wallpaper"
+    echo -e "  ${CYAN}║${NC}${desk4}$(printf '%*s' $((62 - ${#desk4})) '')${CYAN}║${NC}"
+    echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
+    desk5="  Press Enter for default (Yes)"
+    echo -e "  ${CYAN}║${NC}${DIM}${desk5}$(printf '%*s' $((62 - ${#desk5})) '')${NC}${CYAN}║${NC}"
+    echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
+    echo ""
+    if confirm "Set the Himeno desktop wallpaper? [Y/n]: " Y; then
+      INSTALL_DESKTOP_WALLPAPER="true"
+      echo -e "  ${GREEN}→ Himeno will be set as your desktop wallpaper${NC}"
+    else
+      INSTALL_DESKTOP_WALLPAPER="false"
+      echo -e "  ${DIM}→ Your desktop wallpaper will be left alone${NC}"
+    fi
+  fi
+}
+
+# ── GDM login screen prompt ─────────────────────────────────
 prompt_gdm_login() {
   if [ -z "${INSTALL_LOGIN_WALLPAPER:-}" ]; then
     echo ""
@@ -5365,13 +5402,20 @@ _run_step "preflight" preflight
 # default — the defaults only fill the gaps.
 #
 # Discord is not installed by default (a ~540 MB download nobody
-# asked for). The desktop wallpaper IS set by default — it is part
-# of the theme, not an extra. The optional hosted packs are off by
-# default and are added later through `update` on request.
+# asked for). The desktop wallpaper and the GDM login screen are
+# asked explicitly below (both default to Yes); the optional hosted
+# packs are off by default and are added later through `update`.
 INSTALL_DISCORD="${INSTALL_DISCORD:-false}"
-INSTALL_DESKTOP_WALLPAPER="${INSTALL_DESKTOP_WALLPAPER:-true}"
 INSTALL_WALLPAPER_18="${INSTALL_WALLPAPER_18:-false}"
 INSTALL_BILLIE_VIDEOS="${INSTALL_BILLIE_VIDEOS:-false}"
+
+# Desktop wallpaper — asked once per manifest version. A saved answer or
+# an INSTALL_DESKTOP_WALLPAPER env var (update wallpaper) wins.
+if [ -z "${INSTALL_DESKTOP_WALLPAPER:-}" ] && _prompt_should_ask "wallpaper_desktop"; then
+  prompt_desktop_wallpaper
+  _save_prompt_answer "wallpaper_desktop" "${INSTALL_DESKTOP_WALLPAPER:-true}"
+fi
+INSTALL_DESKTOP_WALLPAPER="${INSTALL_DESKTOP_WALLPAPER:-true}"
 
 # GDM login screen — one question, no second confirmation.
 if _prompt_should_ask "wallpaper_login"; then
@@ -5413,7 +5457,6 @@ fi
 # The defaulted extras are written to the state file as they are, so
 # the state always describes what the system actually has.
 _save_prompt_answer "discord" "${INSTALL_DISCORD:-false}"
-_save_prompt_answer "wallpaper_desktop" "${INSTALL_DESKTOP_WALLPAPER:-true}"
 _save_prompt_answer "wallpaper_18" "${INSTALL_WALLPAPER_18:-false}"
 _save_prompt_answer "billie_videos" "${INSTALL_BILLIE_VIDEOS:-false}"
 _save_prompt_answer "old_terminal" "${INSTALL_REMOVE_OLD_TERMINAL:-false}"
