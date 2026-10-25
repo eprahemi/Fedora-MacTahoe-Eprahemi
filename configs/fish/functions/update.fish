@@ -1042,7 +1042,11 @@ function _update_configs_mode --description 'refresh kitty, fish, updater, stars
         chmod +x "$HOME/.local/bin/fedora-mactahoe-updater.sh"
     end
     systemctl --user daemon-reload 2>/dev/null
-    systemctl --user enable --now ktheme-watcher.service 2>/dev/null
+    # ktheme watcher is opt-in. Never enable it here; if the user already
+    # turned it on, keep it running across the config refresh.
+    if systemctl --user is-enabled ktheme-watcher.service >/dev/null 2>&1
+        systemctl --user start ktheme-watcher.service >/dev/null 2>&1
+    end
     systemctl --user enable fedora-mactahoe-updater.timer 2>/dev/null
     systemctl --user start fedora-mactahoe-updater.timer 2>/dev/null
     # live palette re-apply — the copied auto-theme.conf is the seed fallback,

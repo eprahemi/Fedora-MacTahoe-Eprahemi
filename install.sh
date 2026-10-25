@@ -4560,17 +4560,31 @@ install_ktheme_watcher() {
   cp "$ktheme_src/ktheme-watcher.service" "$HOME/.config/systemd/user/"
   log "ktheme-watcher.service installed"
 
-  # 2. Reload, enable, start — re-themes kitty from the wallpaper on every change
-  systemctl --user daemon-reload 2>/dev/null || true
-  systemctl --user enable ktheme-watcher.service 2>/dev/null || true
-  systemctl --user start ktheme-watcher.service 2>/dev/null || true
-
-  if systemctl --user is-active ktheme-watcher.service &>/dev/null; then
-    ok "Auto-theme watcher active — kitty follows your wallpaper"
-    return 0
+  # 2. Preserve the user's choice. The watcher is opt-in: a fresh install
+  #    leaves it OFF, and only `ktheme on` enables it. An install where the
+  #    user already enabled it keeps it enabled (and running). The symlink
+  #    check covers a session without a reachable user manager.
+  local _kt_was_enabled=0
+  if systemctl --user is-enabled ktheme-watcher.service &>/dev/null ||
+     [ -L "$HOME/.config/systemd/user/default.target.wants/ktheme-watcher.service" ]; then
+    _kt_was_enabled=1
   fi
-  warn "ktheme watcher could not be started (kitty colors still theme on demand via ktheme)"
-  return 1
+
+  systemctl --user daemon-reload 2>/dev/null || true
+
+  if [ "$_kt_was_enabled" -eq 1 ]; then
+    systemctl --user enable ktheme-watcher.service 2>/dev/null || true
+    systemctl --user start ktheme-watcher.service 2>/dev/null || true
+    if systemctl --user is-active ktheme-watcher.service &>/dev/null; then
+      ok "Auto-theme watcher kept on — kitty follows your wallpaper"
+      return 0
+    fi
+    warn "ktheme watcher was enabled but could not be started (run: ktheme on)"
+    return 1
+  fi
+
+  ok "Auto-theme watcher installed but off by default — enable with: ktheme on"
+  return 0
 }
 
 # ── PHASE 5: TERMINAL & SHELL ────────────────────────────────

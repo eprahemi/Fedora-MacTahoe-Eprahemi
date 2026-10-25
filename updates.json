@@ -1,9 +1,16 @@
 {
- "latest_version": "3.7.6",
+ "latest_version": "3.7.7",
  "bootstrap_sha256": "c90bf93f19e1fac2a0d0e145689444f9e5b0beb7ce5147c6e1620d3d33a6fb5b",
- "install_sha256": "1fe2aeb867875d222b0adf8b6d28c30729d61c417e87a44756c8723142a5f4af",
- "update_sha256": "d0cb648c56faf96f596133e82cc383c6854dfb502521874bb51ef20eb0621175",
+ "install_sha256": "5f73cac63412ab8a8a9f8a8a8c534ece9b8eed65dad8f514c8b27630736bfbaf",
+ "update_sha256": "b1b6cd647f5423f9b8282e70ad8dd0d2ea6eab4a5f52a617580b34011a12307a",
  "changelog": [
+  {
+   "version": "3.7.7",
+   "changes": [
+    "THE KTHEME WATCHER IS OPT-IN — install.sh used to enable and start ktheme-watcher.service on every install, so kitty re-themed itself from the wallpaper whether you wanted it or not. A fresh install now installs the unit but leaves it disabled and stopped; the step reports \"off by default\" and tells you to run: ktheme on. An install where you had already enabled the watcher keeps it enabled and running — the installer never turns it off for you. The check also recognizes the default.target.wants symlink when no user manager is reachable, and an enabled-but-unstartable watcher fails the step instead of claiming success.",
+    "`update configs` follows the same rule: it copies the unit and starts it only when it is already enabled, never enables it. install.sh and update.fish changed, so install_sha256 and update_sha256 were re-pinned; bootstrap.sh is untouched. No step version was bumped — existing installs keep their current watcher state exactly."
+   ]
+  },
   {
    "version": "3.7.6",
    "changes": [
