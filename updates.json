@@ -1,9 +1,18 @@
 {
- "latest_version": "3.7.3",
+ "latest_version": "3.7.4",
  "bootstrap_sha256": "c90bf93f19e1fac2a0d0e145689444f9e5b0beb7ce5147c6e1620d3d33a6fb5b",
- "install_sha256": "d0e4a4baa17fd6dc7f35067d4ef727948bd7bcfad178bc5b16e5e293737f404d",
+ "install_sha256": "4eb55cf4ada41e1996e0e8892e5d8a98eee502995931fd5f98ad34f19bf9e414",
  "update_sha256": "ad7c74625728617da8b350b7372f9fca9399e7d8aee9d4785a257dd999efa7b9",
  "changelog": [
+  {
+   "version": "3.7.4",
+   "changes": [
+    "Preserve other systemd-logind drop-ins when installing our override.",
+    "Stage RPM Fusion downloads privately and remove only those files; never wipe /tmp/*.rpm.",
+    "Replace installer edits to /etc/sudoers with a root-staged, visudo-validated, commented-only /etc/sudoers.d/90-fedora-mactahoe template. Existing targets and sudo policy are preserved; passwordless sudo is not enabled.",
+    "install.sh re-pinned; bootstrap.sh and update.fish unchanged. Other audit items remain pending."
+   ]
+  },
   {
    "version": "3.7.3",
    "changes": [

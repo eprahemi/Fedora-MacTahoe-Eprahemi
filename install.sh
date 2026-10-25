@@ -1850,10 +1850,10 @@ remove_gnome_weather() {
 # mirror can answer 200 with an HTML error page), and hand dnf a local
 # file. No metalink, no redirect, no dead mirror.
 _rpmfusion_fetch() {
-  # $1 = repo (free|nonfree)   $2 = fedora release
+  # $1 = repo (free|nonfree)   $2 = fedora release   $3 = private staging dir
   local repo="$1" release="$2"
   local name="rpmfusion-${repo}-release-${release}.noarch.rpm"
-  local dest="/tmp/${name}"
+  local dest="$3/${name}"
   local mirror mime
   for mirror in \
     "https://download1.rpmfusion.org" \
@@ -1889,14 +1889,18 @@ install_rpmfusion() {
   next_step "RPM Fusion + Codecs"
   log "Tip: If this step hangs on repo metadata, press Ctrl+C once — the script handles it safely"
 
-  local release rpm_free rpm_nonfree
+  local release rpm_free rpm_nonfree rpm_dir
   release=$(rpm -E %fedora 2>/dev/null) || release="40"
+  if ! rpm_dir=$(mktemp -d /tmp/fedora-mactahoe-rpms.XXXXXXXXXX); then
+    warn "Cannot create private RPM staging directory"
+    return 1
+  fi
 
   # Fetch the release RPMs from a healthy mirror, then install the local
   # files. Installing straight from a URL lets the mirror service pick a
   # dead target — that is what broke this step.
-  rpm_free=$(_rpmfusion_fetch free "$release" || true)
-  rpm_nonfree=$(_rpmfusion_fetch nonfree "$release" || true)
+  rpm_free=$(_rpmfusion_fetch free "$release" "$rpm_dir" || true)
+  rpm_nonfree=$(_rpmfusion_fetch nonfree "$release" "$rpm_dir" || true)
 
   if [ -n "$rpm_free" ] && [ -n "$rpm_nonfree" ]; then
     if sudo dnf install -y "$rpm_free" "$rpm_nonfree" > /tmp/_rpmfusion-dnf.log 2>&1; then
@@ -1911,6 +1915,7 @@ install_rpmfusion() {
   fi
   [ -n "$rpm_free" ] && rm -f "$rpm_free" 2>/dev/null || true
   [ -n "$rpm_nonfree" ] && rm -f "$rpm_nonfree" 2>/dev/null || true
+  rmdir -- "$rpm_dir" 2>/dev/null || warn "RPM staging directory retained: $rpm_dir"
 
   _rpmfusion_harden_repos
 
@@ -2852,13 +2857,13 @@ EOF
     ok "Fastfetch"
   fi
 
-  # Systemd logind overrides — wipes all existing .conf files, copies ours
+  # Update only our drop-in; preserve all other admin/vendor overrides.
   if [ -f "$BUNDLE/config/logind.conf.d/logind-overrides.conf" ]; then
-    sudo mkdir -p /etc/systemd/logind.conf.d
-    sudo rm -f /etc/systemd/logind.conf.d/*.conf
-    sudo cp -f "$BUNDLE/config/logind.conf.d/logind-overrides.conf" /etc/systemd/logind.conf.d/logind-overrides.conf
-    sudo chown root:root /etc/systemd/logind.conf.d/logind-overrides.conf
-    sudo chmod 644 /etc/systemd/logind.conf.d/logind-overrides.conf
+    if ! sudo mkdir -p /etc/systemd/logind.conf.d ||
+       ! sudo install -o root -g root -m 644 "$BUNDLE/config/logind.conf.d/logind-overrides.conf" /etc/systemd/logind.conf.d/logind-overrides.conf; then
+      warn "Could not install systemd-logind overrides"
+      return 1
+    fi
     ok "systemd-logind overrides"
   fi
 }
@@ -3028,26 +3033,46 @@ apply_dconf() {
 # ── Optional passwordless sudo prompt (run before Phase 1) ──
 
 prompt_sudoers_entry() {
-  # Always add the commented NOPASSWD line (no prompt)
-  if sudo grep -q "$USER.*NOPASSWD" /etc/sudoers 2>/dev/null; then
-    ok "NOPASSWD entry for $USER already present in /etc/sudoers"
-  else
-    local _tmp_sudoers
-    _tmp_sudoers=$(mktemp)
-    sudo cat /etc/sudoers > "$_tmp_sudoers"
-    echo "" >> "$_tmp_sudoers"
-    echo "# $USER ALL=(ALL) NOPASSWD: ALL" >> "$_tmp_sudoers"
-    if sudo visudo -c -f "$_tmp_sudoers" 2>/dev/null; then
-      sudo cp "$_tmp_sudoers" /etc/sudoers
-      sudo chmod 440 /etc/sudoers
-      sudo chown root:root /etc/sudoers
-      ok "Commented NOPASSWD entry added to end of /etc/sudoers"
-      warn "Enable it: sudo visudo  →  find the line and uncomment it"
-    else
-      warn "sudoers validation failed - hint not added"
-    fi
-    rm -f "$_tmp_sudoers"
+  # A documentation-only template: never migrate or change existing policy.
+  # Keep creation/validation/publication in one privileged process so the
+  # validated inode is root-owned and cannot be replaced by the caller.
+  local template_user
+  if ! template_user=$(id -un); then
+    warn "Cannot identify the sudoers template user"
+    return 1
   fi
+  if ! sudo bash -s -- "$template_user" <<'SUDOERS_TEMPLATE'
+set -u
+user=$1
+case "$user" in
+  ''|*[!a-zA-Z0-9_.@-]*) echo "Unsupported sudoers template username" >&2; exit 1 ;;
+esac
+target=/etc/sudoers.d/90-fedora-mactahoe
+# Includes dangling symlinks and directories: never overwrite admin content,
+# even if it has our filename or a previous template has been enabled.
+if [ -e "$target" ] || [ -L "$target" ]; then
+  echo "Existing sudoers drop-in preserved: $target"
+  exit 0
+fi
+if ! visudo -cf /etc/sudoers; then exit 1; fi
+if ! mkdir -p /etc/sudoers.d; then exit 1; fi
+umask 077
+if ! stage=$(mktemp -d /etc/sudoers.d/.fedora-mactahoe.XXXXXXXXXX); then exit 1; fi
+trap 'rm -f -- "$stage/template"; rmdir -- "$stage"' EXIT
+if ! printf '%s\n' '# Fedora MacTahoe: optional template only; no privileges granted.' \
+    "# $user ALL=(ALL) NOPASSWD: ALL" > "$stage/template"; then exit 1; fi
+if ! chown root:root "$stage/template" || ! chmod 0440 "$stage/template"; then exit 1; fi
+if ! visudo -cf "$stage/template"; then exit 1; fi
+# Hard-link publication is atomic and fails if ANY target already exists.
+# Unlike mv/cp it never replaces a concurrently-created admin drop-in.
+if ! ln -T -- "$stage/template" "$target"; then exit 1; fi
+echo "Commented sudoers template installed; existing sudo policy unchanged"
+SUDOERS_TEMPLATE
+  then
+    warn "Sudoers template not installed; existing sudo policy left untouched"
+    return 1
+  fi
+  return 0
 }
 
 
@@ -4600,7 +4625,7 @@ finalize() {
   # ── 1. Temporary files from this installer ──
   log "Cleaning installer temporary files..."
   rm -rf /tmp/mactahoe-* /tmp/mac-sounds /tmp/ext-* 2>/dev/null || true
-  rm -f /tmp/*.rpm 2>/dev/null || true
+  # RPM downloads are removed by install_rpmfusion from its private staging dir.
 
   # ── 1b. Remove old commit-based cache files (pre-v1.4 migration) ──
   rm -f "$STATE_DIR/last-notified-commit" "$STATE_DIR/last-dismissed-commit" 2>/dev/null || true
@@ -4984,7 +5009,9 @@ _save_prompt_answer "old_terminal" "${INSTALL_REMOVE_OLD_TERMINAL:-false}"
 # Only the assets this install actually uses are probed.
 _hosted_assets_status
 
-prompt_sudoers_entry
+if ! prompt_sudoers_entry; then
+  warn "Continuing without the optional sudoers template"
+fi
 
 # ── System cleanup steps (after prompts — remove_ptyxis honors the
 #    old-terminal answer; remove_gnome_weather has no prompt) ──
