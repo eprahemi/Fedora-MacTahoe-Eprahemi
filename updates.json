@@ -1,9 +1,16 @@
 {
- "latest_version": "3.7.11",
+ "latest_version": "3.7.12",
  "bootstrap_sha256": "c90bf93f19e1fac2a0d0e145689444f9e5b0beb7ce5147c6e1620d3d33a6fb5b",
- "install_sha256": "2ac5a3e41f690ae921ccbcb7c973633d2942ec7527f18766b4db2f3d4e804866",
+ "install_sha256": "4784654fa39629be9993e4fcc53510e4a38d8de83e37c8aef896890d7125c8ff",
  "update_sha256": "b1b6cd647f5423f9b8282e70ad8dd0d2ea6eab4a5f52a617580b34011a12307a",
  "changelog": [
+  {
+   "version": "3.7.12",
+   "changes": [
+    "Use DNF5 group install for multimedia and the workstation recovery suggestions. Multimedia failures remain visible and fail the step without stopping later installer steps; repo, codec and exhausted ffmpeg fallback failures also retain honest retry status.",
+    "Only approved Tier 2 #19 changed. install_rpmfusion version is 3.7.12; install.sh re-pinned, bootstrap and updater unchanged. No live package operations performed."
+   ]
+  },
   {
    "version": "3.7.11",
    "changes": [
@@ -449,7 +456,7 @@
   "preflight": "1.0",
   "remove_ptyxis": "3.7.9",
   "remove_gnome_weather": "1.0",
-  "install_rpmfusion": "1.1",
+  "install_rpmfusion": "3.7.12",
   "install_nvidia": "1.0",
   "install_rpm_packages": "1.3",
   "install_browsers": "1.0",

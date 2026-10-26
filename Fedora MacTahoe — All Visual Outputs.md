@@ -221,7 +221,7 @@ After pressing any key:
   ║  APIs that are not available on other desktops.              ║
   ║                                                              ║
   ║  Switch to Fedora Workstation (GNOME) or install:            ║
-  ║    sudo dnf groupinstall 'Fedora Workstation'                ║
+  ║    sudo dnf group install workstation-product-environment    ║
   ╚══════════════════════════════════════════════════════════════╝
 ```
 
@@ -240,7 +240,7 @@ After pressing any key:
   ║  This script cannot proceed without it.                      ║
   ║                                                              ║
   ║  To install GNOME on Fedora, run:                            ║
-  ║    sudo dnf groupinstall 'Fedora Workstation'                ║
+  ║    sudo dnf group install workstation-product-environment    ║
   ║    sudo systemctl set-default graphical.target               ║
   ║    sudo reboot                                               ║
   ╚══════════════════════════════════════════════════════════════╝

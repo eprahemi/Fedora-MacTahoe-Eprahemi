@@ -1697,7 +1697,7 @@ ide3="  APIs that are not available on other desktops."
       echo -e "  ${RED}║${NC}                                                              ${RED}║${NC}"
 ide4="  Switch to Fedora Workstation (GNOME) or install:"
       echo -e "  ${RED}║${NC}  ${ide4}$(printf '%*s' $((60 - ${#ide4})) '')${RED}║${NC}"
-ide_cmd="    sudo dnf groupinstall 'Fedora Workstation'"
+ide_cmd="    sudo dnf group install workstation-product-environment"
       echo -e "  ${RED}║${NC}${ide_cmd}$(printf '%*s' $((62 - ${#ide_cmd})) '')${RED}║${NC}"
       echo -e "  ${RED}╚══════════════════════════════════════════════════════════════╝${NC}"
       echo ""
@@ -1722,7 +1722,7 @@ gnome2="  This script cannot proceed without it."
     echo -e "  ${RED}║${NC}                                                              ${RED}║${NC}"
 gnome3="  To install GNOME on Fedora, run:"
     echo -e "  ${RED}║${NC}  ${gnome3}$(printf '%*s' $((60 - ${#gnome3})) '')${RED}║${NC}"
-gnome_cmd1="    sudo dnf groupinstall 'Fedora Workstation'"
+gnome_cmd1="    sudo dnf group install workstation-product-environment"
     echo -e "  ${RED}║${NC}${gnome_cmd1}$(printf '%*s' $((62 - ${#gnome_cmd1})) '')${RED}║${NC}"
 gnome_cmd2="    sudo systemctl set-default graphical.target"
     echo -e "  ${RED}║${NC}${gnome_cmd2}$(printf '%*s' $((62 - ${#gnome_cmd2})) '')${RED}║${NC}"
@@ -1887,6 +1887,7 @@ _rpmfusion_harden_repos() {
 }
 
 install_rpmfusion() {
+  local _step_fail=0
   next_step "RPM Fusion + Codecs"
   log "Tip: If this step hangs on repo metadata, press Ctrl+C once — the script handles it safely"
 
@@ -1908,11 +1909,13 @@ install_rpmfusion() {
       ok "RPM Fusion repos installed"
     else
       warn "RPM Fusion repo install failed — continuing without them"
+      _step_fail=1
       tail -3 /tmp/_rpmfusion-dnf.log 2>/dev/null | sed 's/^/      /' || true
     fi
     rm -f /tmp/_rpmfusion-dnf.log 2>/dev/null || true
   else
     warn "No RPM Fusion mirror reachable — skipping repos (codecs will be limited)"
+    _step_fail=1
   fi
   [ -n "$rpm_free" ] && rm -f "$rpm_free" 2>/dev/null || true
   [ -n "$rpm_nonfree" ] && rm -f "$rpm_nonfree" 2>/dev/null || true
@@ -1927,7 +1930,10 @@ install_rpmfusion() {
   if rpm -q ffmpeg-free &>/dev/null && ! rpm -q ffmpeg &>/dev/null; then
     log "Replacing Fedora's ffmpeg-free with RPM Fusion's ffmpeg..."
     sudo dnf swap -y ffmpeg-free ffmpeg 2>/dev/null || \
-      sudo dnf install -y --allowerasing ffmpeg 2>/dev/null || true
+      sudo dnf install -y --allowerasing ffmpeg 2>/dev/null || {
+        warn "Could not replace ffmpeg-free with ffmpeg"
+        _step_fail=1
+      }
   fi
 
   # Codecs are a nice-to-have, never a blocker. A theming install must not
@@ -1939,13 +1945,20 @@ install_rpmfusion() {
     ok "Codecs installed"
   else
     warn "Codec packages unavailable — skipping (RPM Fusion repos may be unreachable)"
+    _step_fail=1
     tail -3 /tmp/_rpmfusion-dnf.log 2>/dev/null | sed 's/^/      /' || true
   fi
   rm -f /tmp/_rpmfusion-dnf.log 2>/dev/null || true
 
-  sudo dnf groupinstall -y multimedia 2>/dev/null || true
+  if ! sudo dnf group install -y multimedia; then
+    warn "Multimedia group installation failed — continuing; retry with: sudo dnf group install -y multimedia"
+    _step_fail=1
+  fi
   rm -rf ~/.cache/thumbnails/
   nautilus -q 2>/dev/null || true
+  if [ "$_step_fail" -ne 0 ]; then
+    return 1
+  fi
   ok "RPM Fusion + codecs step complete"
 }
 
