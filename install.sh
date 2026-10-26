@@ -3905,6 +3905,11 @@ PY
 }
 
 download_optional_videos() {
+  # Keep progress accounting, but do not announce an unrequested extra.
+  if [ "${INSTALL_BILLIE_VIDEOS:-false}" != "true" ]; then
+    next_step "Download Billie & Jinx + Gintama Videos" >/dev/null
+    return 0
+  fi
   next_step "Download Billie & Jinx + Gintama Videos"
 
   # ── Download if opted in ──
@@ -3975,8 +3980,6 @@ download_optional_videos() {
     fi
     rm -f -- "$_video_tmp/billie.zip" "$_video_tmp/gintama"
     rmdir -- "$_video_tmp" 2>/dev/null || true
-  else
-    log "Skipped video downloads"
   fi
 }
 

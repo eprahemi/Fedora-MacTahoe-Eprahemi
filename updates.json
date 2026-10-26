@@ -1,9 +1,15 @@
 {
- "latest_version": "3.7.9",
+ "latest_version": "3.7.10",
  "bootstrap_sha256": "c90bf93f19e1fac2a0d0e145689444f9e5b0beb7ce5147c6e1620d3d33a6fb5b",
- "install_sha256": "04d066abc3fe1d735a443544433ce228b2a8c13eb741a6043590d28e99e79194",
+ "install_sha256": "eccce62d189648b0e941db10e314239b293e540311fd9cd6f37eb37e95fbe3cd",
  "update_sha256": "b1b6cd647f5423f9b8282e70ad8dd0d2ea6eab4a5f52a617580b34011a12307a",
  "changelog": [
+  {
+   "version": "3.7.10",
+   "changes": [
+    "Declined optional video downloads stay silent, without changing progress accounting. Optional videos remain available through update videos; requested download output and errors are unchanged."
+   ]
+  },
   {
    "version": "3.7.9",
    "changes": [
