@@ -2354,6 +2354,9 @@ install_mactahoe_theme() {
 # ── Icon themes + custom macOS app icons (standalone step for `update icons`) ──
 install_icons() {
   local theme_src="$BUNDLE/themes"
+  local user_hicolor="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor"
+  [[ "$user_hicolor" = /* ]] || user_hicolor="$HOME/.local/share/icons/hicolor"
+  if ! _merge_hicolor_index; then return 1; fi
 
   # Clean stale icon theme directories/symlinks from previous installs
   for stale in MacTahoe MacTahoe-dark MacTahoe-light MacTahoe-Eprahemi MacTahoe-dark-Eprahemi; do
@@ -2524,7 +2527,7 @@ install_icons() {
     local targets=(
       "$HOME/.local/share/icons/MacTahoe-dark/apps/scalable"
       "$HOME/.local/share/icons/MacTahoe/apps/scalable"
-      "$HOME/.local/share/icons/hicolor/256x256/apps"
+      "$user_hicolor/256x256/apps"
     )
     mkdir -p "${targets[@]}"
 
@@ -2601,17 +2604,8 @@ install_icons() {
     # ALWAYS rebuild icon cache last (ensures custom icons override any conflicts)
     gtk-update-icon-cache "$HOME/.local/share/icons/MacTahoe-dark/" 2>/dev/null || warn "Icon cache update failed for MacTahoe-dark"
     gtk-update-icon-cache "$HOME/.local/share/icons/MacTahoe/" 2>/dev/null || warn "Icon cache update failed for MacTahoe"
-    # Ensure hicolor has an index.theme so gtk-update-icon-cache works
-    if [ ! -f "$HOME/.local/share/icons/hicolor/index.theme" ]; then
-      cat > "$HOME/.local/share/icons/hicolor/index.theme" <<-EOF
-[Icon Theme]
-Name=Hicolor
-Comment=Fallback icon theme (local overrides)
-Hidden=true
-Directories=256x256/apps
-EOF
-    fi
-    gtk-update-icon-cache "$HOME/.local/share/icons/hicolor/" 2>/dev/null || warn "Icon cache update failed for hicolor"
+    # The shared merge runs before installing icons; never replace the user index.
+    gtk-update-icon-cache "$user_hicolor/" 2>/dev/null || warn "Icon cache update failed for hicolor"
 
     # ── System-wide: copy all icons + aliases so EVERY user gets them ──
     local sys="/usr/share/icons/hicolor/256x256/apps"
@@ -5027,38 +5021,35 @@ except:
 # so they show up in the GNOME app grid.
 # See: https://github.com/eprahemi/Fedora-MacTahoe-Eprahemi/issues
 
+_merge_hicolor_index() {
+  local destination="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor"
+  [[ "$destination" = /* ]] || destination="$HOME/.local/share/icons/hicolor"
+  if ! fish --no-config -c 'source "$argv[1]"; or exit 1; __mactahoe_hicolor_index "$argv[2]"' \
+      "$BUNDLE/configs/fish/functions/__mactahoe_hicolor_index.fish" \
+      "$destination"; then
+    warn "Could not merge local hicolor index"
+    return 1
+  fi
+}
+
 mirror_flatpak_icons() {
-  local user_hicolor="$HOME/.local/share/icons/hicolor"
+  local user_hicolor="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor"
+  [[ "$user_hicolor" = /* ]] || user_hicolor="$HOME/.local/share/icons/hicolor"
   local user_48="$user_hicolor/48x48/apps"
   local mirrored=0 skipped=0 failed=0
   local bases=()
   local base
 
+  if ! _merge_hicolor_index; then return 1; fi
   # Build list of hicolor sources that exist
   [ -d "/var/lib/flatpak/exports/share/icons/hicolor" ] && bases+=("/var/lib/flatpak/exports/share/icons/hicolor")
-  [ -d "$HOME/.local/share/icons/hicolor" ] && bases+=("$HOME/.local/share/icons/hicolor")
+  [ -d "${user_hicolor%/icons/hicolor}/flatpak/exports/share/icons/hicolor" ] && bases+=("${user_hicolor%/icons/hicolor}/flatpak/exports/share/icons/hicolor")
+  [ -d "$user_hicolor" ] && bases+=("$user_hicolor")
   [ -d "/usr/share/icons/hicolor" ] && bases+=("/usr/share/icons/hicolor")
 
   [ ${#bases[@]} -eq 0 ] && { ok "No hicolor icon directories to scan"; return 0; }
 
-  mkdir -p "$user_48"
-
-  # Ensure user hicolor has an index.theme so gtk-update-icon-cache works
-  if [ ! -f "$user_hicolor/index.theme" ]; then
-    mkdir -p "$user_hicolor"
-    cat > "$user_hicolor/index.theme" <<-EOF
-[Icon Theme]
-Name=Hicolor
-Comment=Fallback icon theme (local overrides)
-Hidden=true
-Directories=256x256/apps,48x48/apps
-
-[48x48/apps]
-Size=48
-Context=Applications
-Type=Fixed
-EOF
-  fi
+  if ! mkdir -p "$user_48"; then return 1; fi
 
   # Collect all unique icon names from all hicolor sources (apps/ only)
   local -A seen_names
@@ -5120,9 +5111,7 @@ EOF
   done
 
   # Rebuild user hicolor cache
-  if [ "$mirrored" -gt 0 ]; then
-    gtk-update-icon-cache "$user_hicolor/" 2>/dev/null || warn "Icon cache update failed for $user_hicolor"
-  fi
+  gtk-update-icon-cache "$user_hicolor/" 2>/dev/null || warn "Icon cache update failed for $user_hicolor"
 
   log "Mirrored $mirrored icon(s) to $user_hicolor/48x48/apps/ ($skipped already covered, $failed failed)"
   if [ "$failed" -gt 0 ]; then

@@ -265,17 +265,21 @@ function refresh --description 'Deep system refresh: cache, services, extensions
 
     if test $do_icons -eq 1
         __refresh_section "ICON MIRROR"
+        set -l icon_data "$HOME/.local/share"
+        if set -q XDG_DATA_HOME; and string match -q '/*' -- "$XDG_DATA_HOME"
+            set icon_data "$XDG_DATA_HOME"
+        end
+        __mactahoe_hicolor_index "$icon_data/icons/hicolor"; or return 1
         # Inline bash (run via sh -c inside __refresh_anim)
         __refresh_anim "Mirror 512×512 icons" '
-            uh=$HOME/.local/share/icons/hicolor;
+            data=${XDG_DATA_HOME:-$HOME/.local/share};
+            case "$data" in /*) ;; *) data=$HOME/.local/share ;; esac;
+            uh=$data/icons/hicolor;
             u48=$uh/48x48/apps;
             mkdir -p "$u48";
-            if [ ! -f "$uh/index.theme" ]; then
-                mkdir -p "$uh";
-                printf "[Icon Theme]\nName=Hicolor\nComment=Local overrides\nHidden=true\nDirectories=256x256/apps,48x48/apps\n\n[48x48/apps]\nSize=48\nContext=Applications\nType=Fixed\n" > "$uh/index.theme";
-            fi;
             for base in /var/lib/flatpak/exports/share/icons/hicolor \
-                        "$HOME/.local/share/icons/hicolor" \
+                        "$data/flatpak/exports/share/icons/hicolor" \
+                        "$uh" \
                         /usr/share/icons/hicolor; do
                 [ -d "$base" ] || continue;
                 find "$base" -path "*/apps/*" \( -name "*.png" -o -name "*.svg" \) 2>/dev/null | while IFS= read -r f; do
@@ -297,7 +301,7 @@ function refresh --description 'Deep system refresh: cache, services, extensions
                     fi;
                 done;
             done;
-            gtk-update-icon-cache "$uh/" 2>/dev/null;
+            gtk-update-icon-cache "$uh/" 2>/dev/null || echo "Warning: hicolor cache refresh failed" >&2;
         '
         # ── Clears all app grid folders — removes ghost/empty ones instantly ──
         __refresh_anim "Clear app grid folders" "gsettings set org.gnome.desktop.app-folders folder-children '[]' 2>/dev/null; true"
