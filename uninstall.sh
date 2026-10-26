@@ -19,7 +19,7 @@
 #      touched them (pre-install state), then MacTahoe-specific keys are
 #      cleared on top so a rotated-out backup cannot leave leftovers
 #    • Stock Fedora wallpapers (reinstalled), GDM logo tweaks, avatars
-#    • Services: tracker, ABRT, packagekit, firewalld, updater timer,
+#    • Services: ABRT, packagekit, firewalld, updater timer,
 #      ktheme watcher, dnf5-automatic
 #    • 15 GNOME extensions (user copies), default terminal + shell
 #    • Ptyxis + GNOME Weather (reinstalled — the installer removed them)
@@ -296,13 +296,10 @@ if state_has_step "install_updater"; then
   fi
 fi
 
-# ── 1d. Optimize_system_resources reversal (tracker/ABRT/Software/PackageKit/firewalld) ──
+# ── 1d. Optimize_system_resources reversal (ABRT/Software/PackageKit/firewalld) ──
 if state_has_step "optimize_system_resources" || [ -f "$HOME/.config/autostart/org.gnome.Software.desktop" ]; then
   log "Restoring default service states (RAM optimizations reversed)"
-  # Tracker file indexer (masked by optimize_system_resources)
-  run "systemctl --user unmask tracker-miner-fs-3 tracker-miner-fs tracker-store 2>/dev/null || true"
-  # Tracker3 miners (disabled by apply_dconf)
-  run "systemctl --user enable --now tracker3-miner-fs tracker3-miner-fs-control tracker3-miner-apps tracker3-miner-extractor 2>/dev/null || true"
+  # Leave file indexing alone, including legacy masks/disables of unknown origin.
   # ABRT crash reporter
   run "sudo systemctl enable --now abrtd abrt-oops abrt-journal-core abrt-xorg 2>/dev/null || true"
   # GNOME Software auto-start (the disabled copy we installed)

@@ -1404,35 +1404,15 @@ _print_missing_pieces() {
 }
 
 # ── RAM / RESOURCE OPTIMIZATION ──────────────────────────────
-# Disables Fedora services that waste RAM with no functional loss.
-# All are reversible: `systemctl --user unmask tracker-miner-fs-3`
+# Applies service tweaks without changing GNOME file indexing.
+# Existing indexer masks/disables are left untouched: their origin is unknown.
 
 optimize_system_resources() {
   next_step "Disable RAM-wasting Services"
 
   local _step_fail=0
 
-  # ── 1. Tracker (file indexer) ──
-  # Saves ~150-300 MB. Only affects GNOME Files full-text search.
-  if systemctl --user mask tracker-miner-fs-3 tracker-miner-fs tracker-store 2>/dev/null; then
-    systemctl --user stop tracker-miner-fs-3 tracker-miner-fs tracker-store 2>/dev/null || true
-    ok "Tracker file indexer disabled (~150-300 MB saved)"
-  else
-    local _tr_left=0 _u
-    for _u in tracker-miner-fs-3 tracker-miner-fs tracker-store; do
-      if systemctl --user is-enabled "$_u" 2>/dev/null | grep -Eq '^(enabled|enabled-runtime|linked)'; then
-        _tr_left=1
-      fi
-    done
-    if [ "$_tr_left" -ne 0 ]; then
-      warn "Tracker could not be disabled"
-      _step_fail=1
-    else
-      warn "Tracker already masked or not installed"
-    fi
-  fi
-
-  # ── 2. ABRT (crash reporter) ──
+  # ── 1. ABRT (crash reporter) ──
   # Saves ~50-80 MB. Removes bug-report popups — crash logs still exist.
   if sudo systemctl disable --now abrtd abrt-oops abrt-journal-core abrt-xorg 2>/dev/null; then
     ok "ABRT crash reporting disabled (~50-80 MB saved)"
@@ -1451,7 +1431,7 @@ optimize_system_resources() {
     fi
   fi
 
-  # ── 3. GNOME Software auto-start ──
+  # ── 2. GNOME Software auto-start ──
   # Prevents GNOME Software from launching at login (~100-200 MB).
   # Still launchable manually from the app grid.
   mkdir -p "$HOME/.config/autostart"
@@ -1463,7 +1443,7 @@ optimize_system_resources() {
     warn "GNOME Software auto-start entry not found"
   fi
 
-  # ── 4. PackageKit background updates ──
+  # ── 3. PackageKit background updates ──
   # Saves ~40-60 MB. `sudo dnf update` still works manually.
   if sudo systemctl mask packagekit 2>/dev/null; then
     sudo systemctl stop packagekit 2>/dev/null || true
@@ -1477,7 +1457,7 @@ optimize_system_resources() {
     fi
   fi
 
-  # ── 5. Firewalld (decision made up front with the other prompts) ──
+  # ── 4. Firewalld (decision made up front with the other prompts) ──
   # INSTALL_DISABLE_FIREWALLD comes from prompt_firewalld (top prompts) or
   # a saved answer. "true" = disable, "false" = keep/enable, unset = firewalld
   # wasn't running at prompt time, so there is nothing to do.
@@ -3208,8 +3188,6 @@ apply_dconf() {
 
   # Stop + disable ABRT crash-reporting daemons (if present)
   sudo systemctl disable --now abrtd abrt-journal-core abrt-oops abrt-xorg 2>/dev/null || true
-  # Stop + disable Tracker3 file indexer (if present) — saves CPU/battery
-  systemctl --user disable --now tracker3-miner-fs tracker3-miner-fs-control tracker3-miner-apps tracker3-miner-extractor 2>/dev/null || true
 
   # ── Extension dconf restore ──
   if [ -f "$dconf_file" ]; then

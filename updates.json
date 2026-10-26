@@ -1,9 +1,16 @@
 {
- "latest_version": "3.7.14",
+ "latest_version": "3.7.15",
  "bootstrap_sha256": "c90bf93f19e1fac2a0d0e145689444f9e5b0beb7ce5147c6e1620d3d33a6fb5b",
- "install_sha256": "cb82357ea63af4320d5cbcf70abe50827f55dc726ea9f65e85e74c031bca45d2",
+ "install_sha256": "c0787c2710e1857765139b0eefa7ac364f10eb0b298580e9a8c4cbcf90a0be2f",
  "update_sha256": "7992daafaa8b9aa04db9b6cd0db6eed5fdd99e64e9596e8ba5b2cdf992eafb1e",
  "changelog": [
+  {
+   "version": "3.7.15",
+   "changes": [
+    "Keep GNOME file indexing at its existing/default state for fast file search: remove legacy Tracker masking and Tracker3 disabling from installer runs. LocalSearch packages and other service optimizations are unchanged; remove the indexer RAM-saving claim.",
+    "Existing indexer masks/disables are NOT repaired automatically: old changes have no ownership record and may be deliberate user choices. Uninstall also leaves indexing untouched; targeted repair requires separate review and consent. No step bump: this removes disabling behavior, not a migration."
+   ]
+  },
   {
    "version": "3.7.14",
    "changes": [
