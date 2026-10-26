@@ -4592,9 +4592,8 @@ install_ktheme_watcher() {
 setup_terminal() {
   next_step "Kitty as Default Terminal"
 
-  # Ptyxis already removed earlier in remove_ptyxis()
-  sudo ln -sf /usr/bin/kitty /usr/bin/gnome-terminal 2>/dev/null || true
-  sudo ln -sf /usr/bin/kitty /usr/bin/x-terminal-emulator 2>/dev/null || true
+  # Select Kitty through desktop settings, never replace system terminal binaries.
+  # This is independent of the optional old-terminal removal choice.
   gsettings set org.gnome.desktop.default-applications.terminal exec 'kitty' 2>/dev/null || true
 
   # Copy desktop entry with Name=Terminal (from repo, fallback to system)
