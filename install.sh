@@ -2713,6 +2713,7 @@ apply_desktop_entries() {
 
 apply_configs() {
   next_step "Config Files (Kitty, Fish, Starship, GTK, Fastfetch)"
+  _force_popup_blur_off || return 1
 
   local cfg="$BUNDLE/configs"
   local _fish_fail=0
@@ -3071,18 +3072,20 @@ KEYBINDING_MERGE
   return "$rc"
 }
 
+_force_popup_blur_off() {
+  # Exact key only; dconf is safe before the extension schema is installed.
+  if ! dconf write /org/gnome/shell/extensions/blur-my-shell/popup/blur false; then
+    warn "Could not turn Popup blur OFF"
+    return 1
+  fi
+}
+
 _restore_extension_settings() {
   # dconf works before extension schemas are installed (apply_dconf runs first).
-  # Only this default is merged; keep the existing restore for all other keys.
-  local popup_blur
-  popup_blur=$(dconf read /org/gnome/shell/extensions/blur-my-shell/popup/blur) || return 1
-  case "$popup_blur" in
-    ''|true|false) ;;
-    *) return 1 ;;
-  esac
+  # Owner policy: configuration runs override even an explicitly saved ON.
   (
     set -o pipefail
-    python3 - "$1" "$popup_blur" <<'PY' | dconf load /org/gnome/shell/extensions/
+    python3 - "$1" <<'PY' | dconf load /org/gnome/shell/extensions/
 import re
 import sys
 
@@ -3092,9 +3095,7 @@ for line in open(sys.argv[1]):
     if header:
         section = header[1]
     if section == 'blur-my-shell/popup' and re.match(r'\s*blur\s*=', line):
-        # An explicit user ON or OFF wins over the bundled fresh-install default.
-        if sys.argv[2]:
-            line = 'blur=' + sys.argv[2] + '\n'
+        line = 'blur=false\n'
     sys.stdout.write(line)
 PY
   )
@@ -3105,6 +3106,7 @@ apply_dconf() {
 
   # Rollback point before any gsettings/dconf writes + extension restore
   backup_dconf
+  _force_popup_blur_off || return 1
 
   local _core_fail=0
   local _ini_fail=0
@@ -4869,6 +4871,7 @@ EXTENSION_MERGE
 
 install_extensions() {
   next_step "GNOME Extensions"
+  _force_popup_blur_off || return 1
 
   # Install via gnome-extensions CLI where possible
   local extensions=(

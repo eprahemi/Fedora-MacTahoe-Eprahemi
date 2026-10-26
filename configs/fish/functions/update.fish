@@ -967,6 +967,13 @@ function _update_configs_mode --description 'refresh kitty, fish, updater, stars
     set -l tmp (_update_fetch_bundle)
     or return 1
     set -l cfg "$tmp/configs"
+    # Owner policy: only Popup blur is forced OFF on config-writing updates.
+    if not dconf write /org/gnome/shell/extensions/blur-my-shell/popup/blur false
+        _update_log_add configs "—" "—" fail UPDATE-CONFIG
+        printf '\n  Could not turn Popup blur OFF.\n' >&2
+        rm -rf "$tmp"
+        return 1
+    end
     # Every destination is created even when missing — project-owned files
     # always overwrite; ~/.config/fish/config.fish is never written.
     mkdir -p "$HOME/.config/kitty" "$HOME/.config/fish/functions" "$HOME/.config/fish/conf.d" "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0" "$HOME/.config/fastfetch" "$HOME/.config/systemd/user" "$HOME/.local/bin"
