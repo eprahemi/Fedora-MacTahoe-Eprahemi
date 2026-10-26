@@ -1,9 +1,15 @@
 {
- "latest_version": "3.7.16",
+ "latest_version": "3.7.17",
  "bootstrap_sha256": "c90bf93f19e1fac2a0d0e145689444f9e5b0beb7ce5147c6e1620d3d33a6fb5b",
- "install_sha256": "a0f8822222a87dd131cc44c9409b346cad8723c7044bee10af801c4f51169a37",
+ "install_sha256": "7673ab24e839bf70dd8a66e8f363610a95329479ff9e819c3dbfca6a53895ef2",
  "update_sha256": "7992daafaa8b9aa04db9b6cd0db6eed5fdd99e64e9596e8ba5b2cdf992eafb1e",
  "changelog": [
+  {
+   "version": "3.7.17",
+   "changes": [
+    "Correct both installer update-notifier interval messages to every 2 hours, matching the existing 2h timer. Text only: timer, behavior and step versions unchanged."
+   ]
+  },
   {
    "version": "3.7.16",
    "changes": [

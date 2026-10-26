@@ -4575,7 +4575,7 @@ install_updater() {
   systemctl --user start fedora-mactahoe-updater.timer 2>/dev/null || true
 
   if systemctl --user is-enabled fedora-mactahoe-updater.timer &>/dev/null; then
-    ok "Update notifier active (checks GitHub every 30 min)"
+    ok "Update notifier active (checks GitHub every 2 hours)"
   else
     warn "Update notifier timer could not be enabled"
     _step_fail=1
@@ -5282,7 +5282,7 @@ v6="  ◆  GDM login screen themed"
   echo -e "  ${GREEN}║${NC}  ${YELLOW}${v6}${NC}$(printf '%*s' $((60 - ${#v6})) '')${GREEN}║${NC}"
 v7="  ◆  Flatpak GTK runtime installed"
   echo -e "  ${GREEN}║${NC}  ${YELLOW}${v7}${NC}$(printf '%*s' $((60 - ${#v7})) '')${GREEN}║${NC}"
-v8="  ◆  Update notifier active (GitHub check every 30 min)"
+v8="  ◆  Update notifier active (GitHub check every 2 hours)"
   echo -e "  ${GREEN}║${NC}  ${YELLOW}${v8}${NC}$(printf '%*s' $((60 - ${#v8})) '')${GREEN}║${NC}"
   if [ "${FIREFOX_THEME_FAILED:-0}" = 1 ]; then
     echo -e "  ${GREEN}║${NC}                                                              ${GREEN}║${NC}"
