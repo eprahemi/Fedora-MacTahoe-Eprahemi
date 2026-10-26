@@ -4049,52 +4049,57 @@ configure_nautilus_defaults() {
   done
   ok "Pictures, Videos, Music, Documents → sort by Name (A–Z)"
 
-  # ── 2. Sidebar bookmark order via GTK bookmarks file ──
-  local bookmarks_file="$HOME/.config/gtk-3.0/bookmarks"
-  mkdir -p "$HOME/.config/gtk-3.0"
-
-  # Our desired XDG order
-  local xdg_entries=(
-    "file://$HOME/Downloads Downloads"
-    "file://$HOME/Pictures Pictures"
-    "file://$HOME/Videos Videos"
-    "file://$HOME/Music Music"
-    "file://$HOME/Documents Documents"
-  )
-
-  # Strip out old XDG lines + Trash from existing bookmarks (preserve custom ones)
-  local custom_bookmarks=""
-  if [ -f "$bookmarks_file" ]; then
-    while IFS= read -r line || [ -n "$line" ]; do
-      # Skip XDG user dirs and Trash
-      case "$line" in
-        file://"$HOME"/Downloads*|file://"$HOME"/Pictures*|file://"$HOME"/Videos*|file://"$HOME"/Music*|file://"$HOME"/Documents*|file://"$HOME"/.local/share/Trash*)
-          continue
-          ;;
-        *)
-          custom_bookmarks="${custom_bookmarks}${line}"$'\n'
-          ;;
-      esac
-    done < "$bookmarks_file"
+  # GTK3, GTK4 and Nautilus share gtk-3.0/bookmarks. Never rebuild a user's list.
+  # Remove only the exact literal line emitted by older project installers.
+  if ! _remove_project_trash_bookmark; then
+    warn "Could not remove the old project Trash bookmark"
+    return 1
   fi
-
-  # Create XDG Trash directories (required for bookmark to work on first click)
-  mkdir -p "$HOME/.local/share/Trash/files" "$HOME/.local/share/Trash/info"
-
-  # Write the new bookmarks file
-  {
-    for entry in "${xdg_entries[@]}"; do
-      echo "$entry"
-    done
-    echo "file://$HOME/.local/share/Trash/files Trash"
-    [ -n "$custom_bookmarks" ] && printf '%s' "$custom_bookmarks"
-  } > "$bookmarks_file"
-  ok "Sidebar order: Downloads, Pictures, Videos, Music, Documents"
 
   # ── 3. File-chooser dialogs: do NOT sort folders before files ──
   gsettings set org.gtk.Settings.FileChooser sort-directories-first false 2>/dev/null || true
   gsettings set org.gtk.gtk4.Settings.FileChooser sort-directories-first false 2>/dev/null || true
   ok "File chooser: 'Sort folders before files' turned off"
+}
+
+_remove_project_trash_bookmark() {
+  python3 - <<'PY'
+import os
+import pathlib
+import stat
+import tempfile
+
+config = os.environ.get('XDG_CONFIG_HOME', '')
+if not os.path.isabs(config):
+    config = os.path.join(os.environ['HOME'], '.config')
+path = pathlib.Path(config) / 'gtk-3.0' / 'bookmarks'
+try:
+    before = path.lstat()
+except FileNotFoundError:
+    raise SystemExit(0)
+if not stat.S_ISREG(before.st_mode):
+    raise SystemExit('Refusing non-regular bookmarks file')
+original = path.read_bytes()
+known = os.fsencode('file://' + os.environ['HOME'] + '/.local/share/Trash/files Trash')
+updated = b''.join(line for line in original.splitlines(keepends=True)
+                   if line.rstrip(b'\r\n') != known)
+if updated == original:
+    raise SystemExit(0)
+fd, temporary = tempfile.mkstemp(prefix='.mactahoe-bookmarks-', dir=path.parent)
+try:
+    with os.fdopen(fd, 'wb') as stream:
+        stream.write(updated)
+        stream.flush()
+        os.fchmod(stream.fileno(), stat.S_IMODE(before.st_mode))
+        os.fchown(stream.fileno(), before.st_uid, before.st_gid)
+        os.fsync(stream.fileno())
+    if path.lstat() != before or path.read_bytes() != original:
+        raise RuntimeError('Bookmarks changed during cleanup')
+    os.replace(temporary, path)
+finally:
+    if os.path.exists(temporary):
+        os.unlink(temporary)
+PY
 }
 
 setup_gdm() {

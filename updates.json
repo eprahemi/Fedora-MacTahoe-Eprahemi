@@ -1,9 +1,16 @@
 {
- "latest_version": "3.7.15",
+ "latest_version": "3.7.16",
  "bootstrap_sha256": "c90bf93f19e1fac2a0d0e145689444f9e5b0beb7ce5147c6e1620d3d33a6fb5b",
- "install_sha256": "c0787c2710e1857765139b0eefa7ac364f10eb0b298580e9a8c4cbcf90a0be2f",
+ "install_sha256": "a0f8822222a87dd131cc44c9409b346cad8723c7044bee10af801c4f51169a37",
  "update_sha256": "7992daafaa8b9aa04db9b6cd0db6eed5fdd99e64e9596e8ba5b2cdf992eafb1e",
  "changelog": [
+  {
+   "version": "3.7.16",
+   "changes": [
+    "Stop adding the custom Trash folder bookmark. Remove only the exact old installer-generated line; preserve all other bookmarks, labels and order. Native GNOME Trash and deleted files are untouched.",
+    "Nautilus configuration no longer rebuilds the user's bookmark list. Cleanup honors XDG_CONFIG_HOME and publishes atomically; configure_nautilus_defaults step bumped to 3.7.16 for existing installs."
+   ]
+  },
   {
    "version": "3.7.15",
    "changes": [
@@ -487,7 +494,7 @@
   "install_font": "1.0",
   "apply_desktop_entries": "1.0",
   "ensure_celluloid_default": "1.0",
-  "configure_nautilus_defaults": "1.0",
+  "configure_nautilus_defaults": "3.7.16",
   "apply_configs": "3.7.14",
   "apply_dconf": "3.7.14",
   "optimize_system_resources": "1.1",
