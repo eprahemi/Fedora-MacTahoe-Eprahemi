@@ -1777,9 +1777,12 @@ remove_ptyxis() {
     sudo dnf remove -y ptyxis > "$_dnf_log" 2>&1 || _dnf_rc=$?
     tail -1 "$_dnf_log" 2>/dev/null | sed 's/^/      /' || true
     rm -f "$_dnf_log" 2>/dev/null || true
-    if [ "$_dnf_rc" -ne 0 ] && rpm -q ptyxis &>/dev/null; then
+    if rpm -q ptyxis &>/dev/null; then
       warn "Ptyxis package removal failed (dnf exit $_dnf_rc) — leaving its settings untouched"
       return 1
+    fi
+    if [ "$_dnf_rc" -ne 0 ]; then
+      warn "dnf exited $_dnf_rc, but the Ptyxis package is no longer installed"
     fi
     ok "Ptyxis package removed"
   else
@@ -1800,9 +1803,7 @@ remove_ptyxis() {
   sudo rm -f /usr/share/applications/org.gnome.Console.desktop 2>/dev/null || true
   # MacTahoe theme icon for Ptyxis
   find "$HOME/.local/share/icons" -path "*MacTahoe*ptyxis*" -delete 2>/dev/null || true
-  # Symlinks that may point to Ptyxis
-  sudo rm -f /usr/bin/gnome-terminal 2>/dev/null || true
-  sudo rm -f /usr/bin/x-terminal-emulator 2>/dev/null || true
+  # System terminal binaries belong to their packages/alternatives manager.
 
   # Verify no traces remain
   local leftover_config leftover_data leftover_dconf
@@ -3849,23 +3850,80 @@ install_custom_avatars() {
 }
 
 # ── 🔥 Billie & Jinx video edits (optional prompt + download, step 22) ──
+_install_downloaded_videos() {
+  # Flatten nested archive paths; exclusive creation preserves every collision.
+  # Never extract archive links or use archive paths as filesystem paths.
+  python3 - "$1" "$2" "${3:-}" <<'PY'
+import os, pathlib, shutil, stat, sys, zipfile
+source, destination, raw_name = sys.argv[1:]
+extensions = {'.mp4', '.mkv', '.mov', '.avi', '.webm', '.m4v'}
+try:
+    os.makedirs(destination, exist_ok=True)
+    directory = os.open(destination, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        def publish(name, stream):
+            try:
+                fd = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                             0o600, dir_fd=directory)
+            except FileExistsError:
+                print('Preserved existing video: ' + repr(name))
+                return
+            try:
+                with os.fdopen(fd, 'wb') as output:
+                    shutil.copyfileobj(stream, output)
+                # Only files created by this invocation receive fresh timestamps.
+                os.utime(name, None, dir_fd=directory, follow_symlinks=False)
+            except BaseException:
+                os.unlink(name, dir_fd=directory)
+                raise
+        if raw_name:
+            with open(source, 'rb') as stream:
+                publish(raw_name, stream)
+        else:
+            with zipfile.ZipFile(source) as archive:
+                entries = []
+                for entry in archive.infolist():
+                    path = pathlib.PurePosixPath(entry.filename)
+                    mode = entry.external_attr >> 16
+                    if (path.is_absolute() or '..' in path.parts or
+                            '\\' in entry.filename or '\x00' in entry.filename or
+                            stat.S_ISLNK(mode)):
+                        raise ValueError('Unsafe archive path or link')
+                    if not entry.is_dir() and path.suffix.lower() in extensions:
+                        entries.append((entry, path.name))
+                if not entries:
+                    raise ValueError('Archive contains no videos')
+                for entry, name in entries:
+                    with archive.open(entry) as stream:
+                        publish(name, stream)
+    finally:
+        os.close(directory)
+except Exception as error:
+    print('Video installation failed: ' + str(error), file=sys.stderr)
+    sys.exit(1)
+PY
+}
+
 download_optional_videos() {
   next_step "Download Billie & Jinx + Gintama Videos"
 
   # ── Download if opted in ──
   if [ "${INSTALL_BILLIE_VIDEOS:-false}" = "true" ]; then
     log "Fetching hot Billie & Jinx edits… 🔥"
-    local dl_dest="$HOME/Downloads"
-    local zip_tmp="/tmp/billie-videos-$$.zip"
-    mkdir -p "$dl_dest" 2>/dev/null || true
+    local dl_dest _video_tmp
+    dl_dest=$(xdg-user-dir DOWNLOAD 2>/dev/null) || dl_dest=""
+    case "$dl_dest" in /*) ;; *) dl_dest="$HOME/Downloads" ;; esac
+    dl_dest="$dl_dest/Billie Hot Body"
+    _video_tmp=$(mktemp -d) || return 1
+    local zip_tmp="$_video_tmp/billie.zip"
     if [ "${SKIP_VIDEOS:-false}" = "true" ]; then
       warn "Skipping the video edits — the hosted link is dead"
     elif curl -L --max-time 90 -b "download_warning=1" "$DOWNLOADS_URL" -o "$zip_tmp" 2>/dev/null; then
       local _extracted=false
       if is_valid_zip "$zip_tmp"; then
-        if unzip -j -o -q "$zip_tmp" -d "$dl_dest" 2>/dev/null; then
+        if _install_downloaded_videos "$zip_tmp" "$dl_dest"; then
           _extracted=true
-          ok "🔥  Billie & Jinx edits landed in ~/Downloads - enjoy!"
+          ok "Billie & Jinx edits installed in $dl_dest"
         else
           warn "Billie & Jinx archive could not be extracted (may be corrupted)"
         fi
@@ -3874,21 +3932,17 @@ download_optional_videos() {
         _drive_failed "video edits" "update videos"
       else
         # Try extracting anyway (some zips don't have PK magic at offset 0)
-        if unzip -j -o -q "$zip_tmp" -d "$dl_dest" 2>/dev/null; then
+        if _install_downloaded_videos "$zip_tmp" "$dl_dest"; then
           _extracted=true
-          ok "🔥  Billie & Jinx edits landed in ~/Downloads - enjoy!"
+          ok "Billie & Jinx edits installed in $dl_dest"
         else
           warn "Billie & Jinx archive could not be extracted (may be corrupted)"
         fi
       fi
-      # Stamp extracted videos with today's date so they sort as "created today"
-      if [ "$_extracted" = true ]; then
-        find "$dl_dest" -maxdepth 1 -type f \( -iname "*.mp4" -o -iname "*.mkv" -o -iname "*.mov" -o -iname "*.avi" -o -iname "*.webm" \) -exec touch {} + 2>/dev/null || true
-      fi
       rm -f "$zip_tmp" 2>/dev/null || true
       # Sequential: now download Gintama
       log "Fetching Gintama video edits..."
-      local gintama_tmp="/tmp/gintama-videos-$$"
+      local gintama_tmp="$_video_tmp/gintama"
       if [ "${SKIP_GINTAMA:-false}" = "true" ]; then
         warn "Skipping the video edit (mp4) — the hosted link is dead"
       elif curl -L --max-time 90 -b "download_warning=1" "$GINTAMA_URL" -o "$gintama_tmp" 2>/dev/null; then
@@ -3900,21 +3954,16 @@ download_optional_videos() {
           warn "Downloaded Gintama file is an HTML page — the file may be deleted from Google Drive"
           _drive_failed "video edit (mp4)" "update videos"
         elif is_valid_zip "$gintama_tmp"; then
-          unzip -j -o -q "$gintama_tmp" -d "$dl_dest" 2>/dev/null && _gintama_ok=true || true
-          [ "$_gintama_ok" = true ] && ok "Gintama edits landed in ~/Downloads"
+          _install_downloaded_videos "$gintama_tmp" "$dl_dest" && _gintama_ok=true || true
+          [ "$_gintama_ok" = true ] && ok "Gintama edits installed in $dl_dest"
         elif echo "$gintama_mime" | grep -qi "mp4\|video"; then
-          if cp "$gintama_tmp" "$dl_dest/Gintama - Bad Boy.mp4" 2>/dev/null; then
+          if _install_downloaded_videos "$gintama_tmp" "$dl_dest" "Gintama - Bad Boy.mp4"; then
             _gintama_ok=true
-            touch "$dl_dest/Gintama - Bad Boy.mp4" 2>/dev/null || true
-            ok "Gintama edits landed in ~/Downloads"
+            ok "Gintama edits installed in $dl_dest"
           fi
         else
           warn "Gintama download has unknown type ($gintama_mime) — file may be corrupted or deleted"
           _drive_failed "video edit (mp4)" "update videos"
-        fi
-        # Stamp any extracted gintama videos with today's date
-        if [ "$_gintama_ok" = true ] && echo "$gintama_mime" | grep -qi "zip"; then
-          find "$dl_dest" -maxdepth 1 -type f \( -iname "*.mp4" -o -iname "*.mkv" -o -iname "*.mov" -o -iname "*.avi" -o -iname "*.webm" \) -exec touch {} + 2>/dev/null || true
         fi
         rm -f "$gintama_tmp" 2>/dev/null || true
       else
@@ -3924,6 +3973,8 @@ download_optional_videos() {
     else
       _drive_failed "video edits" "update videos"
     fi
+    rm -f -- "$_video_tmp/billie.zip" "$_video_tmp/gintama"
+    rmdir -- "$_video_tmp" 2>/dev/null || true
   else
     log "Skipped video downloads"
   fi
@@ -4137,6 +4188,7 @@ setup_gdm() {
 
 setup_firefox_theme() {
   next_step "Firefox macOS Theme (userChrome.css)"
+  FIREFOX_THEME_FAILED=0
 
   local repo="/tmp/mactahoe-gtk"
   if [ ! -f "$repo/tweaks.sh" ]; then
@@ -4156,39 +4208,35 @@ setup_firefox_theme() {
     echo -e "  ${YELLOW}╠══════════════════════════════════════════════════════════════╣${NC}"
     echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
     echo -e "  ${YELLOW}║${NC}  Firefox is open — theme can't apply while it's running.     ${YELLOW}║${NC}"
-    echo -e "  ${YELLOW}║${NC}  The installer will try to close it now.                     ${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}║${NC}  Closing Firefox requires your permission.                   ${YELLOW}║${NC}"
     echo -e "  ${YELLOW}║${NC}  Save your work if needed.                                   ${YELLOW}║${NC}"
     echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
     echo -e "  ${YELLOW}╚══════════════════════════════════════════════════════════════╝${NC}"
 
-    killall firefox firefox-bin 2>/dev/null || true
+    local reply="" _ff_tty
+    if ! { exec {_ff_tty}<>/dev/tty; } 2>/dev/null; then
+      warn "No terminal available for consent — skipping Firefox theming"
+      return 0
+    fi
+    printf '  Save your work. Close Firefox and apply its theme? [y/N]: ' >&"$_ff_tty"
+    if ! read -t 60 -r reply <&"$_ff_tty"; then
+      exec {_ff_tty}>&-
+      warn "No consent received — skipping Firefox theming"
+      return 0
+    fi
+    exec {_ff_tty}>&-
+    case "${reply,,}" in
+      y|yes) killall firefox firefox-bin 2>/dev/null || true ;;
+      *) log "Firefox theming skipped; Firefox left open"; return 0 ;;
+    esac
 
     # Wait up to 10 seconds for Firefox to fully exit
     local _ff_wait=0
     while pgrep -x firefox &>/dev/null || pgrep -x firefox-bin &>/dev/null; do
       if [ "$_ff_wait" -ge 10 ]; then
-        echo ""
-        echo -e "  ${YELLOW}╔══════════════════════════════════════════════════════════════╗${NC}"
-        echo -e "  ${YELLOW}║${NC}  Firefox is still running — close it manually then press     ${YELLOW}║${NC}"
-        echo -e "  ${YELLOW}║${NC}  Enter to retry, or type ${BOLD}s${NC} to skip Firefox theming           ${YELLOW}║${NC}"
-        echo -e "  ${YELLOW}╚══════════════════════════════════════════════════════════════╝${NC}"
-        echo -en "  ${DIM}Close Firefox, then press Enter (s = skip):${NC} "
-        _ff_rc=0
-        read -t 60 -r reply </dev/tty || _ff_rc=$?
-        if [ "$_ff_rc" -eq 142 ]; then
-          _FED_ABORT=1
-          echo ""
-          echo -e "  ${YELLOW}◆${NC}  No answer in 60 seconds — closing. Run it again when you're ready!"
-          exit 42
-        fi
-        if [ "$reply" = "s" ] || [ "$reply" = "S" ]; then
-          warn "Firefox theming skipped by user"
-          FIREFOX_THEME_FAILED=1
-          return 1
-        fi
-        # Try killing again after user pressed Enter
-        killall firefox firefox-bin 2>/dev/null || true
-        _ff_wait=0
+        warn "Firefox did not close within 10 seconds — theme not applied; close it manually and retry"
+        FIREFOX_THEME_FAILED=1
+        return 1
       fi
       sleep 1
       _ff_wait=$((_ff_wait + 1))
@@ -5117,9 +5165,7 @@ finalize() {
   log "Removing unused Flatpak runtimes..."
   flatpak uninstall --unused -y 2>/dev/null || true
 
-  # ── 8. Orphaned RPM packages (dependencies no longer needed) ──
-  log "Removing orphaned RPM packages..."
-  sudo dnf autoremove -y 2>/dev/null || true
+  # Orphaned RPM removal is user-controlled, not part of theme installation.
 
   # ── 9. Old system journal logs (keep last 3 days) ──
   log "Trimming old system logs (keeping 3 days)..."
