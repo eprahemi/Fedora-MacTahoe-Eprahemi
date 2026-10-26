@@ -3071,6 +3071,35 @@ KEYBINDING_MERGE
   return "$rc"
 }
 
+_restore_extension_settings() {
+  # dconf works before extension schemas are installed (apply_dconf runs first).
+  # Only this default is merged; keep the existing restore for all other keys.
+  local popup_blur
+  popup_blur=$(dconf read /org/gnome/shell/extensions/blur-my-shell/popup/blur) || return 1
+  case "$popup_blur" in
+    ''|true|false) ;;
+    *) return 1 ;;
+  esac
+  (
+    set -o pipefail
+    python3 - "$1" "$popup_blur" <<'PY' | dconf load /org/gnome/shell/extensions/
+import re
+import sys
+
+section = ''
+for line in open(sys.argv[1]):
+    header = re.fullmatch(r'\s*\[([^]]+)\]\s*', line)
+    if header:
+        section = header[1]
+    if section == 'blur-my-shell/popup' and re.match(r'\s*blur\s*=', line):
+        # An explicit user ON or OFF wins over the bundled fresh-install default.
+        if sys.argv[2]:
+            line = 'blur=' + sys.argv[2] + '\n'
+    sys.stdout.write(line)
+PY
+  )
+}
+
 apply_dconf() {
   next_step "GNOME dconf Settings"
 
@@ -3182,7 +3211,7 @@ apply_dconf() {
 
   # ── Extension dconf restore ──
   if [ -f "$dconf_file" ]; then
-    if dconf load /org/gnome/shell/extensions/ < "$dconf_file" 2>/dev/null; then
+    if _restore_extension_settings "$dconf_file"; then
       ok "Extension settings restored from backup"
     else
       warn "Could not restore extension settings from backup"

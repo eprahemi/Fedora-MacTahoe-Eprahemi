@@ -1,9 +1,16 @@
 {
- "latest_version": "3.7.12",
+ "latest_version": "3.7.13",
  "bootstrap_sha256": "c90bf93f19e1fac2a0d0e145689444f9e5b0beb7ce5147c6e1620d3d33a6fb5b",
- "install_sha256": "4784654fa39629be9993e4fcc53510e4a38d8de83e37c8aef896890d7125c8ff",
+ "install_sha256": "dca0dd1b02f41f795543c2532a7b575853f4ec765b8cb9b41011fe56972f31d5",
  "update_sha256": "b1b6cd647f5423f9b8282e70ad8dd0d2ea6eab4a5f52a617580b34011a12307a",
  "changelog": [
+  {
+   "version": "3.7.13",
+   "changes": [
+    "Blur My Shell Popup blur is OFF for fresh or unset settings. The extension-settings restore preserves an existing explicit ON or OFF choice for /org/gnome/shell/extensions/blur-my-shell/popup/blur; other bundled settings are unchanged.",
+    "Uses dconf before extension schema installation, with read/restore failures reported rather than overwriting an unknown choice. apply_dconf version is 3.7.13; install.sh re-pinned, bootstrap and updater unchanged. No unrelated audit items changed."
+   ]
+  },
   {
    "version": "3.7.12",
    "changes": [
@@ -468,7 +475,7 @@
   "ensure_celluloid_default": "1.0",
   "configure_nautilus_defaults": "1.0",
   "apply_configs": "3.7.11",
-  "apply_dconf": "1.3",
+  "apply_dconf": "3.7.13",
   "optimize_system_resources": "1.1",
   "apply_wallpapers": "1.3",
   "install_custom_avatars": "1.1",
