@@ -2153,6 +2153,13 @@ end
 # Emit only after validating the entire selection; malformed suffixes do nothing.
 function _update_apps_selection
     set -l input (string replace -a ',' ' ' -- "$argv[1]" | string trim)
+    set -l limit 27
+    set -q argv[2]; and set limit $argv[2]
+    if contains -- (string lower -- "$input") a all
+        test $limit -gt 0; or return 1
+        seq $limit
+        return 0
+    end
     string match -qr '^[0-9 ,\t-]+$' -- "$input"; or return 1
     set -l result
     for token in (string split -n ' ' -- (string replace -ar '\s+' ' ' -- "$input"))
@@ -2163,7 +2170,7 @@ function _update_apps_selection
         if set -q bounds[2]
             set last (math "$bounds[2] + 0")
         end
-        test $first -ge 1; and test $last -le 27; and test $first -le $last; or return 1
+        test $first -ge 1; and test $last -le $limit; and test $first -le $last; or return 1
         for n in (seq $first $last)
             contains -- $n $result; or set -a result $n
         end
@@ -2203,13 +2210,17 @@ function _update_apps_help
     _update_box_title 'DESKTOP APPS' '1;36'
     _update_box_rule
     _update_box_text 'update apps — manage the 27 installer desktop apps'
-    _update_box_text 'Green = installed; red = missing; yellow = unknown.'
-    _update_box_text 'Installed selection removes; missing selection installs.'
-    _update_box_text 'Select 3 5, 3,5 or 3-5. Enter/q cancels.'
+    _update_box_text 'First choose: 1 Install apps / 2 Remove apps / q Exit.'
+    _update_box_text 'Install lists missing apps; Remove lists installed apps.'
+    _update_box_text 'Unknown apps and protected Kitty cannot be removed.'
+    _update_box_text 'Select 3 5, 3,5 or 3-5; a/all selects this entire list.'
+    _update_box_text 'Enter/q cancels; b returns to the action menu.'
     _update_box_text 'Review the exact plan; confirmation defaults to No.'
     _update_box_text 'Kitty removal is protected in this active terminal.'
     _update_box_text 'All installed Flatpak scopes/branches appear in the plan.'
-    _update_box_text 'App data stays. Native package prompts remain enabled.'
+    _update_box_text 'User caches, settings and data stay. No data cleanup.'
+    _update_box_text 'Remove-all also requires typing REMOVE ALL.'
+    _update_box_text 'Native package prompts remain enabled.'
     _update_box_text 'Review dependent removals at the DNF prompt; decline'
     _update_box_text 'if anything outside your approved plan would be removed.'
     _update_box_text 'Uses existing repos only; never rewrites repo settings.'
@@ -2218,32 +2229,47 @@ function _update_apps_help
     _update_box_bottom
 end
 
-function _update_apps_show
+# Output stable catalog IDs, never display numbers. Unknown states fail closed.
+function _update_apps_eligible --argument-names mode
     set -l catalog (_update_apps_catalog)
-    _update_box_top
-    _update_box_title 'DESKTOP APPS' '1;36'
-    _update_box_rule
-    for n in (seq 27)
+    for n in (seq (count $catalog))
         set -l fields (string split '|' -- "$catalog[$n]")
         set -l refs (_update_apps_probe $fields[2] $fields[3])
-        set -l rc $status
-        set -l label missing
+        if test $status -ne 0
+            printf '  %s: status unknown; excluded.\n' "$fields[1]" >&2
+            continue
+        end
+        if test "$mode" = install; and test (count $refs) -eq 0
+            echo $n
+        else if test "$mode" = remove; and test (count $refs) -gt 0; and test "$fields[3]" != kitty
+            echo $n
+        end
+    end
+end
+
+function _update_apps_show --argument-names mode
+    set -l catalog (_update_apps_catalog)
+    set -l eligible $argv[2..-1]
+    _update_box_top
+    _update_box_title (string upper -- "$mode apps") '1;36'
+    _update_box_rule
+    set -l number 0
+    for n in $eligible
+        set number (math $number + 1)
+        set -l fields (string split '|' -- "$catalog[$n]")
         set -l color '1;31'
-        if test $rc -ne 0
-            set label unknown
-            set color '1;33'
-        else if test (count $refs) -gt 0
-            set label installed
+        if test "$mode" = remove
             set color '1;32'
         end
-        if test $n -eq 1; and test "$label" = installed
-            set label 'installed; protected'
-        end
-        _update_box_text (printf '%2d  %-24s %s' $n "$fields[1]" "$label") "$color"
+        _update_box_text (printf '%2d  %s' $number "$fields[1]") "$color"
     end
     _update_box_rule
-    _update_box_text 'Installed -> REMOVE; missing -> INSTALL. Data stays.'
-    _update_box_text 'Select: 3 5 / 3,5 / 3-5. Enter or q cancels.'
+    if test "$mode" = remove
+        _update_box_text 'Kitty is protected: it runs this updater; excluded.'
+    end
+    _update_box_text 'User caches, settings and data are kept.'
+    _update_box_text 'Select: 3 5 / 3,5 / 3-5 / a or all (current list).'
+    _update_box_text 'Enter/q exits; b returns to the action menu.'
     _update_box_bottom
 end
 
@@ -2258,18 +2284,53 @@ function _update_target_apps
             return 1
         end
     end
-    _update_apps_show
     set -l answer ''
+    set -l mode ''
+    set -l eligible
     set -l selected
+    set -l positions
     while true
-        read -P '  App numbers (Enter cancels): ' answer; or return 0
-        set answer (string trim -- "$answer")
-        contains -- "$answer" '' q Q cancel; and return 0
-        set selected (_update_apps_selection "$answer")
-        if test $status -eq 0
-            break
+        _update_box_top
+        _update_box_title 'DESKTOP APPS' '1;36'
+        _update_box_text '1 Install apps'
+        _update_box_text '2 Remove apps'
+        _update_box_text 'q Exit'
+        _update_box_bottom
+        read -P '  Action (Enter exits): ' answer; or return 0
+        set answer (string lower -- (string trim -- "$answer"))
+        contains -- "$answer" '' q exit cancel; and return 0
+        switch "$answer"
+            case 1
+                set mode install
+            case 2
+                set mode remove
+            case '*'
+                printf '  Choose 1 Install apps, 2 Remove apps, or q Exit.\n'
+                continue
         end
-        printf '  Use numbers 1-27: 3 5, 3,5 or 3-5 (not "3 or 5").\n'
+        set eligible (_update_apps_eligible $mode)
+        _update_apps_show $mode $eligible
+        if test (count $eligible) -eq 0
+            printf '  No eligible apps to %s. Returning to the action menu.\n' $mode
+            continue
+        end
+        while true
+            read -P '  App numbers or a/all (Enter exits, b back): ' answer; or return 0
+            set answer (string trim -- "$answer")
+            contains -- (string lower -- "$answer") '' q exit cancel; and return 0
+            contains -- (string lower -- "$answer") b back; and break
+            set positions (_update_apps_selection "$answer" (count $eligible))
+            if test $status -eq 0
+                set selected
+                for position in $positions
+                    set -a selected $eligible[$position]
+                end
+                break
+            end
+            printf '  Use numbers 1-%s: 3 5, 3,5 or 3-5 (not "3 or 5"); a/all.\n' (count $eligible)
+        end
+        contains -- (string lower -- "$answer") b back; and continue
+        break
     end
     set -l catalog (_update_apps_catalog)
     set -l snapshots
@@ -2281,13 +2342,14 @@ function _update_target_apps
             printf '  Cannot determine %s status. No changes made.\n' "$fields[1]"
             return 1
         end
-        if test $n -eq 1; and test (count $refs) -gt 0
-            printf '  Kitty is the active updater terminal: removal is protected.\n'
-            printf '  Choose again without Kitty; no changes made.\n'
+        if begin; test "$mode" = install; and test (count $refs) -gt 0; end; or begin
+                test "$mode" = remove; and begin; test (count $refs) -eq 0; or test "$fields[3]" = kitty; end
+            end
+            printf '  App status changed; rerun to review the intended action. No changes made.\n'
             return 1
         end
         set -a snapshots (string join ',' -- missing $refs)
-        if test (count $refs) -gt 0
+        if test "$mode" = remove
             for ref in $refs
                 printf '  REMOVE  %s  [%s: %s]\n' "$fields[1]" "$fields[3]" "$ref"
             end
@@ -2297,7 +2359,12 @@ function _update_target_apps
     end
     printf '\n  DNF may also remove dependent packages. Review its transaction\n'
     printf '  and decline if it includes anything you did not approve.\n'
-    printf '  Existing repositories only; no app-data deletion.\n'
+    printf '  Existing repositories only; user caches, settings and data are kept.\n'
+    # Guard the entire eligible list even when selected by numeric range/single number.
+    if test "$mode" = remove; and test (count $selected) -eq (count $eligible)
+        read -P '  Removing the entire eligible list. Type REMOVE ALL: ' answer; or return 0
+        test "$answer" = 'REMOVE ALL'; or return 0
+    end
     read -P '  Proceed with this exact plan? [y/N]: ' answer; or return 0
     contains -- (string lower -- (string trim -- "$answer")) y yes; or return 0
     if test (_update_low_battery) -eq 1
@@ -2322,9 +2389,16 @@ function _update_target_apps
         set -l fields (string split '|' -- "$catalog[$n]")
         set -l refs (string split ',' -- "$snapshots[$i]")
         set -e refs[1]
+        # Recheck immediately before each action too: never flip install into remove.
+        set -l current (_update_apps_probe $fields[2] $fields[3])
+        if test $status -ne 0; or test (string join ',' -- missing $current) != "$snapshots[$i]"
+            printf '  %s: status changed/unknown; skipped. Rerun to review.\n' "$fields[1]"
+            set failed 1
+            continue
+        end
         set -l rc 0
         if test "$fields[2]" = rpm
-            if test (count $refs) -gt 0
+            if test "$mode" = remove
                 # No -y: the user must review the native dependency transaction.
                 if not dnf remove --help | string match -q '*--no-autoremove*'
                     printf '  Safe removal flag unsupported; skipping %s.\n' "$fields[1]"
@@ -2337,7 +2411,7 @@ function _update_target_apps
                 sudo dnf --setopt=assumeyes=False --setopt=assumeno=False --setopt=defaultyes=False install -- "$fields[3]"
                 set rc $status
             end
-        else if test (count $refs) -gt 0
+        else if test "$mode" = remove
             for ref in $refs
                 set -l parts (string split ':' -- "$ref")
                 flatpak uninstall --$parts[1] -- "$parts[2]"; or set rc 1
@@ -2349,9 +2423,9 @@ function _update_target_apps
         set -l after (_update_apps_probe $fields[2] $fields[3])
         set -l query_rc $status
         if test $rc -ne 0; or test $query_rc -ne 0; or begin
-                test (count $refs) -gt 0; and test (count $after) -gt 0
+                test "$mode" = remove; and test (count $after) -gt 0
             end; or begin
-                test (count $refs) -eq 0; and test (count $after) -eq 0
+                test "$mode" = install; and test (count $after) -eq 0
             end
             set failed 1
             printf '  %s: not completed or could not verify; see errors above.\n' "$fields[1]"
@@ -2368,7 +2442,8 @@ function _update_target_apps
             printf '  %s: requested change verified.\n' "$fields[1]"
         end
     end
-    _update_apps_show
+    set eligible (_update_apps_eligible $mode)
+    _update_apps_show $mode $eligible
     return $failed
 end
 
