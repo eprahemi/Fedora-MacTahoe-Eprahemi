@@ -913,7 +913,8 @@ except Exception:
 _run_step() {
   local step_id="$1"
   local func_name="$2"
-  if _step_should_run "$step_id"; then
+  # Safety checks must run even when the saved preflight step is current.
+  if [ "$step_id" = "preflight" ] || _step_should_run "$step_id"; then
     # A failing step must never take the rest of the run down with it.
     # The `|| _rc=$?` keeps the call out of `set -e`'s kill path: the
     # step's own failure is captured, recorded and reported later.
@@ -1491,6 +1492,38 @@ optimize_system_resources() {
 
 # ── PREFLIGHT ────────────────────────────────────────────────
 
+# Read-only reachability check, not a guarantee that every later host is available.
+_preflight_https() {
+  command -v curl >/dev/null 2>&1 || {
+    warn "HTTPS preflight requires curl. Install curl (sudo dnf install curl), then retry."
+    return 1
+  }
+  # Immutable, small project manifest: validate bytes, not an arbitrary HTTP 200
+  # (a captive portal or proxy error page is not a successful project download).
+  local ref=6529c3695cabf05543cc94712806a3c90b9c445a
+  local expected=51850cfb13b3853378f602afbf9d5bff3d7994e8c26a0bdbf883f65e48e22a0d
+  local url digest
+  for url in \
+    "https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/$ref/updates.json" \
+    "https://github.com/eprahemi/Fedora-MacTahoe-Eprahemi/raw/$ref/updates.json"; do
+    # -q ignores curlrc overrides; normal proxy/CA environment remains supported.
+    # Two attempts total, no retries; HTTPS-only redirects, verified TLS.
+    if digest=$(curl -q --fail --silent --show-error --location \
+      --proto '=https' --proto-redir '=https' --max-redirs 3 \
+      --connect-timeout 3 --max-time 8 --retry 0 --max-filesize 65536 \
+      "$url" | sha256sum); then
+      if [ "${digest%% *}" = "$expected" ]; then
+        return 0
+      fi
+      warn "Project HTTPS probe returned unexpected content: $url"
+    else
+      warn "Project HTTPS probe failed: $url"
+    fi
+  done
+  warn "Neither project HTTPS download could be verified. Check DNS, proxy/VPN, captive-portal login, system clock and CA certificates, or retry later."
+  return 1
+}
+
 preflight() {
   next_step "Preflight checks"
 
@@ -1721,10 +1754,10 @@ gnome_cmd3="    sudo reboot"
   ok "Running as normal user"
 
   # ── Network check ──
-  if ! ping -c1 -W2 google.com &>/dev/null && ! ping -c1 -W2 github.com &>/dev/null; then
-    fail "No internet — can't reach the outside world."
+  if ! _preflight_https; then
+    fail "Project HTTPS preflight failed; installation has not started."
   fi
-  ok "Internet — we're online"
+  ok "Project HTTPS download verified"
 
   # ── Sudo check ──
   if ! sudo -n true 2>/dev/null; then
