@@ -492,7 +492,7 @@ function _update_usage --description 'the help box'
     _update_box_text ""
     _update_box_cloud "icons · theme · fonts · sounds · gtk · extensions"
     _update_box_cloud "wallpaper · pfp · gdm · videos · services · defaults"
-    _update_box_cloud "dconf · notifier · clean · wallvault"
+    _update_box_cloud "dconf · notifier · clean · wallvault · apps"
     _update_box_text ""
     _update_box_tag "EXTRA FLAGS"
     _update_box_text ""
@@ -1532,11 +1532,12 @@ function _update_target_menu --description 'pick any target from a numbered list
     _update_box_text "[6]  theme         [14] notifier" "1;36"
     _update_box_text "[7]  fonts         [15] clean" "1;36"
     _update_box_text "[8]  sounds        [16] wallvault" "1;36"
+    _update_box_text "[17] apps — install/remove desktop apps" "1;36"
     _update_box_text "[0]  exit" "1;36"
     _update_box_text ""
     _update_box_text "Made by eprahemi — Fedora MacTahoe © 2026" "1;37"
     _update_box_bottom
-    read -l t -P "  Your choice [0-16]: "
+    read -l t -P "  Your choice [0-17]: "
     if test $status -ne 0
         printf "\n  \e[1;31m✘ Cancelled.\e[0m\n"
         return 1
@@ -1558,11 +1559,12 @@ function _update_target_menu --description 'pick any target from a numbered list
         case 14; _update_target_notifier
         case 15; _update_target_clean
         case 16; _update_target_wallvault
+        case 17; _update_target_apps
         case 0 q
             printf "\n  \e[1;32m✓ Nothing changed.\e[0m\n"
             return 0
         case '*'
-            printf "  \e[1;31m✘ Invalid — choose a number 0-15.\e[0m\n"
+            printf "  \e[1;31m✘ Invalid — choose a number 0-17.\e[0m\n"
             return 1
     end
     return $status
@@ -2124,6 +2126,245 @@ end
 # ══════════════════════════════════════════════════════════════
 # update — the entry point
 # ══════════════════════════════════════════════════════════════
+# Fixed installer desktop-app allowlist. Never turn input into shell commands.
+function _update_apps_catalog
+    printf '%s\n' 'Kitty|rpm|kitty' 'Celluloid|rpm|celluloid' 'VLC|rpm|vlc' \
+        'Kdenlive|rpm|kdenlive' 'Volume Control|rpm|pavucontrol' 'Main Menu|rpm|alacarte' \
+        'GNOME Tweaks|rpm|gnome-tweaks' 'GNOME Characters|rpm|gnome-characters' \
+        'LibreOffice Writer|rpm|libreoffice-writer' 'LibreOffice Calc|rpm|libreoffice-calc' \
+        'LibreOffice Impress|rpm|libreoffice-impress' 'Firefox|rpm|firefox' \
+        'Google Chrome|rpm|google-chrome-stable' 'Microsoft Edge|rpm|microsoft-edge-stable' \
+        'Visual Studio Code|rpm|code' 'ZapZap|flatpak|com.rtosta.zapzap' \
+        'Mousam|flatpak|io.github.amit9838.mousam' 'Extension Manager|flatpak|com.mattjakeman.ExtensionManager' \
+        'Flatseal|flatpak|com.github.tchx84.Flatseal' 'Gear Lever|flatpak|it.mijorus.gearlever' \
+        'HandBrake|flatpak|fr.handbrake.ghb' 'Komikku|flatpak|info.febvre.Komikku' \
+        'Obsidian|flatpak|md.obsidian.Obsidian' 'Proton VPN|flatpak|com.protonvpn.www' \
+        'Spotify|flatpak|com.spotify.Client' 'LocalSend|flatpak|org.localsend.localsend_app' \
+        'Discord (optional)|flatpak|com.discordapp.Discord'
+end
+
+# Emit only after validating the entire selection; malformed suffixes do nothing.
+function _update_apps_selection
+    set -l input (string replace -a ',' ' ' -- "$argv[1]" | string trim)
+    string match -qr '^[0-9 ,\t-]+$' -- "$input"; or return 1
+    set -l result
+    for token in (string split -n ' ' -- (string replace -ar '\s+' ' ' -- "$input"))
+        string match -qr '^[0-9]{1,2}(-[0-9]{1,2})?$' -- "$token"; or return 1
+        set -l bounds (string split '-' -- "$token")
+        set -l first (math "$bounds[1] + 0")
+        set -l last $first
+        if set -q bounds[2]
+            set last (math "$bounds[2] + 0")
+        end
+        test $first -ge 1; and test $last -le 27; and test $first -le $last; or return 1
+        for n in (seq $first $last)
+            contains -- $n $result; or set -a result $n
+        end
+    end
+    test (count $result) -gt 0; or return 1
+    printf '%s\n' $result
+end
+
+# Empty output = missing; query failure = unknown (never interpreted as missing).
+# Every installed Flatpak branch and scope is shown and explicitly approved.
+function _update_apps_probe --argument-names kind id
+    if test "$kind" = rpm
+        set -l packages (rpm -qa --queryformat '%{NAME}\n')
+        test $status -eq 0; or return 1
+        if contains -- "$id" $packages
+            echo rpm
+        end
+    else
+        for scope in user system
+            set -l refs (flatpak list --$scope --app --columns=ref)
+            test $status -eq 0; or return 1
+            for ref in $refs
+                set -l parts (string split / -- "$ref")
+                if test "$parts[1]" = "$id"
+                    # Reject malformed tool output, not just malformed user input.
+                    string match -qr '^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$' -- "$ref"; or return 1
+                    echo "$scope:$ref"
+                end
+            end
+        end
+    end
+    return 0
+end
+
+function _update_apps_help
+    _update_box_top
+    _update_box_title 'DESKTOP APPS' '1;36'
+    _update_box_rule
+    _update_box_text 'update apps — manage the 27 installer desktop apps'
+    _update_box_text 'Green = installed; red = missing; yellow = unknown.'
+    _update_box_text 'Installed selection removes; missing selection installs.'
+    _update_box_text 'Select 3 5, 3,5 or 3-5. Enter/q cancels.'
+    _update_box_text 'Review the exact plan; confirmation defaults to No.'
+    _update_box_text 'Kitty removal is protected in this active terminal.'
+    _update_box_text 'All installed Flatpak scopes/branches appear in the plan.'
+    _update_box_text 'App data stays. Native package prompts remain enabled.'
+    _update_box_text 'Review dependent removals at the DNF prompt; decline'
+    _update_box_text 'if anything outside your approved plan would be removed.'
+    _update_box_text 'Uses existing repos only; never rewrites repo settings.'
+    _update_box_text 'Browser setup help: google.com/chrome or microsoft.com'
+    _update_box_text 'Flatpak installs use existing system Flathub.'
+    _update_box_bottom
+end
+
+function _update_apps_show
+    set -l catalog (_update_apps_catalog)
+    _update_box_top
+    _update_box_title 'DESKTOP APPS' '1;36'
+    _update_box_rule
+    for n in (seq 27)
+        set -l fields (string split '|' -- "$catalog[$n]")
+        set -l refs (_update_apps_probe $fields[2] $fields[3])
+        set -l rc $status
+        set -l label missing
+        set -l color '1;31'
+        if test $rc -ne 0
+            set label unknown
+            set color '1;33'
+        else if test (count $refs) -gt 0
+            set label installed
+            set color '1;32'
+        end
+        if test $n -eq 1; and test "$label" = installed
+            set label 'installed; protected'
+        end
+        _update_box_text (printf '%2d  %-24s %s' $n "$fields[1]" "$label") "$color"
+    end
+    _update_box_rule
+    _update_box_text 'Installed -> REMOVE; missing -> INSTALL. Data stays.'
+    _update_box_text 'Select: 3 5 / 3,5 / 3-5. Enter or q cancels.'
+    _update_box_bottom
+end
+
+function _update_target_apps
+    if test (count $argv) -gt 0
+        _update_apps_help
+        return 1
+    end
+    for dependency in rpm flatpak dnf
+        if not command -q $dependency
+            printf '  Required command missing: %s. No changes made.\n' $dependency
+            return 1
+        end
+    end
+    _update_apps_show
+    set -l answer ''
+    set -l selected
+    while true
+        read -P '  App numbers (Enter cancels): ' answer; or return 0
+        set answer (string trim -- "$answer")
+        contains -- "$answer" '' q Q cancel; and return 0
+        set selected (_update_apps_selection "$answer")
+        if test $status -eq 0
+            break
+        end
+        printf '  Use numbers 1-27: 3 5, 3,5 or 3-5 (not "3 or 5").\n'
+    end
+    set -l catalog (_update_apps_catalog)
+    set -l snapshots
+    printf '\n  EXACT PLAN (all listed Flatpak copies are included):\n'
+    for n in $selected
+        set -l fields (string split '|' -- "$catalog[$n]")
+        set -l refs (_update_apps_probe $fields[2] $fields[3])
+        if test $status -ne 0
+            printf '  Cannot determine %s status. No changes made.\n' "$fields[1]"
+            return 1
+        end
+        if test $n -eq 1; and test (count $refs) -gt 0
+            printf '  Kitty is the active updater terminal: removal is protected.\n'
+            printf '  Choose again without Kitty; no changes made.\n'
+            return 1
+        end
+        set -a snapshots (string join ',' -- missing $refs)
+        if test (count $refs) -gt 0
+            for ref in $refs
+                printf '  REMOVE  %s  [%s: %s]\n' "$fields[1]" "$fields[3]" "$ref"
+            end
+        else
+            printf '  INSTALL %s  [%s: %s]\n' "$fields[1]" "$fields[2]" "$fields[3]"
+        end
+    end
+    printf '\n  DNF may also remove dependent packages. Review its transaction\n'
+    printf '  and decline if it includes anything you did not approve.\n'
+    printf '  Existing repositories only; no app-data deletion.\n'
+    read -P '  Proceed with this exact plan? [y/N]: ' answer; or return 0
+    contains -- (string lower -- (string trim -- "$answer")) y yes; or return 0
+    if test (_update_low_battery) -eq 1
+        printf '  Low battery: connect power, then retry. No changes made.\n'
+        return 1
+    end
+    # Revalidate the whole plan before the first mutation.
+    set -l i 0
+    for n in $selected
+        set i (math $i + 1)
+        set -l fields (string split '|' -- "$catalog[$n]")
+        set -l refs (_update_apps_probe $fields[2] $fields[3])
+        if test $status -ne 0; or test (string join ',' -- missing $refs) != "$snapshots[$i]"
+            printf '  App status changed or is unknown; rerun to review. No changes made.\n'
+            return 1
+        end
+    end
+    set -l failed 0
+    set i 0
+    for n in $selected
+        set i (math $i + 1)
+        set -l fields (string split '|' -- "$catalog[$n]")
+        set -l refs (string split ',' -- "$snapshots[$i]")
+        set -e refs[1]
+        set -l rc 0
+        if test "$fields[2]" = rpm
+            if test (count $refs) -gt 0
+                # No -y: the user must review the native dependency transaction.
+                if not dnf remove --help | string match -q '*--no-autoremove*'
+                    printf '  Safe removal flag unsupported; skipping %s.\n' "$fields[1]"
+                    set rc 1
+                else
+                    sudo dnf --setopt=assumeyes=False --setopt=assumeno=False --setopt=defaultyes=False remove --no-autoremove -- "$fields[3]"
+                    set rc $status
+                end
+            else
+                sudo dnf --setopt=assumeyes=False --setopt=assumeno=False --setopt=defaultyes=False install -- "$fields[3]"
+                set rc $status
+            end
+        else if test (count $refs) -gt 0
+            for ref in $refs
+                set -l parts (string split ':' -- "$ref")
+                flatpak uninstall --$parts[1] -- "$parts[2]"; or set rc 1
+            end
+        else
+            flatpak install --system flathub "$fields[3]"
+            set rc $status
+        end
+        set -l after (_update_apps_probe $fields[2] $fields[3])
+        set -l query_rc $status
+        if test $rc -ne 0; or test $query_rc -ne 0; or begin
+                test (count $refs) -gt 0; and test (count $after) -gt 0
+            end; or begin
+                test (count $refs) -eq 0; and test (count $after) -eq 0
+            end
+            set failed 1
+            printf '  %s: not completed or could not verify; see errors above.\n' "$fields[1]"
+            printf '  Check the app vendor repository/Flathub setup before retrying.\n'
+            switch "$fields[3]"
+                case google-chrome-stable
+                    printf '  Official Chrome setup: https://www.google.com/chrome/\n'
+                case microsoft-edge-stable
+                    printf '  Official Edge setup: https://www.microsoft.com/edge/download\n'
+                case code
+                    printf '  Official VS Code setup: https://code.visualstudio.com/docs/setup/linux\n'
+            end
+        else
+            printf '  %s: requested change verified.\n' "$fields[1]"
+        end
+    end
+    _update_apps_show
+    return $failed
+end
+
 function update --description 'Fedora MacTahoe update — Kitty only (menu: quick/full/configs/check)'
     # ── Kitty gate: only Kitty is supported ──
     if not set -q KITTY_PID
@@ -2142,6 +2383,23 @@ function update --description 'Fedora MacTahoe update — Kitty only (menu: quic
     # ── subcommand dispatch ──
     if set -q argv[1]
         set -l sub (string lower -- "$argv[1]")
+        if contains -- "$sub" app aps a
+            printf '  Did you mean "update apps"? No changes made.\n'
+            _update_apps_help
+            return 1
+        end
+        if test "$sub" = apps
+            if set -q argv[2]; and contains -- "$argv[2]" h help -h --help
+                _update_apps_help
+                return 0
+            end
+            _update_target_apps $argv[2..-1]
+            return $status
+        end
+        if contains -- "$sub" h help -h --help; and set -q argv[2]; and test "$argv[2]" = apps
+            _update_apps_help
+            return 0
+        end
         # ── update <target> help → per-target help box (read-only) ──
         if set -q argv[2]
             set -l sub2 (string lower -- "$argv[2]")
@@ -2266,6 +2524,11 @@ function update --description 'Fedora MacTahoe update — Kitty only (menu: quic
                 return $status
             case '*'
                 printf "\n  \e[1;31m✘ Unknown option: %s\e[0m\n" "$argv[1]"
+                if command -q python3
+                    python3 -c 'import difflib,sys
+if difflib.get_close_matches(sys.argv[1], ["apps"], cutoff=0.55):
+    print("  Did you mean update apps? Nothing was run; type it explicitly.")' "$sub"
+                end
                 _update_usage
                 return 1
         end

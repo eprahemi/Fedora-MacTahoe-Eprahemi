@@ -1,9 +1,16 @@
 {
- "latest_version": "3.7.18",
+ "latest_version": "3.7.19",
  "bootstrap_sha256": "c90bf93f19e1fac2a0d0e145689444f9e5b0beb7ce5147c6e1620d3d33a6fb5b",
  "install_sha256": "4a5f9d12623f4e86c686b3065bba4e4a19292f5b4ed9b2c64e2c2dc608882061",
- "update_sha256": "7992daafaa8b9aa04db9b6cd0db6eed5fdd99e64e9596e8ba5b2cdf992eafb1e",
+ "update_sha256": "b7ee7c417d8b0a9ea2bbe00e6348f6e8ae51baadbf805fa1513910fffa8aeb41",
  "changelog": [
+  {
+   "version": "3.7.19",
+   "changes": [
+    "Add update apps: 27 installer desktop apps with measured RPM and user/system Flatpak status, numeric multiple selection and ranges. Installed selections remove; missing selections install. Exact scoped plans require explicit consent, default No; EOF cancels safely.",
+    "Protect active Kitty removal, preserve app data, disable DNF autoremove and retain native dependency transaction review. Existing repositories only: no admin repo overwrite or unrelated browser installations. Unknown status fails closed; refresh actual status after attempts. Add read-only help, menu entry and safe typo suggestions. apply_configs bumped to 3.7.19; updater re-pinned, installer/bootstrap unchanged."
+   ]
+  },
   {
    "version": "3.7.18",
    "changes": [
@@ -508,7 +515,7 @@
   "apply_desktop_entries": "1.0",
   "ensure_celluloid_default": "1.0",
   "configure_nautilus_defaults": "3.7.16",
-  "apply_configs": "3.7.14",
+  "apply_configs": "3.7.19",
   "apply_dconf": "3.7.14",
   "optimize_system_resources": "1.1",
   "apply_wallpapers": "1.3",
