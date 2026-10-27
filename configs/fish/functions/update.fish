@@ -997,8 +997,14 @@ function _update_configs_mode --description 'refresh kitty, fish, updater, stars
     if not test -f "$HOME/.config/kitty/user.conf"
         touch "$HOME/.config/kitty/user.conf"
     end
-    if test -f "$cfg/kitty/auto-theme.conf"
-        cp -f "$cfg/kitty/auto-theme.conf" "$HOME/.config/kitty/"
+    # Seed only a genuinely missing palette; never overwrite personalized colors.
+    if not test -e "$HOME/.config/kitty/auto-theme.conf"
+        if test -L "$HOME/.config/kitty/auto-theme.conf"; or not cp -nT "$cfg/kitty/auto-theme.conf" "$HOME/.config/kitty/auto-theme.conf"
+            rm -rf "$tmp"
+            _update_log_add configs "—" "—" fail UPDATE-CONFIG
+            printf '\n  Could not seed Kitty palette — existing links left untouched.\n' >&2
+            return 1
+        end
     end
     # fish — project settings + every function (update.fish included, so the
     # running copy is replaced with the freshly fetched one).
@@ -1051,14 +1057,15 @@ function _update_configs_mode --description 'refresh kitty, fish, updater, stars
     systemctl --user daemon-reload 2>/dev/null
     # ktheme watcher is opt-in. Never enable it here; if the user already
     # turned it on, keep it running across the config refresh.
-    if systemctl --user is-enabled ktheme-watcher.service >/dev/null 2>&1
+    set -l kt_palette_enabled 0
+    if systemctl --user is-enabled ktheme-watcher.service >/dev/null 2>&1; or test -L "$HOME/.config/systemd/user/default.target.wants/ktheme-watcher.service"
+        set kt_palette_enabled 1
         systemctl --user start ktheme-watcher.service >/dev/null 2>&1
     end
     systemctl --user enable fedora-mactahoe-updater.timer 2>/dev/null
     systemctl --user start fedora-mactahoe-updater.timer 2>/dev/null
-    # live palette re-apply — the copied auto-theme.conf is the seed fallback,
-    # the real colors come from the current wallpaper
-    if functions -q ktheme
+    # Wallpaper colors are opt-in too, not just the background watcher.
+    if test "$kt_palette_enabled" -eq 1; and functions -q ktheme
         ktheme apply --silent >/dev/null 2>&1
     end
     for sock in /tmp/kitty-*

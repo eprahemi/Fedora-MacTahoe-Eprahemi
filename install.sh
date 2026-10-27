@@ -2742,12 +2742,21 @@ apply_configs() {
     fi
     # ktheme auto-theme palette file — kitty.conf ends with `include auto-theme.conf`,
     # so the file MUST exist or kitty logs an include error and skips it.
-    if [ -f "$cfg/kitty/auto-theme.conf" ]; then
-      cp "$cfg/kitty/auto-theme.conf" "$HOME/.config/kitty/"
+    if [ ! -e "$HOME/.config/kitty/auto-theme.conf" ]; then
+      if [ -L "$HOME/.config/kitty/auto-theme.conf" ] ||
+         ! cp -nT "$cfg/kitty/auto-theme.conf" "$HOME/.config/kitty/auto-theme.conf"; then
+        warn "Could not seed Kitty palette — existing links left untouched"
+        return 1
+      fi
     fi
-    # Live palette re-apply — the copied auto-theme.conf is the seed fallback;
-    # the real colors come from the current wallpaper, so re-run ktheme silently.
-    if command -v fish >/dev/null 2>&1 && [ -f "$HOME/.config/fish/functions/ktheme.fish" ]; then
+    # Preserve personalized colors while off, including a disabled but running
+    # watcher. Match install_ktheme_watcher's enabled-state fallback policy.
+    local _kt_palette_enabled=0
+    if systemctl --user is-enabled ktheme-watcher.service &>/dev/null ||
+       [ -L "$HOME/.config/systemd/user/default.target.wants/ktheme-watcher.service" ]; then
+      _kt_palette_enabled=1
+    fi
+    if [ "$_kt_palette_enabled" -eq 1 ] && command -v fish >/dev/null 2>&1 && [ -f "$HOME/.config/fish/functions/ktheme.fish" ]; then
       fish -c 'ktheme apply --silent' >/dev/null 2>&1 || true
     fi
     ok "Kitty config"

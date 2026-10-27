@@ -1,9 +1,15 @@
 {
- "latest_version": "3.7.19",
+ "latest_version": "3.7.20",
  "bootstrap_sha256": "c90bf93f19e1fac2a0d0e145689444f9e5b0beb7ce5147c6e1620d3d33a6fb5b",
- "install_sha256": "4a5f9d12623f4e86c686b3065bba4e4a19292f5b4ed9b2c64e2c2dc608882061",
- "update_sha256": "b7ee7c417d8b0a9ea2bbe00e6348f6e8ae51baadbf805fa1513910fffa8aeb41",
+ "install_sha256": "be5740e5403a43c26d7503b5b535e66916e129369b1bc2e2747603a9df69b2b9",
+ "update_sha256": "b7503ed2b08d1eb0d0192d68ac89dddcbe23226661a31ca615422481233a8107",
  "changelog": [
+  {
+   "version": "3.7.20",
+   "changes": [
+    "Preserve existing Kitty palettes during install/config refresh; seed only a missing palette and fail honestly on seed errors or broken palette links. Wallpaper palette reapplication now requires an already-enabled ktheme watcher, with the existing installer symlink fallback. Config refresh never enables the watcher; disabled watcher palettes remain untouched."
+   ]
+  },
   {
    "version": "3.7.19",
    "changes": [
@@ -515,7 +521,7 @@
   "apply_desktop_entries": "1.0",
   "ensure_celluloid_default": "1.0",
   "configure_nautilus_defaults": "3.7.16",
-  "apply_configs": "3.7.19",
+  "apply_configs": "3.7.20",
   "apply_dconf": "3.7.14",
   "optimize_system_resources": "1.1",
   "apply_wallpapers": "1.3",
