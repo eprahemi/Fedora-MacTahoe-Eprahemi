@@ -2150,6 +2150,37 @@ function _update_apps_catalog
         'Discord (optional)|flatpak|com.discordapp.Discord'
 end
 
+# Allowlist of app-specific data dirs safe to move to Trash on explicit request.
+function _update_apps_data_candidates --argument-names kind id
+    if test "$kind" = flatpak
+        set -l base "$HOME/.var/app/$id"
+        if test -d "$base"
+            printf '%s\n' "$base"
+        end
+    end
+    return 0
+end
+
+function _update_apps_safe_trash --argument-names path
+    test -n "$path"; or return 1
+    string match -q "$HOME/*" "$path"; or return 1
+    if test -L "$path"
+        return 1
+    end
+    set -l real (realpath -e "$path" 2>/dev/null)
+    if test -n "$real"
+        string match -q "$HOME/*" "$real"; or return 1
+    end
+    if command -q gio
+        gio trash -- "$path" 2>/dev/null
+        return $status
+    else if command -q trash-put
+        trash-put -- "$path" 2>/dev/null
+        return $status
+    end
+    return 1
+end
+
 # Emit only after validating the entire selection; malformed suffixes do nothing.
 function _update_apps_selection
     set -l input (string replace -a ',' ' ' -- "$argv[1]" | string trim)
@@ -2359,12 +2390,65 @@ function _update_target_apps
     end
     printf '\n  DNF may also remove dependent packages. Review its transaction\n'
     printf '  and decline if it includes anything you did not approve.\n'
-    printf '  Existing repositories only; user caches, settings and data are kept.\n'
+    printf '  Existing repositories only.\n'
     # Guard the entire eligible list even when selected by numeric range/single number.
     if test "$mode" = remove; and test (count $selected) -eq (count $eligible)
         read -P '  Removing the entire eligible list. Type REMOVE ALL: ' answer; or return 0
         test "$answer" = 'REMOVE ALL'; or return 0
     end
+
+    set -l remove_data 0
+    set -l data_list
+    if test "$mode" = remove
+        printf '\n'
+        _update_box_top
+        _update_box_text 'What to do with this selection?' '1;36'
+        _update_box_text ''
+        _update_box_text '1 Remove app only — keep settings, caches and data' '1;37'
+        _update_box_text '2 Remove app and its data — move known app-specific folders to Trash' '1;33'
+        _update_box_text 'q Cancel' '1;37'
+        _update_box_bottom
+        read -P '  Choice [1]: ' answer; or return 0
+        set answer (string lower -- (string trim -- "$answer"))
+        if contains -- "$answer" '' q exit cancel
+            return 0
+        end
+        if test "$answer" = '2'
+            set remove_data 1
+            printf '\n  App-specific data to move to Trash (if present):\n'
+            set -l has_data 0
+            for n in $selected
+                set -l fields (string split '|' -- "$catalog[$n]")
+                set -l candidates (_update_apps_data_candidates $fields[2] $fields[3])
+                if test (count $candidates) -gt 0
+                    set has_data 1
+                    for c in $candidates
+                        printf '    • %s → %s\n' "$fields[1]" "$c"
+                        set -a data_list (string join '|' -- "$fields[1]" "$c")
+                    end
+                else
+                    printf '    • %s: data cleanup not supported for this app\n' "$fields[1]"
+                end
+            end
+            printf '\n  These go to Trash (recoverable until emptied). Moving to Trash does not\n'
+            printf '  free disk space until you empty Trash. Shared folders and personal files\n'
+            printf '  are NOT touched. Only app-specific allowlisted paths under $HOME.\n'
+            if test "$has_data" -eq 1
+                if test (count $selected) -eq 1
+                    read -P "  Type REMOVE $(string replace -a ' ' '_' -- "$catalog[$selected[1]]" | string split '|' -f1) DATA: " answer; or return 0
+                    set -l expected (string upper -- (string replace -a ' ' '_' -- (string split '|' -- "$catalog[$selected[1]]")[1]))
+                    test (string upper -- (string replace -a ' ' '_' -- "$answer")) = "REMOVE $expected DATA"; or return 0
+                else
+                    read -P '  Removing app data for multiple apps. Type REMOVE ALL APP DATA: ' answer; or return 0
+                    test "$answer" = 'REMOVE ALL APP DATA'; or return 0
+                end
+            else
+                printf '  Nothing known to clean. Skipping data removal.\n'
+                set remove_data 0
+            end
+        end
+    end
+
     read -P '  Proceed with this exact plan? [y/N]: ' answer; or return 0
     contains -- (string lower -- (string trim -- "$answer")) y yes; or return 0
     if test (_update_low_battery) -eq 1
@@ -2440,6 +2524,23 @@ function _update_target_apps
             end
         else
             printf '  %s: requested change verified.\n' "$fields[1]"
+            if test "$mode" = remove; and test "$remove_data" -eq 1
+                set -l candidates (_update_apps_data_candidates $fields[2] $fields[3])
+                for c in $candidates
+                    if test -e "$c"; and not test -L "$c"
+                        set -l real (realpath -e "$c" 2>/dev/null)
+                        if test -z "$real"; or string match -q "$HOME/*" "$real"
+                            if _update_apps_safe_trash "$c"
+                                printf '  %s: moved app data to Trash.\n' "$fields[1]"
+                            else
+                                printf '  %s: could not move app data to Trash (skipped).\n' "$fields[1]"
+                            end
+                        else
+                            printf '  %s: app data path unsafe; skipped.\n' "$fields[1]"
+                        end
+                    end
+                end
+            end
         end
     end
     set eligible (_update_apps_eligible $mode)
