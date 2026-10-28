@@ -3422,8 +3422,8 @@ prompt_desktop_wallpaper() {
 
 # ── GDM login screen prompt ─────────────────────────────────
 prompt_gdm_login() {
-  _UI_QUESTION_TITLE='Login screen'
-  _UI_QUESTION_BODY=$'Apply the Himeno GDM login theme and hide the logo?\nSkip if you already have a custom GDM setup. Change later with gdm.'
+  _UI_QUESTION_TITLE='LOGIN SCREEN'
+  _UI_QUESTION_BODY=$'Use the Himeno wallpaper and macOS-style theme, and hide the Fedora logo.\n\nChoose No to preserve your current login screen.\nAfter installation, use the gdm command to manage its wallpaper.'
   if [ -z "${INSTALL_LOGIN_WALLPAPER:-}" ]; then
     echo ""
     echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
@@ -3450,7 +3450,7 @@ prompt_gdm_login() {
     echo -e "  ${CYAN}║${NC}${DIM}${login5}$(printf '%*s' $((62 - ${#login5})) '')${NC}${CYAN}║${NC}"
     echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
     echo ""
-    if confirm "Override GDM login screen? [Y/n]: " Y; then
+    if confirm "Apply the Fedora MacTahoe login theme? [Y/n]: " Y; then
       INSTALL_LOGIN_WALLPAPER="true"
       echo -e "  ${GREEN}→ GDM login screen will be themed${NC}"
     else

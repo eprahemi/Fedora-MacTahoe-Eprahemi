@@ -26,6 +26,28 @@ _ui_line() {
   text=${text//$'\r'/ }
   printf '\033[2K %.*s\r\n' "$((width - 2))" "$text" >&7
 }
+_ui_brand() {
+  local cols="$1"
+  printf '\033[38;5;%sm' "${2:-44}" >&7
+  if [ "$cols" -ge 36 ] && [ "${3:-24}" -ge 18 ]; then
+    _ui_line '   ____' "$cols"
+    _ui_line '  / __/   Fedora MacTahoe' "$cols"
+    _ui_line ' / /_     Eprahemi Edition' "$cols"
+    _ui_line '/ __/' "$cols"
+    _ui_line '/_/       Made by Eprahemi' "$cols"
+  else
+    _ui_wrap 'Fedora MacTahoe' "$cols"
+    _ui_wrap 'Eprahemi Edition' "$cols"
+    _ui_wrap 'Made by Eprahemi' "$cols"
+  fi
+  printf '\033[0m' >&7
+}
+_ui_wrap() {
+  local text="$1" cols="$2" line
+  while IFS= read -r line; do
+    _ui_line "  $line" "$cols"
+  done < <(printf '%s\n' "$text" | fold -sw "$((cols > 4 ? cols - 4 : 1))")
+}
 _ui_paint() {
   local frame="${1:-0}" rows cols elapsed pct trail name short idx=0
   read -r rows cols < <(stty size < /dev/tty 2>/dev/null) || { rows=24; cols=80; }
@@ -43,13 +65,7 @@ _ui_paint() {
     return 0
   fi
   local colors=(38 44 51 44) spin=('|' '/' '-' '\\')
-  printf '\033[38;5;%sm' "${colors[$((frame % 4))]}" >&7
-  _ui_line '   ____' "$cols"
-  _ui_line '  / __/   Fedora MacTahoe' "$cols"
-  _ui_line ' / /_     Eprahemi Edition' "$cols"
-  _ui_line '/ __/' "$cols"
-  _ui_line '/_/ ' "$cols"
-  printf '\033[0m' >&7
+  _ui_brand "$cols" "${colors[$((frame % 4))]}"
   _ui_line '' "$cols"
   _ui_line "${spin[$((frame % 4))]} $_UI_TASK" "$cols"
   _ui_line "Elapsed ${elapsed}s - keep this window open" "$cols"
@@ -129,12 +145,18 @@ _ui_question() {
     local rows cols line
     read -r rows cols < <(stty size < /dev/tty 2>/dev/null) || cols=80
     [ "${cols:-0}" -ge 4 ] || cols=4
-    _ui_line ' f  Fedora MacTahoe - Eprahemi Edition' "$cols"
+    _ui_brand "$cols" 44 "${rows:-24}"
     _ui_line '' "$cols"
-    _ui_line "$1" "$cols"
-    while IFS= read -r line; do _ui_line "$line" "$cols"; done < <(printf '%s\n' "${2:-}" | fold -sw "$((cols - 2))")
+    printf '\033[1m' >&7
+    _ui_wrap "$1" "$cols"
+    printf '\033[0m' >&7
     _ui_line '' "$cols"
-    printf ' %s ' "${3:-}" >&7
+    _ui_wrap "${2:-}" "$cols"
+    _ui_line '' "$cols"
+    if [ -n "${3:-}" ]; then
+      _ui_wrap "$3" "$cols"
+      printf '   > ' >&7
+    fi
   fi
 }
 _ui_cleanup() {
@@ -454,7 +476,7 @@ wp_line="  ⚠  Read yes/no prompts carefully — some are permanent!"
 echo -e "  ${CYAN}║${NC}  ${BOLD}${RED}${wp_line}${NC}$(printf '%*s' $((60 - ${#wp_line})) '')${CYAN}║${NC}"
 echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
 echo -en "  ${DIM}Waiting on you...${NC} "
-_ui_question 'Ready to prepare Fedora MacTahoe?' 'Read every choice carefully. Some choices change your system.' 'Press any key to begin.'
+_ui_question 'Welcome to Fedora MacTahoe' 'Choose your preferences, then we will prepare your desktop.' 'Press any key to begin.'
 _read_rc=0
 read -t 60 -r -s -n 1 key < /dev/tty || _read_rc=$?
 # 142 = read's timeout (SIGALRM). Other codes (Ctrl+C = 130, EOF = 1) are NOT the timeout.

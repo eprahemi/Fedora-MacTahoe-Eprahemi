@@ -1,7 +1,7 @@
 {
  "latest_version": "3.7.20",
- "bootstrap_sha256": "1abfe8534485f743a6f7b66fd0a164a022c399ac64c4e0ebe1458afbd15359b7",
- "install_sha256": "8cf21f8f5637db0e76f7cb6e9ddf938c32eb6e07208141d32c5c792dd40c0f20",
+ "bootstrap_sha256": "1c7c21d594e71a777d262285b81449e889628815aabcc4e551ef6629a75d6e65",
+ "install_sha256": "e8c7576dcebf4e023c4025a948e691f17ab1e7b8af76e16b972dc75970800daa",
  "update_sha256": "c54c276e903c7fe4c2b7a2aceb40449fc7acf4c19d69456d6858650b3e17e3c3",
  "changelog": [
   {
