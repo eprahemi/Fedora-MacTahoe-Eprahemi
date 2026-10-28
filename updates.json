@@ -1,9 +1,20 @@
 {
- "latest_version": "3.7.21",
- "bootstrap_sha256": "7f2aa7b361d5a0ce1ef034c5eb018c0fe6fc17bc276dfa72ac3a552287692dae",
- "install_sha256": "0075892a6d7dd106f3d06c85eefdfd3aa27129de21eac22b359b01c3f6699392",
- "update_sha256": "c54c276e903c7fe4c2b7a2aceb40449fc7acf4c19d69456d6858650b3e17e3c3",
+ "latest_version": "3.7.22",
+ "bootstrap_sha256": "b56e18eaa8d94a26897c9ca15beb47b973c408cfe4976cf9845cf67bfe657096",
+ "install_sha256": "220f5a523e90a0209f5f84edb98a2e7202db1e6498263a00d937535abe826754",
+ "update_sha256": "cb7a2fb49d5a77347365cae263ca30d27334a83187f1e276e1580147ae3fc9d0",
+ "asset_helper_sha256": "787b7304c3cafca41da79b304ad73e92c4cd2b549a149cb7747c47316ba42020",
  "changelog": [
+  {
+   "version": "3.7.22",
+   "changes": [
+    "Hide unrequested optional videos from the live checklist and completion counts, with contiguous visible numbering while retaining the 29-step saved-state contract.",
+    "Wait indefinitely for installer/bootstrap answers and Firefox close consent. EOF cancels preferences without consent and finishes the restart question without rebooting. Preserve bounded network operations and native sudo authentication.",
+     "Preserve both active wallpaper URIs, options/colors and recursive XML image dependencies before configuration writes. Clean only exact original-checksum Fedora RPM wallpaper/avatar files; keep modified stock paths, custom collections and active dependencies. Stage/validate before publication and roll back failed publication/Trash operations.",
+     "Decide wallpaper and avatar packs independently: both installed keeps both with no pack prompt; extra only offers replace with normal, add normal, or leave (default/EOF). Normal only refreshes without an extra prompt. Preserve existing wallpaper/account selections and unknown legacy files; caller/saved choices cannot silently remove either installed collection.",
+    "Use gio Trash for retired known collections, verified asset helper code, immutable desktop image copies and shared installer/updater safety hooks. Preserve prior successful pack metadata across direct bootstrap state resets. Native Fedora installation, authorization, system Trash and reboot smoke tests remain unverified."
+   ]
+  },
   {
    "version": "3.7.21",
    "changes": [
@@ -515,7 +526,7 @@
  ],
  "steps": {
   "preflight": "1.0",
-  "remove_ptyxis": "3.7.9",
+  "remove_ptyxis": "3.7.22",
   "remove_gnome_weather": "1.0",
   "install_rpmfusion": "3.7.12",
   "install_nvidia": "1.0",
@@ -528,11 +539,11 @@
   "apply_desktop_entries": "1.0",
   "ensure_celluloid_default": "1.0",
   "configure_nautilus_defaults": "3.7.16",
-  "apply_configs": "3.7.20",
-  "apply_dconf": "3.7.14",
+  "apply_configs": "3.7.22",
+  "apply_dconf": "3.7.22",
   "optimize_system_resources": "1.1",
-  "apply_wallpapers": "1.3",
-  "install_custom_avatars": "1.1",
+  "apply_wallpapers": "3.7.22",
+  "install_custom_avatars": "3.7.22",
   "download_optional_videos": "3.7.9",
   "setup_gdm": "1.0",
   "setup_firefox_theme": "3.7.9",
@@ -542,7 +553,7 @@
   "install_ktheme_watcher": "1.0",
   "setup_terminal": "1.1",
   "setup_shell": "1.0",
-  "install_extensions": "3.7.14",
+  "install_extensions": "3.7.22",
   "mirror_flatpak_icons": "1.0",
   "finalize": "3.7.11"
  }

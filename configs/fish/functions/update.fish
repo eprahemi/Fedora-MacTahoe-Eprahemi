@@ -582,25 +582,25 @@ function _update_target_help --description 'per-target help box'
             _update_box_text "No questions asked. Needs a logout so the" "1;33"
             _update_box_text "login screen rebuilds with the new look." "1;33"
         case wallpaper
-            _update_box_text "Re-downloads and installs your WALLPAPER packs" "1;37"
-            _update_box_text "fresh from the server — folders + XMLs, all" "1;37"
-            _update_box_text "cleaned up before install. No questions asked." "1;37"
+            _update_box_text "Stages and validates the selected wallpapers." "1;37"
+            _update_box_text "Both installed: keep both, with no pack prompt." "1;37"
+            _update_box_text "Extra only: replace, add normal, or leave." "1;37"
             _update_box_text ""
             _update_box_tag "PACKS"
             _update_box_text ""
-            _update_box_text "[1] Normal pack" "1;36"
-            _update_box_text "[2] +18 pack" "1;36"
-            _update_box_text "[3] Both — wipe both, fresh install" "1;36"
-            _update_box_text "[4] Cancel" "1;37"
+            _update_box_text "Normal only: refresh, preserving your choice." "1;36"
+            _update_box_text "Extra-only prompt defaults to leave untouched." "1;36"
+            _update_box_text "No installed pack: install normal by default." "1;36"
+            _update_box_text "Use add to explicitly choose an extra pack." "1;37"
             _update_box_text ""
             _update_box_tag "FLAGS"
             _update_box_text ""
             _update_box_cmd "update wallpaper add" "install the other pack alongside"
-            _update_box_cmd "update wallpaper both" "wipe both, fresh install of both"
+            _update_box_cmd "update wallpaper both" "install both; keep existing both"
             _update_box_cmd "update wallpaper help" "this box"
             _update_box_text ""
-            _update_box_text "Needs a fresh session after install — you'll" "1;33"
-            _update_box_text "be asked about logging out when it's done." "1;33"
+            _update_box_text "Current wallpaper dependencies are preserved." "1;33"
+            _update_box_text "Only known replaced packs are moved to Trash." "1;33"
         case wallvault wall w
             _update_box_text "Deploys the Wallvault bundle — 500+" "1;37"
             _update_box_text "wallpapers — into ~/Downloads/Wallvault-Pack." "1;37"
@@ -618,21 +618,21 @@ function _update_target_help --description 'per-target help box'
             _update_box_text ""
             _update_box_text "Aliases: update wall, update w." "1;37"
         case pfp
-            _update_box_text "Re-downloads and installs your PFP packs fresh" "1;37"
-            _update_box_text "from the server — folders + XMLs, all cleaned" "1;37"
-            _update_box_text "up before install. No questions asked." "1;37"
+            _update_box_text "Stages and validates the selected avatar pack." "1;37"
+            _update_box_text "Both installed: keep both, with no pack prompt." "1;37"
+            _update_box_text "Extra only: replace, add normal, or leave." "1;37"
             _update_box_text ""
             _update_box_tag "PACKS"
             _update_box_text ""
-            _update_box_text "[1] Normal pack" "1;36"
-            _update_box_text "[2] +18 pack" "1;36"
-            _update_box_text "[3] Both — wipe both, fresh install" "1;36"
-            _update_box_text "[4] Cancel" "1;37"
+            _update_box_text "Normal only: refresh, preserving your avatar." "1;36"
+            _update_box_text "Extra-only prompt defaults to leave untouched." "1;36"
+            _update_box_text "No installed pack: install normal by default." "1;36"
+            _update_box_text "Use add to explicitly choose an extra pack." "1;37"
             _update_box_text ""
             _update_box_tag "FLAGS"
             _update_box_text ""
             _update_box_cmd "update pfp add" "install the other pack alongside"
-            _update_box_cmd "update pfp both" "wipe both, fresh install of both"
+            _update_box_cmd "update pfp both" "staged refresh of both packs"
             _update_box_cmd "update pfp help" "this box"
         case gtk
             _update_box_text "Refreshes GTK settings for GTK3 and GTK4 and" "1;37"
@@ -963,10 +963,27 @@ with open(path, "w") as fh:
 end
 
 # ── configs-only: just the files, no system changes ──
+function _update_snapshot_wallpaper --argument-names bundle
+    set -l expected (python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["asset_helper_sha256"])' "$bundle/updates.json")
+    or return 1
+    set -l actual (_update_sha256 "$bundle/scripts/mactahoe_assets.py")
+    if test (string length -- "$expected") -ne 64; or test "$actual" != "$expected"
+        printf '\n  Wallpaper preservation helper verification failed.\n' >&2
+        return 1
+    end
+    python3 "$bundle/scripts/mactahoe_assets.py" snapshot >/dev/null
+end
+
 function _update_configs_mode --description 'refresh kitty, fish, updater, starship, gtk, fastfetch files'
     set -l tmp (_update_fetch_bundle)
     or return 1
     set -l cfg "$tmp/configs"
+    if not _update_snapshot_wallpaper "$tmp"
+        _update_log_add configs "—" "—" fail UPDATE-CONFIG
+        printf '\n  Active wallpaper could not be preserved; settings were not changed.\n' >&2
+        rm -rf "$tmp"
+        return 1
+    end
     # Owner policy: only Popup blur is forced OFF on config-writing updates.
     if not dconf write /org/gnome/shell/extensions/blur-my-shell/popup/blur false
         _update_log_add configs "—" "—" fail UPDATE-CONFIG
@@ -1263,10 +1280,10 @@ function _update_target_gdm --description 're-apply the GDM login theme'
 end
 
 function _update_target_wallpaper --description 'reinstall wallpapers: normal, +18 or both — add keeps the other pack'
-    # update wallpaper        → replace: the other pack (folder + XML) is removed
+    # Default refresh delegates installed-pack decisions to the safety handler.
     # update wallpaper add    → install the chosen pack alongside the other one
     # update wallpaper --add  → same (also: -add)
-    # update wallpaper both   → wipe BOTH packs and re-download them fresh
+    # update wallpaper both   → validate and transactionally refresh both packs
     set -l add_mode false
     if set -q argv[1]
         switch (string lower -- "$argv[1]")
@@ -1278,7 +1295,12 @@ function _update_target_wallpaper --description 'reinstall wallpapers: normal, +
     if test "$add_mode" = true
         set title "UPDATE WALLPAPER — ADD"
     end
-    set -l pick (_update_pick_pack $title)
+    set -l pick normal
+    if test "$add_mode" = true
+        set pick (_update_pick_pack $title)
+    else if contains -- "$argv[1]" both 18 normal
+        set pick "$argv[1]"
+    end
     set -l want false
     set -l both_mode false
     switch $pick
@@ -1292,10 +1314,8 @@ function _update_target_wallpaper --description 'reinstall wallpapers: normal, +
     end
     set -l tmp (_update_fetch_bundle)
     or return 1
-    # default = replace: the installer keeps ONE Wallvault set — this swaps
-    # to the chosen one. With the add flag the installer refreshes the chosen
-    # pack and leaves the other folder + XML in place (both stay in the picker).
-    # With "both" the installer wipes both packs and re-downloads them fresh.
+    # Both installed: no prompt, preserve both. Extra only: fresh three-way choice.
+    # Existing normal and active settings are never silently removed/reset.
     set -l envs "INSTALL_WALLPAPER_18=$want" "INSTALL_DESKTOP_WALLPAPER=true"
     if test "$add_mode" = true
         set -a envs "INSTALL_WALLPAPER_ADD=true"
@@ -1309,10 +1329,10 @@ function _update_target_wallpaper --description 'reinstall wallpapers: normal, +
 end
 
 function _update_target_pfp --description 'reinstall profile pictures: normal, +18 or both — add keeps the other pack'
-    # update pfp           → replace: the other pack is wiped from the picker
+    # Default refresh delegates independent avatar decisions to the safety handler.
     # update pfp add       → install the chosen pack alongside the other one
     # update pfp --add     → same (also: -add)
-    # update pfp both      → wipe BOTH packs and re-download them fresh
+    # update pfp both      → staged, validated refresh of both packs
     set -l add_mode false
     if set -q argv[1]
         switch (string lower -- "$argv[1]")
@@ -1324,7 +1344,12 @@ function _update_target_pfp --description 'reinstall profile pictures: normal, +
     if test "$add_mode" = true
         set title "UPDATE PROFILE PICTURES — ADD"
     end
-    set -l pick (_update_pick_pack $title)
+    set -l pick normal
+    if test "$add_mode" = true
+        set pick (_update_pick_pack $title)
+    else if contains -- "$argv[1]" both 18 normal
+        set pick "$argv[1]"
+    end
     set -l want false
     set -l both_mode false
     switch $pick
@@ -1339,8 +1364,8 @@ function _update_target_pfp --description 'reinstall profile pictures: normal, +
     set -l tmp (_update_fetch_bundle)
     or return 1
     # install_custom_avatars keys off the same INSTALL_WALLPAPER_18 answer;
-    # the add flag skips the faces-dir wipe so both packs stay in the picker,
-    # "both" wipes the dir and installs normal + 18+ faces together
+    # add keeps the other managed pack. Replacement validates first, protects
+    # current AccountsService image dependencies and trashes only known targets.
     set -l envs "INSTALL_WALLPAPER_18=$want"
     if test "$add_mode" = true
         set -a envs "INSTALL_WALLPAPER_ADD=true"

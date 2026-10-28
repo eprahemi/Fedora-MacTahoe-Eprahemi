@@ -17,22 +17,33 @@ _UI_FINAL_COMPLETED=0 _UI_FINAL_SKIPPED=0 _UI_FINAL_FAILED=0
 _UI_TRANSFER_DONE=0 _UI_TRANSFER_TOTAL=0 _UI_TRANSFER_DETAIL=''
 _UI_STEP_IDS=() _UI_STEP_LABELS=() _UI_STEP_STATES=() _UI_STEP_REASONS=()
 _UI_STEP_CURRENT=0
+# Visibility is presentation-only: keep every registered/state-tracked step.
+_ui_step_visible() {
+  [ "$1" != download_optional_videos ] || [ "${INSTALL_BILLIE_VIDEOS:-false}" = true ]
+}
 _ui_step() {
   local i
   for i in "${!_UI_STEP_IDS[@]}"; do
     if [ "${_UI_STEP_IDS[$i]}" = "$1" ]; then
-      _UI_STEP_CURRENT=$i
       _UI_STEP_STATES[$i]="$2"
       _UI_STEP_REASONS[$i]="${3:-}"
+      _ui_step_visible "$1" || break
+      _UI_STEP_CURRENT=$i
       _ui_resume
       break
     fi
   done
 }
 _ui_checklist() {
-  local rows="$1" cols="$2" frame="$3" i first=0 count=${#_UI_STEP_IDS[@]} slots color mark text
+  local rows="$1" cols="$2" frame="$3" i first=0 count=0 slots color mark text index current=0
+  local visible=()
   local completed=0 skipped=0 failed=0 processed=0
-  for text in "${_UI_STEP_STATES[@]}"; do
+  for i in "${!_UI_STEP_IDS[@]}"; do
+    _ui_step_visible "${_UI_STEP_IDS[$i]}" || continue
+    visible+=("$i")
+    if [ "$i" -le "$_UI_STEP_CURRENT" ]; then current=$count; fi
+    count=$((count+1))
+    text=${_UI_STEP_STATES[$i]}
     case "$text" in
       ok) completed=$((completed+1));; skipped) skipped=$((skipped+1));; failed) failed=$((failed+1));;
     esac
@@ -48,19 +59,20 @@ _ui_checklist() {
   fi
   [ "$slots" -ge 0 ] || slots=0
   [ "$slots" -le "$count" ] || slots=$count
-  first=$((_UI_STEP_CURRENT-slots/2))
+  first=$((current-slots/2))
   [ "$first" -ge 0 ] || first=0
   if [ "$((first+slots))" -gt "$count" ]; then first=$((count-slots)); fi
   for ((i=first; i<first+slots; i++)); do
+    index=${visible[$i]}
     color=90 mark='○'
-    case "${_UI_STEP_STATES[$i]}" in
+    case "${_UI_STEP_STATES[$index]}" in
       running) color='1;36'; local spin=('|' '/' '-' '\\'); mark=${spin[$((frame%4))]} ;;
       ok) color='1;32'; mark='✓' ;;
       skipped) color='38;5;208'; mark='–' ;;
       failed) color='1;31'; mark='✗' ;;
     esac
-    text="$mark $((i+1)). ${_UI_STEP_LABELS[$i]}"
-    if [ -n "${_UI_STEP_REASONS[$i]:-}" ]; then text+=" - ${_UI_STEP_REASONS[$i]}"; fi
+    text="$mark $((i+1)). ${_UI_STEP_LABELS[$index]}"
+    if [ -n "${_UI_STEP_REASONS[$index]:-}" ]; then text+=" - ${_UI_STEP_REASONS[$index]}"; fi
     _ui_line "$text" "$cols" "$color"
   done
   if [ "$rows" -ge 5 ]; then
@@ -452,9 +464,11 @@ _ui_finish() {
     # A trap-rendered dashboard (abort/failure before finalize) still reports the
     # live checklist totals instead of a misleading 0/0/0.
     if [ "${#_UI_FINAL_TASKS[@]}" -eq 0 ] && [ "${#_UI_STEP_STATES[@]}" -gt 0 ]; then
-      local _state
+      local _state _index
       _UI_FINAL_COMPLETED=0 _UI_FINAL_SKIPPED=0 _UI_FINAL_FAILED=0
-      for _state in "${_UI_STEP_STATES[@]}"; do
+      for _index in "${!_UI_STEP_IDS[@]}"; do
+        _ui_step_visible "${_UI_STEP_IDS[$_index]}" || continue
+        _state=${_UI_STEP_STATES[$_index]}
         case "$_state" in
           ok) _UI_FINAL_COMPLETED=$((_UI_FINAL_COMPLETED + 1)) ;;
           skipped) _UI_FINAL_SKIPPED=$((_UI_FINAL_SKIPPED + 1)) ;;
@@ -663,7 +677,7 @@ _fed_log_finalize() {
   exec 1>&5 2>&6 2>/dev/null || true
   trap - EXIT
   # User closed the script (Ctrl+C forced exit) or it closed itself
-  # (60s no-key timeout) — nothing ran, so the log is not worth keeping.
+  # (cancelled input) — retain the transcript for diagnostics.
   # Retain partial transcripts on interruption as well.
   if [ -n "${_FED_TEE_PID:-}" ]; then wait "$_FED_TEE_PID" 2>/dev/null || true; fi
   # Strip ANSI escape sequences from log file (post-process, no pipe race)
@@ -801,7 +815,7 @@ pt13="  needs to be the main ride for this to work."
     echo ""
     # First press: acknowledge
     while true; do
-      read -r -s -n 1 key < /dev/tty || true
+      read -r -s -n 1 key < /dev/tty || { _FED_ABORT=1; exit 42; }
       echo -e "  ${DIM}ok, one more thing...${NC}"
       break
     done
@@ -820,7 +834,7 @@ pt13="  needs to be the main ride for this to work."
     echo -e "  └─────────────────────────────────────────────────────────────┘"
     echo -en "  ${DIM}Waiting on you...${NC} "
     while true; do
-      read -r -s -n 1 key < /dev/tty || true
+      read -r -s -n 1 key < /dev/tty || { _FED_ABORT=1; exit 42; }
       echo -e "${GREEN}let's roll${NC}"
       break
     done
@@ -875,12 +889,11 @@ echo -e "  ${CYAN}╚═══════════════════�
 echo -en "  ${DIM}Waiting on you...${NC} "
 _ui_question 'Welcome to Fedora MacTahoe' 'Choose your preferences, then we will prepare your desktop.' 'Press any key to begin.'
 _read_rc=0
-read -t 60 -r -s -n 1 key < /dev/tty || _read_rc=$?
-# 142 = read's timeout (SIGALRM). Other codes (Ctrl+C = 130, EOF = 1) are NOT the timeout.
-if [ "$_read_rc" -eq 142 ]; then
+read -r -s -n 1 key < /dev/tty || _read_rc=$?
+if [ "$_read_rc" -ne 0 ]; then
   _FED_ABORT=1
   echo ""
-  echo -e "  ${YELLOW}◆${NC}  No key pressed in 60 seconds — closing. Run it again when you're ready!"
+  echo 'No input available — installation cancelled.'
   exit 42
 fi
 echo -e "${GREEN}here we go${NC}"
@@ -940,10 +953,8 @@ if [ "$_clone_rc" -eq 0 ]; then
   printf "  ${GREEN}◆${NC}  Cloning installer  ✓  \n"
   rm -f "$_clone_log"
 
-  # Hide Fedora logo on GDM login screen
-  sudo mkdir -p /etc/dconf/db/gdm.d 2>/dev/null || true
-  echo -e "[org/gnome/login-screen]\nlogo=''" | sudo tee /etc/dconf/db/gdm.d/01-logo > /dev/null 2>&1 || true
-  sudo dconf update 2>/dev/null || true
+  # GDM settings belong to the consent-gated installer step, after the active
+  # desktop wallpaper and XML dependencies have been preserved. No early writes.
 
   # Eprahemi Public License — silent copy to Documents (always overwrites)
   mkdir -p "$HOME/Documents" 2>/dev/null || true
@@ -961,11 +972,6 @@ else
   exit 1
 fi
 echo ""
-
-# Full re-install for direct bootstrap.sh; incremental for update / notification
-if [ "${UPDATE_MODE:-}" != "incremental" ]; then
-    rm -f "$HOME/.cache/fedora-mactahoe/install-state.json"
-fi
 
 # ── Verify install.sh against the pin in the same clone before running ──
 # updates.json and install.sh come from the same commit, so the pinned hash
@@ -994,12 +1000,22 @@ if [ -n "$_inst_pin" ]; then
   fi
 fi
 
+# A direct bootstrap still starts a full state run. Retain the actual previous
+# successful pack metadata for conservative legacy detection; never lose it just
+# because the full-run state is reset. Move the old user state to Trash, not rm.
+unset _FED_ASSET_LEGACY_STATE_JSON
+if [ "${UPDATE_MODE:-}" != incremental ] && [ -f "$HOME/.cache/fedora-mactahoe/install-state.json" ]; then
+  _FED_ASSET_LEGACY_STATE_JSON=$(cat "$HOME/.cache/fedora-mactahoe/install-state.json") || exit 1
+  export _FED_ASSET_LEGACY_STATE_JSON
+  gio trash -- "$HOME/.cache/fedora-mactahoe/install-state.json" || exit 1
+fi
+
 # Stop the preparation painter before the foreground installer takes over the
 # same original terminal and log. Do not export UI process/animation state.
 _ui_cleanup
 _FED_LOG_HANDED_OFF=1
 export _FED_LOG_PARENT=1
 bash install.sh && _inst_rc=0 || _inst_rc=$?
-# 42 = the installer closed itself (60s no-key/no-answer auto-close) —
+# 42 = input was unavailable and the installer cancelled safely —
 # passed through as-is, it is NOT a failure. Everything else propagates.
 exit "$_inst_rc"

@@ -48,6 +48,10 @@ set -euo pipefail
 # ── Log finalization (runs on normal exit, crash, or Ctrl+C) ──
 _fed_log_finalize() {
   local _exit_rc=$?
+  if [ -n "${_FED_ASSET_ROLLBACK:-}" ]; then
+    python3 "$BUNDLE/scripts/mactahoe_assets.py" restore "$_FED_ASSET_ROLLBACK" || \
+      echo 'Wallpaper settings rollback needs attention; the preserved snapshot is retained.' >&2
+  fi
   if [ -n "${_FED_TRANSFER_PID:-}" ]; then
     kill "$_FED_TRANSFER_PID" 2>/dev/null || true
     wait "$_FED_TRANSFER_PID" 2>/dev/null || true
@@ -63,7 +67,7 @@ _fed_log_finalize() {
   exec 1>&5 2>&6 2>/dev/null || true
   trap - EXIT
   # User closed the installer (Ctrl+C forced exit) or it closed itself
-  # (60s no-key/no-answer timeout) — nothing useful ran, so no log is kept.
+  # (cancelled input) — completed work and its transcript are retained below.
   # Interrupted runs retain the transcript too; completed work is not erased.
   if [ -n "${_FED_TEE_PID:-}" ]; then wait "$_FED_TEE_PID" 2>/dev/null || true; fi
   # Strip ANSI escape sequences from log file (post-process, no pipe race)
@@ -263,19 +267,18 @@ _handle_sigint() {
 }
 trap _handle_sigint INT
 
-# ── Key wait with 60s auto-close ──
-# Any 'press any key' style wait: 60s of silence closes the installer (no log saved).
+# Wait for a key indefinitely; missing input cancels rather than granting consent.
 _wait_or_close() {
   if [ "${_UI_ACTIVE:-0}" = 1 ]; then
     _ui_question 'Kitty is recommended' 'Install Kitty, then run this installer there for the intended experience.' 'Press any key to continue, or Ctrl+C to stop.'
   fi
   local _rc=0
-  read -t 60 -r -s -n 1 key < /dev/tty || _rc=$?
+  read -r -s -n 1 key < /dev/tty || _rc=$?
   if [ "${_UI_ACTIVE:-0}" = 1 ]; then _ui_resume; fi
-  if [ "$_rc" -eq 142 ]; then
+  if [ "$_rc" -ne 0 ]; then
     _FED_ABORT=1
     echo ""
-    echo -e "  ${YELLOW}◆${NC}  No key pressed in 60 seconds — closing. Run it again when you're ready!"
+    echo 'No input available — installation cancelled.'
     exit 42
   fi
 }
@@ -425,7 +428,129 @@ _step_failed() {
     fi
 }
 
+_asset_verify_helper() {
+  local expected actual
+  expected=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["asset_helper_sha256"])' "$BUNDLE/updates.json") || return 1
+  actual=$(sha256sum "$BUNDLE/scripts/mactahoe_assets.py") || return 1
+  if [ "${#expected}" -ne 64 ] || [ "${actual%% *}" != "$expected" ]; then
+    warn 'Asset safety helper verification failed — no asset operation was run'
+    return 1
+  fi
+}
+
+_asset_tool() {
+  _asset_verify_helper || return 1
+  python3 "$BUNDLE/scripts/mactahoe_assets.py" "$@"
+}
+
+_preserve_active_wallpaper() {
+  if [ -n "${_FED_WALLPAPER_SNAPSHOT:-}" ] && [ -f "$_FED_WALLPAPER_SNAPSHOT" ]; then return 0; fi
+  if ! _FED_WALLPAPER_SNAPSHOT=$(_asset_tool snapshot); then
+    warn 'Could not preserve the active wallpaper and its dependencies — settings were not changed'
+    return 1
+  fi
+}
+
+_install_asset_pack() {
+  local kind="$1" variant=normal mode=replace current stage legacy plan active_snapshot image preserve_settings=false choice
+  [ "${INSTALL_WALLPAPER_18:-false}" != true ] || variant=18
+  [ "${INSTALL_WALLPAPER_BOTH:-false}" != true ] || variant=both
+  [ "${INSTALL_WALLPAPER_ADD:-false}" != true ] || mode=add
+  stage=$(mktemp -d "${TMPDIR:-/tmp}/mactahoe-assets.XXXXXXXX") || return 1
+  legacy="$stage/initial-state.json"
+  if [ -n "${_ASSET_INITIAL_STATE_JSON:-}" ]; then
+    printf '%s\n' "$_ASSET_INITIAL_STATE_JSON" > "$legacy"
+  elif [ -f "${STATE_FILE:-/dev/null}" ]; then
+    cp "$STATE_FILE" "$legacy" || return 1
+  else
+    printf '{}\n' > "$legacy"
+  fi
+  if ! current=$(_asset_tool installed "$kind" "$legacy"); then
+    rm -rf -- "$stage"  # only this invocation's private staging directory
+    return 1
+  fi
+  if [ "$current" = both ]; then
+    # Installed reality wins over saved/caller choices: never retire either pack.
+    variant=keep; mode=add; preserve_settings=true
+  elif [ "$current" = 18 ]; then
+    _ui_stop
+    if [ "${_UI_ACTIVE:-0}" = 1 ]; then printf '\033[2J\033[H\033[?25h' >&7; fi
+    printf '\n  Only the extra %s collection is installed.\n  [1] Replace with normal\n  [2] Add normal alongside it\n  [3] Leave untouched (default)\n  Choice [3]: ' "$kind" > /dev/tty 2>/dev/null || true
+    choice=''
+    read -r choice < /dev/tty 2>/dev/null || choice=3
+    _ui_resume
+    case "$choice" in
+      1|replace) variant=normal; mode=replace ;;
+      2|add) variant=normal; mode=add ;;
+      *) rm -rf -- "$stage"; _VISUAL_SKIP_REASON='existing collection kept by request'; return 0 ;;
+    esac
+    preserve_settings=true
+  elif [ "$current" = normal ]; then
+    # A choice may add a pack, never silently remove the installed normal one.
+    mode=add; preserve_settings=true
+  fi
+  local archives=()
+  if [ "$variant" != normal ] && [ "$variant" != keep ]; then
+    if { [ "$kind" = avatar ] && [ "${SKIP_FACES_18:-false}" = true ]; } ||
+       { [ "$kind" = wallpaper ] && { [ "${SKIP_WALLPAPER_18:-false}" = true ] || [ "${SKIP_WALLPAPER_18_V2:-false}" = true ]; }; }; then
+      _VISUAL_SKIP_REASON='hosted asset unavailable; existing collection preserved'
+      rm -rf -- "$stage"; return 0
+    fi
+    if [ "$kind" = wallpaper ]; then
+      if ! _net_download "$WALLPAPER_18_URL" "$stage/extra-1.zip" --max-time 90 -b 'download_warning=1' ||
+         ! _net_download "$WALLPAPER_18_URL_V2" "$stage/extra-2.zip" --max-time 90 -b 'download_warning=1'; then
+        rm -rf -- "$stage"; return 1
+      fi
+      archives=("$stage/extra-1.zip" "$stage/extra-2.zip")
+    else
+      if ! _net_download "$FACES_18_URL" "$stage/extra.zip" --max-time 90 -b 'download_warning=1'; then
+        rm -rf -- "$stage"; return 1
+      fi
+      archives=("$stage/extra.zip")
+    fi
+  fi
+  if ! plan=$(_asset_tool build "$kind" "$variant" "$mode" "$BUNDLE" "$stage" "$legacy" "${archives[@]}"); then
+    warn 'Asset validation failed — the installed collection is unchanged'
+    rm -rf -- "$stage"; return 1
+  fi
+  local rechecked
+  if ! rechecked=$(_asset_tool installed "$kind" "$legacy") || [ "$rechecked" != "$current" ]; then
+    warn 'The installed collection changed during staging — rerun for a fresh choice'
+    rm -rf -- "$stage"; return 1
+  fi
+  if [ "$kind" = wallpaper ]; then
+    if ! active_snapshot=$(_asset_tool snapshot); then rm -rf -- "$stage"; return 1; fi
+    _FED_ASSET_ROLLBACK="$active_snapshot"
+    if ! _asset_tool relocate "$active_snapshot" "$plan"; then
+      _FED_ASSET_ROLLBACK=''; rm -rf -- "$stage"; return 1
+    fi
+    if [ "$preserve_settings" = false ] && [ "${INSTALL_DESKTOP_WALLPAPER:-false}" = true ]; then
+      if ! image=$(_asset_tool desktop "$BUNDLE/wallpapers/desktop/Himeno Fedora.jpg") ||
+         ! _asset_tool activate "$active_snapshot" "$image"; then
+        _asset_tool restore "$active_snapshot" || warn "Restore wallpaper settings from $active_snapshot"
+        _FED_ASSET_ROLLBACK=''; rm -rf -- "$stage"; return 1
+      fi
+    fi
+  fi
+  if ! _asset_verify_helper || ! sudo python3 "$BUNDLE/scripts/mactahoe_assets.py" apply "$plan"; then
+    if [ "$kind" = wallpaper ]; then
+      _asset_tool restore "$active_snapshot" || warn "Restore wallpaper settings from $active_snapshot"
+    fi
+    _FED_ASSET_ROLLBACK=''
+    warn 'Asset publication failed; recovery data is retained if rollback needs attention'
+    rm -rf -- "$stage"; return 1
+  fi
+  _FED_ASSET_ROLLBACK=''
+  rm -rf -- "$stage"
+  if [ "$current" = unknown ]; then
+    warn 'Unidentified legacy avatar files were preserved alongside the managed collection'
+  fi
+  ok "Validated $kind collection installed; active image dependencies preserved"
+  return 0
+}
+
 backup_dconf() {
+  _preserve_active_wallpaper || return 1
   # Rollback point before ANY destructive dconf operation (load/reset).
   # Saves a full dump of the user's live dconf database (few KB) to
   # ~/.cache/fedora-mactahoe/backups/ as dconf-<timestamp>.conf, chmod 600.
@@ -461,11 +586,11 @@ confirm() {
       echo -en "  ${DIM}${prompt}${NC} " >/dev/tty
     fi
     _rc=0
-    read -t 60 -r reply </dev/tty || _rc=$?
-    if [ "$_rc" -eq 142 ]; then
+    read -r reply </dev/tty || _rc=$?
+    if [ "$_rc" -ne 0 ]; then
       _FED_ABORT=1
       echo ""
-      echo -e "  ${YELLOW}◆${NC}  No answer in 60 seconds — closing. Run it again when you're ready!"
+      echo 'No input available — installation cancelled without consent.'
       exit 42
     fi
     case "${reply,,}" in
@@ -478,11 +603,8 @@ confirm() {
 }
 
 # ── confirm() variant for the FINAL restart prompt ──
-# Same y/n loop, but a 60-second timeout here does NOT abort the install:
-# by this point everything is already done, so we finish gracefully — the
-# log gets saved and the user is simply told to restart when ready.
-# Returns: 0 = yes, 1 = no, 2 = timed out (no answer).
-# (The first prompts keep the abort behavior above — they are unchanged.)
+# Wait indefinitely. EOF finishes gracefully without requesting a reboot.
+# Returns: 0 = yes, 1 = no, 2 = no input available.
 confirm_final() {
   local prompt="$1" default="${2:-}"
   local reply=""
@@ -498,8 +620,8 @@ confirm_final() {
       echo -en "  ${DIM}${prompt}${NC} " >/dev/tty
     fi
     _rc=0
-    read -t 60 -r reply </dev/tty || _rc=$?
-    if [ "$_rc" -eq 142 ]; then
+    read -r reply </dev/tty || _rc=$?
+    if [ "$_rc" -ne 0 ]; then
       if [ "${_UI_ACTIVE:-0}" = 1 ]; then _ui_resume; fi
       return 2
     fi
@@ -620,11 +742,16 @@ _hosted_assets_status() {
   if [ "${INSTALL_WALLPAPER_18:-false}" = "true" ]; then
     _need_pack=true
     _need_faces=true
+    local installed_pack installed_faces
+    installed_pack=$(_asset_tool installed wallpaper) || return 1
+    installed_faces=$(_asset_tool installed avatar) || return 1
+    case "$installed_pack" in both|18) _need_pack=false ;; esac
+    case "$installed_faces" in both|18) _need_faces=false ;; esac
   fi
   if [ "${INSTALL_BILLIE_VIDEOS:-false}" = "true" ]; then
     _need_videos=true
   fi
-  if [ "$_need_pack" = "false" ] && [ "$_need_videos" = "false" ]; then
+  if [ "$_need_pack" = "false" ] && [ "$_need_faces" = "false" ] && [ "$_need_videos" = "false" ]; then
     return 0
   fi
 
@@ -648,6 +775,8 @@ _hosted_assets_status() {
         SKIP_WALLPAPER_18_V2=true
       fi
     fi
+  fi
+  if [ "$_need_faces" = "true" ]; then
     _st=0
     _drive_asset "extra profile pictures" "$FACES_18_URL" || _st=$?
     if [ "$_st" -eq 1 ]; then
@@ -1051,6 +1180,9 @@ _run_step() {
 
 # ── Copy saved prompt answers into installer variables ──
 _load_prompt_answers
+
+# Preserve historical successful pack metadata before prompt defaults are saved.
+_ASSET_INITIAL_STATE_JSON="${_FED_ASSET_LEGACY_STATE_JSON:-$STATE_JSON}"
 
 next_step() {
   sudo -n -v 2>/dev/null || true  # refresh sudo credential silently
@@ -1936,7 +2068,7 @@ remove_ptyxis() {
   # GNOME Software cache icons
   find "$HOME/.cache/gnome-software" -name "*ptyxi*" -delete 2>/dev/null || true
   # Dconf profiles and settings
-  backup_dconf
+  backup_dconf || return 1
   dconf reset -f /org/gnome/Ptyxis/ 2>/dev/null || true
   # Desktop entry
   sudo rm -f /usr/share/applications/org.gnome.Ptyxis.desktop 2>/dev/null || true
@@ -2064,7 +2196,10 @@ install_rpmfusion() {
 
   _rpmfusion_harden_repos
 
-  timeout 60 sudo dnf check-update 2>/dev/null || true
+  # Authentication belongs to native sudo, without a process deadline. Keep
+  # the existing bound on the subsequent network/package query only.
+  sudo -v || return 1
+  timeout 60 sudo -n dnf check-update 2>/dev/null || true
 
   # Fedora 44+ ships ffmpeg-free which conflicts with RPM Fusion's ffmpeg.
   # Swap it out cleanly before installing the rest.
@@ -3224,6 +3359,7 @@ KEYBINDING_MERGE
 }
 
 _force_popup_blur_off() {
+  _preserve_active_wallpaper || return 1
   # Exact key only; dconf is safe before the extension schema is installed.
   if ! dconf write /org/gnome/shell/extensions/blur-my-shell/popup/blur false; then
     warn "Could not turn Popup blur OFF"
@@ -3256,7 +3392,7 @@ apply_dconf() {
   next_step "GNOME dconf Settings"
 
   # Rollback point before any gsettings/dconf writes + extension restore
-  backup_dconf
+  backup_dconf || return 1
   _force_popup_blur_off || return 1
 
   local _core_fail=0
@@ -3635,416 +3771,12 @@ fw7="  Press Enter for default (Yes — disable)"
 
 apply_wallpapers() {
   next_step "Wallpaper + Login Screen"
-
-  local wp="$BUNDLE/wallpapers"
-  local wp_norm="/usr/share/backgrounds/Wallvault Wallpapers"
-  local wp_18="/usr/share/backgrounds/Wallvault Wallpapers +18"
-  local xml_dir="/usr/share/gnome-background-properties"
-  mkdir -p "$HOME/.local/share/backgrounds"
-
-  if [ ! -d "$wp" ]; then
-    warn "Wallpaper bundle not found at $wp — nothing changed"
-    return 1
-  fi
-
-  local _wp_fail=0
-
-  # ── Always wipe stock Fedora backgrounds ──
-  # (skipped in add mode — "update wallpaper add" keeps the other pack + XML)
-  if [ "${INSTALL_WALLPAPER_ADD:-false}" != "true" ] && [ -d /usr/share/backgrounds ]; then
-    sudo rm -rf /usr/share/backgrounds/* 2>/dev/null || true
-    ok "Stock system wallpapers removed"
-  fi
-
-  local count_norm=0
-  local count_18=0
-
-  # ══════════════════════════════════════════════════════════════════
-  # +18 BRANCH — runs when INSTALL_WALLPAPER_18=true (+18-only or "both")
-  #   +18-only: destroys the normal folder + XML (no cache left behind).
-  #   Add mode / both: keeps the normal pack — "both" installs it after.
-  # ══════════════════════════════════════════════════════════════════
-  if [ "${INSTALL_WALLPAPER_18:-false}" = "true" ]; then
-    # Replace (default): destroy the normal folder + XML (no cache left behind).
-    # Add mode / both (INSTALL_WALLPAPER_ADD=true / INSTALL_WALLPAPER_BOTH=true):
-    #   keep the normal pack alongside — "both" refreshes it below.
-    if [ "${INSTALL_WALLPAPER_ADD:-false}" != "true" ] && [ "${INSTALL_WALLPAPER_BOTH:-false}" != "true" ]; then
-      [ -d "$wp_norm" ] && sudo rm -rf "$wp_norm" 2>/dev/null
-      [ -f "$xml_dir/wallvault-wallpapers.xml" ] && sudo rm -f "$xml_dir/wallvault-wallpapers.xml" 2>/dev/null
-    fi
-
-    # Destroy old +18 folder so we start clean
-    [ -d "$wp_18" ] && sudo rm -rf "$wp_18" 2>/dev/null
-    sudo mkdir -p "$wp_18"
-
-    log "Downloading 18+ wallpapers…"
-    local zip_tmp="/tmp/wallpapers-18-$$.zip"
-    local extract_tmp="/tmp/wallpapers-18-extract-$$"
-    mkdir -p "$extract_tmp"
-
-    if [ "${SKIP_WALLPAPER_18:-false}" = "true" ]; then
-      warn "Skipping the extra wallpaper pack — its hosted link is dead"
-    elif _net_download "$WALLPAPER_18_URL" "$zip_tmp" --max-time 90 -b "download_warning=1"; then
-      if ! is_valid_zip "$zip_tmp"; then
-        local mime
-        mime=$(file --brief --mime-type "$zip_tmp" 2>/dev/null || echo "unknown")
-        rm -f "$zip_tmp" 2>/dev/null || true
-        warn "Downloaded file is not a valid zip (got: $mime) — the hosted file may be gone"
-        _drive_failed "extra wallpaper pack" "update wallpaper"
-        _wp_fail=1
-      elif unzip -q "$zip_tmp" -d "$extract_tmp" 2>/dev/null; then
-        while IFS= read -r -d '' img; do
-          if sudo cp "$img" "$wp_18/" 2>/dev/null; then
-            count_18=$((count_18 + 1))
-          fi
-        done < <(find "$extract_tmp" -type f -print0 2>/dev/null)
-        [ "$count_18" -gt 0 ] && ok "$count_18 18+ wallpapers installed"
-      else
-        warn "Failed to extract 18+ zip (file may be corrupted)"
-      fi
-      rm -f "$zip_tmp" 2>/dev/null || true
-    else
-      _drive_failed "extra wallpaper pack" "update wallpaper"
-      _wp_fail=1
-    fi
-    rm -rf "$extract_tmp" 2>/dev/null || true
-
-    # ── 18+ wallpapers v2 (additional zip) ──
-    mkdir -p "$extract_tmp"
-    if [ "${SKIP_WALLPAPER_18_V2:-false}" = "true" ]; then
-      warn "Skipping the extra wallpaper pack (v2) — its hosted link is dead"
-    elif _net_download "$WALLPAPER_18_URL_V2" "$zip_tmp" --max-time 90 -b "download_warning=1"; then
-      if ! is_valid_zip "$zip_tmp"; then
-        local mime
-        mime=$(file --brief --mime-type "$zip_tmp" 2>/dev/null || echo "unknown")
-        rm -f "$zip_tmp" 2>/dev/null || true
-        warn "Downloaded file is not a valid zip (got: $mime) — the hosted file may be gone"
-        _drive_failed "extra wallpaper pack (v2)" "update wallpaper"
-        _wp_fail=1
-      elif unzip -q "$zip_tmp" -d "$extract_tmp" 2>/dev/null; then
-        local count_v2=0
-        while IFS= read -r -d '' img; do
-          if sudo cp "$img" "$wp_18/" 2>/dev/null; then
-            count_v2=$((count_v2 + 1))
-          fi
-        done < <(find "$extract_tmp" -type f -print0 2>/dev/null)
-        count_18=$((count_18 + count_v2))
-        [ "$count_v2" -gt 0 ] && ok "$count_v2 additional 18+ wallpapers v2 installed"
-      else
-        warn "Failed to extract 18+ wallpapers v2 (file may be corrupted)"
-      fi
-      rm -f "$zip_tmp" 2>/dev/null || true
-    else
-      _drive_failed "extra wallpaper pack (v2)" "update wallpaper"
-      _wp_fail=1
-    fi
-    rm -rf "$extract_tmp" 2>/dev/null || true
-
-    if [ "$count_18" -eq 0 ]; then
-      if [ "${SKIP_WALLPAPER_18:-false}" = "true" ] && [ "${SKIP_WALLPAPER_18_V2:-false}" = "true" ]; then
-        warn "Both extra wallpaper packs were skipped"
-      else
-        warn "No 18+ wallpapers were installed"
-        _wp_fail=1
-      fi
-    fi
-
-    if [ "$count_18" -gt 0 ]; then
-      # Generate +18 XML
-      local xml_18="$xml_dir/wallvault-wallpapers-18.xml"
-      {
-        echo '<?xml version="1.0" encoding="UTF-8"?>'
-        echo '<!DOCTYPE wallpapers SYSTEM "gnome-wp-list.dtd">'
-        echo '<wallpapers>'
-        for img in "$wp_18/"*; do
-          [ -f "$img" ] || continue
-          local bname; bname=$(basename "$img")
-          local bname_noext="${bname%.*}"
-          cat << EOF
-      <wallpaper deleted="false">
-          <name>${bname_noext}</name>
-          <filename>${img}</filename>
-          <options>zoom</options>
-          <shade_type>solid</shade_type>
-          <pcolor>#000000</pcolor>
-          <scolor>#000000</scolor>
-      </wallpaper>
-EOF
-        done
-        echo '</wallpapers>'
-      } | sudo tee "$xml_18" > /dev/null
-      ok "Wallvault Wallpapers +18 registered in GNOME picker"
-
-      # Delete ALL stock XMLs except the Wallvault one(s) — add/both mode keeps both
-      for sx in "$xml_dir"/*.xml; do
-        [ -f "$sx" ] || continue
-        [ "$sx" = "$xml_dir/wallvault-wallpapers-18.xml" ] && continue
-        if [ "${INSTALL_WALLPAPER_ADD:-false}" = "true" ] || [ "${INSTALL_WALLPAPER_BOTH:-false}" = "true" ]; then
-          [ "$sx" = "$xml_dir/wallvault-wallpapers.xml" ] && continue
-        fi
-        sudo rm -f "$sx" 2>/dev/null || true
-      done
-      ok "Stock GNOME XMLs deleted"
-    fi
-  fi
-
-  # ══════════════════════════════════════════════════════════════════
-  # NORMAL BRANCH — runs when NOT +18-only (normal-only or "both")
-  #   normal-only: destroys the +18 folder + XML (no cache left behind).
-  #   Add mode / both: keeps the +18 pack — "both" already installed it above.
-  # ══════════════════════════════════════════════════════════════════
-  if [ "${INSTALL_WALLPAPER_18:-false}" != "true" ] || [ "${INSTALL_WALLPAPER_BOTH:-false}" = "true" ]; then
-    if [ ! -d "$wp/background-normal" ] && [ ! -d "$wp/desktop" ]; then
-      warn "Normal wallpaper sources not found in the bundle — keeping the current pack"
-      return 1
-    fi
-    # Replace (default): destroy the +18 folder + XML (no cache left behind).
-    # Add mode / both: keep the +18 pack alongside — only the normal pack is refreshed here.
-    if [ "${INSTALL_WALLPAPER_ADD:-false}" != "true" ] && [ "${INSTALL_WALLPAPER_BOTH:-false}" != "true" ]; then
-      [ -d "$wp_18" ] && sudo rm -rf "$wp_18" 2>/dev/null
-      [ -f "$xml_dir/wallvault-wallpapers-18.xml" ] && sudo rm -f "$xml_dir/wallvault-wallpapers-18.xml" 2>/dev/null
-    fi
-
-    # Destroy old normal folder so we start clean
-    [ -d "$wp_norm" ] && sudo rm -rf "$wp_norm" 2>/dev/null
-    sudo mkdir -p "$wp_norm"
-
-    # Copy desktop wallpapers (excluding Himeno — lives in ~/.local/share/backgrounds/)
-    if [ "${INSTALL_DESKTOP_WALLPAPER:-false}" = "true" ]; then
-      for img in "$wp/desktop/"*; do
-        [ -f "$img" ] || continue
-        bname="${img##*/}"
-        [ "$bname" = "Himeno Fedora.jpg" ] && continue
-        if sudo cp "$img" "$wp_norm/" 2>/dev/null; then
-          count_norm=$((count_norm + 1))
-        fi
-      done
-    fi
-
-    # Copy all custom background images
-    for img in "$wp/background-normal/"*; do
-      [ -f "$img" ] || continue
-      if sudo cp "$img" "$wp_norm/" 2>/dev/null; then
-        count_norm=$((count_norm + 1))
-      fi
-    done
-
-    if [ "$count_norm" -eq 0 ]; then
-      warn "No wallpapers were copied — the normal pack is empty"
-      return 1
-    fi
-
-    if [ "$count_norm" -gt 0 ]; then
-      ok "$count_norm wallpapers installed"
-
-      # Generate normal XML
-      local xml_norm="$xml_dir/wallvault-wallpapers.xml"
-      {
-        echo '<?xml version="1.0" encoding="UTF-8"?>'
-        echo '<!DOCTYPE wallpapers SYSTEM "gnome-wp-list.dtd">'
-        echo '<wallpapers>'
-        for img in "$wp_norm/"*; do
-          [ -f "$img" ] || continue
-          local bname; bname=$(basename "$img")
-          local bname_noext="${bname%.*}"
-          cat << EOF
-      <wallpaper deleted="false">
-          <name>${bname_noext}</name>
-          <filename>${img}</filename>
-          <options>zoom</options>
-          <shade_type>solid</shade_type>
-          <pcolor>#000000</pcolor>
-          <scolor>#000000</scolor>
-      </wallpaper>
-EOF
-        done
-        echo '</wallpapers>'
-      } | sudo tee "$xml_norm" > /dev/null
-      ok "Wallvault Wallpapers registered in GNOME picker"
-
-      # Delete ALL stock XMLs except the Wallvault one(s) — add/both mode keeps both
-      for sx in "$xml_dir"/*.xml; do
-        [ -f "$sx" ] || continue
-        [ "$sx" = "$xml_dir/wallvault-wallpapers.xml" ] && continue
-        if [ "${INSTALL_WALLPAPER_ADD:-false}" = "true" ] || [ "${INSTALL_WALLPAPER_BOTH:-false}" = "true" ]; then
-          [ "$sx" = "$xml_dir/wallvault-wallpapers-18.xml" ] && continue
-        fi
-        sudo rm -f "$sx" 2>/dev/null || true
-      done
-      ok "Stock GNOME XMLs deleted"
-    fi
-  fi
-
-  # Always copy Himeno Fedora.jpg to backgrounds dir (available in picker / for later use)
-  if [ -f "$wp/desktop/Himeno Fedora.jpg" ]; then
-    cp "$wp/desktop/Himeno Fedora.jpg" "$HOME/.local/share/backgrounds/"
-    ok "Himeno Fedora.jpg copied to ~/.local/share/backgrounds/"
-  fi
-
-  # Set active desktop wallpaper only if user opted in
-  if [ "${INSTALL_DESKTOP_WALLPAPER:-false}" = "true" ]; then
-    if [ -f "$HOME/.local/share/backgrounds/Himeno Fedora.jpg" ]; then
-      if gsettings set org.gnome.desktop.background picture-uri "file://$HOME/.local/share/backgrounds/Himeno Fedora.jpg" 2>/dev/null; then
-        gsettings set org.gnome.desktop.background picture-uri-dark "file://$HOME/.local/share/backgrounds/Himeno Fedora.jpg" 2>/dev/null || true
-        gsettings set org.gnome.desktop.background picture-options "zoom" 2>/dev/null || true
-        ok "Desktop wallpaper applied via gsettings"
-      else
-        warn "Could not apply the desktop wallpaper"
-        _wp_fail=1
-      fi
-    else
-      warn "Himeno Fedora.jpg not found in ~/.local/share/backgrounds/"
-      _wp_fail=1
-    fi
-  fi
-
-  # Always clean up any leftover login wallpaper from ~/.local/share/backgrounds/
-  if [ -f "$HOME/.local/share/backgrounds/Himeno Fedora LoginScreen.jpg" ]; then
-    rm "$HOME/.local/share/backgrounds/Himeno Fedora LoginScreen.jpg"
-    ok "Removed leftover login wallpaper from ~/.local/share/backgrounds/"
-  fi
-
-  if [ "$_wp_fail" -ne 0 ]; then
-    return 1
-  fi
-  return 0
+  _install_asset_pack wallpaper
 }
 
 install_custom_avatars() {
   next_step "Custom Profile Pictures (Avatars)"
-
-  local face_dir="/usr/share/pixmaps/faces"
-  local src="$BUNDLE/assets/normal-faces"
-  local _avatar_fail=0
-  local _avatar_skipped=0
-
-  # ── Silently purge any stray face/faces folders (keep only the real one) ──
-  for dir in /usr/share/pixmaps/face*; do
-    [ -d "$dir" ] || continue
-    [ "$dir" = "$face_dir" ] && continue
-    sudo rm -rf "$dir" 2>/dev/null || true
-  done
-
-  # ── Always wipe stock avatars ──
-  # (skipped in add mode — "update pfp add" keeps the other pack alongside)
-  if [ "${INSTALL_WALLPAPER_ADD:-false}" != "true" ] && [ -d "$face_dir" ]; then
-    sudo rm -rf "$face_dir"/* 2>/dev/null || true
-    ok "Stock avatars removed"
-  fi
-
-  # ── Normal faces ──
-  # Runs when NOT +18-only, or in "both" mode (normal + 18+ together)
-  local _normal_wanted=0
-  if [ "${INSTALL_WALLPAPER_18:-false}" != "true" ] || [ "${INSTALL_WALLPAPER_BOTH:-false}" = "true" ]; then
-    _normal_wanted=1
-    if [ ! -d "$src" ] || [ -z "$(ls -A "$src" 2>/dev/null)" ]; then
-      warn "Normal avatar source not found at $src"
-      _avatar_fail=1
-    fi
-  fi
-
-  local count=0
-  if [ "$_normal_wanted" -eq 1 ] && [ -d "$src" ] && [ -n "$(ls -A "$src" 2>/dev/null)" ]; then
-    sudo mkdir -p "$face_dir"
-
-    # Copy custom avatars — convert to exact 512x512 JPEG
-    local tmp_dir
-    tmp_dir="$(mktemp -d)"
-
-    for img in "$src/"*; do
-      [ -f "$img" ] || continue
-      local base
-      base=$(basename "${img%.*}")
-      local tmp_out="$tmp_dir/${base}.jpg"
-
-      if command -v magick &>/dev/null; then
-        magick "$img" -resize 512x512^ -gravity center -extent 512x512 -quality 92 "$tmp_out" 2>/dev/null || true
-      elif command -v convert &>/dev/null; then
-        convert "$img" -resize 512x512^ -gravity center -extent 512x512 -quality 92 "$tmp_out" 2>/dev/null || true
-      else
-        warn "ImageMagick not found — skipping avatar conversion"
-        _avatar_fail=1
-        break
-      fi
-
-      if [ -f "$tmp_out" ] && sudo cp "$tmp_out" "$face_dir/" 2>/dev/null; then
-        count=$((count + 1))
-      fi
-    done
-
-    rm -rf "$tmp_dir"
-
-    if [ "$count" -gt 0 ]; then
-      sudo chmod 644 "$face_dir"/*.jpg 2>/dev/null || true
-      ok "$count custom avatars installed to $face_dir"
-    else
-      warn "No normal avatars were installed"
-      _avatar_fail=1
-    fi
-  fi
-
-  # ── 18+ faces (optional zip download) → replaces normal avatars ──
-  # Runs in +18-only mode AND in "both" mode (after normal faces above)
-  if [ "${INSTALL_WALLPAPER_18:-false}" = "true" ]; then
-    log "Downloading 18+ profile pictures…"
-    local zip_tmp="/tmp/faces-18-$$.zip"
-    local extract_tmp="/tmp/faces-18-extract-$$"
-    mkdir -p "$extract_tmp"
-
-    if [ "${SKIP_FACES_18:-false}" = "true" ]; then
-      warn "Skipping the extra profile pictures — the hosted link is dead"
-      _avatar_skipped=1
-    elif _net_download "$FACES_18_URL" "$zip_tmp" --max-time 90 -b "download_warning=1"; then
-      if ! is_valid_zip "$zip_tmp"; then
-        local mime
-        mime=$(file --brief --mime-type "$zip_tmp" 2>/dev/null || echo "unknown")
-        rm -f "$zip_tmp" 2>/dev/null || true
-        warn "Downloaded file is not a valid zip (got: $mime) — the hosted file may be gone"
-        _drive_failed "extra profile pictures" "update pfp"
-        _avatar_fail=1
-      else
-        sudo mkdir -p "$face_dir"
-        if unzip -q "$zip_tmp" -d "$extract_tmp" 2>/dev/null; then
-          local count_18=0
-          while IFS= read -r -d '' img; do
-            # Install to the standard face dir so GNOME avatar picker finds them
-            if sudo cp "$img" "$face_dir/" 2>/dev/null; then
-              count_18=$((count_18 + 1))
-            fi
-          done < <(find "$extract_tmp" -type f -print0 2>/dev/null)
-          sudo chmod 644 "$face_dir"/* 2>/dev/null || true
-          if [ "$count_18" -gt 0 ]; then
-            ok "$count_18 18+ profile pictures installed to $face_dir"
-          else
-            warn "No 18+ profile pictures were installed"
-            _avatar_fail=1
-          fi
-        else
-          warn "Failed to extract 18+ faces zip (file may be corrupted)"
-          _avatar_fail=1
-        fi
-      fi
-      rm -f "$zip_tmp" 2>/dev/null || true
-    else
-      _drive_failed "extra profile pictures" "update pfp"
-      _avatar_fail=1
-    fi
-    rm -rf "$extract_tmp" 2>/dev/null || true
-  fi
-
-  local _avatar_total=$((count + ${count_18:-0}))
-  if [ "$_avatar_fail" -ne 0 ]; then
-    warn "Custom avatar step incomplete — see warnings above"
-    return 1
-  fi
-  if [ "$_avatar_total" -eq 0 ] && [ "$_avatar_skipped" -eq 0 ]; then
-    warn "No custom avatars were installed"
-    return 1
-  fi
-  if [ "$_avatar_total" -eq 0 ] && [ "$_avatar_skipped" -ne 0 ]; then
-    _VISUAL_SKIP_REASON='hosted asset unavailable; skipped by request'
-  fi
-  return 0
+  _install_asset_pack avatar
 }
 
 # ── 🔥 Billie & Jinx video edits (optional prompt + download, step 22) ──
@@ -4473,7 +4205,7 @@ setup_firefox_theme() {
     if [ "${_UI_ACTIVE:-0}" != 1 ]; then
       printf '  Save your work. Close Firefox and apply its theme? [y/N]: ' >&"$_ff_tty"
     fi
-    if ! read -t 60 -r reply <&"$_ff_tty"; then
+    if ! read -r reply <&"$_ff_tty"; then
       exec {_ff_tty}>&-
       if [ "${_UI_ACTIVE:-0}" = 1 ]; then _ui_resume; fi
       warn "No consent received — skipping Firefox theming"
@@ -5500,7 +5232,9 @@ _installation_completion() {
   # or the retry contract. Count that separate model when present.
   if [ "${#_UI_STEP_IDS[@]}" -gt 0 ]; then
     completed=0 skipped=0 failed=0
-    for value in "${_UI_STEP_STATES[@]}"; do
+    for i in "${!_UI_STEP_IDS[@]}"; do
+      _ui_step_visible "${_UI_STEP_IDS[$i]}" || continue
+      value=${_UI_STEP_STATES[$i]}
       case "$value" in
         ok) completed=$((completed+1));; skipped) skipped=$((skipped+1));;
         failed) failed=$((failed+1));;
@@ -5558,7 +5292,7 @@ _installation_completion() {
   if [ "${_UI_ACTIVE:-0}" = 1 ]; then
     _ui_finish "$_UI_COMPLETION"
   fi
-  # The only final restart decision. No/EOF/timeout all finish normally.
+  # The only final restart decision. No/EOF finish normally.
   confirm_final 'Restart now? [y/N]: ' N || rc=$?
   if [ "$rc" -eq 0 ]; then
     if ! sudo reboot; then warn 'Restart could not be requested. Run sudo reboot when ready.'; fi
@@ -5621,6 +5355,7 @@ _load_prompt_answers
 # Runs ONLY the listed step function(s), then exits. Prompts are skipped —
 # the caller passes every INSTALL_* variable the step needs, explicitly.
 if [ -n "${UPDATE_STEPS:-}" ]; then
+  _preserve_active_wallpaper || exit 1
   # install_icons has no next_step of its own — print one for it
   case "$UPDATE_STEPS" in
     install_icons) next_step "MacTahoe Icon Themes + Custom App Icons" ;;
@@ -5665,6 +5400,8 @@ fi
 
 # ── Preflight (always runs) ──
 _run_step "preflight" preflight
+
+_preserve_active_wallpaper || exit 1
 
 # ── The questions the installer asks ──────────────────────────
 # Everything else is defaulted and stays changeable later through
