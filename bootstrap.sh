@@ -12,7 +12,73 @@ _UI_NOTICE='' _UI_NOTICE_COLOR='1;33' _UI_CHOICES='' _UI_FINISHED=0 _UI_RESULT_D
 _UI_NOTICES=()
 _UI_NOTICE_COLORS=()
 _UI_WARNINGS=()
-_UI_TRANSFER_DONE=0 _UI_TRANSFER_TOTAL=0
+_UI_FINAL_TASKS=() _UI_FINAL_ATTENTION=()
+_UI_FINAL_COMPLETED=0 _UI_FINAL_SKIPPED=0 _UI_FINAL_FAILED=0
+_UI_TRANSFER_DONE=0 _UI_TRANSFER_TOTAL=0 _UI_TRANSFER_DETAIL=''
+_UI_STEP_IDS=() _UI_STEP_LABELS=() _UI_STEP_STATES=() _UI_STEP_REASONS=()
+_UI_STEP_CURRENT=0
+_ui_step() {
+  local i
+  for i in "${!_UI_STEP_IDS[@]}"; do
+    if [ "${_UI_STEP_IDS[$i]}" = "$1" ]; then
+      _UI_STEP_CURRENT=$i
+      _UI_STEP_STATES[$i]="$2"
+      _UI_STEP_REASONS[$i]="${3:-}"
+      _ui_resume
+      break
+    fi
+  done
+}
+_ui_checklist() {
+  local rows="$1" cols="$2" frame="$3" i first=0 count=${#_UI_STEP_IDS[@]} slots color mark text
+  local completed=0 skipped=0 failed=0 processed=0
+  for text in "${_UI_STEP_STATES[@]}"; do
+    case "$text" in
+      ok) completed=$((completed+1));; skipped) skipped=$((skipped+1));; failed) failed=$((failed+1));;
+    esac
+  done
+  processed=$((completed+skipped+failed))
+  # Reserve fixed header/footer rows; never wrap a checklist row.
+  if [ "$rows" -ge 20 ] && [ "$cols" -ge 52 ]; then
+    _ui_brand "$cols" 44 "$rows"
+    slots=$((rows-12))
+  else
+    _ui_line 'Fedora MacTahoe - Eprahemi Edition' "$cols" '1;36'
+    slots=$((rows-8))
+  fi
+  [ "$slots" -ge 0 ] || slots=0
+  [ "$slots" -le "$count" ] || slots=$count
+  first=$((_UI_STEP_CURRENT-slots/2))
+  [ "$first" -ge 0 ] || first=0
+  if [ "$((first+slots))" -gt "$count" ]; then first=$((count-slots)); fi
+  for ((i=first; i<first+slots; i++)); do
+    color=90 mark='○'
+    case "${_UI_STEP_STATES[$i]}" in
+      running) color='1;36'; local spin=('|' '/' '-' '\\'); mark=${spin[$((frame%4))]} ;;
+      ok) color='1;32'; mark='✓' ;;
+      skipped) color='38;5;208'; mark='–' ;;
+      failed) color='1;31'; mark='✗' ;;
+    esac
+    text="$mark $((i+1)). ${_UI_STEP_LABELS[$i]}"
+    if [ -n "${_UI_STEP_REASONS[$i]:-}" ]; then text+=" - ${_UI_STEP_REASONS[$i]}"; fi
+    _ui_line "$text" "$cols" "$color"
+  done
+  if [ "$rows" -ge 5 ]; then
+    _ui_bar "$cols" "$processed" "$count"
+    if [ "$cols" -lt 40 ]; then
+      _ui_line "C:$completed S:$skipped F:$failed" "$cols" '1'
+    else
+      _ui_line "$completed complete / $skipped skipped / $failed failed" "$cols" '1'
+    fi
+  fi
+  if [ "$rows" -ge 8 ]; then
+    _ui_line "$_UI_PHASE: $_UI_TASK" "$cols" '1;36'
+    _ui_line "Elapsed $((EPOCHSECONDS-_UI_STARTED))s - rows $((first+1))-$((first+slots))/$count" "$cols" '90'
+    _ui_line "$_UI_NOTICE" "$cols" "$_UI_NOTICE_COLOR"
+  fi
+  if [ "$rows" -ge 2 ]; then _ui_line 'Made by Eprahemi' "$cols" '90'; fi
+  printf '\033[J' >&7
+}
 _ui_stop() {
   if [ -n "${_UI_PID:-}" ]; then
     kill -CONT "$_UI_PID" 2>/dev/null || true
@@ -78,6 +144,10 @@ _ui_paint() {
   [ "$cols" -ge 4 ] || cols=4
   elapsed=$((EPOCHSECONDS - _UI_STARTED))
   printf '\033[H' >&7
+  if [ "${#_UI_STEP_IDS[@]}" -gt 0 ]; then
+    _ui_checklist "$rows" "$cols" "$frame"
+    return 0
+  fi
    if [ "$rows" -lt 20 ] || [ "$cols" -lt 52 ]; then
     _ui_line 'Fedora MacTahoe - Eprahemi Edition' "$cols" '1;36'
     _ui_wrap "$_UI_TASK" "$cols" '1;36'
@@ -86,6 +156,7 @@ _ui_paint() {
       _ui_line "Tasks $_UI_DONE/$_UI_TOTAL" "$cols" '1'
     fi
     if [ "$_UI_TRANSFER_TOTAL" -gt 0 ]; then _ui_bar "$cols" "$_UI_TRANSFER_DONE" "$_UI_TRANSFER_TOTAL"; fi
+    if [ -n "$_UI_TRANSFER_DETAIL" ]; then _ui_line "$_UI_TRANSFER_DETAIL" "$cols" '90'; fi
     _ui_line "Elapsed ${elapsed}s" "$cols" '90'
     _ui_wrap "$_UI_NOTICE" "$cols" "$_UI_NOTICE_COLOR"
     _ui_line 'Made by Eprahemi' "$cols" '90'
@@ -105,6 +176,7 @@ _ui_paint() {
     _ui_line 'Preparing installation' "$cols" '90'
   fi
   if [ "$_UI_TRANSFER_TOTAL" -gt 0 ]; then _ui_bar "$cols" "$_UI_TRANSFER_DONE" "$_UI_TRANSFER_TOTAL"; fi
+  if [ -n "$_UI_TRANSFER_DETAIL" ]; then _ui_line "$_UI_TRANSFER_DETAIL" "$cols" '90'; fi
   _ui_line '' "$cols"
   # The current phase is highlighted; all prior/next phases remain visible.
   trail=''
@@ -162,9 +234,9 @@ _ui_init() {
     _ui_resume
   fi
 }
-_ui_task() { _UI_TASK="$1"; _UI_TRANSFER_DONE=0; _UI_TRANSFER_TOTAL=0; _ui_resume; }
+_ui_task() { _UI_TASK="$1"; _UI_TRANSFER_DONE=0; _UI_TRANSFER_TOTAL=0; _UI_TRANSFER_DETAIL=''; _ui_resume; }
 _ui_download_progress() {
-  _UI_TASK="$1" _UI_TRANSFER_DONE="$2" _UI_TRANSFER_TOTAL="$3"
+  _UI_TASK="$1" _UI_TRANSFER_DONE="$2" _UI_TRANSFER_TOTAL="$3" _UI_TRANSFER_DETAIL="${4:-}"
   _ui_resume
 }
 _ui_phase() { _UI_PHASE="$1"; _ui_resume; }
@@ -205,21 +277,200 @@ _ui_cleanup() {
     _UI_ACTIVE=0
   fi
 }
+_ui_finish_brand() {
+  # Fixed 62-column header box: the same Fedora figlet mark used by install.sh.
+  local cb=$'\033[1;36m' cw=$'\033[1;37m' c0=$'\033[0m'
+  printf '%s' "$cb" >&5
+  printf '%s\n' \
+'  ╔══════════════════════════════════════════════════════════════╗' \
+'  ║                                                              ║' \
+'  ║      ______                 __                   _           ║' \
+'  ║     / ____/___  _________ _/ /_  ___  ____ ___  (_)          ║' \
+'  ║    / __/ / __ \/ ___/ __ `/ __ \/ _ \/ __ `__ \/ /           ║' \
+'  ║   / /___/ /_/ / /  / /_/ / / / /  __/ / / / / / /            ║' \
+'  ║  /_____/ .___/_/   \__,_/_/ /_/\___/_/ /_/ /_/_/             ║' \
+'  ║       /_/                                                    ║' \
+'  ║                                                              ║' >&5
+  printf '%s' "$c0" >&5
+  printf '  %s║%s%s            M A C T A H O E   ·   E P R A H E M I             %s%s║%s\n' \
+    "$cb" "$c0" "$cw" "$c0" "$cb" "$c0" >&5
+  printf '%s' "$cb" >&5
+  printf '%s\n' \
+'  ║                                                              ║' \
+'  ╚══════════════════════════════════════════════════════════════╝' >&5
+  printf '%s' "$c0" >&5
+}
+_ui_center() {
+  local text="$1" width="$2" left right
+  left=$(( (width - ${#text}) / 2 ))
+  [ "$left" -ge 0 ] || left=0
+  right=$(( width - ${#text} - left ))
+  [ "$right" -ge 0 ] || right=0
+  printf '%*s%s%*s' "$left" '' "$text" "$right" ''
+}
+_ui_finish_badges() {
+  local completed="$1" skipped="$2" failed="$3"
+  local cb=$'\033[1;36m' cg=$'\033[1;32m' co=$'\033[38;5;208m' cr=$'\033[1;31m' c0=$'\033[0m'
+  local top='┌───────────────┐' bottom='└───────────────┘'
+  local i1 i2 i3 l1 l2 l3
+  i1=$(_ui_center "✓ $completed" 15)
+  i2=$(_ui_center "– $skipped" 15)
+  i3=$(_ui_center "✗ $failed" 15)
+  l1=$(_ui_center 'COMPLETED' 15)
+  l2=$(_ui_center 'SKIPPED' 15)
+  l3=$(_ui_center 'FAILED' 15)
+  printf '       ' >&5
+  printf '%s%s%s   %s%s%s   %s%s%s\n' "$cb" "$top" "$c0" "$cb" "$top" "$c0" "$cb" "$top" "$c0" >&5
+  printf '       ' >&5
+  printf '%s│%s%s%s%s%s│%s' "$cb" "$c0" "$cg" "$i1" "$c0" "$cb" "$c0" >&5
+  printf '   ' >&5
+  printf '%s│%s%s%s%s%s│%s' "$cb" "$c0" "$co" "$i2" "$c0" "$cb" "$c0" >&5
+  printf '   ' >&5
+  printf '%s│%s%s%s%s%s│%s\n' "$cb" "$c0" "$cr" "$i3" "$c0" "$cb" "$c0" >&5
+  printf '       ' >&5
+  printf '%s│%s%s%s%s%s│%s' "$cb" "$c0" "$cg" "$l1" "$c0" "$cb" "$c0" >&5
+  printf '   ' >&5
+  printf '%s│%s%s%s%s%s│%s' "$cb" "$c0" "$co" "$l2" "$c0" "$cb" "$c0" >&5
+  printf '   ' >&5
+  printf '%s│%s%s%s%s%s│%s\n' "$cb" "$c0" "$cr" "$l3" "$c0" "$cb" "$c0" >&5
+  printf '       ' >&5
+  printf '%s%s%s   %s%s%s   %s%s%s\n' "$cb" "$bottom" "$c0" "$cb" "$bottom" "$c0" "$cb" "$bottom" "$c0" >&5
+}
+_ui_finish_dashboard() {
+  local issues="$1" cols="$2"
+  local cb=$'\033[1;36m' cg=$'\033[1;32m' co=$'\033[38;5;208m' cr=$'\033[1;31m'
+  local cw=$'\033[1;37m' cd=$'\033[90m' c0=$'\033[0m'
+  local completed="${_UI_FINAL_COMPLETED:-0}" skipped="${_UI_FINAL_SKIPPED:-0}" failed="${_UI_FINAL_FAILED:-0}"
+  local entry group label state mark color status dots dotstr cur_group=''
+  _ui_finish_brand
+  printf '\n' >&5
+  if [ "$issues" -eq 1 ]; then
+    printf '  %s              F I N I S H E D   W I T H   I S S U E S%s\n\n' "$co" "$c0" >&5
+  else
+    printf '  %s              I N S T A L L A T I O N   C O M P L E T E%s\n\n' "$cg" "$c0" >&5
+  fi
+  _ui_finish_badges "$completed" "$skipped" "$failed"
+  local bar
+  printf -v bar '%*s' 40 ''
+  bar=${bar// /█}
+  printf '\n       %s%s%s  %s100%%%s\n\n' "$cb" "$bar" "$c0" "$cg" "$c0" >&5
+  for entry in "${_UI_FINAL_TASKS[@]}"; do
+    group=${entry%%|*}
+    label=${entry#*|}; label=${label%|*}
+    state=${entry##*|}
+    case "$state" in
+      ok) mark='✓'; color="$cg"; status='completed' ;;
+      skipped) mark='–'; color="$co"; status='skipped' ;;
+      failed) mark='✗'; color="$cr"; status='failed' ;;
+      *) mark='○'; color="$cd"; status='not run' ;;
+    esac
+    if [ "$group" != "$cur_group" ]; then
+      [ -z "$cur_group" ] || printf '\n' >&5
+      cur_group="$group"
+      printf '       %s%s%s\n' "$cw" "$group" "$c0" >&5
+    fi
+    # Fixed 10-column status field keeps every outcome left-aligned in the
+    # same column instead of right-ragging by word length.
+    dots=$((54 - ${#label} - 10))
+    [ "$dots" -ge 3 ] || dots=3
+    printf -v dotstr '%*s' "$dots" ''
+    dotstr=${dotstr// /·}
+    printf '       %s%s%s  %s %s %s%-10s%s\n' \
+      "$color" "$mark" "$c0" "$label" "$dotstr" "$color" "$status" "$c0" >&5
+  done
+  if [ "${#_UI_FINAL_ATTENTION[@]}" -gt 0 ]; then
+    printf '\n       %sNEEDS ATTENTION%s\n' "$cr" "$c0" >&5
+    for entry in "${_UI_FINAL_ATTENTION[@]}"; do
+      label=${entry%%|*}
+      local retry=''
+      case "$entry" in *'|'*) retry=${entry#*|} ;; esac
+      printf '       %s✗%s  %s\n' "$cr" "$c0" "$label" >&5
+      [ -n "$retry" ] && printf '          %sRetry: %s%s\n' "$cd" "$retry" "$c0" >&5
+    done
+  fi
+  local elapsed=$((EPOCHSECONDS - _UI_STARTED))
+  local mins=$((elapsed / 60)) secs=$((elapsed % 60))
+  local logname="${_FED_LOG:-}"
+  logname="${logname##*/}"
+  if [ "${#logname}" -gt 58 ]; then logname="…${logname: -57}"; fi
+  printf '\n       %s─────────────────────────────────────────────────────%s\n' "$cd" "$c0" >&5
+  printf '       %sElapsed%s   %dm %02ds\n' "$cd" "$c0" "$mins" "$secs" >&5
+  printf '       %sLog saved in your Home folder%s\n' "$cd" "$c0" >&5
+  printf '       %s%s%s\n' "$cw" "$logname" "$c0" >&5
+  printf '\n       %sYour desktop, reimagined.%s\n' "$cw" "$c0" >&5
+  printf '       %sMade by Eprahemi%s\n' "$cd" "$c0" >&5
+}
+_ui_finish_compact() {
+  local issues="$1" cols="$2"
+  local cg=$'\033[1;32m' co=$'\033[38;5;208m' cr=$'\033[1;31m'
+  local cw=$'\033[1;37m' cd=$'\033[90m' c0=$'\033[0m'
+  local entry group label state mark color status cur_group=''
+  printf '  %sFedora MacTahoe - Eprahemi Edition%s\n' "$cw" "$c0" >&5
+  if [ "$issues" -eq 1 ]; then
+    printf '  %sFinished with issues%s\n\n' "$co" "$c0" >&5
+  else
+    printf '  %sInstallation complete%s\n\n' "$cg" "$c0" >&5
+  fi
+  for entry in "${_UI_FINAL_TASKS[@]}"; do
+    group=${entry%%|*}
+    label=${entry#*|}; label=${label%|*}
+    state=${entry##*|}
+    case "$state" in
+      ok) mark='✓'; color="$cg"; status='completed' ;;
+      skipped) mark='–'; color="$co"; status='skipped' ;;
+      failed) mark='✗'; color="$cr"; status='failed' ;;
+      *) mark='○'; color="$cd"; status='not run' ;;
+    esac
+    if [ "$group" != "$cur_group" ]; then
+      [ -z "$cur_group" ] || printf '\n' >&5
+      cur_group="$group"
+      printf '  %s%s%s\n' "$cw" "$group" "$c0" >&5
+    fi
+    printf '  %s%s%s  %s (%s)\n' "$color" "$mark" "$c0" "$label" "$status" >&5
+  done
+  if [ "${#_UI_FINAL_ATTENTION[@]}" -gt 0 ]; then
+    printf '\n  %sNeeds attention%s\n' "$cr" "$c0" >&5
+    for entry in "${_UI_FINAL_ATTENTION[@]}"; do
+      label=${entry%%|*}
+      local retry=''
+      case "$entry" in *'|'*) retry=${entry#*|} ;; esac
+      printf '  %s✗%s  %s\n' "$cr" "$c0" "$label" >&5
+      [ -n "$retry" ] && printf '     %sRetry: %s%s\n' "$cd" "$retry" "$c0" >&5
+    done
+  fi
+  local elapsed=$((EPOCHSECONDS - _UI_STARTED))
+  printf '\n  %sElapsed %dm %02ds%s\n' "$cd" "$((elapsed / 60))" "$((elapsed % 60))" "$c0" >&5
+  printf '  %sMade by Eprahemi%s\n' "$cd" "$c0" >&5
+}
 _ui_finish() {
   if [ "${_UI_ACTIVE:-0}" = 1 ]; then
     _ui_cleanup
-    local result_color='1;32'
-    case "$1" in *ISSUES*|*issues*|*stopped*|*Stopped*|*failed*) result_color='1;33' ;; esac
-    printf '\n\033[1;36m Fedora MacTahoe - Eprahemi Edition\033[0m\n Your desktop, reimagined.\n\033[%sm %s\033[0m\n' "$result_color" "$1" >&5
-    # Routine activity belongs in the transcript, not a second completion dump.
-    # Failed tasks and their recovery commands are retained separately below.
-    if [ -n "${_UI_RESULT_DETAILS:-}" ]; then printf '%s\n' "$_UI_RESULT_DETAILS" >&5; fi
-    local warning
-    for warning in "${_UI_WARNINGS[@]}"; do printf '\033[1;33m Warning: %s\033[0m\n' "$warning" >&5; done
-    printf '\033[90m Made by Eprahemi\033[0m\n' >&5
+    local rows cols issues=0
+    read -r rows cols < <(stty size < /dev/tty 2>/dev/null) || cols=80
+    [ "${cols:-0}" -ge 4 ] || cols=4
+    case "$1" in *ISSUES*|*issues*|*stopped*|*Stopped*|*failed*) issues=1 ;; esac
+    # A trap-rendered dashboard (abort/failure before finalize) still reports the
+    # live checklist totals instead of a misleading 0/0/0.
+    if [ "${#_UI_FINAL_TASKS[@]}" -eq 0 ] && [ "${#_UI_STEP_STATES[@]}" -gt 0 ]; then
+      local _state
+      _UI_FINAL_COMPLETED=0 _UI_FINAL_SKIPPED=0 _UI_FINAL_FAILED=0
+      for _state in "${_UI_STEP_STATES[@]}"; do
+        case "$_state" in
+          ok) _UI_FINAL_COMPLETED=$((_UI_FINAL_COMPLETED + 1)) ;;
+          skipped) _UI_FINAL_SKIPPED=$((_UI_FINAL_SKIPPED + 1)) ;;
+          failed) _UI_FINAL_FAILED=$((_UI_FINAL_FAILED + 1)) ;;
+        esac
+      done
+    fi
+    if [ "$cols" -ge 68 ]; then
+      _ui_finish_dashboard "$issues" "$cols"
+    else
+      _ui_finish_compact "$issues" "$cols"
+    fi
     _UI_FINISHED=1
   fi
 }
+
 _ui_auth() {
   # sudo owns authentication and hidden input. Never read passwords ourselves,
   # never enable pwfeedback, never log authentication output or keystrokes.
@@ -291,11 +542,11 @@ _net_download() {
       total=$(awk '/^HTTP\// {n=0} tolower($1)=="content-length:" {gsub("\r", "", $2); n=$2} END {print n+0}' "$headers")
       speed=$(awk -v b="$bytes" -v p="$previous" -v t="$now" -v s="$started" 'BEGIN {if(t>s && b>=p) printf "%.2f",(b-p)/(t-s)/1048576; else print "0.00"}')
       if [ "$total" -gt 0 ] && [ "$bytes" -le "$total" ]; then
-        last="Download $bytes / $total bytes ($((bytes * 100 / total))%) - $speed MiB/s"
+        last="$bytes of $total bytes · $speed MiB/s"
       else
-        last="Download $bytes bytes - $speed MiB/s"
+        last="$bytes bytes · $speed MiB/s"
       fi
-      _ui_download_progress "$last" "$bytes" "$total"
+      _ui_download_progress 'Downloading installation files' "$bytes" "$total" "$last"
       previous=$bytes started=$now
       sleep 0.25
     done
@@ -303,7 +554,7 @@ _net_download() {
     _FED_TRANSFER_PID=''
     if [ "$rc" -eq 0 ]; then
       bytes=$(stat -c %s "$dest" 2>/dev/null || echo 0)
-      _ui_download_progress "Download complete: $bytes bytes" "$bytes" "$bytes"
+      _ui_download_progress 'Downloading installation files' "$bytes" "$bytes" "Complete · $bytes bytes"
       rm -f "$headers"
       return 0
     fi
@@ -660,10 +911,11 @@ while kill -0 "$_clone_pid" 2>/dev/null; do
   _transfer=$(tr '\r' '\n' < "$_clone_log" | grep 'Receiving objects:' | tail -1 | sed -E 's/^.*Receiving objects: */Download objects: /; s/, done\.$//' || true)
   if [ -n "$_transfer" ] && [ "$_transfer" != "$_transfer_last" ]; then
     _transfer_pct=$(printf '%s\n' "$_transfer" | sed -nE 's/^Download objects: *([0-9]+)%.*/\1/p')
+    _transfer_detail=$(printf '%s\n' "$_transfer" | sed -nE 's/^Download objects: *[0-9]+% *\([^)]*\), *(.*)$/\1/p' | sed 's/ | / · /')
     if [ -n "$_transfer_pct" ]; then
-      _ui_download_progress "$_transfer" "$_transfer_pct" 100
+      _ui_download_progress 'Downloading installation files' "$_transfer_pct" 100 "$_transfer_detail"
     else
-      _ui_task "$_transfer"
+      _ui_task 'Downloading installation files'
     fi
     _transfer_last="$_transfer"
   fi

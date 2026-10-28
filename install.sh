@@ -74,7 +74,10 @@ _fed_log_finalize() {
     command -v gio &>/dev/null && [ -f "${_FED_ICON_PATH:-}" ] && \
       gio set "$_FED_LOG" metadata::custom-icon "file://$_FED_ICON_PATH" 2>/dev/null || true
   fi
-  echo -e "  ${CYAN}Log saved: ${_FED_LOG}${NC}"
+  # The completion dashboard already shows the log name. Do not print it twice.
+  if [ "${_UI_FINISHED:-0}" != 1 ]; then
+    echo -e "  ${CYAN}Log saved: ${_FED_LOG}${NC}"
+  fi
 }
 trap _fed_log_finalize EXIT
 
@@ -678,6 +681,11 @@ _hosted_assets_status() {
 }
 
 TOTAL_STEPS=29
+if [ -z "${UPDATE_STEPS:-}" ]; then
+  _UI_STEP_IDS=(preflight remove_ptyxis remove_gnome_weather install_rpmfusion install_nvidia install_rpm_packages install_browsers install_flatpaks install_mactahoe_theme install_font apply_desktop_entries ensure_celluloid_default configure_nautilus_defaults apply_configs apply_dconf optimize_system_resources apply_wallpapers install_custom_avatars setup_gdm setup_firefox_theme setup_flatpak_theme install_sounds install_updater install_ktheme_watcher setup_terminal setup_shell install_extensions download_optional_videos finalize)
+  _UI_STEP_LABELS=('Preflight' 'Old terminal' 'GNOME Weather' 'RPM Fusion and codecs' 'NVIDIA drivers' 'RPM packages' 'Browsers' 'Flatpak apps' 'GTK and icon themes' 'SF Pro font' 'Desktop entries' 'Celluloid defaults' 'Nautilus defaults' 'Configuration files' 'GNOME settings' 'System resources' 'Wallpapers' 'Custom avatars' 'Login theme' 'Firefox theme' 'Flatpak GTK runtime' 'Big Sur sounds' 'Update notifier' 'Kitty theme watcher' 'Kitty terminal' 'Fish shell' 'GNOME extensions' 'Optional videos' 'Cleanup and finalize')
+  for _sid in "${_UI_STEP_IDS[@]}"; do _UI_STEP_STATES+=(waiting); _UI_STEP_REASONS+=(''); done
+fi
 if [ -z "${UPDATE_STEPS:-}" ]; then _ui_progress 0 "$TOTAL_STEPS"; fi
 STEP=0
 
@@ -982,6 +990,8 @@ except Exception:
 _run_step() {
   local step_id="$1"
   local func_name="$2"
+  _VISUAL_SKIP_REASON=''
+  _ui_step "$step_id" running
   # Safety checks must run even when the saved preflight step is current.
   if [ "$step_id" = "preflight" ] || _step_should_run "$step_id"; then
     # A failing step must never take the rest of the run down with it.
@@ -990,6 +1000,7 @@ _run_step() {
     local _rc=0
     "$func_name" || _rc=$?
     if [ -s "${_FED_NET_STOP:-/dev/null}" ]; then
+      _ui_step "$step_id" failed 'interrupted; retry this task'
       _step_failed "$step_id" 130 stopped
       _clear_step_state "$step_id" || warn "Could not clear interrupted step state: $step_id"
       _UI_COMPLETION='Stopped safely. Completed work is kept; retry the interrupted task later.'
@@ -1000,6 +1011,7 @@ _run_step() {
       _ui_progress "$_UI_DONE" "$TOTAL_STEPS"
     fi
     if [ "$_rc" -ne 0 ]; then
+      _ui_step "$step_id" failed "exit $_rc; retry: $(_step_fix "$step_id")"
       # Preflight is the one step that must stay fatal: if the machine is
       # not a supported target there is nothing sensible to continue with.
       if [ "$step_id" = "preflight" ]; then
@@ -1015,7 +1027,13 @@ _run_step() {
     fi
     _update_step_state "$step_id"
     _step_record "$step_id" "ok" "${CURRENT_STEP_LABEL:-$step_id}"
+    if [ -n "$_VISUAL_SKIP_REASON" ]; then
+      _ui_step "$step_id" skipped "$_VISUAL_SKIP_REASON"
+    else
+      _ui_step "$step_id" ok
+    fi
   else
+    _ui_step "$step_id" skipped 'up to date (not rechecked)'
     if [ "${_UI_ACTIVE:-0}" = 1 ]; then
       _UI_DONE=$((_UI_DONE + 1))
       _ui_progress "$_UI_DONE" "$TOTAL_STEPS"
@@ -1885,8 +1903,10 @@ remove_ptyxis() {
   if [ "${INSTALL_REMOVE_OLD_TERMINAL:-false}" != "true" ]; then
     if rpm -q ptyxis &>/dev/null || command -v ptyxis &>/dev/null || flatpak info org.gnome.Ptyxis &>/dev/null; then
       ok "Old terminal kept — you declined removal"
+      _VISUAL_SKIP_REASON='removal declined'
     else
       ok "Old terminal not installed — nothing to remove"
+      _VISUAL_SKIP_REASON='not installed'
     fi
     return 0
   fi
@@ -1954,6 +1974,7 @@ remove_gnome_weather() {
     ok "gnome-weather removed"
   else
     ok "gnome-weather not installed — nothing to remove"
+    _VISUAL_SKIP_REASON='not installed'
   fi
   return 0
 }
@@ -2159,6 +2180,7 @@ n17="  Press any key to continue, or Ctrl+C to update first"
     rm -f /tmp/_nvidia-dnf.log 2>/dev/null || true
   else
     warn "No NVIDIA gear found — moving on"
+    _VISUAL_SKIP_REASON='no NVIDIA GPU detected'
   fi
 }
 
@@ -4019,6 +4041,9 @@ install_custom_avatars() {
     warn "No custom avatars were installed"
     return 1
   fi
+  if [ "$_avatar_total" -eq 0 ] && [ "$_avatar_skipped" -ne 0 ]; then
+    _VISUAL_SKIP_REASON='hosted asset unavailable; skipped by request'
+  fi
   return 0
 }
 
@@ -4081,6 +4106,7 @@ download_optional_videos() {
   # Keep progress accounting, but do not announce an unrequested extra.
   if [ "${INSTALL_BILLIE_VIDEOS:-false}" != "true" ]; then
     next_step "Download Billie & Jinx + Gintama Videos" >/dev/null
+    _VISUAL_SKIP_REASON='not requested'
     return 0
   fi
   next_step "Download Billie & Jinx + Gintama Videos"
@@ -4096,6 +4122,7 @@ download_optional_videos() {
     local zip_tmp="$_video_tmp/billie.zip"
     if [ "${SKIP_VIDEOS:-false}" = "true" ]; then
       warn "Skipping the video edits — the hosted link is dead"
+      _VISUAL_SKIP_REASON='hosted asset unavailable; skipped by request'
     elif _net_download "$DOWNLOADS_URL" "$zip_tmp" --max-time 90 -b "download_warning=1"; then
       local _extracted=false
       if is_valid_zip "$zip_tmp"; then
@@ -4265,6 +4292,7 @@ setup_gdm() {
   # User said "n" to the GDM prompt — skip everything
   if [ "${INSTALL_LOGIN_WALLPAPER:-true}" != "true" ]; then
     ok "GDM login screen skipped (user opted out)"
+    _VISUAL_SKIP_REASON='not requested'
     return
   fi
 
@@ -4367,6 +4395,40 @@ setup_gdm() {
   return 0
 }
 
+# Match executable identity, not command-line substrings or another user's
+# process names. A windowless DBus/background Firefox still owns its profile.
+# pidfds pin the selected process across the consent-to-signal race.
+_firefox_processes() {
+  python3 - "${1:-list}" <<'PY'
+import os, pathlib, signal, sys
+root = pathlib.Path('/proc')
+for entry in root.iterdir():
+    if not entry.name.isdecimal():
+        continue
+    fd = None
+    try:
+        if entry.stat().st_uid != os.getuid():
+            continue
+        if sys.argv[1] == 'terminate':
+            fd = os.pidfd_open(int(entry.name))
+        exe = os.readlink(entry / 'exe').removesuffix(' (deleted)')
+        if pathlib.Path(exe).name not in ('firefox', 'firefox-bin'):
+            continue
+        state = (entry / 'stat').read_text().rsplit(')', 1)[1].split()[0]
+        if state in ('Z', 'X'):
+            continue
+        if fd is not None:
+            signal.pidfd_send_signal(fd, signal.SIGTERM)
+        else:
+            print(entry.name)
+    except (OSError, ValueError):
+        continue
+    finally:
+        if fd is not None:
+            os.close(fd)
+PY
+}
+
 setup_firefox_theme() {
   next_step "Firefox macOS Theme (userChrome.css)"
   FIREFOX_THEME_FAILED=0
@@ -4382,25 +4444,31 @@ setup_firefox_theme() {
   fi
 
   # ── Ensure Firefox is closed before theming ──
-  if pgrep -x firefox &>/dev/null || pgrep -x firefox-bin &>/dev/null; then
+  if [ -n "$(_firefox_processes)" ]; then
     echo ""
     echo -e "  ${YELLOW}╔══════════════════════════════════════════════════════════════╗${NC}"
     echo -e "  ${YELLOW}║${NC}        ${BOLD}Close Firefox for macOS theming${NC}                       ${YELLOW}║${NC}"
     echo -e "  ${YELLOW}╠══════════════════════════════════════════════════════════════╣${NC}"
     echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
-    echo -e "  ${YELLOW}║${NC}  Firefox is open — theme can't apply while it's running.     ${YELLOW}║${NC}"
+    echo -e "  ${YELLOW}║${NC}  Firefox is running (possibly without a browser window).     ${YELLOW}║${NC}"
     echo -e "  ${YELLOW}║${NC}  Closing Firefox requires your permission.                   ${YELLOW}║${NC}"
     echo -e "  ${YELLOW}║${NC}  Save your work if needed.                                   ${YELLOW}║${NC}"
     echo -e "  ${YELLOW}║${NC}                                                              ${YELLOW}║${NC}"
     echo -e "  ${YELLOW}╚══════════════════════════════════════════════════════════════╝${NC}"
 
     local reply="" _ff_tty
+    # Source fetching and rendering can take time. Recheck before consent.
+    if [ -z "$(_firefox_processes)" ]; then
+      "$repo/tweaks.sh" -f 2>&1 || { FIREFOX_THEME_FAILED=1; return 1; }
+      return 0
+    fi
     if ! { exec {_ff_tty}<>/dev/tty; } 2>/dev/null; then
       warn "No terminal available for consent — skipping Firefox theming"
+      _VISUAL_SKIP_REASON='no terminal for close consent'
       return 0
     fi
     if [ "${_UI_ACTIVE:-0}" = 1 ]; then
-      _ui_question 'Close Firefox for theming?' 'Firefox is open. Save your work. Only Yes permits closing it.' 'Close Firefox and apply its theme? [y/N]:'
+      _ui_question 'Close Firefox for theming?' 'Your Firefox process is running, possibly in the background without a window. Save your work. Only Yes permits closing it.' 'Close Firefox and apply its theme? [y/N]:'
     fi
     if [ "${_UI_ACTIVE:-0}" != 1 ]; then
       printf '  Save your work. Close Firefox and apply its theme? [y/N]: ' >&"$_ff_tty"
@@ -4409,18 +4477,19 @@ setup_firefox_theme() {
       exec {_ff_tty}>&-
       if [ "${_UI_ACTIVE:-0}" = 1 ]; then _ui_resume; fi
       warn "No consent received — skipping Firefox theming"
+      _VISUAL_SKIP_REASON='no close consent received'
       return 0
     fi
     exec {_ff_tty}>&-
     if [ "${_UI_ACTIVE:-0}" = 1 ]; then _ui_resume; fi
     case "${reply,,}" in
-      y|yes) killall firefox firefox-bin 2>/dev/null || true ;;
-      *) log "Firefox theming skipped; Firefox left open"; return 0 ;;
+      y|yes) _firefox_processes terminate ;;
+      *) _VISUAL_SKIP_REASON='close consent declined'; log "Firefox theming skipped; Firefox left running"; return 0 ;;
     esac
 
     # Wait up to 10 seconds for Firefox to fully exit
     local _ff_wait=0
-    while pgrep -x firefox &>/dev/null || pgrep -x firefox-bin &>/dev/null; do
+    while [ -n "$(_firefox_processes)" ]; do
       if [ "$_ff_wait" -ge 10 ]; then
         warn "Firefox did not close within 10 seconds — theme not applied; close it manually and retry"
         FIREFOX_THEME_FAILED=1
@@ -5413,12 +5482,13 @@ except Exception:
   # summary counts all steps. _run_step replaces this with the real
   # outcome as soon as this function returns.
   _step_record "finalize" "ok" "Cleanup & Reboot"
+  _ui_step finalize ok
 
   _installation_completion
 }
 
 _installation_completion() {
-  local completed=0 skipped=0 failed=0 value i rc=0 sid label status
+  local completed=0 skipped=0 failed=0 value i rc=0 sid label status group state
   for value in "${STEP_RESULT_VALS[@]}"; do
     case "$value" in
       ok) completed=$((completed + 1)) ;;
@@ -5426,42 +5496,67 @@ _installation_completion() {
       failed) failed=$((failed + 1)) ;;
     esac
   done
+  # Display-only deliberate skips do not alter saved successful step versions
+  # or the retry contract. Count that separate model when present.
+  if [ "${#_UI_STEP_IDS[@]}" -gt 0 ]; then
+    completed=0 skipped=0 failed=0
+    for value in "${_UI_STEP_STATES[@]}"; do
+      case "$value" in
+        ok) completed=$((completed+1));; skipped) skipped=$((skipped+1));;
+        failed) failed=$((failed+1));;
+      esac
+    done
+  fi
+  _UI_FINAL_COMPLETED=$completed
+  _UI_FINAL_SKIPPED=$skipped
+  _UI_FINAL_FAILED=$failed
   _UI_COMPLETION='INSTALLATION COMPLETE'
   if [ "$failed" -gt 0 ]; then _UI_COMPLETION='FINISHED WITH ISSUES'; fi
   _UI_RESULT_DETAILS=" $completed completed  /  $skipped skipped  /  $failed failed"$'\n'
   _UI_RESULT_DETAILS+=" Elapsed $((EPOCHSECONDS - _UI_STARTED))s"$'\n'
+  _UI_FINAL_TASKS=()
+  _UI_FINAL_ATTENTION=()
   # Report task outcomes, not unverified claims that every asset is active.
-  for sid in install_mactahoe_theme install_font setup_terminal setup_shell install_sounds setup_gdm setup_flatpak_theme install_updater; do
+  # Grouped in display order so the completion dashboard never repeats a header.
+  for sid in install_mactahoe_theme install_font install_sounds setup_terminal setup_shell setup_gdm setup_flatpak_theme install_updater; do
     status=$(_step_status "$sid")
     case "$sid" in
-      install_mactahoe_theme) label='GTK and icon theme task' ;;
-      install_font) label='SF Pro font task' ;;
-      setup_terminal) label='Kitty default terminal task' ;;
-      setup_shell) label='Fish default shell task' ;;
-      install_sounds) label='Big Sur sounds task' ;;
-      setup_gdm) label='Login theme task' ;;
-      setup_flatpak_theme) label='Flatpak GTK runtime task' ;;
-      install_updater) label='Update notifier task (every 2 hours)' ;;
+      install_mactahoe_theme) label='GTK and icon theme'; group='APPEARANCE' ;;
+      install_font) label='SF Pro font'; group='APPEARANCE' ;;
+      install_sounds) label='Big Sur sounds'; group='APPEARANCE' ;;
+      setup_terminal) label='Kitty default terminal'; group='TERMINAL & SHELL' ;;
+      setup_shell) label='Fish default shell'; group='TERMINAL & SHELL' ;;
+      setup_gdm) label='Login theme'; group='SYSTEM' ;;
+      setup_flatpak_theme) label='Flatpak GTK runtime'; group='SYSTEM' ;;
+      install_updater) label='Update notifier (every 2 hours)'; group='SYSTEM' ;;
     esac
     # A deliberate login opt-out is not an installed outcome.
     if [ "$sid" = setup_gdm ] && [ "${INSTALL_LOGIN_WALLPAPER:-false}" != true ]; then status=declined; fi
     case "$status" in
-      ok) status=completed ;;
-      skipped) status='unchanged (not rechecked)' ;;
-      failed) status='needs attention' ;;
-      declined) status='not requested' ;;
-      *) status='not run' ;;
+      ok) status=completed; state=ok ;;
+      skipped) status='unchanged (not rechecked)'; state=skipped ;;
+      failed) status='needs attention'; state=failed ;;
+      declined) status='not requested'; state=skipped ;;
+      *) status='not run'; state=notrun ;;
     esac
     _UI_RESULT_DETAILS+=" $label: $status"$'\n'
+    _UI_FINAL_TASKS+=("$group|$label|$state")
+    if [ "$state" = failed ]; then
+      _UI_FINAL_ATTENTION+=("$label|$(_step_fix "$sid")")
+    fi
   done
   for ((i=0; i<MISSING_COUNT; i++)); do
     _UI_RESULT_DETAILS+=" ${MISSING_LABEL[$i]} - retry: ${MISSING_FIX[$i]}"$'\n'
+    _UI_FINAL_ATTENTION+=("${MISSING_LABEL[$i]}|${MISSING_FIX[$i]}")
   done
   _UI_QUESTION_BODY="$_UI_COMPLETION. $completed completed, $skipped skipped, $failed failed. Restart to load the changes that completed."
   # Plain report is part of the shared transcript too, not just the renderer.
   printf '\nYour desktop, reimagined.\n%s\n%s\nMade by Eprahemi\n' "$_UI_COMPLETION" "$_UI_RESULT_DETAILS"
+  # Render the completion dashboard before the single restart question so the
+  # report and the prompt appear together, and the dashboard is never lost to
+  # a reboot. _ui_finish clears _UI_ACTIVE, so the exit trap will not repeat it.
   if [ "${_UI_ACTIVE:-0}" = 1 ]; then
-    _ui_task "$_UI_COMPLETION"
+    _ui_finish "$_UI_COMPLETION"
   fi
   # The only final restart decision. No/EOF/timeout all finish normally.
   confirm_final 'Restart now? [y/N]: ' N || rc=$?

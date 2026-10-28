@@ -1,9 +1,16 @@
 {
- "latest_version": "3.7.20",
- "bootstrap_sha256": "e13906192f49d287fa2fc7dfc1dc48332c1fa5a414ad4c3a37f46dae514d2c81",
- "install_sha256": "8b772ea6d75b69860a45529df3545bc77d2e3ff9d8a9dd5975775a3f830c23c7",
+ "latest_version": "3.7.21",
+ "bootstrap_sha256": "7f2aa7b361d5a0ce1ef034c5eb018c0fe6fc17bc276dfa72ac3a552287692dae",
+ "install_sha256": "0075892a6d7dd106f3d06c85eefdfd3aa27129de21eac22b359b01c3f6699392",
  "update_sha256": "c54c276e903c7fe4c2b7a2aceb40449fc7acf4c19d69456d6858650b3e17e3c3",
  "changelog": [
+  {
+   "version": "3.7.21",
+   "changes": [
+    "Redesign the completion screen around the installer's Fedora figlet mark: MACTAHOE · EPRAHEMI header box, colored 29-step completed/skipped/failed badges, grouped dotted task rows, NEEDS ATTENTION retry commands, formatted elapsed time and the log filename. Routine warnings stay in the log; only real failures are surfaced.",
+    "Send downloader output to the log and paint the live progress bar from measured byte counts and transfer speed, so raw Download objects lines no longer overwrite the interface."
+   ]
+  },
   {
    "version": "3.7.20",
    "changes": [
