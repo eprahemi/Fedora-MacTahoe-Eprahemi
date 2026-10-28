@@ -38,17 +38,26 @@ fi
 
 # Both entry points share one presentation library and keep the original fds.
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/bootstrap.sh" --ui-library
+_FED_NET_STOP=$(mktemp "${TMPDIR:-/tmp}/mactahoe-network-stop.XXXXXXXX") || {
+  echo 'Cannot create the network recovery marker; no installation work was started.' >&2
+  exit 1
+}
 _ui_init
 set -euo pipefail
 
 # ── Log finalization (runs on normal exit, crash, or Ctrl+C) ──
 _fed_log_finalize() {
   local _exit_rc=$?
+  if [ -n "${_FED_TRANSFER_PID:-}" ]; then
+    kill "$_FED_TRANSFER_PID" 2>/dev/null || true
+    wait "$_FED_TRANSFER_PID" 2>/dev/null || true
+  fi
+  rm -f "${_FED_NET_STOP:-}" 2>/dev/null || true
   if [ "${_UI_ACTIVE:-0}" = 1 ]; then
     if [ "$_exit_rc" -eq 0 ]; then
-      _ui_finish "${_UI_COMPLETION:-Selected tasks finished. Review any notices below.}"
+      _ui_finish "${_UI_COMPLETION:-Selected tasks finished.}"
     else
-      _ui_finish 'Stopped or finished with issues. See the full log for details.'
+      _ui_finish "${_UI_COMPLETION:-Stopped or finished with issues. See the full log for details.}"
     fi
   fi
   exec 1>&5 2>&6 2>/dev/null || true
@@ -58,14 +67,14 @@ _fed_log_finalize() {
   # Interrupted runs retain the transcript too; completed work is not erased.
   if [ -n "${_FED_TEE_PID:-}" ]; then wait "$_FED_TEE_PID" 2>/dev/null || true; fi
   # Strip ANSI escape sequences from log file (post-process, no pipe race)
-  if [ -n "${_FED_LOG:-}" ] && [ -f "$_FED_LOG" ]; then
+  if [ "${_FED_LOG_PARENT:-0}" != 1 ] && [ -n "${_FED_LOG:-}" ] && [ -f "$_FED_LOG" ]; then
     LC_ALL=C sed -i 's/\x1b\[[0-9;]*[a-zA-Z]//g' "$_FED_LOG" 2>/dev/null || true
     LC_ALL=C sed -i 's/\x1b\][0-9;]*[^\x07\x1b]*[\x07\x1b]//g' "$_FED_LOG" 2>/dev/null || true
     # Set custom icon for this log file
     command -v gio &>/dev/null && [ -f "${_FED_ICON_PATH:-}" ] && \
       gio set "$_FED_LOG" metadata::custom-icon "file://$_FED_ICON_PATH" 2>/dev/null || true
   fi
-  echo -e "  ${GREEN}Log saved: ${_FED_LOG}${NC}"
+  echo -e "  ${CYAN}Log saved: ${_FED_LOG}${NC}"
 }
 trap _fed_log_finalize EXIT
 
@@ -284,11 +293,11 @@ log()   { echo -e "  ${CYAN}${DIM}┊${NC} ${CYAN}$(date +%H:%M:%S)${NC} ${DIM}�
 ok()    { echo -e "  ${GREEN}  ┊ ✓ ${NC}  $1"; }
 warn()  {
   echo -e "  ${YELLOW}  ┊ ⚠ ${NC}  $1"
-  if [ "${_UI_ACTIVE:-0}" = 1 ]; then _ui_notice "$1"; fi
+  if [ "${_UI_ACTIVE:-0}" = 1 ]; then _UI_WARNINGS+=("$1"); _ui_notice "$1"; fi
 }
 fail()  {
   echo -e "  ${RED}  ┊ ✗ ${NC}  $1"
-  if [ "${_UI_ACTIVE:-0}" = 1 ]; then _ui_notice "$1"; fi
+  if [ "${_UI_ACTIVE:-0}" = 1 ]; then _ui_notice "$1" '1;31'; fi
   exit 1
 }
 
@@ -397,10 +406,18 @@ _step_failed() {
     STEP_FAILED_COUNT=$((STEP_FAILED_COUNT + 1))
     _step_record "$step_id" "failed" "$label"
     echo -e "  ${RED}  ┊ ✗ ${NC}  ${BOLD}${RED}Step failed${NC} ${DIM}(${step_id}, exit ${rc})${NC}"
-    echo -e "  ${RED}  ┊   ${NC}  ${DIM}Continuing with the next step — this one is retried on the next run.${NC}"
+    if [ "${3:-}" = stopped ]; then
+      echo 'Stopped at a safe task boundary. Completed work and the session log are kept.'
+    else
+      echo -e "  ${RED}  ┊   ${NC}  ${DIM}Continuing with the next step — this one is retried on the next run.${NC}"
+    fi
     _note_missing "$label" "$(_step_fix "$step_id")"
     if [ "${_UI_ACTIVE:-0}" = 1 ]; then
-      _ui_notice "$label could not complete; remaining steps will continue."
+      if [ "${3:-}" = stopped ]; then
+        _ui_notice "$label was interrupted. Stopping safely; completed work is kept." '1;33'
+      else
+        _ui_notice "$label could not complete. Continuing with the remaining steps." '1;31'
+      fi
       _UI_RESULT_DETAILS+="$label - retry: $(_step_fix "$step_id")"$'\n'
     fi
 }
@@ -661,6 +678,7 @@ _hosted_assets_status() {
 }
 
 TOTAL_STEPS=29
+if [ -z "${UPDATE_STEPS:-}" ]; then _ui_progress 0 "$TOTAL_STEPS"; fi
 STEP=0
 
 # ── Incremental update state ──────────────────────────────
@@ -971,6 +989,12 @@ _run_step() {
     # step's own failure is captured, recorded and reported later.
     local _rc=0
     "$func_name" || _rc=$?
+    if [ -s "${_FED_NET_STOP:-/dev/null}" ]; then
+      _step_failed "$step_id" 130 stopped
+      _clear_step_state "$step_id" || warn "Could not clear interrupted step state: $step_id"
+      _UI_COMPLETION='Stopped safely. Completed work is kept; retry the interrupted task later.'
+      exit 130
+    fi
     if [ "${_UI_ACTIVE:-0}" = 1 ]; then
       _UI_DONE=$((_UI_DONE + 1))
       _ui_progress "$_UI_DONE" "$TOTAL_STEPS"
@@ -1564,6 +1588,7 @@ optimize_system_resources() {
 
 # Read-only reachability check, not a guarantee that every later host is available.
 _preflight_https() {
+  _PREFLIGHT_RETRY_URL=''
   command -v curl >/dev/null 2>&1 || {
     warn "HTTPS preflight requires curl. Install curl (sudo dnf install curl), then retry."
     return 1
@@ -1572,7 +1597,7 @@ _preflight_https() {
   # (a captive portal or proxy error page is not a successful project download).
   local ref=6529c3695cabf05543cc94712806a3c90b9c445a
   local expected=51850cfb13b3853378f602afbf9d5bff3d7994e8c26a0bdbf883f65e48e22a0d
-  local url digest
+  local url digest probe_rc transport_only=1
   for url in \
     "https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/$ref/updates.json" \
     "https://github.com/eprahemi/Fedora-MacTahoe-Eprahemi/raw/$ref/updates.json"; do
@@ -1586,11 +1611,15 @@ _preflight_https() {
         return 0
       fi
       warn "Project HTTPS probe returned unexpected content: $url"
+      transport_only=0
     else
+      probe_rc=$?
+      case "$probe_rc" in 5|6|7|18|28|52|55|56) : ;; *) transport_only=0 ;; esac
       warn "Project HTTPS probe failed: $url"
     fi
   done
   warn "Neither project HTTPS download could be verified. Check DNS, proxy/VPN, captive-portal login, system clock and CA certificates, or retry later."
+  if [ "$transport_only" -eq 1 ]; then _PREFLIGHT_RETRY_URL="$url"; fi
   return 1
 }
 
@@ -1828,9 +1857,13 @@ gnome_cmd3="    sudo reboot"
   ok "Running as normal user"
 
   # ── Network check ──
-  if ! _preflight_https; then
-    fail "Project HTTPS preflight failed; installation has not started."
-  fi
+  while ! _preflight_https; do
+    if [ -n "${_PREFLIGHT_RETRY_URL:-}" ]; then
+      _net_recover "$_PREFLIGHT_RETRY_URL" || return 130
+    else
+      fail "Project HTTPS preflight failed; installation has not started."
+    fi
+  done
   ok "Project HTTPS download verified"
 
   # ── Sudo check ──
@@ -3629,7 +3662,7 @@ apply_wallpapers() {
 
     if [ "${SKIP_WALLPAPER_18:-false}" = "true" ]; then
       warn "Skipping the extra wallpaper pack — its hosted link is dead"
-    elif curl -L --max-time 90 -b "download_warning=1" "$WALLPAPER_18_URL" -o "$zip_tmp" 2>/dev/null; then
+    elif _net_download "$WALLPAPER_18_URL" "$zip_tmp" --max-time 90 -b "download_warning=1"; then
       if ! is_valid_zip "$zip_tmp"; then
         local mime
         mime=$(file --brief --mime-type "$zip_tmp" 2>/dev/null || echo "unknown")
@@ -3658,7 +3691,7 @@ apply_wallpapers() {
     mkdir -p "$extract_tmp"
     if [ "${SKIP_WALLPAPER_18_V2:-false}" = "true" ]; then
       warn "Skipping the extra wallpaper pack (v2) — its hosted link is dead"
-    elif curl -L --max-time 90 -b "download_warning=1" "$WALLPAPER_18_URL_V2" -o "$zip_tmp" 2>/dev/null; then
+    elif _net_download "$WALLPAPER_18_URL_V2" "$zip_tmp" --max-time 90 -b "download_warning=1"; then
       if ! is_valid_zip "$zip_tmp"; then
         local mime
         mime=$(file --brief --mime-type "$zip_tmp" 2>/dev/null || echo "unknown")
@@ -3939,7 +3972,7 @@ install_custom_avatars() {
     if [ "${SKIP_FACES_18:-false}" = "true" ]; then
       warn "Skipping the extra profile pictures — the hosted link is dead"
       _avatar_skipped=1
-    elif curl -L --max-time 90 -b "download_warning=1" "$FACES_18_URL" -o "$zip_tmp" 2>/dev/null; then
+    elif _net_download "$FACES_18_URL" "$zip_tmp" --max-time 90 -b "download_warning=1"; then
       if ! is_valid_zip "$zip_tmp"; then
         local mime
         mime=$(file --brief --mime-type "$zip_tmp" 2>/dev/null || echo "unknown")
@@ -4063,7 +4096,7 @@ download_optional_videos() {
     local zip_tmp="$_video_tmp/billie.zip"
     if [ "${SKIP_VIDEOS:-false}" = "true" ]; then
       warn "Skipping the video edits — the hosted link is dead"
-    elif curl -L --max-time 90 -b "download_warning=1" "$DOWNLOADS_URL" -o "$zip_tmp" 2>/dev/null; then
+    elif _net_download "$DOWNLOADS_URL" "$zip_tmp" --max-time 90 -b "download_warning=1"; then
       local _extracted=false
       if is_valid_zip "$zip_tmp"; then
         if _install_downloaded_videos "$zip_tmp" "$dl_dest"; then
@@ -4090,7 +4123,7 @@ download_optional_videos() {
       local gintama_tmp="$_video_tmp/gintama"
       if [ "${SKIP_GINTAMA:-false}" = "true" ]; then
         warn "Skipping the video edit (mp4) — the hosted link is dead"
-      elif curl -L --max-time 90 -b "download_warning=1" "$GINTAMA_URL" -o "$gintama_tmp" 2>/dev/null; then
+      elif _net_download "$GINTAMA_URL" "$gintama_tmp" --max-time 90 -b "download_warning=1"; then
         # Detect type: zip, mp4, or html
         local gintama_mime
         gintama_mime=$(file --brief --mime-type "$gintama_tmp" 2>/dev/null || echo "unknown")
@@ -5017,7 +5050,7 @@ install_extensions() {
       continue
     fi
     rm -f /tmp/ext-"$uuid".zip
-    if ! curl -sL --max-time 25 "https://extensions.gnome.org$dl_url" -o /tmp/ext-"$uuid".zip 2>/dev/null; then
+    if ! _net_download "https://extensions.gnome.org$dl_url" /tmp/ext-"$uuid".zip --max-time 25; then
       warn "Failed to download extension $uuid"
       ext_fail=$((ext_fail + 1))
       continue
@@ -5097,7 +5130,7 @@ install_extensions() {
   local wtp_version_try
   for wtp_version_try in $wtp_candidates; do
     local wtp_gh_url="https://github.com/eprahemi/window-title-pro-topbar/releases/download/v${wtp_version_try}/window-title-pro-v${wtp_version_try}.zip"
-    if curl -fsSL --max-time 40 "$wtp_gh_url" -o /tmp/window-title-pro.zip 2>/dev/null; then
+    if _net_download "$wtp_gh_url" /tmp/window-title-pro.zip --max-time 40; then
       if unzip -qo /tmp/window-title-pro.zip -d "$wtp_target" 2>/dev/null; then
         glib-compile-schemas "$wtp_target/schemas" 2>/dev/null || true
         wtp_installed=true
@@ -5138,7 +5171,7 @@ except:
 
     if [ -n "$wtp_dl_url" ]; then
       mkdir -p "$wtp_target"
-      if curl -sL --max-time 25 "https://extensions.gnome.org$wtp_dl_url" -o /tmp/window-title-pro.zip 2>/dev/null; then
+      if _net_download "https://extensions.gnome.org$wtp_dl_url" /tmp/window-title-pro.zip --max-time 25; then
         if unzip -qo /tmp/window-title-pro.zip -d "$wtp_target" 2>/dev/null; then
           glib-compile-schemas "$wtp_target/schemas" 2>/dev/null || true
           wtp_installed=true
@@ -5381,148 +5414,64 @@ except Exception:
   # outcome as soon as this function returns.
   _step_record "finalize" "ok" "Cleanup & Reboot"
 
-  __install_summary
+  _installation_completion
+}
 
+_installation_completion() {
+  local completed=0 skipped=0 failed=0 value i rc=0 sid label status
+  for value in "${STEP_RESULT_VALS[@]}"; do
+    case "$value" in
+      ok) completed=$((completed + 1)) ;;
+      skipped) skipped=$((skipped + 1)) ;;
+      failed) failed=$((failed + 1)) ;;
+    esac
+  done
+  _UI_COMPLETION='INSTALLATION COMPLETE'
+  if [ "$failed" -gt 0 ]; then _UI_COMPLETION='FINISHED WITH ISSUES'; fi
+  _UI_RESULT_DETAILS=" $completed completed  /  $skipped skipped  /  $failed failed"$'\n'
+  _UI_RESULT_DETAILS+=" Elapsed $((EPOCHSECONDS - _UI_STARTED))s"$'\n'
+  # Report task outcomes, not unverified claims that every asset is active.
+  for sid in install_mactahoe_theme install_font setup_terminal setup_shell install_sounds setup_gdm setup_flatpak_theme install_updater; do
+    status=$(_step_status "$sid")
+    case "$sid" in
+      install_mactahoe_theme) label='GTK and icon theme task' ;;
+      install_font) label='SF Pro font task' ;;
+      setup_terminal) label='Kitty default terminal task' ;;
+      setup_shell) label='Fish default shell task' ;;
+      install_sounds) label='Big Sur sounds task' ;;
+      setup_gdm) label='Login theme task' ;;
+      setup_flatpak_theme) label='Flatpak GTK runtime task' ;;
+      install_updater) label='Update notifier task (every 2 hours)' ;;
+    esac
+    # A deliberate login opt-out is not an installed outcome.
+    if [ "$sid" = setup_gdm ] && [ "${INSTALL_LOGIN_WALLPAPER:-false}" != true ]; then status=declined; fi
+    case "$status" in
+      ok) status=completed ;;
+      skipped) status='unchanged (not rechecked)' ;;
+      failed) status='needs attention' ;;
+      declined) status='not requested' ;;
+      *) status='not run' ;;
+    esac
+    _UI_RESULT_DETAILS+=" $label: $status"$'\n'
+  done
+  for ((i=0; i<MISSING_COUNT; i++)); do
+    _UI_RESULT_DETAILS+=" ${MISSING_LABEL[$i]} - retry: ${MISSING_FIX[$i]}"$'\n'
+  done
+  _UI_QUESTION_BODY="$_UI_COMPLETION. $completed completed, $skipped skipped, $failed failed. Restart to load the changes that completed."
+  # Plain report is part of the shared transcript too, not just the renderer.
+  printf '\nYour desktop, reimagined.\n%s\n%s\nMade by Eprahemi\n' "$_UI_COMPLETION" "$_UI_RESULT_DETAILS"
   if [ "${_UI_ACTIVE:-0}" = 1 ]; then
-    _UI_RESULT_DETAILS=''
-    local _ui_i
-    for ((_ui_i=0; _ui_i<MISSING_COUNT; _ui_i++)); do
-      _UI_RESULT_DETAILS+="${MISSING_LABEL[$_ui_i]} - retry: ${MISSING_FIX[$_ui_i]}"$'\n'
-    done
-    if [ "$STEP_FAILED_COUNT" -gt 0 ]; then
-      _UI_COMPLETION="Finished with issues: $STEP_FAILED_COUNT step(s) need attention."
-    else
-      _UI_COMPLETION='Installation finished successfully.'
-    fi
-    _UI_QUESTION_BODY="$_UI_COMPLETION Log: $_FED_LOG"
     _ui_task "$_UI_COMPLETION"
   fi
-
-  echo ""
-  echo -e "  ${GREEN}╔══════════════════════════════════════════════════════════════╗${NC}"
-  echo -e "  ${GREEN}║${NC}                                                              ${GREEN}║${NC}"
-  echo -e "  ${GREEN}║${NC}"'      ______                 __                   _           '"${GREEN}║${NC}"
-  echo -e "  ${GREEN}║${NC}"'     / ____/___  _________ _/ /_  ___  ____ ___  (_)          '"${GREEN}║${NC}"
-  echo -e "  ${GREEN}║${NC}"'    / __/ / __ \/ ___/ __ `/ __ \/ _ \/ __ `__ \/ /           '"${GREEN}║${NC}"
-  echo -e "  ${GREEN}║${NC}"'   / /___/ /_/ / /  / /_/ / / / /  __/ / / / / / /            '"${GREEN}║${NC}"
-  echo -e "  ${GREEN}║${NC}"'  /_____/ .___/_/   \__,_/_/ /_/\___/_/ /_/ /_/_/             '"${GREEN}║${NC}"
-  echo -e "  ${GREEN}║${NC}"'       /_/                                                    '"${GREEN}║${NC}"
-  echo -e "  ${GREEN}║${NC}"'                                                              '"${GREEN}║${NC}"
-  echo -e "  ${GREEN}║${NC}            ${BOLD}${WHITE}✅  YOU DID IT!${NC}                                   ${GREEN}║${NC}"
-  echo -e "  ${GREEN}║${NC}"'                                                              '"${GREEN}║${NC}"
-  echo -e "  ${GREEN}╠══════════════════════════════════════════════════════════════╣${NC}"
-v_title="  ◆  Fedora MacTahoe  —  Eprahemi Edition"
-  echo -e "  ${GREEN}║${NC}  ${BOLD}${WHITE}${v_title}${NC}$(printf '%*s' $((60 - ${#v_title})) '')${GREEN}║${NC}"
-  echo -e "  ${GREEN}║${NC}"'                                                              '"${GREEN}║${NC}"
-v1="  ◆  All themes, icons, fonts are active"
-  echo -e "  ${GREEN}║${NC}  ${YELLOW}${v1}${NC}$(printf '%*s' $((60 - ${#v1})) '')${GREEN}║${NC}"
-v2="  ◆  Kitty is the default terminal"
-  echo -e "  ${GREEN}║${NC}  ${YELLOW}${v2}${NC}$(printf '%*s' $((60 - ${#v2})) '')${GREEN}║${NC}"
-v3="  ◆  Fish will be default shell (after logout)"
-  echo -e "  ${GREEN}║${NC}  ${YELLOW}${v3}${NC}$(printf '%*s' $((60 - ${#v3})) '')${GREEN}║${NC}"
-v4="  ◆  All custom keybindings are active"
-  echo -e "  ${GREEN}║${NC}  ${YELLOW}${v4}${NC}$(printf '%*s' $((60 - ${#v4})) '')${GREEN}║${NC}"
-v5="  ◆  macOS Big Sur sounds will play"
-  echo -e "  ${GREEN}║${NC}  ${YELLOW}${v5}${NC}$(printf '%*s' $((60 - ${#v5})) '')${GREEN}║${NC}"
-v6="  ◆  GDM login screen themed"
-  echo -e "  ${GREEN}║${NC}  ${YELLOW}${v6}${NC}$(printf '%*s' $((60 - ${#v6})) '')${GREEN}║${NC}"
-v7="  ◆  Flatpak GTK runtime installed"
-  echo -e "  ${GREEN}║${NC}  ${YELLOW}${v7}${NC}$(printf '%*s' $((60 - ${#v7})) '')${GREEN}║${NC}"
-v8="  ◆  Update notifier active (GitHub check every 2 hours)"
-  echo -e "  ${GREEN}║${NC}  ${YELLOW}${v8}${NC}$(printf '%*s' $((60 - ${#v8})) '')${GREEN}║${NC}"
-  if [ "${FIREFOX_THEME_FAILED:-0}" = 1 ]; then
-    echo -e "  ${GREEN}║${NC}                                                              ${GREEN}║${NC}"
-    ff1="  ⚠  Firefox not themed — log in, launch Firefox once"
-    echo -e "  ${GREEN}║${NC}  ${YELLOW}${ff1}${NC}$(printf '%*s' $((60 - ${#ff1})) '')${GREEN}║${NC}"
-    ff2="  ⚠  then re-run: bash install.sh (skips done steps)"
-    echo -e "  ${GREEN}║${NC}  ${YELLOW}${ff2}${NC}$(printf '%*s' $((60 - ${#ff2})) '')${GREEN}║${NC}"
-  fi
-  echo -e "  ${GREEN}║${NC}                                                              ${GREEN}║${NC}"
-  echo -e "  ${GREEN}╠══════════════════════════════════════════════════════════════╣${NC}"
-  echo -e "  ${GREEN}║${NC}                                                              ${GREEN}║${NC}"
-ep1="  ┊  ©  Made by Eprahemi"
-  echo -e "  ${GREEN}║${NC}  ${DIM}${ep1}${NC}$(printf '%*s' $((60 - ${#ep1})) '')${GREEN}║${NC}"
-ep2="  ┊  Fedora MacTahoe  —  Open-source Mac vibes"
-  echo -e "  ${GREEN}║${NC}  ${DIM}${ep2}${NC}$(printf '%*s' $((60 - ${#ep2})) '')${GREEN}║${NC}"
-  echo -e "  ${GREEN}║${NC}                                                              ${GREEN}║${NC}"
-  echo -e "  ${GREEN}╚══════════════════════════════════════════════════════════════╝${NC}"
-  echo ""
-  echo -e "  ${DIM}╭─${NC} ${BOLD}${WHITE}✦  More from Eprahemi${NC} ${DIM}─────────────────────────────────────────╮${NC}"
-  echo -e "  ${DIM}│${NC}                                                                 ${DIM}│${NC}"
-m1="  🐙  GitHub         →  https://github.com/eprahemi"
-  echo -e "  ${DIM}│${NC}  ${CYAN}${m1}${NC}$(printf '%*s' $((62 - ${#m1})) '')${DIM}│${NC}"
-m2="  🖥   MacTahoe Site  →  https://fedoratahoe.pages.dev"
-  echo -e "  ${DIM}│${NC}  ${CYAN}${m2}${NC}$(printf '%*s' $((62 - ${#m2})) '')${DIM}│${NC}"
-m3="  🖼   Wallpapers    →  https://wallvault.pages.dev/home  (+18)"
-  echo -e "  ${DIM}│${NC}  ${CYAN}${m3}${NC}$(printf '%*s' $((62 - ${#m3})) '')${DIM}│${NC}"
-  echo -e "  ${DIM}│${NC}                                                                 ${DIM}│${NC}"
-m4="  If you enjoyed this project, consider starring ⭐ on GitHub"
-  echo -e "  ${DIM}│${NC}  ${DIM}${m4}${NC}$(printf '%*s' $((62 - ${#m4})) '')${DIM}│${NC}"
-  echo -e "  ${DIM}╰${NC}${DIM}─────────────────────────────────────────────────────────────────╯${NC}"
-  echo ""
-  echo -e "  ${YELLOW}╔══════════════════════════════════════════════════════════════╗${NC}"
-reboot_txt="  ⚡  Reboot now — changes kick in after restart"
-  echo -e "  ${YELLOW}║${NC}  ${BOLD}${WHITE}${reboot_txt}${NC}$(printf '%*s' $((60 - ${#reboot_txt})) '')${YELLOW}║${NC}"
-  echo -e "  ${YELLOW}╚══════════════════════════════════════════════════════════════╝${NC}"
-  echo ""
-  echo ""
-  confirm_final "Reboot now? [y/N]: " N
-  local _rrc=$?
-  if [ "$_rrc" -eq 0 ]; then
-    echo -e "  ${GREEN}See you on the other side! Rebooting...${NC}"
-    sudo reboot
-  elif [ "$_rrc" -eq 2 ]; then
-    # 60s no answer — install IS done, finish gracefully, keep the log.
-    echo ""
-    echo -e "  ${YELLOW}◆${NC}  No answer — the install is complete."
-    echo -e "  ${YELLOW}◆${NC}  Restart when you're ready — everything kicks in after reboot."
+  # The only final restart decision. No/EOF/timeout all finish normally.
+  confirm_final 'Restart now? [y/N]: ' N || rc=$?
+  if [ "$rc" -eq 0 ]; then
+    if ! sudo reboot; then warn 'Restart could not be requested. Run sudo reboot when ready.'; fi
   else
-    echo -e ""
-    local r1="╔══════════════════════════════════════════════════════════════╗"
-    echo -e "  ${BOLD}${RED}${r1}${NC}"
-    local r2=" ⚠  SYSTEM RESTART REQUIRED"
-    echo -e "  ${BOLD}${RED}║${NC}  ${BOLD}${WHITE}${r2}$(printf '%*s' $((60 - ${#r2})) '')${NC}${BOLD}${RED}║${NC}"
-    echo -e "  ${BOLD}${RED}║${NC}  $(printf '%*s' 60 '')${NC}${BOLD}${RED}║${NC}"
-    local r4="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo -e "  ${BOLD}${RED}║${NC}  ${DIM}${r4}$(printf '%*s' $((60 - ${#r4})) '')${NC}${BOLD}${RED}║${NC}"
-    echo -e "  ${BOLD}${RED}║${NC}  $(printf '%*s' 60 '')${NC}${BOLD}${RED}║${NC}"
-    local r6="A reboot finalizes the following critical operations:"
-    echo -e "  ${BOLD}${RED}║${NC}  ${r6}$(printf '%*s' $((60 - ${#r6})) '')${NC}${BOLD}${RED}║${NC}"
-    echo -e "  ${BOLD}${RED}║${NC}  $(printf '%*s' 60 '')${NC}${BOLD}${RED}║${NC}"
-    local r8="  • Flush and reinitialize session-level caches"
-    echo -e "  ${BOLD}${RED}║${NC}  ${r8}$(printf '%*s' $((60 - ${#r8})) '')${NC}${BOLD}${RED}║${NC}"
-    local r9="  • Reload GNOME Shell extensions (Dash-to-Dock, etc.)"
-    echo -e "  ${BOLD}${RED}║${NC}  ${r9}$(printf '%*s' $((60 - ${#r9})) '')${NC}${BOLD}${RED}║${NC}"
-    local r10="  • Apply GTK theme contexts across all running processes"
-    echo -e "  ${BOLD}${RED}║${NC}  ${r10}$(printf '%*s' $((60 - ${#r10})) '')${NC}${BOLD}${RED}║${NC}"
-    local r11="  • Activate GDM login screen theme and wallpaper"
-    echo -e "  ${BOLD}${RED}║${NC}  ${r11}$(printf '%*s' $((60 - ${#r11})) '')${NC}${BOLD}${RED}║${NC}"
-    local r12="  • Register updated icon caches and font configurations"
-    echo -e "  ${BOLD}${RED}║${NC}  ${r12}$(printf '%*s' $((60 - ${#r12})) '')${NC}${BOLD}${RED}║${NC}"
-    local r13="  • Initialize desktop environment session parameters"
-    echo -e "  ${BOLD}${RED}║${NC}  ${r13}$(printf '%*s' $((60 - ${#r13})) '')${NC}${BOLD}${RED}║${NC}"
-    echo -e "  ${BOLD}${RED}║${NC}  $(printf '%*s' 60 '')${NC}${BOLD}${RED}║${NC}"
-    local r15="Until restarted, theme elements, dock behavior,"
-    echo -e "  ${BOLD}${RED}║${NC}  ${BOLD}${WHITE}${r15}$(printf '%*s' $((60 - ${#r15})) '')${NC}${BOLD}${RED}║${NC}"
-    local r16="and login screen customizations will remain in a"
-    echo -e "  ${BOLD}${RED}║${NC}  ${BOLD}${WHITE}${r16}$(printf '%*s' $((60 - ${#r16})) '')${NC}${BOLD}${RED}║${NC}"
-    local r17="pending state."
-    echo -e "  ${BOLD}${RED}║${NC}  ${BOLD}${WHITE}${r17}$(printf '%*s' $((60 - ${#r17})) '')${NC}${BOLD}${RED}║${NC}"
-    echo -e "  ${BOLD}${RED}║${NC}  $(printf '%*s' 60 '')${NC}${BOLD}${RED}║${NC}"
-    local r19="╚══════════════════════════════════════════════════════════════╝"
-    echo -e "  ${BOLD}${RED}${r19}${NC}"
-    echo -e ""
-    confirm_final "  Restart now to apply changes? [y/N]: " N
-    local _rrc2=$?
-    if [ "$_rrc2" -eq 0 ]; then
-      echo -e "  ${GREEN}See you on the other side! Rebooting...${NC}"
-      sudo reboot
-    else
-      echo -e ""
-      echo -e "  ${BOLD}${YELLOW}⚠  Postponed — restart at your earliest convenience.${NC}"
-      echo -e "  ${DIM}   Run ${NC}${BOLD}${WHITE}sudo reboot${NC}${DIM} when ready to finalize.${NC}"
-    fi
+    _UI_RESULT_DETAILS+=' Restart later with: sudo reboot'$'\n'
+    echo 'Restart later with: sudo reboot'
   fi
+  return 0
 }
 
 # ── Capture GNOME version ──
@@ -5591,6 +5540,12 @@ if [ -n "${UPDATE_STEPS:-}" ]; then
         CURRENT_STEP_LABEL="$_ustep"
         _target_rc=0
         "$_ustep" || _target_rc=$?
+        if [ -s "${_FED_NET_STOP:-/dev/null}" ]; then
+          _step_failed "$_ustep" 130 stopped
+          _clear_step_state "$_ustep" || warn "Could not clear interrupted task state: $_ustep"
+          _UI_COMPLETION='Stopped safely. Completed work is kept.'
+          exit 130
+        fi
         if [ "$_target_rc" -ne 0 ]; then
           _step_failed "$_ustep" "$_target_rc"
           _clear_step_state "$_ustep" || \
@@ -5672,7 +5627,7 @@ if [ "${_UI_ACTIVE:-0}" = 1 ]; then
   printf -v _UI_CHOICES 'Desktop wallpaper: %s\nLogin theme: %s\nDisable firewalld: %s\nRemove Ptyxis and its settings/cache: %s' \
     "$INSTALL_DESKTOP_WALLPAPER" "${INSTALL_LOGIN_WALLPAPER:-false}" "${INSTALL_DISABLE_FIREWALLD:-false}" "$INSTALL_REMOVE_OLD_TERMINAL"
   printf 'Choices: %s\n' "$_UI_CHOICES"
-  _ui_notice 'Choices recorded; installation is now starting.'
+  _ui_notice 'Preferences saved. Starting installation.' '36'
 fi
 
 # A "yes" answer must run its step even when that step is already recorded

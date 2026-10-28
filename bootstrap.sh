@@ -8,8 +8,11 @@ _UI_ACTIVE=0 _UI_PID='' _UI_TASK='Preparing your Fedora desktop'
 _UI_PHASE='Preparation' _UI_DONE=0 _UI_TOTAL=0 _UI_STARTED=${_FED_UI_STARTED:-$EPOCHSECONDS}
 export _FED_UI_STARTED="$_UI_STARTED"
 _UI_OWNER=$BASHPID
-_UI_NOTICE='' _UI_CHOICES='' _UI_FINISHED=0 _UI_RESULT_DETAILS=''
+_UI_NOTICE='' _UI_NOTICE_COLOR='1;33' _UI_CHOICES='' _UI_FINISHED=0 _UI_RESULT_DETAILS=''
 _UI_NOTICES=()
+_UI_NOTICE_COLORS=()
+_UI_WARNINGS=()
+_UI_TRANSFER_DONE=0 _UI_TRANSFER_TOTAL=0
 _ui_stop() {
   if [ -n "${_UI_PID:-}" ]; then
     kill -CONT "$_UI_PID" 2>/dev/null || true
@@ -20,33 +23,53 @@ _ui_stop() {
 }
 _ui_line() {
   # All dynamic text is clipped to terminal columns by using ASCII UI copy.
-  local text="$1" width="$2"
+  local text="$1" width="$2" ansi=$'\033''\[[[:digit:];?]*[[:alpha:]]'
+  while [[ "$text" =~ $ansi ]]; do text=${text//"${BASH_REMATCH[0]}"/}; done
   text=${text//$'\033'/}
   text=${text//$'\n'/ }
   text=${text//$'\r'/ }
-  printf '\033[2K %.*s\r\n' "$((width - 2))" "$text" >&7
+  printf '\033[0m\033[%sm\033[2K %.*s\033[0m\r\n' "${3:-0}" "$((width - 2))" "$text" >&7
 }
 _ui_brand() {
   local cols="$1"
-  printf '\033[38;5;%sm' "${2:-44}" >&7
   if [ "$cols" -ge 36 ] && [ "${3:-24}" -ge 18 ]; then
-    _ui_line '   ____' "$cols"
-    _ui_line '  / __/   Fedora MacTahoe' "$cols"
-    _ui_line ' / /_     Eprahemi Edition' "$cols"
-    _ui_line '/ __/' "$cols"
-    _ui_line '/_/       Made by Eprahemi' "$cols"
+    _ui_line '   ____' "$cols" "1;38;5;${2:-44}"
+    _ui_line '  / __/   Fedora MacTahoe' "$cols" "1;38;5;${2:-44}"
+    _ui_line ' / /_     Eprahemi Edition' "$cols" "1;38;5;${2:-44}"
+    _ui_line '/ __/' "$cols" "1;38;5;${2:-44}"
+    _ui_line '/_/       Made by Eprahemi' "$cols" '90'
   else
-    _ui_wrap 'Fedora MacTahoe' "$cols"
-    _ui_wrap 'Eprahemi Edition' "$cols"
-    _ui_wrap 'Made by Eprahemi' "$cols"
+    _ui_wrap 'Fedora MacTahoe' "$cols" '1;36'
+    _ui_wrap 'Eprahemi Edition' "$cols" '36'
+    _ui_wrap 'Made by Eprahemi' "$cols" '90'
   fi
   printf '\033[0m' >&7
 }
 _ui_wrap() {
   local text="$1" cols="$2" line
   while IFS= read -r line; do
-    _ui_line "  $line" "$cols"
+    _ui_line "  $line" "$cols" "${3:-0}"
   done < <(printf '%s\n' "$text" | fold -sw "$((cols > 4 ? cols - 4 : 1))")
+}
+_ui_bar() {
+  local cols="$1" done="$2" total="$3" pct cells filled bar empty
+  [ "$total" -gt 0 ] || return 0
+  pct=$((done * 100 / total))
+  [ "$pct" -le 100 ] || pct=100
+  cells=$((cols - 12))
+  [ "$cells" -le 48 ] || cells=48
+  if [ "$cells" -lt 4 ]; then
+    if [ "$cols" -lt 6 ]; then
+      printf '\033[0m\033[1;36m\033[2K%s%%\033[0m\r\n' "$pct" >&7
+    else
+      _ui_line "${pct}%" "$cols" '1;36'
+    fi
+    return 0
+  fi
+  filled=$((cells * pct / 100))
+  printf -v bar '%*s' "$filled" ''; bar=${bar// /#}
+  printf -v empty '%*s' "$((cells - filled))" ''; empty=${empty// /-}
+  _ui_line "[$bar$empty] ${pct}%" "$cols" '1;36'
 }
 _ui_paint() {
   local frame="${1:-0}" rows cols elapsed pct trail name short idx=0
@@ -55,44 +78,56 @@ _ui_paint() {
   [ "$cols" -ge 4 ] || cols=4
   elapsed=$((EPOCHSECONDS - _UI_STARTED))
   printf '\033[H' >&7
-  if [ "$rows" -lt 14 ] || [ "$cols" -lt 52 ]; then
-    _ui_line 'Fedora MacTahoe - Eprahemi Edition' "$cols"
-    _ui_line "$_UI_PHASE: $_UI_TASK" "$cols"
-    _ui_line "Working | elapsed ${elapsed}s | keep this window open" "$cols"
-    _ui_line "$_UI_NOTICE" "$cols"
-    _ui_line 'Made by Eprahemi' "$cols"
+   if [ "$rows" -lt 20 ] || [ "$cols" -lt 52 ]; then
+    _ui_line 'Fedora MacTahoe - Eprahemi Edition' "$cols" '1;36'
+    _ui_wrap "$_UI_TASK" "$cols" '1;36'
+    if [ "$_UI_TOTAL" -gt 0 ]; then
+      _ui_bar "$cols" "$_UI_DONE" "$_UI_TOTAL"
+      _ui_line "Tasks $_UI_DONE/$_UI_TOTAL" "$cols" '1'
+    fi
+    if [ "$_UI_TRANSFER_TOTAL" -gt 0 ]; then _ui_bar "$cols" "$_UI_TRANSFER_DONE" "$_UI_TRANSFER_TOTAL"; fi
+    _ui_line "Elapsed ${elapsed}s" "$cols" '90'
+    _ui_wrap "$_UI_NOTICE" "$cols" "$_UI_NOTICE_COLOR"
+    _ui_line 'Made by Eprahemi' "$cols" '90'
     printf '\033[J' >&7
     return 0
   fi
   local colors=(38 44 51 44) spin=('|' '/' '-' '\\')
   _ui_brand "$cols" "${colors[$((frame % 4))]}"
   _ui_line '' "$cols"
-  _ui_line "${spin[$((frame % 4))]} $_UI_TASK" "$cols"
-  _ui_line "Elapsed ${elapsed}s - keep this window open" "$cols"
+  _ui_line "${spin[$((frame % 4))]} $_UI_TASK" "$cols" '1;36'
+  _ui_line "Elapsed ${elapsed}s - keep this window open" "$cols" '90'
   if [ "$_UI_TOTAL" -gt 0 ]; then
     pct=$((_UI_DONE * 100 / _UI_TOTAL))
-    _ui_line "Processed $_UI_DONE/$_UI_TOTAL steps (${pct}%) - not a success score" "$cols"
+    _ui_line "Step $_UI_DONE of $_UI_TOTAL · ${pct}%" "$cols" '1'
+    _ui_bar "$cols" "$_UI_DONE" "$_UI_TOTAL"
   else
-    _ui_line 'Preparing downloads - measuring availability, not guessing a percent' "$cols"
+    _ui_line 'Preparing installation' "$cols" '90'
   fi
+  if [ "$_UI_TRANSFER_TOTAL" -gt 0 ]; then _ui_bar "$cols" "$_UI_TRANSFER_DONE" "$_UI_TRANSFER_TOTAL"; fi
   _ui_line '' "$cols"
   # The current phase is highlighted; all prior/next phases remain visible.
   trail=''
+  printf '\033[0m\033[2K ' >&7
   for name in Preparation Foundations Packages Themes Configuration Shell Finalize; do
     case "$name" in
       Preparation) short=Prep ;; Foundations) short=Base ;; Packages) short=Apps ;;
       Themes) short=Theme ;; Configuration) short=Config ;; Shell) short=Shell ;; Finalize) short=Finish ;;
     esac
-    if [ "$name" = "$_UI_PHASE" ]; then trail+="[$short] "; else trail+="$short "; fi
+    if [ "$name" = "$_UI_PHASE" ]; then
+      printf '\033[1;36m[%s]\033[0m ' "$short" >&7
+    else
+      printf '\033[90m%s\033[0m ' "$short" >&7
+    fi
   done
-  _ui_line "$trail" "$cols"
-  _ui_line "Current phase: $_UI_PHASE" "$cols"
-  _ui_line "$_UI_NOTICE" "$cols"
+  printf '\r\n' >&7
+  _ui_line '' "$cols"
+  _ui_wrap "$_UI_NOTICE" "$cols" "$_UI_NOTICE_COLOR"
   if [ -n "$_UI_CHOICES" ] && [ "$rows" -ge 24 ]; then
-    while IFS= read -r name; do _ui_line "$name" "$cols"; done <<<"$_UI_CHOICES"
+    while IFS= read -r name; do _ui_line "$name" "$cols" '90'; done <<<"$_UI_CHOICES"
   fi
   _ui_line '' "$cols"
-  _ui_line 'Made by Eprahemi' "$cols"
+  _ui_line 'Made by Eprahemi' "$cols" '90'
   printf '\033[J' >&7
 }
 _ui_resume() {
@@ -127,13 +162,19 @@ _ui_init() {
     _ui_resume
   fi
 }
-_ui_task() { _UI_TASK="$1"; _ui_resume; }
+_ui_task() { _UI_TASK="$1"; _UI_TRANSFER_DONE=0; _UI_TRANSFER_TOTAL=0; _ui_resume; }
+_ui_download_progress() {
+  _UI_TASK="$1" _UI_TRANSFER_DONE="$2" _UI_TRANSFER_TOTAL="$3"
+  _ui_resume
+}
 _ui_phase() { _UI_PHASE="$1"; _ui_resume; }
 _ui_progress() { _UI_DONE="$1"; _UI_TOTAL="$2"; _ui_resume; }
 _ui_notice() {
   if [ "${_UI_ACTIVE:-0}" = 1 ] && [ "$BASHPID" = "$_UI_OWNER" ]; then
     _UI_NOTICE="$1"
+    _UI_NOTICE_COLOR="${2:-1;33}"
     _UI_NOTICES+=("$1")
+    _UI_NOTICE_COLORS+=("$_UI_NOTICE_COLOR")
     _ui_resume
   fi
 }
@@ -147,15 +188,13 @@ _ui_question() {
     [ "${cols:-0}" -ge 4 ] || cols=4
     _ui_brand "$cols" 44 "${rows:-24}"
     _ui_line '' "$cols"
-    printf '\033[1m' >&7
-    _ui_wrap "$1" "$cols"
-    printf '\033[0m' >&7
+    _ui_wrap "$1" "$cols" '1;36'
     _ui_line '' "$cols"
     _ui_wrap "${2:-}" "$cols"
     _ui_line '' "$cols"
     if [ -n "${3:-}" ]; then
-      _ui_wrap "$3" "$cols"
-      printf '   > ' >&7
+      _ui_wrap "$3" "$cols" '90'
+      printf '\033[1;36m   > \033[0m' >&7
     fi
   fi
 }
@@ -169,10 +208,15 @@ _ui_cleanup() {
 _ui_finish() {
   if [ "${_UI_ACTIVE:-0}" = 1 ]; then
     _ui_cleanup
-    printf '\n Fedora MacTahoe - Eprahemi Edition\n %s\n Log: %s\n Made by Eprahemi\n' "$1" "$_FED_LOG" >&5
-    local notice
-    for notice in "${_UI_NOTICES[@]}"; do printf ' Notice: %s\n' "$notice" >&5; done
+    local result_color='1;32'
+    case "$1" in *ISSUES*|*issues*|*stopped*|*Stopped*|*failed*) result_color='1;33' ;; esac
+    printf '\n\033[1;36m Fedora MacTahoe - Eprahemi Edition\033[0m\n Your desktop, reimagined.\n\033[%sm %s\033[0m\n' "$result_color" "$1" >&5
+    # Routine activity belongs in the transcript, not a second completion dump.
+    # Failed tasks and their recovery commands are retained separately below.
     if [ -n "${_UI_RESULT_DETAILS:-}" ]; then printf '%s\n' "$_UI_RESULT_DETAILS" >&5; fi
+    local warning
+    for warning in "${_UI_WARNINGS[@]}"; do printf '\033[1;33m Warning: %s\033[0m\n' "$warning" >&5; done
+    printf '\033[90m Made by Eprahemi\033[0m\n' >&5
     _UI_FINISHED=1
   fi
 }
@@ -184,13 +228,13 @@ _ui_auth() {
   # painters or pretend to own their parent's foreground UI/state.
   if [ "${_UI_ACTIVE:-0}" = 1 ] && [ "$BASHPID" != "$_UI_OWNER" ]; then
     if [ -n "${_UI_PID:-}" ]; then kill -STOP "$_UI_PID" 2>/dev/null || true; fi
-    printf '\033[?25h\n Administrator permission: password typing is hidden.\n' >/dev/tty
+    printf '\033[?25h\n Administrator permission: your password stays hidden while you type.\n' >/dev/tty
     command sudo -v >/dev/tty 2>/dev/tty || rc=$?
     if [ -n "${_UI_PID:-}" ]; then kill -CONT "$_UI_PID" 2>/dev/null || true; fi
     return "$rc"
   fi
   if [ "${_UI_ACTIVE:-0}" = 1 ]; then
-    _ui_question 'Administrator permission' 'Type your password when sudo asks. Typing is hidden.' ''
+    _ui_question 'Administrator permission' 'Your password stays hidden while you type.' ''
     command sudo -v >/dev/tty 2>/dev/tty || rc=$?
     _ui_resume
   else
@@ -198,13 +242,113 @@ _ui_auth() {
   fi
   return "$rc"
 }
+
+# Retry only transport failures at an individual, repeatable download boundary.
+# Phase replay is intentionally not attempted: configuration phases include asset
+# deletion, config backup and browser consent and are not safely replayable.
+_net_reachable() {
+  command curl -q --silent --show-error --head --location --output /dev/null \
+    --connect-timeout 3 --max-time 8 "$1" 2>/dev/null
+}
+_net_recover() {
+  local endpoint="$1" answer rc
+  while :; do
+    printf 'Download endpoint unavailable: %s\n' "$endpoint"
+    _ui_question 'CONNECTION PAUSED' "Cannot reach $endpoint. Completed work and your log are kept. Retry this download only; earlier phases are not replayed." 'Enter/y = retry; n = stop safely.'
+    if [ "${_UI_ACTIVE:-0}" != 1 ]; then printf 'Enter/y = retry; n = stop safely: '; fi
+    answer='' rc=0
+    read -r answer </dev/tty || rc=$?
+    if [ "$rc" -ne 0 ]; then answer=n; fi
+    case "${answer,,}" in
+      n|no)
+        if [ -n "${_FED_NET_STOP:-}" ]; then printf stopped >"$_FED_NET_STOP"; fi
+        _ui_resume
+        return 130 ;;
+      ''|y|yes)
+        _ui_task 'Checking the download endpoint'
+        if _net_reachable "$endpoint"; then _ui_resume; return 0; fi
+        printf 'Endpoint is still unreachable; no work was marked complete.\n' ;;
+      *) printf 'Type y/yes or n/no.\n' ;;
+    esac
+  done
+}
+_net_download() {
+  local url="$1" dest="$2"; shift 2
+  if [ -s "${_FED_NET_STOP:-/dev/null}" ]; then return 130; fi
+  local headers pid rc bytes previous=0 started=$EPOCHREALTIME now speed total last=''
+  headers=$(mktemp "${TMPDIR:-/tmp}/mactahoe-transfer.XXXXXXXX") || return 1
+  while :; do
+    previous=0 started=$EPOCHREALTIME
+    : >"$dest" || { rm -f "$headers"; return 1; }
+    : >"$headers"
+    command curl -q --fail --location --silent --show-error --dump-header "$headers" \
+      "$@" --output "$dest" "$url" &
+    pid=$! rc=0
+    _FED_TRANSFER_PID=$pid
+    while kill -0 "$pid" 2>/dev/null; do
+      bytes=$(stat -c %s "$dest" 2>/dev/null || echo 0)
+      now=$EPOCHREALTIME
+      total=$(awk '/^HTTP\// {n=0} tolower($1)=="content-length:" {gsub("\r", "", $2); n=$2} END {print n+0}' "$headers")
+      speed=$(awk -v b="$bytes" -v p="$previous" -v t="$now" -v s="$started" 'BEGIN {if(t>s && b>=p) printf "%.2f",(b-p)/(t-s)/1048576; else print "0.00"}')
+      if [ "$total" -gt 0 ] && [ "$bytes" -le "$total" ]; then
+        last="Download $bytes / $total bytes ($((bytes * 100 / total))%) - $speed MiB/s"
+      else
+        last="Download $bytes bytes - $speed MiB/s"
+      fi
+      _ui_download_progress "$last" "$bytes" "$total"
+      previous=$bytes started=$now
+      sleep 0.25
+    done
+    wait "$pid" || rc=$?
+    _FED_TRANSFER_PID=''
+    if [ "$rc" -eq 0 ]; then
+      bytes=$(stat -c %s "$dest" 2>/dev/null || echo 0)
+      _ui_download_progress "Download complete: $bytes bytes" "$bytes" "$bytes"
+      rm -f "$headers"
+      return 0
+    fi
+    case "$rc" in
+      5|6|7|18|28|52|55|56)
+        if ! _net_recover "$url"; then rm -f "$headers"; return 130; fi ;;
+      *) rm -f "$headers"; return "$rc" ;;
+    esac
+  done
+}
+_net_package_run() {
+  # The manager is foreground and owns its transaction/locks. Inspect transport
+  # diagnostics ONLY after it exits. Never kill it on a connectivity change.
+  local capture rc endpoint diagnostic
+  if [ -s "${_FED_NET_STOP:-/dev/null}" ]; then return 130; fi
+  capture=$(mktemp "${TMPDIR:-/tmp}/mactahoe-package.XXXXXXXX") || return 1
+  while :; do
+    rc=0
+    if "$@" 2>&1 | tee "$capture"; then rc=${PIPESTATUS[0]}; else rc=${PIPESTATUS[0]}; fi
+    if [ "$rc" -eq 0 ]; then rm -f "$capture"; return 0; fi
+    diagnostic=$(grep -Ei 'Curl error \((5|6|7|28|52|55|56)\)|Could not resolve host|Could not connect to' "$capture" || true)
+    endpoint=$(printf '%s\n' "$diagnostic" | grep -Eo 'https?://[^[:space:]<>]+' | head -1 | sed 's/[]),;"]*$//' || true)
+    if [ -z "$endpoint" ]; then
+      endpoint=$(printf '%s\n' "$diagnostic" | sed -nE 's/.*[Cc]ould not resolve host: ([A-Za-z0-9.-]+).*/https:\/\/\1\//p' | head -1)
+    fi
+    # Without the actual failed endpoint and an explicit transport diagnostic,
+    # this could be a missing package, bad repository, GPG or configuration error.
+    if [ -z "$endpoint" ]; then rm -f "$capture"; return "$rc"; fi
+    if ! _net_recover "$endpoint"; then rm -f "$capture"; return 130; fi
+  done
+}
+flatpak() {
+  if [ "${1:-}" = install ]; then _net_package_run command flatpak "$@"; else command flatpak "$@"; fi
+}
 sudo() {
   # Preserve noninteractive credential checks. For work, warm authentication
   # before invoking the original argv; do not wrap the work in a subshell.
   if [ "${_UI_ACTIVE:-0}" = 1 ] && [ "${1:-}" != -n ]; then
     if ! command sudo -n -v 2>/dev/null; then _ui_auth || return $?; fi
   fi
-  command sudo "$@"
+  case "${1:-}:${2:-}:${3:-}" in
+    dnf:install:*|dnf:swap:*|dnf:group:install)
+      _net_package_run command sudo "$@" ;;
+    *) command sudo "$@" ;;
+  esac
 }
 
 if [ "${1:-}" = --ui-library ]; then return 0; fi
@@ -278,7 +422,9 @@ _fed_log_finalize() {
     # Set custom icon for this log file (icon may not exist yet on first bootstrap run — silently ignored)
     command -v gio &>/dev/null && [ -f "${HOME}/.local/share/icons/fedora-mactahoe/mactahoe_log_icon.png" ] && \
       gio set "$_FED_LOG" metadata::custom-icon "file://${HOME}/.local/share/icons/fedora-mactahoe/mactahoe_log_icon.png" 2>/dev/null || true
-    echo -e "  ${GREEN}Log saved: ${_FED_LOG}${NC}"
+    if [ "${_FED_LOG_HANDED_OFF:-0}" != 1 ]; then
+      echo -e "  ${CYAN}Log saved: ${_FED_LOG}${NC}"
+    fi
   fi
 }
 trap _fed_log_finalize EXIT
@@ -500,10 +646,11 @@ fi
 echo ""
 rm -rf "$TMP"
 _clone_log=$(mktemp 2>/dev/null || echo /tmp/mct-clone.$$)
+while :; do
 timeout 180 git clone --depth 1 --progress "$REPO" "$TMP" >"$_clone_log" 2>&1 &
 _clone_pid=$!
 _clone_rc=0
-_ui_task 'Downloading the installer bundle'
+_ui_task 'Downloading installation files…'
 echo 'Downloading the installer bundle (preparation)...'
 _transfer_last=''
 while kill -0 "$_clone_pid" 2>/dev/null; do
@@ -512,7 +659,12 @@ while kill -0 "$_clone_pid" 2>/dev/null; do
   # combine resolving-delta percentages with transfer, or advance by elapsed time.
   _transfer=$(tr '\r' '\n' < "$_clone_log" | grep 'Receiving objects:' | tail -1 | sed -E 's/^.*Receiving objects: */Download objects: /; s/, done\.$//' || true)
   if [ -n "$_transfer" ] && [ "$_transfer" != "$_transfer_last" ]; then
-    _ui_task "$_transfer"
+    _transfer_pct=$(printf '%s\n' "$_transfer" | sed -nE 's/^Download objects: *([0-9]+)%.*/\1/p')
+    if [ -n "$_transfer_pct" ]; then
+      _ui_download_progress "$_transfer" "$_transfer_pct" 100
+    else
+      _ui_task "$_transfer"
+    fi
     _transfer_last="$_transfer"
   fi
   sleep 0.2
@@ -521,6 +673,16 @@ wait "$_clone_pid" 2>/dev/null || _clone_rc=$?
 _clone_pid=''
 # Original Git output belongs in the transcript, not the clean dashboard.
 cat "$_clone_log" >>"$_FED_LOG"
+if [ "$_clone_rc" -eq 0 ]; then break; fi
+# Classify Git transport diagnostics, not arbitrary clone/configuration failures.
+# A timeout has already ended the clone; package transactions are never involved.
+if [ "$_clone_rc" -eq 124 ] || grep -Eqi 'could not resolve|failed to connect|connection timed out|connection reset|network is unreachable|early EOF' "$_clone_log"; then
+  _net_recover "${REPO}/info/refs?service=git-upload-pack" || exit 130
+  rm -rf "$TMP"
+else
+  break
+fi
+done
 
 if [ "$_clone_rc" -eq 0 ]; then
   printf "  ${GREEN}◆${NC}  Cloning installer  ✓  \n"
@@ -583,6 +745,8 @@ fi
 # Stop the preparation painter before the foreground installer takes over the
 # same original terminal and log. Do not export UI process/animation state.
 _ui_cleanup
+_FED_LOG_HANDED_OFF=1
+export _FED_LOG_PARENT=1
 bash install.sh && _inst_rc=0 || _inst_rc=$?
 # 42 = the installer closed itself (60s no-key/no-answer auto-close) —
 # passed through as-is, it is NOT a failure. Everything else propagates.
