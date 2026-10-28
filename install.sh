@@ -509,6 +509,11 @@ _install_asset_pack() {
       archives=("$stage/extra.zip")
     fi
   fi
+  # Avatar validation may need a narrow privileged metadata read. Authenticate
+  # through the existing foreground sudo/UI boundary, never inside captured output.
+  if [ "$kind" = avatar ] && ! sudo -v; then
+    rm -rf -- "$stage"; return 1
+  fi
   if ! plan=$(_asset_tool build "$kind" "$variant" "$mode" "$BUNDLE" "$stage" "$legacy" "${archives[@]}"); then
     warn 'Asset validation failed — the installed collection is unchanged'
     rm -rf -- "$stage"; return 1

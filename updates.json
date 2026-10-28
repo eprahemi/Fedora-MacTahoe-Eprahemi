@@ -1,10 +1,16 @@
 {
- "latest_version": "3.7.22",
+ "latest_version": "3.7.23",
  "bootstrap_sha256": "b56e18eaa8d94a26897c9ca15beb47b973c408cfe4976cf9845cf67bfe657096",
- "install_sha256": "220f5a523e90a0209f5f84edb98a2e7202db1e6498263a00d937535abe826754",
+ "install_sha256": "86c308bc9152a3b0da680fb134edeb01eada9bf87c2ff0d14552f2b4a28bc22d",
  "update_sha256": "cb7a2fb49d5a77347365cae263ca30d27334a83187f1e276e1580147ae3fc9d0",
- "asset_helper_sha256": "787b7304c3cafca41da79b304ad73e92c4cd2b549a149cb7747c47316ba42020",
+ "asset_helper_sha256": "780bff6ee435af864aec79c3d24526ca72dd8adf96ed16851b4fbbd042378dd1",
  "changelog": [
+  {
+   "version": "3.7.23",
+   "changes": [
+    "Fix avatar protection scans on root-only AccountsService metadata using narrow read-only privileged enumeration when permission is denied. Validate all returned icon paths and fail closed on read errors; preserve all users' active avatars without changing system permissions or account selections. Development candidate; native Fedora smoke test pending."
+   ]
+  },
   {
    "version": "3.7.22",
    "changes": [

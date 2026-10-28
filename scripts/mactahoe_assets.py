@@ -256,6 +256,48 @@ def stock_records(kind):
         return {}
 
 
+def persisted_icons():
+    """Read all persisted selections; unreadable metadata must never mean none."""
+    try:
+        icons = []
+        for account in ACCOUNTS.iterdir() if ACCOUNTS.is_dir() else []:
+            if account.is_symlink() or not account.is_file():
+                raise ValueError('Unsafe AccountsService metadata entry')
+            ini = configparser.ConfigParser(interpolation=None)
+            with account.open() as stream:
+                ini.read_file(stream)
+            icons.append(ini.get('User', 'Icon', fallback=''))
+    except PermissionError:
+        if ACCOUNTS != Path('/var/lib/AccountsService/users') or os.geteuid() == 0:
+            raise
+        # Fixed read-only program, isolated system interpreter, no helper import,
+        # caller paths, shell interpolation, or privileged mutation.
+        code = '''import configparser,json,os,stat
+root='/var/lib/AccountsService/users'
+icons=[]
+fd=os.open(root,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
+try:
+ for name in os.listdir(fd):
+  f=os.open(name,os.O_RDONLY|os.O_NOFOLLOW|os.O_NONBLOCK,dir_fd=fd)
+  with os.fdopen(f) as stream:
+   if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
+    raise ValueError('Nonregular account metadata')
+   ini=configparser.ConfigParser(interpolation=None)
+   ini.read_file(stream)
+   icons.append(ini.get('User','Icon',fallback=''))
+finally:
+ os.close(fd)
+print(json.dumps(icons))
+'''
+        icons = json.loads(run('sudo', '-n', '--', '/usr/bin/python3', '-I', '-c', code))
+    if (not isinstance(icons, list) or len(icons) > 100000 or
+            any(not isinstance(p, str) or len(p) > 4096 or '\x00' in p or
+                (p and (not Path(p).is_absolute() or '..' in Path(p).parts))
+                for p in icons)):
+        raise ValueError('Invalid AccountsService icon enumeration')
+    return [p for p in icons if p]
+
+
 def stock_changes(kind):
     protected = set()
     if kind == 'wallpaper':
@@ -263,11 +305,7 @@ def stock_changes(kind):
         protected.update(Path(p) for root in saved['roots'].values() for p in root['paths'])
     else:
         protected.add(Path(account_icon()))
-        for account in ACCOUNTS.iterdir() if ACCOUNTS.is_dir() else []:
-            ini = configparser.ConfigParser(interpolation=None)
-            if account.is_file() and not account.is_symlink():
-                ini.read(account)
-                protected.add(Path(ini.get('User', 'Icon', fallback='')))
+        protected.update(map(Path, persisted_icons()))
     changes = {}
     for path, digest in stock_records(kind).items():
         if path in protected or path.is_symlink() or not path.is_file():
@@ -645,12 +683,7 @@ def apply(plan_file):
             # the existing path. No account selection/AccountsService write occurs.
             if plan['kind'] == 'avatar':
                 icons = list(plan.get('icons', []))
-                for account in ACCOUNTS.iterdir() if ACCOUNTS.is_dir() else []:
-                    if not account.is_file() or account.is_symlink():
-                        continue
-                    ini = configparser.ConfigParser(interpolation=None)
-                    ini.read(account)
-                    icons.append(ini.get('User', 'Icon', fallback=''))
+                icons.extend(persisted_icons())
                 for value in icons:
                     icon = Path(value)
                     for index, target in enumerate(map(Path, plan['expected'])):
