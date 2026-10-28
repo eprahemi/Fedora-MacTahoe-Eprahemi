@@ -4,7 +4,7 @@
 # --ui-library; the online bash -c entry needs no extra download/dependency.
 # Installation functions always execute in the foreground shell. Only painting
 # runs in a child; it never reads input, executes work, or writes the transcript.
-_UI_ACTIVE=0 _UI_PID='' _UI_TASK='Preparing your Fedora desktop'
+_UI_ACTIVE=0 _UI_PID='' _UI_MODE=work _UI_TASK='Preparing your Fedora desktop'
 _UI_PHASE='Preparation' _UI_DONE=0 _UI_TOTAL=0 _UI_STARTED=${_FED_UI_STARTED:-$EPOCHSECONDS}
 export _FED_UI_STARTED="$_UI_STARTED"
 _UI_OWNER=$BASHPID
@@ -29,6 +29,7 @@ _ui_step() {
       _UI_STEP_REASONS[$i]="${3:-}"
       _ui_step_visible "$1" || break
       _UI_STEP_CURRENT=$i
+      _UI_MODE=work
       _ui_resume
       break
     fi
@@ -215,13 +216,23 @@ _ui_paint() {
   printf '\033[J' >&7
 }
 _ui_resume() {
+  if [ "${1:-}" = work ]; then _UI_MODE=work; fi
+  # Answering a question is not work. Keep the owned question region intact
+  # until a task/step/transfer explicitly hands the terminal back to progress.
+  [ "${_UI_MODE:-work}" = work ] || return 0
   if [ "${_UI_ACTIVE:-0}" = 1 ] && [ "$BASHPID" = "$_UI_OWNER" ]; then
     _ui_stop
     printf '\033[?25l' >&7
     _ui_paint 0
-    (
+    local ready_fd ready
+    exec {ready_fd}< <(
+      # This child owns animation only, never the installer's EXIT/log handler.
+      trap - EXIT ERR
       _tick_pid=''
-      trap 'if [ -n "$_tick_pid" ]; then kill "$_tick_pid" 2>/dev/null || true; fi; exit 0' TERM INT
+      trap 'if [ -n "$_tick_pid" ]; then kill "$_tick_pid" 2>/dev/null || true; wait "$_tick_pid" 2>/dev/null || true; fi; exit 0' TERM INT
+      # A pipe acknowledgement, not a delay: the owner may replace this painter
+      # immediately, but only after its private signal/cleanup traps are ready.
+      printf 'ready\n'
       _frame=0
       while :; do
         # Waiting for a background tick lets TERM interrupt the wait promptly;
@@ -232,8 +243,10 @@ _ui_resume() {
         _frame=$((_frame + 1))
         _ui_paint "$_frame"
       done
-    ) &
+    )
     _UI_PID=$!
+    IFS= read -r ready <&"$ready_fd" || true
+    exec {ready_fd}<&-
   fi
 }
 _ui_init() {
@@ -246,13 +259,14 @@ _ui_init() {
     _ui_resume
   fi
 }
-_ui_task() { _UI_TASK="$1"; _UI_TRANSFER_DONE=0; _UI_TRANSFER_TOTAL=0; _UI_TRANSFER_DETAIL=''; _ui_resume; }
+_ui_task() { _UI_MODE=work; _UI_TASK="$1"; _UI_TRANSFER_DONE=0; _UI_TRANSFER_TOTAL=0; _UI_TRANSFER_DETAIL=''; _ui_resume; }
 _ui_download_progress() {
+  _UI_MODE=work
   _UI_TASK="$1" _UI_TRANSFER_DONE="$2" _UI_TRANSFER_TOTAL="$3" _UI_TRANSFER_DETAIL="${4:-}"
   _ui_resume
 }
 _ui_phase() { _UI_PHASE="$1"; _ui_resume; }
-_ui_progress() { _UI_DONE="$1"; _UI_TOTAL="$2"; _ui_resume; }
+_ui_progress() { _UI_MODE=work; _UI_DONE="$1"; _UI_TOTAL="$2"; _ui_resume; }
 _ui_notice() {
   if [ "${_UI_ACTIVE:-0}" = 1 ] && [ "$BASHPID" = "$_UI_OWNER" ]; then
     _UI_NOTICE="$1"
@@ -265,6 +279,7 @@ _ui_notice() {
 _ui_question() {
   if [ "${_UI_ACTIVE:-0}" = 1 ]; then
     _ui_stop
+    _UI_MODE=question
     # Alternate screen belongs entirely to us, never erase normal scrollback.
     printf '\033[H\033[J\033[?25h\033[0m' >&7
     local rows cols line
@@ -488,11 +503,22 @@ _ui_finish() {
 _ui_auth() {
   # sudo owns authentication and hidden input. Never read passwords ourselves,
   # never enable pwfeedback, never log authentication output or keystrokes.
-  local rc=0
+  local rc=0 previous_mode="${_UI_MODE:-work}"
   # Pipeline/command-substitution children must never spawn replacement
   # painters or pretend to own their parent's foreground UI/state.
   if [ "${_UI_ACTIVE:-0}" = 1 ] && [ "$BASHPID" != "$_UI_OWNER" ]; then
-    if [ -n "${_UI_PID:-}" ]; then kill -STOP "$_UI_PID" 2>/dev/null || true; fi
+    if [ -n "${_UI_PID:-}" ] && kill -STOP "$_UI_PID" 2>/dev/null; then
+      # Sending STOP is asynchronous. Observe kernel acknowledgement before
+      # giving native sudo the tty, including when a frame was mid-write.
+      local painter_key painter_state
+      while [ -r "/proc/$_UI_PID/status" ]; do
+        painter_state=''
+        while read -r painter_key painter_state; do
+          [ "$painter_key" != State: ] || break
+        done <"/proc/$_UI_PID/status" 2>/dev/null || break
+        case "$painter_state" in T*|t*|Z*|X*) break ;; esac
+      done
+    fi
     printf '\033[?25h\n Administrator permission: your password stays hidden while you type.\n' >/dev/tty
     command sudo -v >/dev/tty 2>/dev/tty || rc=$?
     if [ -n "${_UI_PID:-}" ]; then kill -CONT "$_UI_PID" 2>/dev/null || true; fi
@@ -501,6 +527,7 @@ _ui_auth() {
   if [ "${_UI_ACTIVE:-0}" = 1 ]; then
     _ui_question 'Administrator permission' 'Your password stays hidden while you type.' ''
     command sudo -v >/dev/tty 2>/dev/tty || rc=$?
+    _UI_MODE="$previous_mode"
     _ui_resume
   else
     command sudo -v || rc=$?

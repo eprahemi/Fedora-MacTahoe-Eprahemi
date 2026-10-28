@@ -4220,7 +4220,9 @@ setup_firefox_theme() {
     exec {_ff_tty}>&-
     if [ "${_UI_ACTIVE:-0}" = 1 ]; then _ui_resume; fi
     case "${reply,,}" in
-      y|yes) _firefox_processes terminate ;;
+      y|yes)
+        if [ "${_UI_ACTIVE:-0}" = 1 ]; then _ui_resume work; fi
+        _firefox_processes terminate ;;
       *) _VISUAL_SKIP_REASON='close consent declined'; log "Firefox theming skipped; Firefox left running"; return 0 ;;
     esac
 
@@ -5486,6 +5488,7 @@ _save_prompt_answer "old_terminal" "${INSTALL_REMOVE_OLD_TERMINAL:-false}"
 
 # ── Hosted assets: check the links before anything is downloaded ──
 # Only the assets this install actually uses are probed.
+if [ "${_UI_ACTIVE:-0}" = 1 ]; then _ui_resume work; fi
 _hosted_assets_status
 
 if ! prompt_sudoers_entry; then

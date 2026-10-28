@@ -1,10 +1,16 @@
 {
- "latest_version": "3.7.23",
- "bootstrap_sha256": "b56e18eaa8d94a26897c9ca15beb47b973c408cfe4976cf9845cf67bfe657096",
- "install_sha256": "86c308bc9152a3b0da680fb134edeb01eada9bf87c2ff0d14552f2b4a28bc22d",
+ "latest_version": "3.7.24",
+ "bootstrap_sha256": "d92e7da774b997ac7342000aaf3fb6f1b62b822b9e4582797473e34c93af200e",
+ "install_sha256": "f6fc8636257cd8697befc39325ececbedb8bd0a3fe5ae257581de100933821f8",
  "update_sha256": "cb7a2fb49d5a77347365cae263ca30d27334a83187f1e276e1580147ae3fc9d0",
  "asset_helper_sha256": "780bff6ee435af864aec79c3d24526ca72dd8adf96ed16851b4fbbd042378dd1",
  "changelog": [
+  {
+   "version": "3.7.24",
+   "changes": [
+    "Development candidate: retain question mode between consecutive installer questions instead of briefly painting the checklist. Resume progress on actual task, step, transfer or processed-work transitions, without presentation delays. Acknowledge painter trap readiness before replacement so animation cannot run installer EXIT cleanup. Synchronize pipeline painter suspension before native sudo authentication; keep password input hidden and outside the log. Native Fedora smoke test pending."
+   ]
+  },
   {
    "version": "3.7.23",
    "changes": [
