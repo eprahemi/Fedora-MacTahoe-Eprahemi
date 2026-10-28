@@ -33,21 +33,30 @@ if [ -z "${_FED_LOG:-}" ]; then
   # Preserve original stdout/stderr, then redirect all output to both terminal and log
   exec 5>&1 6>&2
   exec > >(tee -a "$_FED_LOG") 2>&1
+  _FED_TEE_PID=$!
 fi
 
+# Both entry points share one presentation library and keep the original fds.
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/bootstrap.sh" --ui-library
+_ui_init
 set -euo pipefail
 
 # ── Log finalization (runs on normal exit, crash, or Ctrl+C) ──
 _fed_log_finalize() {
+  local _exit_rc=$?
+  if [ "${_UI_ACTIVE:-0}" = 1 ]; then
+    if [ "$_exit_rc" -eq 0 ]; then
+      _ui_finish "${_UI_COMPLETION:-Selected tasks finished. Review any notices below.}"
+    else
+      _ui_finish 'Stopped or finished with issues. See the full log for details.'
+    fi
+  fi
   exec 1>&5 2>&6 2>/dev/null || true
   trap - EXIT
   # User closed the installer (Ctrl+C forced exit) or it closed itself
   # (60s no-key/no-answer timeout) — nothing useful ran, so no log is kept.
-  if [ "${_FED_ABORT:-0}" = "1" ]; then
-    rm -f "${_FED_LOG:-}" 2>/dev/null || true
-    return 0
-  fi
-  sleep 0.5 2>/dev/null || true
+  # Interrupted runs retain the transcript too; completed work is not erased.
+  if [ -n "${_FED_TEE_PID:-}" ]; then wait "$_FED_TEE_PID" 2>/dev/null || true; fi
   # Strip ANSI escape sequences from log file (post-process, no pipe race)
   if [ -n "${_FED_LOG:-}" ] && [ -f "$_FED_LOG" ]; then
     LC_ALL=C sed -i 's/\x1b\[[0-9;]*[a-zA-Z]//g' "$_FED_LOG" 2>/dev/null || true
@@ -63,6 +72,7 @@ trap _fed_log_finalize EXIT
 # ── Error logging ──
 _fed_log_error() {
   local _line=$1 _code=$2
+  _ui_notice 'An operation could not complete. Details are in the session log.'
   echo -e "\n  ${RED}${BOLD}✗  ERROR at line ${_line} (exit code: ${_code})${NC}"
   echo -e "  ${YELLOW}${BOLD}   Full log: ${_FED_LOG}${NC}"
 }
@@ -86,6 +96,9 @@ fi
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 BOLD='\033[1m'; WHITE='\033[1;37m'; DIM='\033[2m'; PINK='\033[1;35m'
+if [ ! -t 5 ]; then
+  RED='' GREEN='' YELLOW='' CYAN='' NC='' BOLD='' WHITE='' DIM='' PINK=''
+fi
 
 # ── Padded header row helper ──
 # Prints "  ║  LABEL (padded to 12)  :  VALUE <pad>║"
@@ -224,6 +237,10 @@ _print_log_header
 _INT_PRESS=0
 _FED_ABORT=0
 _handle_sigint() {
+  _ui_stop
+  if [ "${_UI_ACTIVE:-0}" = 1 ]; then
+    printf '\033[?25h\n Interrupted. Press Ctrl+C again to exit.\n' >&7
+  fi
   _INT_PRESS=$((_INT_PRESS + 1))
   if [ "$_INT_PRESS" -ge 2 ]; then
     _FED_ABORT=1
@@ -237,8 +254,12 @@ trap _handle_sigint INT
 # ── Key wait with 60s auto-close ──
 # Any 'press any key' style wait: 60s of silence closes the installer (no log saved).
 _wait_or_close() {
+  if [ "${_UI_ACTIVE:-0}" = 1 ]; then
+    _ui_question 'Kitty is recommended' 'Install Kitty, then run this installer there for the intended experience.' 'Press any key to continue, or Ctrl+C to stop.'
+  fi
   local _rc=0
   read -t 60 -r -s -n 1 key < /dev/tty || _rc=$?
+  if [ "${_UI_ACTIVE:-0}" = 1 ]; then _ui_resume; fi
   if [ "$_rc" -eq 142 ]; then
     _FED_ABORT=1
     echo ""
@@ -261,8 +282,15 @@ GINTAMA_URL="https://drive.usercontent.google.com/download?id=1zZn587151sm8033-W
 
 log()   { echo -e "  ${CYAN}${DIM}┊${NC} ${CYAN}$(date +%H:%M:%S)${NC} ${DIM}┊${NC} $1"; }
 ok()    { echo -e "  ${GREEN}  ┊ ✓ ${NC}  $1"; }
-warn()  { echo -e "  ${YELLOW}  ┊ ⚠ ${NC}  $1"; }
-fail()  { echo -e "  ${RED}  ┊ ✗ ${NC}  $1"; exit 1; }
+warn()  {
+  echo -e "  ${YELLOW}  ┊ ⚠ ${NC}  $1"
+  if [ "${_UI_ACTIVE:-0}" = 1 ]; then _ui_notice "$1"; fi
+}
+fail()  {
+  echo -e "  ${RED}  ┊ ✗ ${NC}  $1"
+  if [ "${_UI_ACTIVE:-0}" = 1 ]; then _ui_notice "$1"; fi
+  exit 1
+}
 
 # ── Step status tracking ────────────────────────────────────────
 # The installer must never fall over because one step failed. A dead
@@ -371,6 +399,10 @@ _step_failed() {
     echo -e "  ${RED}  ┊ ✗ ${NC}  ${BOLD}${RED}Step failed${NC} ${DIM}(${step_id}, exit ${rc})${NC}"
     echo -e "  ${RED}  ┊   ${NC}  ${DIM}Continuing with the next step — this one is retried on the next run.${NC}"
     _note_missing "$label" "$(_step_fix "$step_id")"
+    if [ "${_UI_ACTIVE:-0}" = 1 ]; then
+      _ui_notice "$label could not complete; remaining steps will continue."
+      _UI_RESULT_DETAILS+="$label - retry: $(_step_fix "$step_id")"$'\n'
+    fi
 }
 
 backup_dconf() {
@@ -398,8 +430,16 @@ confirm() {
   local prompt="$1" default="${2:-}"
   local reply=""
   local _rc=0
+  local _correction=''
   while true; do
-    echo -en "  ${DIM}${prompt}${NC} " >/dev/tty
+    if [ "${_UI_ACTIVE:-0}" = 1 ]; then
+      _ui_question "${_UI_QUESTION_TITLE:-Your preference}" "${_UI_QUESTION_BODY:-Please review this choice.}${_correction}" "$prompt"
+    fi
+    if [ "${_UI_ACTIVE:-0}" = 1 ]; then
+      printf '%s\n' "$prompt"
+    else
+      echo -en "  ${DIM}${prompt}${NC} " >/dev/tty
+    fi
     _rc=0
     read -t 60 -r reply </dev/tty || _rc=$?
     if [ "$_rc" -eq 142 ]; then
@@ -409,10 +449,10 @@ confirm() {
       exit 42
     fi
     case "${reply,,}" in
-      y|yes) return 0 ;;
-      n|no)  return 1 ;;
-      '')    [ "$default" = "Y" ] && return 0 || return 1 ;;
-      *)     warn "Type y/yes or n/no" ;;
+      y|yes) if [ "${_UI_ACTIVE:-0}" = 1 ]; then _ui_resume; fi; return 0 ;;
+      n|no)  if [ "${_UI_ACTIVE:-0}" = 1 ]; then _ui_resume; fi; return 1 ;;
+      '')    if [ "${_UI_ACTIVE:-0}" = 1 ]; then _ui_resume; fi; [ "$default" = "Y" ] && return 0 || return 1 ;;
+      *)     echo 'Type y/yes or n/no'; _correction=$'\nType y/yes or n/no.' ;;
     esac
   done
 }
@@ -427,18 +467,27 @@ confirm_final() {
   local prompt="$1" default="${2:-}"
   local reply=""
   local _rc=0
+  local _correction=''
   while true; do
-    echo -en "  ${DIM}${prompt}${NC} " >/dev/tty
+    if [ "${_UI_ACTIVE:-0}" = 1 ]; then
+      _ui_question 'Restart your computer' "${_UI_COMPLETION:-Processing has finished.} A restart applies desktop and login changes.${_correction}" "$prompt"
+    fi
+    if [ "${_UI_ACTIVE:-0}" = 1 ]; then
+      printf '%s\n' "$prompt"
+    else
+      echo -en "  ${DIM}${prompt}${NC} " >/dev/tty
+    fi
     _rc=0
     read -t 60 -r reply </dev/tty || _rc=$?
     if [ "$_rc" -eq 142 ]; then
+      if [ "${_UI_ACTIVE:-0}" = 1 ]; then _ui_resume; fi
       return 2
     fi
     case "${reply,,}" in
-      y|yes) return 0 ;;
-      n|no)  return 1 ;;
-      '')    [ "$default" = "Y" ] && return 0 || return 1 ;;
-      *)     warn "Type y/yes or n/no" ;;
+      y|yes) if [ "${_UI_ACTIVE:-0}" = 1 ]; then _ui_resume; fi; return 0 ;;
+      n|no)  if [ "${_UI_ACTIVE:-0}" = 1 ]; then _ui_resume; fi; return 1 ;;
+      '')    if [ "${_UI_ACTIVE:-0}" = 1 ]; then _ui_resume; fi; [ "$default" = "Y" ] && return 0 || return 1 ;;
+      *)     echo 'Type y/yes or n/no'; _correction=$'\nType y/yes or n/no.' ;;
     esac
   done
 }
@@ -517,6 +566,8 @@ _drive_asset() {
 # stops because a third-party file is gone.
 # Returns 0 = continue without it, 1 = try the download anyway.
 _drive_dead_ask() {
+    _UI_QUESTION_TITLE='Requested download unavailable'
+    _UI_QUESTION_BODY='A hosted file you requested appears unavailable. Continue without this asset?'
   # _drive_dead_ask "<what>" "<how to add it later>"
   local what="$1" fix="$2"
   echo ""
@@ -920,6 +971,10 @@ _run_step() {
     # step's own failure is captured, recorded and reported later.
     local _rc=0
     "$func_name" || _rc=$?
+    if [ "${_UI_ACTIVE:-0}" = 1 ]; then
+      _UI_DONE=$((_UI_DONE + 1))
+      _ui_progress "$_UI_DONE" "$TOTAL_STEPS"
+    fi
     if [ "$_rc" -ne 0 ]; then
       # Preflight is the one step that must stay fatal: if the machine is
       # not a supported target there is nothing sensible to continue with.
@@ -937,6 +992,10 @@ _run_step() {
     _update_step_state "$step_id"
     _step_record "$step_id" "ok" "${CURRENT_STEP_LABEL:-$step_id}"
   else
+    if [ "${_UI_ACTIVE:-0}" = 1 ]; then
+      _UI_DONE=$((_UI_DONE + 1))
+      _ui_progress "$_UI_DONE" "$TOTAL_STEPS"
+    fi
     # A step that does not run has no label of its own — next_step()
     # lives inside the step function.
     _step_record "$step_id" "skipped" "$step_id"
@@ -955,6 +1014,7 @@ next_step() {
   sudo -n -v 2>/dev/null || true  # refresh sudo credential silently
   STEP=$((STEP + 1))
   CURRENT_STEP_LABEL="$1"
+  if [ "${_UI_ACTIVE:-0}" = 1 ]; then _ui_task "$1"; fi
   local pct=$((STEP * 100 / TOTAL_STEPS))
   local filled=$((STEP * 30 / TOTAL_STEPS))
   local empty=$((30 - filled))
@@ -969,6 +1029,16 @@ next_step() {
 
 phase_divider() {
   local title="$1" start="$2" end="$3"
+  if [ "${_UI_ACTIVE:-0}" = 1 ]; then
+    case "$title" in
+      *'PHASE 1'*) _ui_phase Foundations ;;
+      *'PHASE 2'*) _ui_phase Packages ;;
+      *'PHASE 3'*) _ui_phase Themes ;;
+      *'PHASE 4'*) _ui_phase Configuration ;;
+      *'PHASE 5'*) _ui_phase Shell ;;
+      *'PHASE 6'*) _ui_phase Finalize ;;
+    esac
+  fi
   local ph="◈◈◈  ${title}  ◈◈◈"
   local range
   [ "$start" = "$end" ] && range="Step ${start} of ${TOTAL_STEPS}" || range="Steps ${start}–${end} of ${TOTAL_STEPS}"
@@ -1544,6 +1614,7 @@ preflight() {
 
     # Block Ptyxis (it gets removed during installation)
     if [ "$detected_term" = "ptyxis" ] || [ "$detected_term" = "gnome-ptyxis" ]; then
+      if [ "${_UI_ACTIVE:-0}" = 1 ]; then _ui_notice 'Use Kitty instead of Ptyxis. Install Kitty with sudo dnf install kitty, then run this installer there.'; fi
       echo ""
       echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
 pt_title="          ⛔  WOAH — PTYXIS DETECTED"
@@ -1641,6 +1712,7 @@ pt13="  needs to be the main ride for this to work."
     detected_os=$(grep -oP '^NAME="?\K[^"]+' /etc/os-release 2>/dev/null || echo "Unknown Linux")
   fi
   if [ ! -f /etc/fedora-release ]; then
+    if [ "${_UI_ACTIVE:-0}" = 1 ]; then _ui_notice 'Fedora Workstation is required. This operating system is unsupported.'; fi
     echo ""
     echo -e "  ${RED}╔══════════════════════════════════════════════════════════════╗${NC}"
 ios_t="          INCOMPATIBLE OPERATING SYSTEM"
@@ -1694,6 +1766,7 @@ ios_url="  https://fedoraproject.org/workstation/"
       echo ""
       echo -e "  ${RED}╔══════════════════════════════════════════════════════════════╗${NC}"
 ide_t="          INCOMPATIBLE DESKTOP ENVIRONMENT"
+      if [ "${_UI_ACTIVE:-0}" = 1 ]; then _ui_notice 'The active desktop must be GNOME. Switch to Fedora Workstation GNOME.'; fi
       echo -e "  ${RED}║${NC}${ide_t}$(printf '%*s' $((62 - ${#ide_t})) '')${RED}║${NC}"
       echo -e "  ${RED}╠══════════════════════════════════════════════════════════════╣${NC}"
 ide_det="  Detected DE :  $detected_desk"
@@ -1718,6 +1791,7 @@ ide_cmd="    sudo dnf group install workstation-product-environment"
     fi
   fi
   if [ "$gnome_ok" = false ]; then
+    if [ "${_UI_ACTIVE:-0}" = 1 ]; then _ui_notice 'GNOME Shell was not found. Fedora Workstation with GNOME is required.'; fi
     echo ""
     echo -e "  ${RED}╔══════════════════════════════════════════════════════════════╗${NC}"
 gnome_t="            GNOME SHELL NOT FOUND"
@@ -3312,6 +3386,8 @@ SUDOERS_TEMPLATE
 # INSTALL_DESKTOP_WALLPAPER (update wallpaper) skips it, so the
 # updater can apply the wallpaper without a second confirmation.
 prompt_desktop_wallpaper() {
+  _UI_QUESTION_TITLE='Desktop wallpaper'
+  _UI_QUESTION_BODY=$'Set Himeno as your desktop background?\nNo keeps the wallpaper you picked. Change later with update wallpaper.'
   if [ -z "${INSTALL_DESKTOP_WALLPAPER:-}" ]; then
     echo ""
     echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
@@ -3346,6 +3422,8 @@ prompt_desktop_wallpaper() {
 
 # ── GDM login screen prompt ─────────────────────────────────
 prompt_gdm_login() {
+  _UI_QUESTION_TITLE='Login screen'
+  _UI_QUESTION_BODY=$'Apply the Himeno GDM login theme and hide the logo?\nSkip if you already have a custom GDM setup. Change later with gdm.'
   if [ -z "${INSTALL_LOGIN_WALLPAPER:-}" ]; then
     echo ""
     echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
@@ -3387,6 +3465,8 @@ prompt_gdm_login() {
 # nothing to remove and the prompt must not appear. Returns 1 when Ptyxis is
 # absent (caller saves no answer — the default is false anyway).
 prompt_remove_old_terminal() {
+  _UI_QUESTION_TITLE='Remove the old terminal?'
+  _UI_QUESTION_BODY=$'Ptyxis is installed. Yes removes the app, its settings and cache.\nNo keeps it untouched. Kitty remains the intended terminal.'
   local _present=0
   if rpm -q ptyxis &>/dev/null; then _present=1; fi
   if command -v ptyxis &>/dev/null; then _present=1; fi
@@ -3437,6 +3517,8 @@ prompt_remove_old_terminal() {
 # Returns 0 when an answer is available, 1 when firewalld isn't
 # running (nothing to ask about — the step skips it too).
 prompt_firewalld() {
+  _UI_QUESTION_TITLE='Disable firewalld?'
+  _UI_QUESTION_BODY=$'Yes stops the firewall manager. No keeps/enables it.\nManaged filtering and container integration can change when it stops.\nReview this security choice carefully. Enter defaults to Yes.'
   # Only ask when firewalld is actually running — the box's premise is
   # "Firewalld is running and using ~30-50 MB RAM."
   if ! systemctl is-active firewalld >/dev/null 2>&1; then
@@ -4284,13 +4366,20 @@ setup_firefox_theme() {
       warn "No terminal available for consent — skipping Firefox theming"
       return 0
     fi
-    printf '  Save your work. Close Firefox and apply its theme? [y/N]: ' >&"$_ff_tty"
+    if [ "${_UI_ACTIVE:-0}" = 1 ]; then
+      _ui_question 'Close Firefox for theming?' 'Firefox is open. Save your work. Only Yes permits closing it.' 'Close Firefox and apply its theme? [y/N]:'
+    fi
+    if [ "${_UI_ACTIVE:-0}" != 1 ]; then
+      printf '  Save your work. Close Firefox and apply its theme? [y/N]: ' >&"$_ff_tty"
+    fi
     if ! read -t 60 -r reply <&"$_ff_tty"; then
       exec {_ff_tty}>&-
+      if [ "${_UI_ACTIVE:-0}" = 1 ]; then _ui_resume; fi
       warn "No consent received — skipping Firefox theming"
       return 0
     fi
     exec {_ff_tty}>&-
+    if [ "${_UI_ACTIVE:-0}" = 1 ]; then _ui_resume; fi
     case "${reply,,}" in
       y|yes) killall firefox firefox-bin 2>/dev/null || true ;;
       *) log "Firefox theming skipped; Firefox left open"; return 0 ;;
@@ -5294,6 +5383,21 @@ except Exception:
 
   __install_summary
 
+  if [ "${_UI_ACTIVE:-0}" = 1 ]; then
+    _UI_RESULT_DETAILS=''
+    local _ui_i
+    for ((_ui_i=0; _ui_i<MISSING_COUNT; _ui_i++)); do
+      _UI_RESULT_DETAILS+="${MISSING_LABEL[$_ui_i]} - retry: ${MISSING_FIX[$_ui_i]}"$'\n'
+    done
+    if [ "$STEP_FAILED_COUNT" -gt 0 ]; then
+      _UI_COMPLETION="Finished with issues: $STEP_FAILED_COUNT step(s) need attention."
+    else
+      _UI_COMPLETION='Installation finished successfully.'
+    fi
+    _UI_QUESTION_BODY="$_UI_COMPLETION Log: $_FED_LOG"
+    _ui_task "$_UI_COMPLETION"
+  fi
+
   echo ""
   echo -e "  ${GREEN}╔══════════════════════════════════════════════════════════════╗${NC}"
   echo -e "  ${GREEN}║${NC}                                                              ${GREEN}║${NC}"
@@ -5460,9 +5564,8 @@ echo -e "  ${CYAN}║${NC}  ${BOLD}${RED}${wp_line}${NC}$(printf '%*s' $((60 - $
 echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
-__secure_tunnel
 __system_dashboard
-__cdn_speed_test
+# Simulated security/network numbers and artificial delays are not shown/run.
 
 # ── Before any prompts, load saved answers from state ──
 # This populates INSTALL_DESKTOP_WALLPAPER, INSTALL_LOGIN_WALLPAPER,
@@ -5564,6 +5667,13 @@ fi
 
 # Fill the remaining gaps AFTER the prompts.
 INSTALL_REMOVE_OLD_TERMINAL="${INSTALL_REMOVE_OLD_TERMINAL:-false}"
+
+if [ "${_UI_ACTIVE:-0}" = 1 ]; then
+  printf -v _UI_CHOICES 'Desktop wallpaper: %s\nLogin theme: %s\nDisable firewalld: %s\nRemove Ptyxis and its settings/cache: %s' \
+    "$INSTALL_DESKTOP_WALLPAPER" "${INSTALL_LOGIN_WALLPAPER:-false}" "${INSTALL_DISABLE_FIREWALLD:-false}" "$INSTALL_REMOVE_OLD_TERMINAL"
+  printf 'Choices: %s\n' "$_UI_CHOICES"
+  _ui_notice 'Choices recorded; installation is now starting.'
+fi
 
 # A "yes" answer must run its step even when that step is already recorded
 # at the current version. Without this, the prompt promises an action that

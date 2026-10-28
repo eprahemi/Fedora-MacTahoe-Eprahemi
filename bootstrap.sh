@@ -1,5 +1,192 @@
 #!/usr/bin/env bash
 
+# Shared terminal presentation library. install.sh sources this file with
+# --ui-library; the online bash -c entry needs no extra download/dependency.
+# Installation functions always execute in the foreground shell. Only painting
+# runs in a child; it never reads input, executes work, or writes the transcript.
+_UI_ACTIVE=0 _UI_PID='' _UI_TASK='Preparing your Fedora desktop'
+_UI_PHASE='Preparation' _UI_DONE=0 _UI_TOTAL=0 _UI_STARTED=${_FED_UI_STARTED:-$EPOCHSECONDS}
+export _FED_UI_STARTED="$_UI_STARTED"
+_UI_OWNER=$BASHPID
+_UI_NOTICE='' _UI_CHOICES='' _UI_FINISHED=0 _UI_RESULT_DETAILS=''
+_UI_NOTICES=()
+_ui_stop() {
+  if [ -n "${_UI_PID:-}" ]; then
+    kill -CONT "$_UI_PID" 2>/dev/null || true
+    kill "$_UI_PID" 2>/dev/null || true
+    wait "$_UI_PID" 2>/dev/null || true
+    _UI_PID=''
+  fi
+}
+_ui_line() {
+  # All dynamic text is clipped to terminal columns by using ASCII UI copy.
+  local text="$1" width="$2"
+  text=${text//$'\033'/}
+  text=${text//$'\n'/ }
+  text=${text//$'\r'/ }
+  printf '\033[2K %.*s\r\n' "$((width - 2))" "$text" >&7
+}
+_ui_paint() {
+  local frame="${1:-0}" rows cols elapsed pct trail name short idx=0
+  read -r rows cols < <(stty size < /dev/tty 2>/dev/null) || { rows=24; cols=80; }
+  case "$rows:$cols" in *[!0-9:]*|:*) rows=24; cols=80 ;; esac
+  [ "$cols" -ge 4 ] || cols=4
+  elapsed=$((EPOCHSECONDS - _UI_STARTED))
+  printf '\033[H' >&7
+  if [ "$rows" -lt 14 ] || [ "$cols" -lt 52 ]; then
+    _ui_line 'Fedora MacTahoe - Eprahemi Edition' "$cols"
+    _ui_line "$_UI_PHASE: $_UI_TASK" "$cols"
+    _ui_line "Working | elapsed ${elapsed}s | keep this window open" "$cols"
+    _ui_line "$_UI_NOTICE" "$cols"
+    _ui_line 'Made by Eprahemi' "$cols"
+    printf '\033[J' >&7
+    return 0
+  fi
+  local colors=(38 44 51 44) spin=('|' '/' '-' '\\')
+  printf '\033[38;5;%sm' "${colors[$((frame % 4))]}" >&7
+  _ui_line '   ____' "$cols"
+  _ui_line '  / __/   Fedora MacTahoe' "$cols"
+  _ui_line ' / /_     Eprahemi Edition' "$cols"
+  _ui_line '/ __/' "$cols"
+  _ui_line '/_/ ' "$cols"
+  printf '\033[0m' >&7
+  _ui_line '' "$cols"
+  _ui_line "${spin[$((frame % 4))]} $_UI_TASK" "$cols"
+  _ui_line "Elapsed ${elapsed}s - keep this window open" "$cols"
+  if [ "$_UI_TOTAL" -gt 0 ]; then
+    pct=$((_UI_DONE * 100 / _UI_TOTAL))
+    _ui_line "Processed $_UI_DONE/$_UI_TOTAL steps (${pct}%) - not a success score" "$cols"
+  else
+    _ui_line 'Preparing downloads - measuring availability, not guessing a percent' "$cols"
+  fi
+  _ui_line '' "$cols"
+  # The current phase is highlighted; all prior/next phases remain visible.
+  trail=''
+  for name in Preparation Foundations Packages Themes Configuration Shell Finalize; do
+    case "$name" in
+      Preparation) short=Prep ;; Foundations) short=Base ;; Packages) short=Apps ;;
+      Themes) short=Theme ;; Configuration) short=Config ;; Shell) short=Shell ;; Finalize) short=Finish ;;
+    esac
+    if [ "$name" = "$_UI_PHASE" ]; then trail+="[$short] "; else trail+="$short "; fi
+  done
+  _ui_line "$trail" "$cols"
+  _ui_line "Current phase: $_UI_PHASE" "$cols"
+  _ui_line "$_UI_NOTICE" "$cols"
+  if [ -n "$_UI_CHOICES" ] && [ "$rows" -ge 24 ]; then
+    while IFS= read -r name; do _ui_line "$name" "$cols"; done <<<"$_UI_CHOICES"
+  fi
+  _ui_line '' "$cols"
+  _ui_line 'Made by Eprahemi' "$cols"
+  printf '\033[J' >&7
+}
+_ui_resume() {
+  if [ "${_UI_ACTIVE:-0}" = 1 ] && [ "$BASHPID" = "$_UI_OWNER" ]; then
+    _ui_stop
+    printf '\033[?25l' >&7
+    _ui_paint 0
+    (
+      _tick_pid=''
+      trap 'if [ -n "$_tick_pid" ]; then kill "$_tick_pid" 2>/dev/null || true; fi; exit 0' TERM INT
+      _frame=0
+      while :; do
+        # Waiting for a background tick lets TERM interrupt the wait promptly;
+        # replacing a task never adds the animation interval to install time.
+        sleep 0.4 & _tick_pid=$!
+        wait "$_tick_pid" || true
+        _tick_pid=''
+        _frame=$((_frame + 1))
+        _ui_paint "$_frame"
+      done
+    ) &
+    _UI_PID=$!
+  fi
+}
+_ui_init() {
+  # Test ORIGINAL stdout, not tee's pipe. Never infer TTY from /dev/tty alone.
+  if [ -t 5 ] && [ -t 6 ] && [ "${TERM:-dumb}" != dumb ] &&
+     { exec 7>/dev/tty; } 2>/dev/null; then
+    _UI_ACTIVE=1
+    exec >>"$_FED_LOG" 2>&1
+    printf '\033[?1049h\033[?25l' >&7
+    _ui_resume
+  fi
+}
+_ui_task() { _UI_TASK="$1"; _ui_resume; }
+_ui_phase() { _UI_PHASE="$1"; _ui_resume; }
+_ui_progress() { _UI_DONE="$1"; _UI_TOTAL="$2"; _ui_resume; }
+_ui_notice() {
+  if [ "${_UI_ACTIVE:-0}" = 1 ] && [ "$BASHPID" = "$_UI_OWNER" ]; then
+    _UI_NOTICE="$1"
+    _UI_NOTICES+=("$1")
+    _ui_resume
+  fi
+}
+_ui_question() {
+  if [ "${_UI_ACTIVE:-0}" = 1 ]; then
+    _ui_stop
+    # Alternate screen belongs entirely to us, never erase normal scrollback.
+    printf '\033[H\033[J\033[?25h\033[0m' >&7
+    local rows cols line
+    read -r rows cols < <(stty size < /dev/tty 2>/dev/null) || cols=80
+    [ "${cols:-0}" -ge 4 ] || cols=4
+    _ui_line ' f  Fedora MacTahoe - Eprahemi Edition' "$cols"
+    _ui_line '' "$cols"
+    _ui_line "$1" "$cols"
+    while IFS= read -r line; do _ui_line "$line" "$cols"; done < <(printf '%s\n' "${2:-}" | fold -sw "$((cols - 2))")
+    _ui_line '' "$cols"
+    printf ' %s ' "${3:-}" >&7
+  fi
+}
+_ui_cleanup() {
+  if [ "${_UI_ACTIVE:-0}" = 1 ]; then
+    _ui_stop
+    printf '\033[0m\033[?25h\033[?1049l' >&7
+    _UI_ACTIVE=0
+  fi
+}
+_ui_finish() {
+  if [ "${_UI_ACTIVE:-0}" = 1 ]; then
+    _ui_cleanup
+    printf '\n Fedora MacTahoe - Eprahemi Edition\n %s\n Log: %s\n Made by Eprahemi\n' "$1" "$_FED_LOG" >&5
+    local notice
+    for notice in "${_UI_NOTICES[@]}"; do printf ' Notice: %s\n' "$notice" >&5; done
+    if [ -n "${_UI_RESULT_DETAILS:-}" ]; then printf '%s\n' "$_UI_RESULT_DETAILS" >&5; fi
+    _UI_FINISHED=1
+  fi
+}
+_ui_auth() {
+  # sudo owns authentication and hidden input. Never read passwords ourselves,
+  # never enable pwfeedback, never log authentication output or keystrokes.
+  local rc=0
+  # Pipeline/command-substitution children must never spawn replacement
+  # painters or pretend to own their parent's foreground UI/state.
+  if [ "${_UI_ACTIVE:-0}" = 1 ] && [ "$BASHPID" != "$_UI_OWNER" ]; then
+    if [ -n "${_UI_PID:-}" ]; then kill -STOP "$_UI_PID" 2>/dev/null || true; fi
+    printf '\033[?25h\n Administrator permission: password typing is hidden.\n' >/dev/tty
+    command sudo -v >/dev/tty 2>/dev/tty || rc=$?
+    if [ -n "${_UI_PID:-}" ]; then kill -CONT "$_UI_PID" 2>/dev/null || true; fi
+    return "$rc"
+  fi
+  if [ "${_UI_ACTIVE:-0}" = 1 ]; then
+    _ui_question 'Administrator permission' 'Type your password when sudo asks. Typing is hidden.' ''
+    command sudo -v >/dev/tty 2>/dev/tty || rc=$?
+    _ui_resume
+  else
+    command sudo -v || rc=$?
+  fi
+  return "$rc"
+}
+sudo() {
+  # Preserve noninteractive credential checks. For work, warm authentication
+  # before invoking the original argv; do not wrap the work in a subshell.
+  if [ "${_UI_ACTIVE:-0}" = 1 ] && [ "${1:-}" != -n ]; then
+    if ! command sudo -n -v 2>/dev/null; then _ui_auth || return $?; fi
+  fi
+  command sudo "$@"
+}
+
+if [ "${1:-}" = --ui-library ]; then return 0; fi
+
 # ─────────────────────────────────────────────────────────────
 #  Fedora MacTahoe — Eprahemi Edition
 #  Bootstrap: fetches install.sh from GitHub and runs it
@@ -32,6 +219,7 @@ touch "$_FED_LOG" 2>/dev/null || true
 # Preserve original stdout/stderr, then redirect all output to both terminal and log
 exec 5>&1 6>&2
 exec > >(tee -a "$_FED_LOG") 2>&1
+_FED_TEE_PID=$!
 
 set -euo pipefail
 
@@ -40,18 +228,27 @@ TMP="/tmp/fedora-mactahoe"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 BOLD='\033[1m'; WHITE='\033[1;37m'; DIM='\033[2m'
+if [ ! -t 5 ]; then
+  RED='' GREEN='' YELLOW='' CYAN='' NC='' BOLD='' WHITE='' DIM=''
+fi
+_ui_init
 
 # ── Log finalization (runs on normal exit, crash, or Ctrl+C) ──
 _fed_log_finalize() {
+  local _exit_rc=$?
+  if [ -n "${_clone_pid:-}" ]; then
+    kill "$_clone_pid" 2>/dev/null || true
+    wait "$_clone_pid" 2>/dev/null || true
+  fi
+  if [ "${_UI_ACTIVE:-0}" = 1 ]; then
+    _ui_finish 'Preparation stopped. Review the session log and try again when ready.'
+  fi
   exec 1>&5 2>&6 2>/dev/null || true
   trap - EXIT
   # User closed the script (Ctrl+C forced exit) or it closed itself
   # (60s no-key timeout) — nothing ran, so the log is not worth keeping.
-  if [ "${_FED_ABORT:-0}" = "1" ]; then
-    rm -f "${_FED_LOG:-}" 2>/dev/null || true
-    return 0
-  fi
-  sleep 0.5 2>/dev/null || true
+  # Retain partial transcripts on interruption as well.
+  if [ -n "${_FED_TEE_PID:-}" ]; then wait "$_FED_TEE_PID" 2>/dev/null || true; fi
   # Strip ANSI escape sequences from log file (post-process, no pipe race)
   if [ -n "${_FED_LOG:-}" ] && [ -f "$_FED_LOG" ]; then
     LC_ALL=C sed -i 's/\x1b\[[0-9;]*[a-zA-Z]//g' "$_FED_LOG" 2>/dev/null || true
@@ -67,6 +264,7 @@ trap _fed_log_finalize EXIT
 # ── Error logging ──
 _fed_log_error() {
   local _line=$1 _code=$2
+  _ui_notice 'Preparation could not complete. The session log has details.'
   echo -e "\n  ${RED}${BOLD}✗  ERROR at line ${_line} (exit code: ${_code})${NC}"
   echo -e "  ${YELLOW}${BOLD}   Full log: ${_FED_LOG}${NC}"
 }
@@ -77,6 +275,10 @@ trap '_fed_log_error $LINENO $?' ERR
 _INT_PRESS=0
 _FED_ABORT=0
 _handle_sigint() {
+  _ui_stop
+  if [ "${_UI_ACTIVE:-0}" = 1 ]; then
+    printf '\033[?25h\n Interrupted. Press Ctrl+C again to exit.\n' >&7
+  fi
   _INT_PRESS=$((_INT_PRESS + 1))
   if [ "$_INT_PRESS" -ge 2 ]; then
     _FED_ABORT=1
@@ -99,10 +301,11 @@ if [ -z "${KITTY_PID:-}" ]; then
         break
         ;;
     esac
-    walk_pid=$(cat /proc/"$walk_pid"/status 2>/dev/null | awk '/^PPid:/{print $2}')
+    walk_pid=$(cat /proc/"$walk_pid"/status 2>/dev/null | awk '/^PPid:/{print $2}') || true
   done
 
   if [ "$detected_term" = "ptyxis" ] || [ "$detected_term" = "gnome-ptyxis" ]; then
+    _ui_notice 'Ptyxis cannot run this installer. Install Kitty with sudo dnf install kitty, then run it there.'
     echo ""
     echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
 pt_title="          ⛔  WOAH — PTYXIS DETECTED"
@@ -152,6 +355,7 @@ pt13="  needs to be the main ride for this to work."
 
   # ── Kitty recommendation for non-Kitty terminals ──
   if [ "$detected_term" != "kitty" ]; then
+    _ui_question 'Kitty is recommended' 'Install Kitty with sudo dnf install kitty and run this installer there.' 'Press any key to continue here, or Ctrl+C to stop.'
     echo ""
     echo "  ┌─────────────────────────────────────────────────────────────┐"
     echo "  │  ✦  KITTY = THE REAL DEAL  ✦                                │"
@@ -183,6 +387,7 @@ pt13="  needs to be the main ride for this to work."
       break
     done
     # Second space: confirm
+    _ui_question 'Continue without Kitty?' 'The intended desktop terminal experience uses Kitty.' 'Press any key to proceed, or Ctrl+C to stop.'
     echo ""
     echo -e "  ┌─────────────────────────────────────────────────────────────┐"
     echo -e "  │  ${BOLD}${YELLOW}⚠  FOR REAL? NO KITTY?${NC}                                     │"
@@ -201,6 +406,24 @@ pt13="  needs to be the main ride for this to work."
       break
     done
   fi
+fi
+
+# Preparation checks are visible before any package download or privilege use.
+_ui_task 'Checking Fedora, GNOME and installer prerequisites'
+if [ "$EUID" -eq 0 ]; then
+  _ui_notice 'Run as your normal desktop user, not root.'
+  echo 'Run as your normal desktop user, not root.'
+  exit 1
+fi
+if [ ! -f /etc/fedora-release ] || ! command -v gnome-shell >/dev/null 2>&1; then
+  _ui_notice 'Fedora Workstation with GNOME is required.'
+  echo 'Fedora Workstation with GNOME is required.'
+  exit 1
+fi
+if ! command -v sudo >/dev/null 2>&1; then
+  _ui_notice 'sudo is required. Ask your administrator to install/configure it first.'
+  echo 'sudo is required. Ask your administrator to install/configure it first.'
+  exit 1
 fi
 
 # ── Capture GNOME version ──
@@ -231,6 +454,7 @@ wp_line="  ⚠  Read yes/no prompts carefully — some are permanent!"
 echo -e "  ${CYAN}║${NC}  ${BOLD}${RED}${wp_line}${NC}$(printf '%*s' $((60 - ${#wp_line})) '')${CYAN}║${NC}"
 echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
 echo -en "  ${DIM}Waiting on you...${NC} "
+_ui_question 'Ready to prepare Fedora MacTahoe?' 'Read every choice carefully. Some choices change your system.' 'Press any key to begin.'
 _read_rc=0
 read -t 60 -r -s -n 1 key < /dev/tty || _read_rc=$?
 # 142 = read's timeout (SIGALRM). Other codes (Ctrl+C = 130, EOF = 1) are NOT the timeout.
@@ -241,9 +465,11 @@ if [ "$_read_rc" -eq 142 ]; then
   exit 42
 fi
 echo -e "${GREEN}here we go${NC}"
+_ui_resume
 
 # ── Ensure git is available ──
 if ! command -v git &>/dev/null; then
+  _ui_task 'Installing the Git download prerequisite'
   echo -e "  ${CYAN}◆${NC}  Git's not here — grabbing it real quick..."
   sudo dnf install -y git
 fi
@@ -255,35 +481,24 @@ _clone_log=$(mktemp 2>/dev/null || echo /tmp/mct-clone.$$)
 timeout 180 git clone --depth 1 --progress "$REPO" "$TMP" >"$_clone_log" 2>&1 &
 _clone_pid=$!
 _clone_rc=0
-_spin=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
-_msgs=("Contacting GitHub..." "Fetching the installer..." "Cloning the repository..." "Almost there...")
-_i=0
-_pct=0
-printf '\e[?25l'
+_ui_task 'Downloading the installer bundle'
+echo 'Downloading the installer bundle (preparation)...'
+_transfer_last=''
 while kill -0 "$_clone_pid" 2>/dev/null; do
-  _i=$((_i + 1))
-  _frame=${_spin[$((_i % 10))]}
-  _real=$(tr '\r' '\n' < "$_clone_log" 2>/dev/null | grep -Eo '(Receiving objects|Resolving deltas): *[0-9]+%' | tail -1 | grep -Eo '[0-9]+' || true)
-  if [ -n "$_real" ] && [ "$_real" -gt "$_pct" ]; then
-    _pct=$_real
-  elif [ -z "$_real" ]; then
-    _pct=$((_i * 100 / 900))
+  # Git's transfer record is measured data: object percentage, received bytes
+  # and transfer rate when Git reports them. Never synthesize missing values,
+  # combine resolving-delta percentages with transfer, or advance by elapsed time.
+  _transfer=$(tr '\r' '\n' < "$_clone_log" | grep 'Receiving objects:' | tail -1 | sed -E 's/^.*Receiving objects: */Download objects: /; s/, done\.$//' || true)
+  if [ -n "$_transfer" ] && [ "$_transfer" != "$_transfer_last" ]; then
+    _ui_task "$_transfer"
+    _transfer_last="$_transfer"
   fi
-  [ "$_pct" -gt 99 ] && _pct=99
-  _filled=$((_pct * 20 / 100))
-  _empty=$((20 - _filled))
-  _bar=""
-  _pad=""
-  for ((_k = 0; _k < _filled; _k++)); do _bar+="█"; done
-  for ((_k = 0; _k < _empty; _k++)); do _pad+="░"; done
-  _midx=$((_i / 25))
-  [ "$_midx" -gt 3 ] && _midx=3
-  _msg=${_msgs[$_midx]}
-  printf '\r  \e[1;36m%s\e[0m  \e[1;37m%s\e[0m  \e[2;37m[\e[0m\e[1;36m%s\e[0m\e[2;37m%s\e[0m\e[2;37m]\e[0m \e[1;33m%3d%%\e[0m' "$_frame" "$_msg" "$_bar" "$_pad" "$_pct"
   sleep 0.2
 done
 wait "$_clone_pid" 2>/dev/null || _clone_rc=$?
-printf '\e[?25h\r  %*s\r' 80 ''
+_clone_pid=''
+# Original Git output belongs in the transcript, not the clean dashboard.
+cat "$_clone_log" >>"$_FED_LOG"
 
 if [ "$_clone_rc" -eq 0 ]; then
   printf "  ${GREEN}◆${NC}  Cloning installer  ✓  \n"
@@ -299,6 +514,7 @@ if [ "$_clone_rc" -eq 0 ]; then
   cp -f "$TMP/EPRAHEMI — PUBLIC LICENSE & REUSE TERMS.md" "$HOME/Documents/" 2>/dev/null || true
 
 else
+  _ui_notice 'The installer bundle could not be downloaded. Check your connection and retry.'
   printf "  ${RED}◆${NC}  Cloning installer  ✗  \n"
   echo ""
   echo -e "  ${RED}╔══════════════════════════════════════════════════════════════╗${NC}"
@@ -331,6 +547,7 @@ fi
 if [ -n "$_inst_pin" ]; then
   _inst_got=$(sha256sum install.sh 2>/dev/null | awk '{print $1}' || true)
   if [ "$_inst_got" != "$_inst_pin" ]; then
+    _ui_notice 'Installer verification failed. Nothing was run. Fetch a fresh copy and try again.'
     echo -e "  ${RED}◆${NC}  ${BOLD}Installer verification failed${NC} — the downloaded install.sh"
     echo -e "  ${RED}◆${NC}  does not match the fingerprint pinned in updates.json."
     echo -e "  ${RED}◆${NC}  This usually means a corrupted download or a tampered file."
@@ -341,6 +558,9 @@ if [ -n "$_inst_pin" ]; then
   fi
 fi
 
+# Stop the preparation painter before the foreground installer takes over the
+# same original terminal and log. Do not export UI process/animation state.
+_ui_cleanup
 bash install.sh && _inst_rc=0 || _inst_rc=$?
 # 42 = the installer closed itself (60s no-key/no-answer auto-close) —
 # passed through as-is, it is NOT a failure. Everything else propagates.
