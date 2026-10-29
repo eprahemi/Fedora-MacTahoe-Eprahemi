@@ -66,7 +66,8 @@ _ui_checklist() {
   if [ "$((first+slots))" -gt "$count" ]; then first=$((count-slots)); fi
   for ((i=first; i<first+slots; i++)); do
     index=${visible[$i]}
-    color=90 mark='○'
+    local waiting=('⠏' '⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇')
+    color=90 mark=${waiting[$((frame%10))]}
     case "${_UI_STEP_STATES[$index]}" in
       running) color='1;36'; local spin=('|' '/' '-' '\\'); mark=${spin[$((frame%4))]} ;;
       ok) color='1;32'; mark='✓' ;;
@@ -626,15 +627,60 @@ _net_download() {
     esac
   done
 }
+_ui_native_run() {
+  # Never redirect a native transaction into the quiet transcript. It owns the
+  # original input/output TTYs, including unexpected security/consent prompts.
+  local rc=0 active=${_UI_ACTIVE:-0} child=0
+  if [ "$active" = 1 ]; then
+    if [ "$BASHPID" = "$_UI_OWNER" ]; then
+      _ui_stop
+      printf '\033[0m\033[?25h\033[?1049l' >&7
+    else
+      child=1
+      if [ -n "${_UI_PID:-}" ]; then
+        kill -STOP "$_UI_PID" 2>/dev/null || true
+        local key state
+        while [ -r "/proc/$_UI_PID/status" ]; do
+          while read -r key state; do [ "$key" != State: ] || break; done <"/proc/$_UI_PID/status" || break
+          case "$state" in T*|t*|Z*|X*) break ;; esac
+        done
+      fi
+      printf '\033[?25h\n' >&7
+    fi
+    _UI_ACTIVE=0
+    printf 'Native foreground interaction started; input/authentication is not logged.\n'
+    "$@" >&5 2>&6 || rc=$?
+    printf 'Native foreground interaction exited %s.\n' "$rc"
+    _UI_ACTIVE=1
+    if [ "$child" = 1 ]; then
+      [ -z "${_UI_PID:-}" ] || kill -CONT "$_UI_PID" 2>/dev/null || true
+    else
+      printf '\033[?1049h' >&7
+      _ui_resume
+    fi
+  else
+    "$@" || rc=$?
+  fi
+  return "$rc"
+}
+_net_package_once() {
+  # Keep diagnostics for command-boundary recovery; stdin remains native.
+  # sudo authentication is warmed separately, never through this pipe.
+  local rc=0
+  if "$@" 2>&1 | tee "$capture"; then rc=${PIPESTATUS[0]}; else rc=${PIPESTATUS[0]}; fi
+  return "$rc"
+}
 _net_package_run() {
   # The manager is foreground and owns its transaction/locks. Inspect transport
   # diagnostics ONLY after it exits. Never kill it on a connectivity change.
-  local capture rc endpoint diagnostic
+  local capture rc endpoint diagnostic native_ui
   if [ -s "${_FED_NET_STOP:-/dev/null}" ]; then return 130; fi
   capture=$(mktemp "${TMPDIR:-/tmp}/mactahoe-package.XXXXXXXX") || return 1
   while :; do
     rc=0
-    if "$@" 2>&1 | tee "$capture"; then rc=${PIPESTATUS[0]}; else rc=${PIPESTATUS[0]}; fi
+    native_ui=${_UI_ACTIVE:-0}
+    _ui_native_run _net_package_once "$@" || rc=$?
+    if [ "$native_ui" = 1 ] && [ -n "${_FED_LOG:-}" ]; then cat "$capture" >>"$_FED_LOG"; fi
     if [ "$rc" -eq 0 ]; then rm -f "$capture"; return 0; fi
     diagnostic=$(grep -Ei 'Curl error \((5|6|7|28|52|55|56)\)|Could not resolve host|Could not connect to' "$capture" || true)
     endpoint=$(printf '%s\n' "$diagnostic" | grep -Eo 'https?://[^[:space:]<>]+' | head -1 | sed 's/[]),;"]*$//' || true)
@@ -648,7 +694,11 @@ _net_package_run() {
   done
 }
 flatpak() {
-  if [ "${1:-}" = install ]; then _net_package_run command flatpak "$@"; else command flatpak "$@"; fi
+  case "${1:-}" in
+    install) _net_package_run command flatpak "$@" ;;
+    uninstall) _ui_native_run command flatpak "$@" ;;
+    *) command flatpak "$@" ;;
+  esac
 }
 sudo() {
   # Preserve noninteractive credential checks. For work, warm authentication
@@ -658,12 +708,70 @@ sudo() {
   fi
   case "${1:-}:${2:-}:${3:-}" in
     dnf:install:*|dnf:swap:*|dnf:group:install)
-      _net_package_run command sudo "$@" ;;
+       _net_package_run command sudo "$@" ;;
+    dnf:*:*|bash:*:*|chsh:*:*|*.sh:*:*) _ui_native_run command sudo "$@" ;;
     *) command sudo "$@" ;;
   esac
 }
 
 if [ "${1:-}" = --ui-library ]; then return 0; fi
+
+# Fish owns all work and input. This process owns presentation only and consumes
+# data (never shell source) from an owner-private, atomically replaced snapshot.
+# The acknowledged pause leaves the alternate screen BEFORE native interaction.
+if [ "${1:-}" = --ui-events ]; then
+  _events=$2 _FED_LOG=$3 _events_owner=$4 _events_retry=${5:-update}
+  exec 5>&1 6>&2 7>/dev/tty
+  UPDATE_STEPS=updater
+  _UI_ACTIVE=1 _UI_PHASE=Update
+  _events_mode=pause _events_seq='' _events_frame=0
+  _events_cleanup() { _ui_cleanup; }
+  trap '_events_cleanup; exit 130' INT TERM HUP
+  trap _events_cleanup EXIT
+  # Start outside the alternate screen until the first work snapshot arrives.
+  _UI_ACTIVE=0
+  while kill -0 "$_events_owner" 2>/dev/null; do
+    if [ -r "$_events/state" ]; then
+      IFS=$'\t' read -r _seq _mode <"$_events/state"
+      if [ "$_seq" != "$_events_seq" ]; then
+        _events_seq=$_seq
+        _UI_STEP_IDS=() _UI_STEP_LABELS=() _UI_STEP_STATES=() _UI_STEP_REASONS=()
+        _i=0
+        while IFS=$'\t' read -r _state _label; do
+          case "$_state" in waiting|running|ok|skipped|failed) ;; *) continue ;; esac
+          _UI_STEP_IDS+=("task-$_i") _UI_STEP_LABELS+=("$_label")
+          _UI_STEP_STATES+=("$_state") _UI_STEP_REASONS+=('')
+          if [ "$_state" = running ]; then _UI_STEP_CURRENT=$_i _UI_TASK=$_label; fi
+          _i=$((_i+1))
+        done < <(tail -n +2 "$_events/state")
+        if [ "$_mode" = finish ] || [ "$_mode" = failed ] || [ "$_mode" = abort ]; then
+          # Finish uses exactly the installer's renderer and measured counters.
+          _UI_FINAL_ATTENTION=()
+          for _i in "${!_UI_STEP_IDS[@]}"; do
+            if [ "${_UI_STEP_STATES[$_i]}" = failed ]; then
+              _UI_FINAL_ATTENTION+=("${_UI_STEP_LABELS[$_i]}|$_events_retry")
+            fi
+          done
+          _UI_ACTIVE=1
+          _ui_finish "${_mode/abort/Stopped}"
+          printf '%s\n' "$_events_seq" >"$_events/ack"
+          exit 0
+        elif [ "$_mode" = pause ]; then
+          _ui_cleanup
+        elif [ "$_mode" = work ] && [ "$_UI_ACTIVE" = 0 ]; then
+          _UI_ACTIVE=1
+          printf '\033[?1049h\033[?25l' >&7
+        fi
+        _events_mode=$_mode
+        printf '%s\n' "$_events_seq" >"$_events/ack"
+      fi
+    fi
+    if [ "$_events_mode" = work ]; then _ui_paint "$_events_frame"; fi
+    _events_frame=$((_events_frame+1))
+    sleep 0.2
+  done
+  exit 0
+fi
 
 # ─────────────────────────────────────────────────────────────
 #  Fedora MacTahoe — Eprahemi Edition

@@ -36,6 +36,15 @@ if [ -z "${_FED_LOG:-}" ]; then
   _FED_TEE_PID=$!
 fi
 
+# A foreground Fish fetch can hand its already-created transcript to this
+# process without inheriting Bash's fd setup. Bootstrap handoff is unchanged.
+if [ "${_FED_UPDATER_LOG:-0}" = 1 ]; then
+  unset _FED_UPDATER_LOG
+  exec 5>&1 6>&2
+  exec > >(tee -a "$_FED_LOG") 2>&1
+  _FED_TEE_PID=$!
+fi
+
 # Both entry points share one presentation library and keep the original fds.
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/bootstrap.sh" --ui-library
 _FED_NET_STOP=$(mktemp "${TMPDIR:-/tmp}/mactahoe-network-stop.XXXXXXXX") || {
@@ -2405,7 +2414,7 @@ install_rpm_packages() {
 
   # Starship prompt (not in Fedora repos — install via official script)
   if ! command -v starship &>/dev/null; then
-    if ! curl -fsSL --max-time 60 https://starship.rs/install.sh | sh -s -- -y 2>/dev/null; then
+    if ! curl -fsSL --max-time 60 https://starship.rs/install.sh | _ui_native_run sh -s -- -y; then
       warn "Starship install failed — check network or https://starship.rs"
       _step_fail=1
     fi
@@ -2611,14 +2620,10 @@ install_mactahoe_theme() {
   log "Cloning MacTahoe source (GNOME $gtk_version)..."
   if _mactahoe_get_source "$repo"; then
     log "Compiling all theme variants with blur + libadwaita..."
-    local _compile_log="/tmp/mactahoe-compile.log"
-    if ! "$repo/install.sh" -t all -b -l > "$_compile_log" 2>&1; then
+    if ! _ui_native_run "$repo/install.sh" -t all -b -l; then
       warn "Compilation failed — theme not installed"
-      tail -20 "$_compile_log" 2>/dev/null
-      rm -f "$_compile_log"
       return 1
     fi
-    rm -f "$_compile_log"
   else
     warn "No MacTahoe source available (upstream + vendored) — falling back to bundled pre-compiled theme"
     local fallback_dir="$BUNDLE/themes/MacTahoe-Dark"
@@ -3011,6 +3016,14 @@ apply_configs() {
 
   local cfg="$BUNDLE/configs"
   local _fish_fail=0
+
+  # The updater uses this same presentation engine without fetching executable
+  # UI code during local app management. The bundle is already verified by its
+  # caller; copy failure is a real configuration-step failure.
+  if [ -f "$BUNDLE/bootstrap.sh" ]; then
+    mkdir -p "$HOME/.local/share/fedora-mactahoe" || return 1
+    cp "$BUNDLE/bootstrap.sh" "$HOME/.local/share/fedora-mactahoe/ui-library.sh" || return 1
+  fi
 
   # Kitty
   if [ -f "$cfg/kitty/kitty.conf" ]; then
@@ -4208,7 +4221,7 @@ setup_firefox_theme() {
     local reply="" _ff_tty
     # Source fetching and rendering can take time. Recheck before consent.
     if [ -z "$(_firefox_processes)" ]; then
-      "$repo/tweaks.sh" -f 2>&1 || { FIREFOX_THEME_FAILED=1; return 1; }
+      _ui_native_run "$repo/tweaks.sh" -f || { FIREFOX_THEME_FAILED=1; return 1; }
       return 0
     fi
     if ! { exec {_ff_tty}<>/dev/tty; } 2>/dev/null; then
@@ -4252,7 +4265,7 @@ setup_firefox_theme() {
     echo -e "  ${GREEN}  ┊ ✓ ${NC}  Firefox closed — proceeding with theming"
   fi
 
-  if ! "$repo/tweaks.sh" -f 2>&1; then
+  if ! _ui_native_run "$repo/tweaks.sh" -f; then
     warn "Firefox theming skipped — not yet initialized"
     FIREFOX_THEME_FAILED=1
   fi

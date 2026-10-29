@@ -1,10 +1,17 @@
 {
- "latest_version": "3.7.25",
- "bootstrap_sha256": "9c71b400cae88630c700985ce6a6c3d3e67c8bb967bc56b472711d2873f55dd4",
- "install_sha256": "8d63b9344419923a79fc04393ac6865140baf765097dff1164d8ff0d5aac04ae",
- "update_sha256": "cb7a2fb49d5a77347365cae263ca30d27334a83187f1e276e1580147ae3fc9d0",
+ "latest_version": "3.7.26",
+ "bootstrap_sha256": "2155ca934c9037c22f1ce513a6fa1b5e63334da8824f662dcb1021691d978388",
+ "install_sha256": "7309e6ac8420fcd1f5af80868519e4ec87c27bebf47f5eba612b5223a0a2035f",
+ "update_sha256": "7d0068e90469c5c8991204a73afaf42e5a693dbff47b99f3a71751b2561d144f",
  "asset_helper_sha256": "df36b62f1c2b7a0717f295e4aa1f136aa27216d9143a59ad66deabb46284a22a",
  "changelog": [
+  {
+   "version": "3.7.26",
+   "changes": [
+    "Animate gray waiting tasks with Braille frames while preserving the cyan running spinner. Reuse the installer presentation engine for updater-owned configuration, app, cleanup and Wallvault tasks, with checked foreground operations and measured task outcomes. Remove timed pretend progress and duplicate installer success reports.",
+    "Keep native authentication and package consent visible; native interaction takes priority over suppression. Check configuration copies, service changes, app postconditions/data Trash and Wallvault extraction/publication failures. Wallvault progress measures tasks, not transfer bytes. Audited noninteractive output is retained in the session log; native direct-TTY output is not universally captured. Menus, preparation and uninstall retain plain presentation. Native Fedora/Kitty/package smoke testing remains pending."
+   ]
+  },
   {
    "version": "3.7.25",
    "changes": [

@@ -31,6 +31,192 @@
 # Fedora MacTahoe Eprahemi Edition © 2026
 # ══════════════════════════════════════════════════════════════
 
+# The installer and updater share bootstrap.sh's presentation engine. Keep a
+# local library after configuration refresh; never download executable UI code
+# merely to manage apps. An older installation without it gets plain status.
+set -g __update_source (status filename)
+
+function _update_ui_publish --argument-names mode
+    set -q __update_ui_dir; or return 0
+    set -g __update_ui_seq (math $__update_ui_seq + 1)
+    begin
+        printf '%s\t%s\n' $__update_ui_seq "$mode"
+        for i in (seq (count $__update_ui_labels))
+            printf '%s\t%s\n' "$__update_ui_states[$i]" "$__update_ui_labels[$i]"
+        end
+    end > "$__update_ui_dir/next"
+    command mv -f "$__update_ui_dir/next" "$__update_ui_dir/state"
+    # Acknowledge terminal ownership, not an animation delay. Fail to plain mode
+    # if the painter exits or cannot acknowledge; never leave native input hidden.
+    for tick in (seq 250)
+        if test -f "$__update_ui_dir/ack"; and test (string trim < "$__update_ui_dir/ack") = "$__update_ui_seq"
+            return 0
+        end
+        command kill -0 $__update_ui_pid 2>/dev/null; or break
+        sleep 0.02
+    end
+    command kill -TERM $__update_ui_pid 2>/dev/null
+    wait $__update_ui_pid 2>/dev/null
+    command rm -rf -- "$__update_ui_dir"
+    set -e __update_ui_dir
+    printf '\e[0m\e[?25h\e[?1049l' >/dev/tty 2>/dev/null
+end
+
+function _update_ui_begin --argument-names retry library
+    # No reentrant/competing painters (installer-backed targets own their UI).
+    set -q __update_ui_log; and return 0
+    if test -n "$library"
+        set -l manifest (path dirname "$library")/updates.json
+        set -l expected (python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["bootstrap_sha256"])' "$manifest")
+        or return 1
+        if test (string length -- "$expected") -ne 64; or test (_update_sha256 "$library") != "$expected"
+            printf '\n  UI library fingerprint mismatch. No configuration work started.\n' >&2
+            return 1
+        end
+    end
+    set -g __update_ui_labels $argv[3..-1]
+    set -g __update_ui_states
+    for label in $__update_ui_labels
+        set -a __update_ui_states waiting
+    end
+    set -g __update_ui_current 1
+    set -g __update_ui_failed 0
+    set -g __update_ui_cancel 0
+    set -g __update_ui_retry "$retry"
+    set -g __update_ui_seq 0
+    if set -q __update_fetch_log
+        set -g __update_ui_log "$__update_fetch_log"
+        set -e __update_fetch_log
+    else
+        set -g __update_ui_log (mktemp "$HOME/FedoraTahoe_log."(date +%Y-%m-%d.%H-%M-%S)".XXXXXXXX ( UPDATE ).txt")
+        or return 1
+    end
+    chmod 600 "$__update_ui_log"
+    printf 'Fedora MacTahoe — %s\nNative authentication/input is never recorded. Native interactive output remains on the terminal.\n' "$retry" >> "$__update_ui_log"
+    if test -z "$library"
+        set library "$HOME/.local/share/fedora-mactahoe/ui-library.sh"
+        # Bundled developer execution, not a remote fetch or installed setting.
+        set -l bundled (path normalize (path dirname "$__update_source")/../../../bootstrap.sh)
+        if string match -q '*/configs/fish/functions/update.fish' -- "$__update_source"; and test -f "$bundled"
+            set library "$bundled"
+        end
+    end
+    # A pre-dashboard bootstrap ignores unknown arguments and would INSTALL.
+    # Never execute an older library merely because its fingerprint is valid.
+    if test -t 1; and test -t 2; and test "$TERM" != dumb; and test -f "$library"; and command grep -Fq 'if [ "${1:-}" = --ui-events ]; then' "$library"
+        set -g __update_ui_dir (mktemp -d /tmp/mactahoe-ui.XXXXXXXX)
+        bash "$library" --ui-events "$__update_ui_dir" "$__update_ui_log" "$fish_pid" "$retry" &
+        set -g __update_ui_pid $last_pid
+        _update_ui_publish work
+    end
+    function __update_ui_interrupt --on-signal INT
+        if set -q __update_ui_pid
+            command kill -TERM $__update_ui_pid 2>/dev/null
+        end
+        set -g __update_ui_failed 1
+        set -g __update_ui_cancel 1
+    end
+end
+
+function _update_ui_task --argument-names index state
+    set -q __update_ui_log; or return 0
+    test "$__update_ui_cancel" = 1; and return 130
+    set -g __update_ui_current $index
+    test "$state" = failed; and set -g __update_ui_failed 1
+    # A later successful command cannot turn a failed task green.
+    if test "$__update_ui_states[$index]" != failed
+        set -g __update_ui_states[$index] "$state"
+    end
+    printf '%s: %s\n' "$__update_ui_states[$index]" "$__update_ui_labels[$index]" >> "$__update_ui_log"
+    if set -q __update_ui_dir
+        _update_ui_publish work
+    else
+        printf '  %s: %s\n' "$__update_ui_states[$index]" "$__update_ui_labels[$index]"
+    end
+end
+
+function _update_ui_quiet
+    # ONLY audited, noninteractive local file/query/download operations use this.
+    # Never wrap a whole updater function or a native package/auth transaction.
+    if set -q __update_ui_cancel; and test "$__update_ui_cancel" = 1
+        return 130
+    end
+    if not set -q __update_ui_log
+        $argv
+        return $status
+    end
+    set -l rc 0
+    if test -t 1; and test -t 2
+        $argv >> "$__update_ui_log" 2>&1
+        set rc $status
+    else
+        $argv 2>&1 | tee -a "$__update_ui_log"
+        set rc $pipestatus[1]
+    end
+    if test $rc -ne 0
+        set -g __update_ui_failed 1
+        _update_ui_task $__update_ui_current failed
+        _update_ui_publish pause
+        printf '\n  Failed: %s (exit %s). Retry: %s\n  Details: %s\n' "$__update_ui_labels[$__update_ui_current]" $rc "$__update_ui_retry" "$__update_ui_log" >&2
+    end
+    return $rc
+end
+
+function _update_ui_native
+    # Preserve actual TTY fds and stdin: tee/blanket redirection changes native
+    # isatty decisions and can hide consent. No password reader/proxy is added.
+    if set -q __update_ui_cancel; and test "$__update_ui_cancel" = 1
+        return 130
+    end
+    _update_ui_publish pause
+    $argv
+    set -l rc $status
+    if test $rc -eq 130
+        set -g __update_ui_cancel 1
+    end
+    if set -q __update_ui_log
+        printf 'Native foreground operation exited %s (interactive output not captured).\n' $rc >> "$__update_ui_log"
+        if test $rc -ne 0
+            set -g __update_ui_failed 1
+            _update_ui_task $__update_ui_current failed
+            _update_ui_publish pause
+        end
+    end
+    return $rc
+end
+
+function _update_ui_end --argument-names code
+    set -q __update_ui_log; or return $code
+    test "$__update_ui_cancel" = 1; and set code 130
+    if test "$code" -ne 0
+        set -g __update_ui_failed 1
+    end
+    if set -q __update_ui_dir
+        if test "$code" -eq 130
+            _update_ui_publish abort
+        else if test "$code" -ne 0; or test "$__update_ui_failed" -ne 0
+            _update_ui_publish failed
+        else
+            _update_ui_publish finish
+        end
+        wait $__update_ui_pid 2>/dev/null
+        set -q __update_ui_dir; and command rm -rf -- "$__update_ui_dir"
+    else
+        printf '\n  Fedora MacTahoe — task results\n'
+        for i in (seq (count $__update_ui_labels))
+            printf '  %s: %s\n' "$__update_ui_states[$i]" "$__update_ui_labels[$i]"
+        end
+        printf '  Log: %s\n' "$__update_ui_log"
+    end
+    printf 'Operation exit: %s; task failures: %s\n' $code $__update_ui_failed >> "$__update_ui_log"
+    command sed -i 's/\x1b\[[0-9;]*[a-zA-Z]//g' "$__update_ui_log"
+    set -l failed $__update_ui_failed
+    set -e __update_ui_log __update_ui_dir __update_ui_pid __update_ui_cancel
+    functions -e __update_ui_interrupt
+    test $code -ne 0; and return $code
+    return $failed
+end
+
 # ── fetch updates.json into the cache; rc 0 = got it ──
 # raw.githubusercontent is CDN-cached and can lag a fresh push for minutes
 # (observed 2026-08-01: old copy served after the push landed). When the
@@ -341,55 +527,9 @@ function _update_low_battery --description 'is the machine on dying battery?'
     end
 end
 
-# ── animated loading line: spinner + rotating status + filling progress bar ──
-# Usage: _update_loading [seconds]  (default 5; update full uses 8)
-# Ctrl+C mid-animation: clears the line + cancels cleanly (no leftover text,
-# no blinking cursor stuck inside the prompt). Verified --on-signal behavior.
-function _update_loading --description 'loading ritual; optional seconds (default 5)'
-    set -l seconds 5
-    if set -q argv[1]; and string match -qr '^[0-9]+$' -- $argv[1]
-        set seconds $argv[1]
-    end
-    set -g __update_abort 0
-    function __update_clear --on-signal INT
-        set -g __update_abort 1
-        printf '\e[?25h\r  %*s\r' 80 ''
-    end
-    printf '\e[?25l'
-    set -l frames ⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏
-    set -l msgs "Contacting GitHub..." "Fetching the manifest..." "Comparing versions..." "Scanning your setup..." "Preparing the installer..." "Almost there..."
-    set -l ticks (math "$seconds * 5")
-    set -l step (math "$ticks / "(count $msgs))
-    if test $step -lt 1
-        set step 1
-    end
-    set -l i 1
-    set -l j 1
-    for t in (seq 1 $ticks)
-        if test $__update_abort -eq 1
-            break
-        end
-        set -l pct (math -s0 "$t * 100 / $ticks")
-        set -l filled (math -s0 "$pct * 20 / 100")
-        set -l fill_part (string repeat -n $filled '█')
-        set -l empty_part (string repeat -n (math -s0 "20 - $filled") '░')
-        printf '\r  \e[1;36m%s\e[0m  \e[1;37m%s\e[0m  \e[2;37m[\e[0m\e[1;36m%s\e[0m\e[2;37m%s\e[0m\e[2;37m]\e[0m \e[1;33m%3d%%\e[0m' $frames[$i] $msgs[$j] "$fill_part" "$empty_part" $pct
-        sleep 0.2
-        set i (math "$i % 10 + 1")
-        if test (math "$t % $step") -eq 0
-            if test $j -lt (count $msgs)
-                set j (math "$j + 1")
-            end
-        end
-    end
-    functions -e __update_clear 2>/dev/null
-    printf '\e[?25h\r  %*s\r' 80 ''
-    if test $__update_abort -eq 1
-        set -e __update_abort
-        printf "\n  \e[1;31m✘ Cancelled.\e[0m\n"
-        return 1
-    end
-    set -e __update_abort
+# Compatibility hook for existing callers: the old timed ritual invented both
+# work and percentages after the real check had already finished. No fake work.
+function _update_loading --description 'legacy presentation hook (no artificial delay)'
     return 0
 end
 
@@ -813,12 +953,11 @@ function _update_run --description 'fetch + verify + run the real installer; log
     if test $code -eq 0
         _update_log_add $label $frm $to ok (string upper -- "update-$label")
         echo "$to" > "$HOME/.cache/fedora-mactahoe/last-notified-version"
-        printf "\n  \e[1;32m✅ Update complete — you're on version $to.\e[0m\n"
     else if test $code -eq 42; or test $code -eq 130
         # 42 = installer closed itself (60s no-answer auto-close),
         # 130 = user force-closed with Ctrl+C — neither is a failure.
         _update_log_add $label $frm $to close (string upper -- "update-$label")
-        printf "\n  \e[1;33m⏹ Installer closed before finishing (exit $code) — nothing was marked done.\e[0m\n"
+        printf "\n  \e[1;33mInstaller stopped (exit $code). Earlier completed work is kept.\e[0m\n"
         printf "  \e[1;33mRun 'update' again when you're ready — it continues where it left off.\e[0m\n"
     else
         _update_log_add $label $frm $to fail (string upper -- "update-$label")
@@ -838,35 +977,23 @@ function _update_fetch_bundle --description 'clone the repo bundle; echoes the t
         return 1
     end
     set -l tmp (mktemp -d /tmp/mactahoe-target.XXXXXX)
-    set -g __update_clean_tmp "$tmp"
-    function __update_fetch_cleanup --on-signal INT
-        printf '\e[?25h\r  %*s\r' 78 '' >&2
-        if set -q __update_clean_tmp
-            string match -q "/tmp/*" "$__update_clean_tmp"
-            and rm -rf "$__update_clean_tmp"
-        end
-        set -e __update_clean_tmp
+    or return 1
+    set -g __update_fetch_log (mktemp "$HOME/FedoraTahoe_log."(date +%Y-%m-%d.%H-%M-%S)".XXXXXXXX ( UPDATE ).txt")
+    or begin
+        rm -rf "$tmp"
+        set -e __update_fetch_log
+        printf '  Cannot create the session log; no bundle work started.\n' >&2
+        return 1
     end
-    set -l frames ⠋ ⠙ ⠹ ⠸ ⠼ ⠴ ⠦ ⠧ ⠇ ⠏
-    printf '\e[?25l' >&2
-    # fish's wait() always reports 0 for background jobs, so record git's
-    # real exit code in a status file and read it back after the spinner.
-    sh -c 'git clone --depth 1 -q https://github.com/eprahemi/Fedora-MacTahoe-Eprahemi.git "$1" 2>/dev/null; echo $? > "$1/.clone-status"' sh "$tmp" &
-    set -l pid $last_pid
-    set -l i 1
-    while kill -0 $pid 2>/dev/null
-        printf '\r  \e[1;36m%s\e[0m  \e[1;37mFetching the latest files from GitHub...\e[0m' $frames[$i] >&2
-        sleep 0.1
-        set i (math "$i % 10 + 1")
-    end
-    wait $pid 2>/dev/null
-    set -l code 130
-    if test -f "$tmp/.clone-status"
-        set code (cat "$tmp/.clone-status")
-    end
-    printf '\e[?25h\r  %*s\r' 78 '' >&2
-    functions --erase __update_fetch_cleanup
-    set -e __update_clean_tmp
+    chmod 600 "$__update_fetch_log"
+    printf '  Fetching the latest files from GitHub…\n' >&2
+    # Git is foreground; its real status is authoritative. No command output is
+    # discarded, no artificial percentage and no non-TTY cursor escapes.
+    # Git can unexpectedly request credentials (for example after a local URL
+    # rewrite). Keep its native prompts/errors visible, even during preparation;
+    # stdout of this function must still contain ONLY the resulting bundle path.
+    git clone --depth 1 -q https://github.com/eprahemi/Fedora-MacTahoe-Eprahemi.git "$tmp" 2>&1 | tee -a "$__update_fetch_log" >&2
+    set -l code $pipestatus[1]
     if test $code -ne 0
         rm -rf "$tmp"
         if test $code -eq 130
@@ -874,6 +1001,8 @@ function _update_fetch_bundle --description 'clone the repo bundle; echoes the t
         else
             printf "\n  \e[1;31m✘ Could not fetch the repo — check your connection.\e[0m\n" >&2
         end
+        printf '  Details: %s\n' "$__update_fetch_log" >&2
+        set -e __update_fetch_log
         return 1
     end
     echo "$tmp"
@@ -897,19 +1026,26 @@ function _update_sync_system_fish --description 'refresh the root-owned fish hel
     end
     if command -q sudo
         and sudo -n true 2>/dev/null
-        sudo mkdir -p "$sys_fish_dir" 2>/dev/null
-        sudo cp -f "$detector" "$sys_fish_dir/update.fish" 2>/dev/null
-        and sudo chmod 644 "$sys_fish_dir/update.fish" 2>/dev/null
-        and sudo cp -f "$handler" "$sys_fish_dir/" 2>/dev/null
+        sudo mkdir -p "$sys_fish_dir"; or return 1
+        sudo cp -f "$detector" "$sys_fish_dir/update.fish"
+        and sudo chmod 644 "$sys_fish_dir/update.fish"
+        and sudo cp -f "$handler" "$sys_fish_dir/"
         and printf '\n  \e[1;32m✓ System-wide fish helpers updated (rescue detector + did-you-mean handler).\e[0m\n'
+        or return 1
     else if command -q pkexec
         printf '\n  \e[1;33mSystem-wide fish helpers need your password — a dialog will pop up once.\e[0m\n'
-        pkexec mkdir -p "$sys_fish_dir" 2>/dev/null
-        and pkexec cp -f "$detector" "$sys_fish_dir/update.fish" 2>/dev/null
-        and pkexec chmod 644 "$sys_fish_dir/update.fish" 2>/dev/null
-        and pkexec cp -f "$handler" "$sys_fish_dir/__fish_default_command_not_found_handler.fish" 2>/dev/null
+        pkexec mkdir -p "$sys_fish_dir"
+        and pkexec cp -f "$detector" "$sys_fish_dir/update.fish"
+        and pkexec chmod 644 "$sys_fish_dir/update.fish"
+        and pkexec cp -f "$handler" "$sys_fish_dir/__fish_default_command_not_found_handler.fish"
         and printf '\n  \e[1;32m✓ System-wide fish helpers updated (rescue detector + did-you-mean handler).\e[0m\n'
-        or printf '\n  \e[1;31m✘ System-wide fish helpers skipped — authorization cancelled.\e[0m\n'
+        or begin
+            printf '\n  \e[1;31m✘ System-wide fish helpers not updated — authorization/operation failed.\e[0m\n'
+            return 1
+        end
+    else
+        printf '\n  System-wide Fish helpers require sudo or pkexec.\n' >&2
+        return 1
     end
     # /etc/fish/config.fish — the did-you-mean fallback source block (once).
     # fish does not autoload event handlers from /etc, so the system-wide
@@ -919,9 +1055,11 @@ function _update_sync_system_fish --description 'refresh the root-owned fish hel
         set -l block "\n# ── Fedora MacTahoe did-you-mean fallback (fedora-mactahoe-handler) ──\nif not test -f \"\$HOME/.config/fish/functions/__fish_default_command_not_found_handler.fish\"\n    and test -f /etc/fish/functions/__fish_default_command_not_found_handler.fish\n    source /etc/fish/functions/__fish_default_command_not_found_handler.fish\nend\n# ── end of fedora-mactahoe-handler ──\n"
         if command -q sudo
             and sudo -n true 2>/dev/null
-            printf '%b' "$block" | sudo tee -a /etc/fish/config.fish >/dev/null 2>/dev/null
+            printf '%b' "$block" | sudo tee -a /etc/fish/config.fish >/dev/null
+            test $pipestatus[2] -eq 0; or return 1
         else if command -q pkexec
-            printf '%b' "$block" | pkexec tee -a /etc/fish/config.fish >/dev/null 2>/dev/null
+            printf '%b' "$block" | pkexec tee -a /etc/fish/config.fish >/dev/null
+            test $pipestatus[2] -eq 0; or return 1
         end
     end
     # /etc/fish/config.fish — keep the guard message friendly + current
@@ -951,13 +1089,17 @@ with open(path, "w") as fh:
 '
         set -l tmp_block (mktemp /tmp/mactahoe-guard.XXXXXX)
         printf '%b' "$gblock" > "$tmp_block"
+        set -l guard_rc 1
         if command -q sudo
             and sudo -n true 2>/dev/null
             sudo python3 -c "$py" "$sys_cfg" "$gstart" "$gend" "$tmp_block"
+            set guard_rc $status
         else if command -q pkexec
             pkexec python3 -c "$py" "$sys_cfg" "$gstart" "$gend" "$tmp_block"
+            set guard_rc $status
         end
         rm -f "$tmp_block"
+        test $guard_rc -eq 0; or return 1
     end
     return 0
 end
@@ -977,48 +1119,79 @@ end
 function _update_configs_mode --description 'refresh kitty, fish, updater, starship, gtk, fastfetch files'
     set -l tmp (_update_fetch_bundle)
     or return 1
-    set -l cfg "$tmp/configs"
-    if not _update_snapshot_wallpaper "$tmp"
+    _update_ui_begin 'update configs' "$tmp/bootstrap.sh" 'Preserve active wallpaper' 'Back up Fish configuration' 'Refresh user configuration' 'Refresh system Fish helpers' 'Refresh desktop files' 'Refresh user services' 'Reload Kitty configuration'
+    or begin
+        rm -rf "$tmp"
+        if set -q __update_fetch_log
+            printf '  Preparation log: %s\n' "$__update_fetch_log" >&2
+            set -e __update_fetch_log
+        end
+        return 1
+    end
+    _update_configs_work "$tmp"
+    set -l code $status
+    if test $code -ne 0
+        _update_ui_task $__update_ui_current failed
+    end
+    rm -rf "$tmp"
+    _update_ui_end $code
+    set code $status
+    if test $code -eq 0
+        _update_log_add configs "—" "—" ok UPDATE-CONFIG
+    else
         _update_log_add configs "—" "—" fail UPDATE-CONFIG
+    end
+    return $code
+end
+
+function _update_configs_work --argument-names tmp
+    set -l cfg "$tmp/configs"
+    _update_ui_task 1 running
+    if not _update_ui_quiet _update_snapshot_wallpaper "$tmp"
         printf '\n  Active wallpaper could not be preserved; settings were not changed.\n' >&2
         rm -rf "$tmp"
         return 1
     end
+    _update_ui_task 1 ok
+    _update_ui_task 2 running
     # Owner policy: only Popup blur is forced OFF on config-writing updates.
-    if not dconf write /org/gnome/shell/extensions/blur-my-shell/popup/blur false
-        _update_log_add configs "—" "—" fail UPDATE-CONFIG
+    if not _update_ui_quiet dconf write /org/gnome/shell/extensions/blur-my-shell/popup/blur false
         printf '\n  Could not turn Popup blur OFF.\n' >&2
         rm -rf "$tmp"
         return 1
     end
     # Every destination is created even when missing — project-owned files
     # always overwrite; ~/.config/fish/config.fish is never written.
-    mkdir -p "$HOME/.config/kitty" "$HOME/.config/fish/functions" "$HOME/.config/fish/conf.d" "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0" "$HOME/.config/fastfetch" "$HOME/.config/systemd/user" "$HOME/.local/bin"
+    _update_ui_quiet mkdir -p "$HOME/.config/kitty" "$HOME/.config/fish/functions" "$HOME/.config/fish/conf.d" "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0" "$HOME/.config/fastfetch" "$HOME/.config/systemd/user" "$HOME/.local/bin"
+    or return 1
     # Auto-backup the live fish config before touching anything (keeps last 5)
     set -l bk "$HOME/.cache/fedora-mactahoe/backups"
     if test -d "$HOME/.config/fish"
-        mkdir -p "$bk"
-        chmod 700 "$bk" 2>/dev/null
+        _update_ui_quiet mkdir -p "$bk"; or return 1
+        _update_ui_quiet chmod 700 "$bk"; or return 1
         set -l snap "$bk/fish-"(date +%Y%m%d-%H%M%S)".tar.gz"
-        tar czf "$snap" -C "$HOME/.config" fish 2>/dev/null
-        chmod 600 "$snap" 2>/dev/null
+        _update_ui_quiet tar czf "$snap" -C "$HOME/.config" fish; or return 1
+        _update_ui_quiet chmod 600 "$snap"; or return 1
         for old in (ls -1t "$bk"/fish-*.tar.gz 2>/dev/null | tail -n +6)
-            rm -f "$old"
+            _update_ui_quiet rm -f "$old"
         end
     end
+    _update_ui_task 2 ok
+    _update_ui_task 3 running
+    _update_ui_quiet mkdir -p "$HOME/.local/share/fedora-mactahoe"; or return 1
+    _update_ui_quiet cp "$tmp/bootstrap.sh" "$HOME/.local/share/fedora-mactahoe/ui-library.sh"; or return 1
     # kitty
     if test -f "$cfg/kitty/kitty.conf"
-        cp -f "$cfg/kitty/kitty.conf" "$HOME/.config/kitty/"
+        _update_ui_quiet cp -f "$cfg/kitty/kitty.conf" "$HOME/.config/kitty/"; or return 1
     end
     # user.conf — created empty on first run, NEVER overwritten; user settings win
     if not test -f "$HOME/.config/kitty/user.conf"
-        touch "$HOME/.config/kitty/user.conf"
+        _update_ui_quiet touch "$HOME/.config/kitty/user.conf"; or return 1
     end
     # Seed only a genuinely missing palette; never overwrite personalized colors.
     if not test -e "$HOME/.config/kitty/auto-theme.conf"
-        if test -L "$HOME/.config/kitty/auto-theme.conf"; or not cp -nT "$cfg/kitty/auto-theme.conf" "$HOME/.config/kitty/auto-theme.conf"
+        if test -L "$HOME/.config/kitty/auto-theme.conf"; or not _update_ui_quiet cp -nT "$cfg/kitty/auto-theme.conf" "$HOME/.config/kitty/auto-theme.conf"
             rm -rf "$tmp"
-            _update_log_add configs "—" "—" fail UPDATE-CONFIG
             printf '\n  Could not seed Kitty palette — existing links left untouched.\n' >&2
             return 1
         end
@@ -1029,12 +1202,13 @@ function _update_configs_mode --description 'refresh kitty, fish, updater, stars
     # conf.d/50-fedora-mactahoe.fish, which fish sources before config.fish,
     # so user aliases/env/functions/startup commands survive every refresh.
     if test -f "$cfg/fish/conf.d/50-fedora-mactahoe.fish"
-        cp -f "$cfg/fish/conf.d/50-fedora-mactahoe.fish" "$HOME/.config/fish/conf.d/"
+        _update_ui_quiet cp -f "$cfg/fish/conf.d/50-fedora-mactahoe.fish" "$HOME/.config/fish/conf.d/"; or return 1
     else
         printf '\n  \e[1;33m⚠ fish settings snippet missing from the bundle — config.fish left untouched.\e[0m\n'
+        return 1
     end
     for f in "$cfg/fish/functions/"*.fish
-        cp -f "$f" "$HOME/.config/fish/functions/"
+        _update_ui_quiet cp -f "$f" "$HOME/.config/fish/functions/"; or return 1
     end
     if test -f "$HOME/.config/fish/config.fish"; and grep -q 'ANI_CLI_PLAYER vlc' "$HOME/.config/fish/config.fish" 2>/dev/null
         printf '\n  \e[1;33m⚠ config.fish still has the old MacTahoe block; project settings now load from conf.d/50-fedora-mactahoe.fish (duplicate lines are safe to remove).\e[0m\n'
@@ -1043,56 +1217,83 @@ function _update_configs_mode --description 'refresh kitty, fish, updater, stars
     # 'update' when the user copy is gone) + the did-you-mean handler.
     # Warm sudo: silent refresh. Cold sudo: one polkit password dialog
     # (pkexec) pops up and both files are copied anyway — no silent skips.
-    _update_sync_system_fish "$cfg"
+    _update_ui_task 3 ok
+    _update_ui_task 4 running
+    if test -f "$cfg/updater/update-rescue.fish"; or test -f "$cfg/fish/functions/__fish_default_command_not_found_handler.fish"
+        _update_ui_native _update_sync_system_fish "$cfg"
+        or return 1
+        _update_ui_task 4 ok
+    else
+        _update_ui_task 4 skipped
+    end
+    _update_ui_task 5 running
+    set -l desktop_files 0
     # starship
     if test -f "$cfg/starship.toml"
-        cp -f "$cfg/starship.toml" "$HOME/.config/"
+        _update_ui_quiet cp -f "$cfg/starship.toml" "$HOME/.config/"; or return 1
+        set desktop_files (math $desktop_files + 1)
     end
     # gtk
     if test -f "$cfg/gtk-3.0/settings.ini"
-        cp -f "$cfg/gtk-3.0/settings.ini" "$HOME/.config/gtk-3.0/"
+        _update_ui_quiet cp -f "$cfg/gtk-3.0/settings.ini" "$HOME/.config/gtk-3.0/"; or return 1
+        set desktop_files (math $desktop_files + 1)
     end
     if test -f "$cfg/gtk-4.0/settings.ini"
-        cp -f "$cfg/gtk-4.0/settings.ini" "$HOME/.config/gtk-4.0/"
+        _update_ui_quiet cp -f "$cfg/gtk-4.0/settings.ini" "$HOME/.config/gtk-4.0/"; or return 1
+        set desktop_files (math $desktop_files + 1)
     end
     # fastfetch
     if test -f "$cfg/fastfetch/config.jsonc"
         sed "s|PLACEHOLDER_USER_HOME|$HOME|g" "$cfg/fastfetch/config.jsonc" > "$HOME/.config/fastfetch/config.jsonc"
+        or return 1
+        set desktop_files (math $desktop_files + 1)
         for img in "$cfg/fastfetch/"*.png "$cfg/fastfetch/"*.gif
-            cp -f "$img" "$HOME/.config/fastfetch/"
+            _update_ui_quiet cp -f "$img" "$HOME/.config/fastfetch/"; or return 1
         end
     end
+    if test $desktop_files -gt 0
+        _update_ui_task 5 ok
+    else
+        _update_ui_task 5 skipped
+    end
+    _update_ui_task 6 running
     # systemd user units — ktheme watcher + the update notifier
     for u in "$cfg/systemd/"*.service "$cfg/updater/"*.service "$cfg/updater/"*.timer
-        cp -f "$u" "$HOME/.config/systemd/user/"
+        _update_ui_quiet cp -f "$u" "$HOME/.config/systemd/user/"; or return 1
     end
     # updater script
     if test -f "$cfg/updater/fedora-mactahoe-updater.sh"
-        cp -f "$cfg/updater/fedora-mactahoe-updater.sh" "$HOME/.local/bin/"
-        chmod +x "$HOME/.local/bin/fedora-mactahoe-updater.sh"
+        _update_ui_quiet cp -f "$cfg/updater/fedora-mactahoe-updater.sh" "$HOME/.local/bin/"; or return 1
+        _update_ui_quiet chmod +x "$HOME/.local/bin/fedora-mactahoe-updater.sh"; or return 1
     end
-    systemctl --user daemon-reload 2>/dev/null
+    _update_ui_quiet systemctl --user daemon-reload; or return 1
     # ktheme watcher is opt-in. Never enable it here; if the user already
     # turned it on, keep it running across the config refresh.
     set -l kt_palette_enabled 0
     if systemctl --user is-enabled ktheme-watcher.service >/dev/null 2>&1; or test -L "$HOME/.config/systemd/user/default.target.wants/ktheme-watcher.service"
         set kt_palette_enabled 1
-        systemctl --user start ktheme-watcher.service >/dev/null 2>&1
+        _update_ui_quiet systemctl --user start ktheme-watcher.service; or return 1
     end
-    systemctl --user enable fedora-mactahoe-updater.timer 2>/dev/null
-    systemctl --user start fedora-mactahoe-updater.timer 2>/dev/null
+    _update_ui_quiet systemctl --user enable fedora-mactahoe-updater.timer; or return 1
+    _update_ui_quiet systemctl --user start fedora-mactahoe-updater.timer; or return 1
     # Wallpaper colors are opt-in too, not just the background watcher.
     if test "$kt_palette_enabled" -eq 1; and functions -q ktheme
-        ktheme apply --silent >/dev/null 2>&1
+        _update_ui_native ktheme apply --silent; or return 1
     end
+    _update_ui_task 6 ok
+    _update_ui_task 7 running
+    set -l reloaded 0
     for sock in /tmp/kitty-*
         if test -S "$sock"
-            kitty @ --to "unix:$sock" load-config 2>/dev/null
+            _update_ui_quiet kitty @ --to "unix:$sock" load-config; or return 1
+            set reloaded 1
         end
     end
-    rm -rf "$tmp"
-    _update_log_add configs "—" "—" ok UPDATE-CONFIG
-    printf "\n  \e[1;32m✓ Configs refreshed — kitty, fish, updater and fastfetch are current.\e[0m\n"
+    if test $reloaded -eq 1
+        _update_ui_task 7 ok
+    else
+        _update_ui_task 7 skipped
+    end
     return 0
 end
 
@@ -1156,16 +1357,19 @@ function _update_run_step --description 'run installer steps from a bundle clone
         set -a cmd $kv
     end
     set -a cmd "INSTALL_SOURCE=update-$tag"
+    if set -q __update_fetch_log
+        set -a cmd "_FED_LOG=$__update_fetch_log" '_FED_UPDATER_LOG=1'
+        set -e __update_fetch_log
+    end
     set -a cmd bash "$tmp/install.sh"
     $cmd
     set -l code $status
     if test $code -eq 0
         _update_log_add $steps "—" "—" ok (string upper -- "update-$tag")
-        printf "\n  \e[1;32m✓ %s — done.\e[0m\n" $steps
     else if test $code -eq 130
         # Ctrl+C — the installer was interrupted mid-run
         _update_log_add $steps "—" "—" cancel (string upper -- "update-$tag")
-        printf "\n  \e[1;33m✘ Cancelled — nothing was changed.\e[0m\n" $steps
+        printf "\n  \e[1;33mCancelled. Earlier completed work is kept; review the session log.\e[0m\n"
     else
         _update_log_add $steps "—" "—" fail (string upper -- "update-$tag")
         printf "\n  \e[1;31m✘ %s failed (exit $code).\e[0m\n" $steps
@@ -1380,12 +1584,19 @@ end
 function _update_target_gtk --description 'refresh GTK settings + Flatpak GTK runtime'
     set -l tmp (_update_fetch_bundle)
     or return 1
-    mkdir -p "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0"
-    if test -f "$tmp/configs/gtk-3.0/settings.ini"
-        cp -f "$tmp/configs/gtk-3.0/settings.ini" "$HOME/.config/gtk-3.0/"
+    set -l failed 0
+    mkdir -p "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0"; or set failed 1
+    for version in 3.0 4.0
+        if test -f "$tmp/configs/gtk-$version/settings.ini"
+            cp -f "$tmp/configs/gtk-$version/settings.ini" "$HOME/.config/gtk-$version/"; or set failed 1
+        else
+            set failed 1
+        end
     end
-    if test -f "$tmp/configs/gtk-4.0/settings.ini"
-        cp -f "$tmp/configs/gtk-4.0/settings.ini" "$HOME/.config/gtk-4.0/"
+    if test $failed -ne 0
+        printf '\n  GTK settings could not be copied; the runtime update was not started.\n' >&2
+        rm -rf "$tmp"
+        return 1
     end
     _update_run_step "$tmp" "setup_flatpak_theme"
     set -l code $status
@@ -1518,39 +1729,58 @@ function _update_target_notifier --description 'reinstall the update notifier'
 end
 
 function _update_target_clean --description 'flush caches and trim logs'
-    printf "\n"
-    _update_header "UPDATE — CLEAN"
-    if test -d "$HOME/.cache/thumbnails"
-        rm -rf "$HOME/.cache/thumbnails/"* 2>/dev/null
-        _update_box_text "✓ thumbnail cache cleared" "1;32"
-    end
-    if test -d "$HOME/.cache/fontconfig"
-        rm -rf "$HOME/.cache/fontconfig/"* 2>/dev/null
-        _update_box_text "✓ fontconfig cache cleared" "1;32"
-    end
-    if test -d "$HOME/.cache/mesa_shader_cache"
-        rm -rf "$HOME/.cache/mesa_shader_cache/"* 2>/dev/null
-        _update_box_text "✓ Mesa shader cache cleared" "1;32"
-    end
-    sudo dnf clean all 2>/dev/null
-    _update_box_text "✓ DNF metadata cache cleared" "1;32"
-    flatpak uninstall --unused -y 2>/dev/null
-    _update_box_text "✓ unused Flatpak runtimes removed" "1;32"
-    sudo dnf autoremove -y 2>/dev/null
-    _update_box_text "✓ orphaned RPM packages removed" "1;32"
-    sudo journalctl --vacuum-time=3d 2>/dev/null
-    _update_box_text "✓ old journal logs trimmed (3 days)" "1;32"
-    for icon in MacTahoe MacTahoe-dark hicolor
-        if test -d "$HOME/.local/share/icons/$icon"
-            gtk-update-icon-cache "$HOME/.local/share/icons/$icon/" 2>/dev/null
+    _update_ui_begin 'update clean' '' 'Thumbnail cache' 'Font cache' 'Mesa shader cache' 'DNF metadata' 'Unused Flatpak runtimes' 'Review unused RPM packages' 'Old journal entries' 'Icon caches'
+    or return 1
+    set -l i 0
+    for cache in thumbnails fontconfig mesa_shader_cache
+        set i (math $i + 1)
+        _update_ui_task $i running
+        if test -L "$HOME/.cache/$cache"
+            _update_ui_task $i failed
+            _update_ui_publish pause
+            printf '  Refusing to clean a symlinked cache: %s\n' "$HOME/.cache/$cache" >&2
+            continue
+        end
+        if test -d "$HOME/.cache/$cache"
+            # find also handles empty directories without unmatched Fish globs.
+            _update_ui_quiet find "$HOME/.cache/$cache" -mindepth 1 -maxdepth 1 -exec rm -rf -- '{}' +
+            _update_ui_task $i ok
+        else
+            _update_ui_task $i skipped
         end
     end
-    _update_box_text "✓ icon caches rebuilt" "1;32"
-    _update_box_text "Made by eprahemi — Fedora MacTahoe © 2026" "1;37"
-    _update_box_bottom
-    printf "\n"
-    _update_log_add clean "—" "—" ok UPDATE-CLEAN
-    return 0
+    _update_ui_task 4 running
+    _update_ui_native sudo dnf clean all
+    _update_ui_task 4 ok
+    _update_ui_task 5 running
+    # Native transaction/authorization/consent must remain foreground and visible.
+    _update_ui_native flatpak uninstall --unused
+    _update_ui_task 5 ok
+    _update_ui_task 6 running
+    _update_ui_native sudo dnf --setopt=assumeyes=False --setopt=assumeno=False --setopt=defaultyes=False autoremove
+    _update_ui_task 6 ok
+    _update_ui_task 7 running
+    _update_ui_native sudo journalctl --vacuum-time=3d
+    _update_ui_task 7 ok
+    _update_ui_task 8 running
+    set -l icons 0
+    for icon in MacTahoe MacTahoe-dark hicolor
+        if test -d "$HOME/.local/share/icons/$icon"
+            _update_ui_quiet gtk-update-icon-cache "$HOME/.local/share/icons/$icon/"
+            set icons 1
+        end
+    end
+    if test $icons -eq 1
+        _update_ui_task 8 ok
+    else
+        _update_ui_task 8 skipped
+    end
+    _update_ui_end 0
+    set -l code $status
+    set -l result ok
+    test $code -ne 0; and set result fail
+    _update_log_add clean "—" "—" $result UPDATE-CLEAN
+    return $code
 end
 
 function _update_target_menu --description 'pick any target from a numbered list'
@@ -1770,6 +2000,18 @@ function _update_target_wallvault --description 'Wallvault asset vault — gated
     end
 
     # ── workspace allocation + Ctrl+C safety ──
+    _update_ui_begin 'update wallvault' '' 'Download Wallvault archive' 'Verify archive' 'Extract archive' 'Publish Wallvault folder'
+    or return 1
+    _update_wallvault_work "$vault_url" "$vault_pass"
+    set -l result $status
+    if test $result -ne 0
+        _update_ui_task $__update_ui_current failed
+    end
+    _update_ui_end $result
+    return $status
+end
+
+function _update_wallvault_work --argument-names vault_url vault_pass
     set -l tbase /tmp
     if set -q TMPDIR; and test -n "$TMPDIR"
         set tbase "$TMPDIR"
@@ -1779,125 +2021,36 @@ function _update_target_wallvault --description 'Wallvault asset vault — gated
         printf "\n  \e[1;31m✘ Workspace allocation failed — temporary directory unavailable.\e[0m\n"
         return 1
     end
-    set -g __wv_abort 0
-    function __wv_cleanup --on-signal INT
-        set -g __wv_abort 1
-    end
-
-    # ── transfer: boxed live progress, one automatic retry, Ctrl+C safe ──
+    # Foreground downloader; the shared engine is the only background painter.
+    _update_ui_task 1 running
     set -l zip "$tmp/wallvault.zip"
-    # probe the size up front (HEAD) so the bar can show real totals
-    set -l total_bytes ""
-    set -l hl (curl -sIL --max-time 20 "$vault_url" 2>/dev/null | command grep -i '^content-length:' | string replace -ri '^content-length:\s*' '' | string trim)
-    if set -q hl[1]; and string match -qr '^[0-9]+$' -- "$hl[1]"
-        set total_bytes "$hl[1]"
-    end
     set -l attempt 0
+    set -l dl_rc 1
     while test $attempt -lt 2
         set attempt (math $attempt + 1)
         if test $attempt -gt 1
-            printf "\n  \e[1;33mTransfer got interrupted — rounding it up again.\e[0m\n"
+            printf 'Retrying Wallvault download (attempt %s).\n' $attempt >> "$__update_ui_log"
         end
-        curl -fL --retry 3 --retry-delay 2 --max-time 900 -o "$zip" "$vault_url" &
-        set -l cpid $last_pid
-        # live boxed bar — painted only on a real terminal (captured/piped
-        # runs stay clean and just poll silently)
-        set -l frame 0
-        set -l last_bytes 0
-        set -l last_t (date +%s%N)
-        set -l speed 0
-        functions -e __wv_paint 2>/dev/null
-        function __wv_paint --no-scope-shadowing
-            set -l got 0
-            if test -e "$zip"
-                set got (command stat -c %s "$zip" 2>/dev/null; or echo 0)
-            end
-            set -l now (date +%s%N)
-            set -l dt (math "$now - $last_t")
-            if test $dt -gt 0
-                set -l db (math "$got - $last_bytes")
-                if test $db -gt 0
-                    set speed (math -s0 "$db * 1000000000 / $dt")
-                end
-            end
-            set frame (math "$frame + 1")
-            set last_bytes $got
-            set last_t $now
-            set -l dots (string repeat -n (math "1 + ($frame % 3)") '.')
-            set -l fillpct 0
-            if test -n "$total_bytes"; and test "$total_bytes" -gt 0
-                set fillpct (math -s0 "$got * 100 / $total_bytes")
-            end
-            if test $fillpct -gt 100
-                set fillpct 100
-            end
-            set -l filled (math -s0 "$fillpct * 52 / 100")
-            if test $filled -gt 52
-                set filled 52
-            end
-            set -l pcs (printf '%3d%%' $fillpct)
-            set -l barfill (string repeat -n $filled '█')
-            set -l barempty (string repeat -n (math -s0 "52 - $filled") '░')
-            set -l gotmb (math -s1 "$got / 1048576.0")
-            set -l spdmb (math -s1 "$speed / 1048576.0")
-            set -l statsln "  $gotmb MB"
-            if test -n "$total_bytes"; and test "$total_bytes" -gt 0
-                set -l totmb (math -s1 "$total_bytes / 1048576.0")
-                set statsln "$statsln of $totmb MB"
-            end
-            set statsln "$statsln · $spdmb MB/s"
-            printf '\e[4A'
-            _update_box_title "Downloading$dots" "1;36"
-            _update_box_text "  $barfill$barempty $pcs" "1;36"
-            _update_box_text "$statsln" "1;37"
-            _update_box_bottom
-        end
-        if test -t 1
-            printf "\n"
-            _update_box_top
-            _update_box_title "Downloading…" "1;36"
-            _update_box_text (string join '' '  ' (string repeat -n 52 '░') ' ' '  0%') "1;90"
-            _update_box_text "  0.0 MB · 0.0 MB/s" "1;37"
-            _update_box_bottom
-        end
-        while kill -0 $cpid 2>/dev/null
-            if test $__wv_abort -eq 1
-                kill $cpid 2>/dev/null
-                break
-            end
-            if test -t 1
-                sleep 0.25
-                __wv_paint
-            else
-                sleep 0.2
-            end
-        end
-        wait $cpid 2>/dev/null
-        set -l dl_rc $status
-        # one final refresh with the real numbers
-        if test -t 1; and test $__wv_abort -eq 0
-            __wv_paint
-        end
-        functions -e __wv_paint 2>/dev/null
-        if test $__wv_abort -eq 1
-            rm -rf "$tmp" 2>/dev/null
-            functions -e __wv_cleanup 2>/dev/null
-            set -e __wv_abort
-            printf "\n  \e[1;31m✘ Operation aborted — no artifacts staged.\e[0m\n"
-            return 1
+        curl -q -fL --retry 3 --retry-delay 2 --max-time 900 -o "$zip" "$vault_url" >> "$__update_ui_log" 2>&1
+        set dl_rc $status
+        if test "$__update_ui_cancel" = 1; or test $dl_rc -eq 130
+            rm -rf "$tmp"
+            return 130
         end
         if test $dl_rc -eq 0; and test -s "$zip"
             break
         end
         rm -f "$zip" 2>/dev/null
     end
-    functions -e __wv_cleanup 2>/dev/null
-    set -e __wv_abort
-    if not test -s "$zip"
+    if test $dl_rc -ne 0; or not test -s "$zip"
+        _update_ui_task 1 failed
         rm -rf "$tmp" 2>/dev/null
+        _update_ui_publish pause
         printf "\n  \e[1;31m✘ Transfer failed — endpoint unreachable or connection interrupted.\e[0m\n"
         return 1
     end
+    _update_ui_task 1 ok
+    _update_ui_task 2 running
 
     # ── integrity verification (7zip backend; silent background decryption) ──
     if command -q 7z
@@ -1906,15 +2059,14 @@ function _update_target_wallvault --description 'Wallvault asset vault — gated
         if test "$enc" -gt 0
             # archive is genuinely encrypted — decrypt in the background with the
             # baked-in key (never prompted, never displayed)
-            set -l t_out (7z t -p"$vault_pass" "$zip" 2>&1)
-            if test $status -ne 0
+            if not _update_ui_quiet 7z t -p"$vault_pass" "$zip" </dev/null
                 rm -rf "$tmp" 2>/dev/null
                 printf "\n  \e[1;31m✘ Decryption failed — the bundle could not be opened.\e[0m\n"
                 return 1
             end
         else
             # plain archive: verify without any password
-            if not 7z t "$zip" >/dev/null 2>&1
+            if not _update_ui_quiet 7z t -p"$vault_pass" "$zip" </dev/null
                 rm -rf "$tmp" 2>/dev/null
                 printf "\n  \e[1;31m✘ Integrity verification failed — payload is not a valid archive.\e[0m\n"
                 return 1
@@ -1926,25 +2078,43 @@ function _update_target_wallvault --description 'Wallvault asset vault — gated
         printf "  \e[1;37m    Run update (full / services) to install it, then retry.\e[0m\n"
         return 1
     end
+    _update_ui_task 2 ok
+    _update_ui_task 3 running
 
     # ── extraction + staging into Downloads ──
-    mkdir -p "$tmp/extract"
+    _update_ui_quiet mkdir -p "$tmp/extract"; or begin; rm -rf "$tmp"; return 1; end
     if test -n "$vault_pass"
-        7z x -y -o"$tmp/extract" -p"$vault_pass" "$zip" >/dev/null 2>&1
+        _update_ui_quiet 7z x -y -o"$tmp/extract" -p"$vault_pass" "$zip" </dev/null
     else
-        7z x -y -o"$tmp/extract" "$zip" >/dev/null 2>&1
+        _update_ui_quiet 7z x -y -o"$tmp/extract" -p- "$zip" </dev/null
     end
+    if test $status -ne 0
+        rm -rf "$tmp"
+        return 1
+    end
+    if test -z (find "$tmp/extract" -type f -print -quit)
+        _update_ui_task 3 failed
+        rm -rf "$tmp"
+        return 1
+    end
+    _update_ui_task 3 ok
+    _update_ui_task 4 running
     set -l folder (find "$tmp/extract" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | head -1)
     if test -z "$folder"
         set folder "$tmp/extract"
     end
     set -l name "Wallvault-Pack"
     set -l dest "$HOME/Downloads"
-    mkdir -p "$dest"
+    _update_ui_quiet mkdir -p "$dest"; or begin; rm -rf "$tmp"; return 1; end
     if test -e "$dest/$name"
         set name "Wallvault-Pack-"(date +%Y%m%d-%H%M%S)
     end
-    mv -- "$folder" "$dest/$name" 2>/dev/null
+    _update_ui_quiet mv -T -n -- "$folder" "$dest/$name"
+    # mv -n may report success without moving after a concurrent collision.
+    if test $status -ne 0; or test -d "$folder"
+        rm -rf "$tmp"
+        return 1
+    end
     if not test -d "$dest/$name"
         rm -rf "$tmp" 2>/dev/null
         printf "\n  \e[1;31m✘ Staging failed — unable to deploy the bundle into the target directory.\e[0m\n"
@@ -1952,16 +2122,10 @@ function _update_target_wallvault --description 'Wallvault asset vault — gated
     end
     set -l count (string trim -- (find "$dest/$name" -type f 2>/dev/null | wc -l))
     rm -rf "$tmp" 2>/dev/null
-    printf "\n"
-    _update_box_top
-    _update_box_title "WALLVAULT — READY" "1;36"
-    _update_box_text ""
-    _update_box_text "✓  $count wallpapers. Delivered." "1;32"
-    _update_box_text ""
-    _update_box_text "$dest/$name" "1;37"
-    _update_box_text ""
-    _update_box_text "Enjoy the view." "1;33"
-    _update_box_bottom
+    _update_ui_task 4 ok
+    printf 'Published %s files to %s/%s\n' "$count" "$dest" "$name" >> "$__update_ui_log"
+    _update_ui_publish pause
+    printf '\n  Wallvault: %s files saved to %s/%s\n' "$count" "$dest" "$name"
     return 0
 end
 
@@ -2197,13 +2361,13 @@ function _update_apps_safe_trash --argument-names path
         string match -q "$HOME/*" "$real"; or return 1
     end
     if command -q gio
-        gio trash -- "$path" 2>/dev/null
-        return $status
+        gio trash -- "$path"; or return $status
     else if command -q trash-put
-        trash-put -- "$path" 2>/dev/null
-        return $status
+        trash-put -- "$path"; or return $status
+    else
+        return 1
     end
-    return 1
+    not test -e "$path"; and not test -L "$path"
 end
 
 # Emit only after validating the entire selection; malformed suffixes do nothing.
@@ -2274,7 +2438,8 @@ function _update_apps_help
     _update_box_text 'Review the exact plan; confirmation defaults to No.'
     _update_box_text 'Kitty removal is protected in this active terminal.'
     _update_box_text 'All installed Flatpak scopes/branches appear in the plan.'
-    _update_box_text 'User caches, settings and data stay. No data cleanup.'
+    _update_box_text 'Keep data, or explicitly Trash known Flatpak data.'
+    _update_box_text 'Data removal needs separate typed confirmation.'
     _update_box_text 'Remove-all also requires typing REMOVE ALL.'
     _update_box_text 'Native package prompts remain enabled.'
     _update_box_text 'Review dependent removals at the DNF prompt; decline'
@@ -2430,7 +2595,7 @@ function _update_target_apps
         _update_box_text 'What to do with this selection?' '1;36'
         _update_box_text ''
         _update_box_text '1 Remove app only — keep settings, caches and data' '1;37'
-        _update_box_text '2 Remove app and its data — move known app-specific folders to Trash' '1;33'
+        _update_box_text '2 Remove app and data — known folders go to Trash' '1;33'
         _update_box_text 'q Cancel' '1;37'
         _update_box_bottom
         read -P '  Choice [1]: ' answer; or return 0
@@ -2462,7 +2627,7 @@ function _update_target_apps
                 if test (count $selected) -eq 1
                     read -P "  Type REMOVE $(string replace -a ' ' '_' -- "$catalog[$selected[1]]" | string split '|' -f1) DATA: " answer; or return 0
                     set -l expected (string upper -- (string replace -a ' ' '_' -- (string split '|' -- "$catalog[$selected[1]]")[1]))
-                    test (string upper -- (string replace -a ' ' '_' -- "$answer")) = "REMOVE $expected DATA"; or return 0
+                    test (string upper -- (string replace -a ' ' '_' -- "$answer")) = "REMOVE_"$expected"_DATA"; or return 0
                 else
                     read -P '  Removing app data for multiple apps. Type REMOVE ALL APP DATA: ' answer; or return 0
                     test "$answer" = 'REMOVE ALL APP DATA'; or return 0
@@ -2492,9 +2657,19 @@ function _update_target_apps
         end
     end
     set -l failed 0
+    set -l labels
+    for n in $selected
+        set -l fields (string split '|' -- "$catalog[$n]")
+        set -a labels "$mode $fields[1]"
+    end
+    _update_ui_begin 'update apps' '' $labels; or return 1
     set i 0
     for n in $selected
         set i (math $i + 1)
+        _update_ui_task $i running
+        if test "$__update_ui_cancel" = 1
+            break
+        end
         set -l fields (string split '|' -- "$catalog[$n]")
         set -l refs (string split ',' -- "$snapshots[$i]")
         set -e refs[1]
@@ -2503,6 +2678,8 @@ function _update_target_apps
         if test $status -ne 0; or test (string join ',' -- missing $current) != "$snapshots[$i]"
             printf '  %s: status changed/unknown; skipped. Rerun to review.\n' "$fields[1]"
             set failed 1
+            _update_ui_task $i skipped
+            _update_ui_publish pause
             continue
         end
         set -l rc 0
@@ -2513,20 +2690,20 @@ function _update_target_apps
                     printf '  Safe removal flag unsupported; skipping %s.\n' "$fields[1]"
                     set rc 1
                 else
-                    sudo dnf --setopt=assumeyes=False --setopt=assumeno=False --setopt=defaultyes=False remove --no-autoremove -- "$fields[3]"
+                    _update_ui_native sudo dnf --setopt=assumeyes=False --setopt=assumeno=False --setopt=defaultyes=False remove --no-autoremove -- "$fields[3]"
                     set rc $status
                 end
             else
-                sudo dnf --setopt=assumeyes=False --setopt=assumeno=False --setopt=defaultyes=False install -- "$fields[3]"
+                _update_ui_native sudo dnf --setopt=assumeyes=False --setopt=assumeno=False --setopt=defaultyes=False install -- "$fields[3]"
                 set rc $status
             end
         else if test "$mode" = remove
             for ref in $refs
                 set -l parts (string split ':' -- "$ref")
-                flatpak uninstall --$parts[1] -- "$parts[2]"; or set rc 1
+                _update_ui_native flatpak uninstall --$parts[1] -- "$parts[2]"; or set rc 1
             end
         else
-            flatpak install --system flathub "$fields[3]"
+            _update_ui_native flatpak install --system flathub "$fields[3]"
             set rc $status
         end
         set -l after (_update_apps_probe $fields[2] $fields[3])
@@ -2537,6 +2714,8 @@ function _update_target_apps
                 test "$mode" = install; and test (count $after) -eq 0
             end
             set failed 1
+            _update_ui_task $i failed
+            _update_ui_publish pause
             printf '  %s: not completed or could not verify; see errors above.\n' "$fields[1]"
             printf '  Check the app vendor repository/Flathub setup before retrying.\n'
             switch "$fields[3]"
@@ -2555,19 +2734,26 @@ function _update_target_apps
                     if test -e "$c"; and not test -L "$c"
                         set -l real (realpath -e "$c" 2>/dev/null)
                         if test -z "$real"; or string match -q "$HOME/*" "$real"
-                            if _update_apps_safe_trash "$c"
+                            if _update_ui_quiet _update_apps_safe_trash "$c"
                                 printf '  %s: moved app data to Trash.\n' "$fields[1]"
                             else
                                 printf '  %s: could not move app data to Trash (skipped).\n' "$fields[1]"
+                                set failed 1
+                                _update_ui_task $i failed
                             end
                         else
                             printf '  %s: app data path unsafe; skipped.\n' "$fields[1]"
+                            set failed 1
+                            _update_ui_task $i failed
                         end
                     end
                 end
             end
+            _update_ui_task $i ok
         end
     end
+    _update_ui_end $failed
+    set failed $status
     set eligible (_update_apps_eligible $mode)
     _update_apps_show $mode $eligible
     return $failed
