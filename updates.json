@@ -1,10 +1,16 @@
 {
- "latest_version": "3.7.26",
+ "latest_version": "3.7.27",
  "bootstrap_sha256": "2155ca934c9037c22f1ce513a6fa1b5e63334da8824f662dcb1021691d978388",
  "install_sha256": "7309e6ac8420fcd1f5af80868519e4ec87c27bebf47f5eba612b5223a0a2035f",
- "update_sha256": "7d0068e90469c5c8991204a73afaf42e5a693dbff47b99f3a71751b2561d144f",
+ "update_sha256": "f863c40cd6acb6a921506f0a1d48605f2c7299704b441f2730816c735c8529c1",
  "asset_helper_sha256": "df36b62f1c2b7a0717f295e4aa1f136aa27216d9143a59ad66deabb46284a22a",
  "changelog": [
+  {
+   "version": "3.7.27",
+   "changes": [
+    "Development candidate: reject interrupted, malformed or unpinned manifest responses before publishing the cache. Stage bounded HTTPS transfers, validate all four SHA256 fields and use a validated API fallback. Failed refreshes never authorize execution from an old cache. Preserve installer hash matching and fingerprint-change consent. Installed older updater copies require a separately verified migration; no live installation or native Fedora smoke test performed."
+   ]
+  },
   {
    "version": "3.7.26",
    "changes": [

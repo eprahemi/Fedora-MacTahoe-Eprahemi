@@ -218,28 +218,62 @@ function _update_ui_end --argument-names code
 end
 
 # ── fetch updates.json into the cache; rc 0 = got it ──
-# raw.githubusercontent is CDN-cached and can lag a fresh push for minutes
-# (observed 2026-08-01: old copy served after the push landed). When the
-# pinned fingerprint is missing, fall back to the GitHub API — always fresh.
+# Stage and validate complete responses before atomic cache publication.
+# The API is a fallback transport, not a separate signature/trust authority.
+function _update_validate_manifest --argument-names file
+    command python3 -I -c 'import json,re,sys
+def unique(pairs):
+    d = {}
+    for k,v in pairs:
+        if k in d: raise ValueError("duplicate key")
+        d[k] = v
+    return d
+try:
+    with open(sys.argv[1]) as f: d=json.load(f, object_pairs_hook=unique)
+    assert isinstance(d,dict)
+    assert isinstance(d.get("latest_version"),str) and re.fullmatch(r"[0-9]+(?:\.[0-9]+)*",d["latest_version"])
+    for k in ("bootstrap_sha256","install_sha256","update_sha256","asset_helper_sha256"):
+        assert isinstance(d.get(k),str) and re.fullmatch(r"[0-9a-f]{64}",d[k])
+except Exception:
+    sys.exit(1)' "$file"
+end
+
 function _update_fetch_manifest --description 'fetch the version manifest from GitHub'
     set -l cache_dir "$HOME/.cache/fedora-mactahoe"
-    mkdir -p "$cache_dir"
+    mkdir -p "$cache_dir"; or return 1
+    set -l stage (mktemp -d "$cache_dir/.manifest.XXXXXXXX")
+    or return 1
     set -l url "https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/updates.json"
-    curl -sf --max-time 15 "$url" -o "$cache_dir/latest-manifest.json" 2>/dev/null
-    if test -s "$cache_dir/latest-manifest.json"; and not string match -q '*bootstrap_sha256*' (cat "$cache_dir/latest-manifest.json")
-        # stale CDN copy — pull the manifest from the GitHub API instead
-        curl -sf --max-time 20 "https://api.github.com/repos/eprahemi/Fedora-MacTahoe-Eprahemi/contents/updates.json" -o "$cache_dir/api-manifest.json" 2>/dev/null
-        if test -s "$cache_dir/api-manifest.json"
-            python3 -c 'import json,sys,base64
+    set -l valid 0
+    if command curl -q -fsSL --proto '=https' --proto-redir '=https' --max-redirs 3 --connect-timeout 5 --max-time 15 --max-filesize 1048576 "$url" -o "$stage/manifest.json"
+        if _update_validate_manifest "$stage/manifest.json"
+            set valid 1
+        end
+    end
+    if test $valid -eq 0
+        if command curl -q -fsSL --proto '=https' --proto-redir '=https' --max-redirs 3 --connect-timeout 5 --max-time 20 --max-filesize 2097152 "https://api.github.com/repos/eprahemi/Fedora-MacTahoe-Eprahemi/contents/updates.json?ref=main" -o "$stage/api.json"
+            if command python3 -I -c 'import json,sys,base64
 try:
     d = json.load(open(sys.argv[1]))
-    open(sys.argv[2], "w").write(base64.b64decode(d["content"]).decode("utf-8"))
+    assert d["encoding"] == "base64" and isinstance(d["content"],str)
+    content = base64.b64decode("".join(d["content"].split()), validate=True)
+    assert len(content) <= 1048576
+    open(sys.argv[2], "wb").write(content)
 except Exception:
-    pass' "$cache_dir/api-manifest.json" "$cache_dir/latest-manifest.json"
+    sys.exit(1)' "$stage/api.json" "$stage/manifest.json"
+                if _update_validate_manifest "$stage/manifest.json"
+                    set valid 1
+                end
+            end
         end
-        rm -f "$cache_dir/api-manifest.json"
     end
-    test -s "$cache_dir/latest-manifest.json"
+    set -l result 1
+    if test $valid -eq 1
+        command mv -f -- "$stage/manifest.json" "$cache_dir/latest-manifest.json"
+        set result $status
+    end
+    command rm -rf -- "$stage"
+    return $result
 end
 
 # ── sha256 hex of a file (empty on failure) — the fingerprint ──
@@ -261,11 +295,14 @@ function _update_manifest_hash --description 'pinned sha256 for a key in the cac
     if not test -f "$man"
         return 1
     end
-    python3 -c 'import json,sys
+    _update_validate_manifest "$man"; or return 1
+    command python3 -I -c 'import json,re,sys
 try:
-    print(json.load(open(sys.argv[1])).get(sys.argv[2], ""))
+    value=json.load(open(sys.argv[1]))[sys.argv[2]]
+    assert isinstance(value,str) and re.fullmatch(r"[0-9a-f]{64}",value)
+    print(value)
 except Exception:
-    pass' "$man" "$key"
+    sys.exit(1)' "$man" "$key"
 end
 
 # ── fingerprint trust: first run saves silently; a change asks for trust ──
@@ -536,7 +573,7 @@ end
 # ── update check: status at a glance, no prompts ──
 function _update_check --description 'show versions + what is waiting'
     if not _update_fetch_manifest
-        printf "\n  \e[1;31m✘ Could not reach GitHub — check your connection.\e[0m\n"
+        printf "\n  \e[1;31m✘ Could not fetch a complete, valid version manifest. Nothing was run.\e[0m\n"
         return 1
     end
     set -l current_ver "0.0"
@@ -899,7 +936,7 @@ function _update_run --description 'fetch + verify + run the real installer; log
 
     # fresh manifest — it pins the hash of the very file we are about to run
     if not _update_fetch_manifest
-        printf "\n  \e[1;31m✘ Could not reach GitHub — check your connection.\e[0m\n"
+        printf "\n  \e[1;31m✘ Could not fetch a complete, valid version manifest. Nothing was run.\e[0m\n"
         return 1
     end
     set -l expected (_update_manifest_hash bootstrap_sha256)
@@ -911,7 +948,7 @@ function _update_run --description 'fetch + verify + run the real installer; log
     printf "\n  \e[1;37mFetching the installer from GitHub...\e[0m\n"
     set -l base "https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main"
     set -l tmpfile (mktemp /tmp/mactahoe-bootstrap.XXXXXX)
-    curl -fsSL --max-time 120 "$base/bootstrap.sh" -o "$tmpfile" 2>/dev/null
+    command curl -q -fsSL --proto '=https' --proto-redir '=https' --max-redirs 3 --connect-timeout 5 --max-time 120 "$base/bootstrap.sh" -o "$tmpfile"
     if test $status -ne 0
         rm -f "$tmpfile"
         printf "\n  \e[1;31m✘ Could not download the installer.\e[0m\n"
@@ -2930,7 +2967,7 @@ if difflib.get_close_matches(sys.argv[1], ["apps"], cutoff=0.55):
 
     # ── fetch + parse ──
     if not _update_fetch_manifest
-        printf "\n  \e[1;31m✘ Could not reach GitHub — check your connection and try again.\e[0m\n"
+        printf "\n  \e[1;31m✘ Could not fetch a complete, valid version manifest. Try again.\e[0m\n"
         return 1
     end
     set -l current_ver "0.0"
