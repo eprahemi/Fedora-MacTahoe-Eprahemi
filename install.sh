@@ -1510,136 +1510,6 @@ __cdn_speed_test() {
   echo ""
 }
 
-# ── Install summary dashboard ──
-# Displays final installation recap before the victory banner
-__install_summary() {
-  local elapsed="?"
-  if [ -n "$INSTALL_START_EPOCH" ]; then
-    local now
-    now=$(date +%s 2>/dev/null || echo "0")
-    local diff=$((now - INSTALL_START_EPOCH))
-    local em=$((diff / 60)) es=$((diff % 60))
-    [ "$em" -gt 0 ] && elapsed="${em}m ${es}s" || elapsed="${es}s"
-  fi
-
-  # Disk used for themes/icons/fonts (approximate)
-  local theme_disk=""
-  if command -v du &>/dev/null; then
-    local tsize=0
-    for td in "$HOME/.themes/MacTahoe"* "$HOME/.local/share/themes/MacTahoe"* \
-               "$HOME/.local/share/icons/MacTahoe"* "$HOME/.local/share/fonts/SF"* \
-               /usr/share/themes/MacTahoe* /usr/share/icons/MacTahoe*; do
-      [ -d "$td" ] || [ -f "$td" ] || continue
-      local sz
-      sz=$(du -sm "$td" 2>/dev/null | awk '{print $1}' || echo "0")
-      tsize=$((tsize + sz))
-    done
-    if [ "$tsize" -gt 0 ]; then
-      if [ "$tsize" -ge 1000 ]; then
-        theme_disk="$(awk "BEGIN{printf \"%.1f\", $tsize / 1024}" 2>/dev/null || echo "${tsize}") GiB"
-      else
-        theme_disk="${tsize} MiB"
-      fi
-    fi
-  fi
-  [ -z "$theme_disk" ] && theme_disk="~2 GiB"
-
-  # ── Real numbers ─────────────────────────────────────────────
-  # Every step records its outcome, so the report counts what actually
-  # happened instead of printing a fixed string.
-  local _ran=0 _skip=0 _fail=0 _v
-  for _v in ${STEP_RESULT_VALS[@]+"${STEP_RESULT_VALS[@]}"}; do
-    case "$_v" in
-      ok)      _ran=$((_ran + 1)) ;;
-      skipped) _skip=$((_skip + 1)) ;;
-      failed)  _fail=$((_fail + 1)) ;;
-    esac
-  done
-
-  local _status="Complete"
-  local _status_color="${GREEN}"
-  if [ "$_fail" -gt 0 ]; then
-    _status="Incomplete"
-    _status_color="${RED}"
-  fi
-
-  echo ""
-  echo -e "  ${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-  local summary_t="📋  INSTALLATION SUMMARY  📋"
-  echo -e "  ${CYAN}║${NC}        ${BOLD}${WHITE}${summary_t}${NC}$(printf '%*s' $((62 - 8 - ${#summary_t} - 2)) '')${CYAN}║${NC}"
-  echo -e "  ${CYAN}╠══════════════════════════════════════════════════════════════╣${NC}"
-  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-
-  local i_st="  Status:     ${_status}  (${_ran} ran, ${_skip} skipped, ${_fail} failed)"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}Status:${NC}     ${_status_color}${_status}${NC}  ${DIM}(${_ran} ran, ${_skip} skipped, ${_fail} failed)${NC}$(printf '%*s' $((62 - ${#i_st})) '')${CYAN}║${NC}"
-
-  local i_dur="  Duration:   ${elapsed}"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}Duration:${NC}   ${elapsed}$(printf '%*s' $((62 - ${#i_dur})) '')${CYAN}║${NC}"
-
-  if [ "$MISSING_COUNT" -gt 0 ]; then
-    local i_miss="  Missing:    ${MISSING_COUNT} piece(s) not installed"
-    echo -e "  ${CYAN}║${NC}  ${BOLD}Missing:${NC}    ${YELLOW}${MISSING_COUNT}${NC} piece(s) not installed$(printf '%*s' $((62 - ${#i_miss})) '')${CYAN}║${NC}"
-  fi
-
-  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-  echo -e "  ${CYAN}║${NC}  ${DIM}──────────────────────────────────────────────────────────${NC}  ${CYAN}║${NC}"
-  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-
-  local i_rpm_clean="  RPM:        ${INSTALL_RPM_OK} installed, ${INSTALL_RPM_FAIL} unavailable"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}RPM:${NC}        ${GREEN}${INSTALL_RPM_OK}${NC} installed, ${YELLOW}${INSTALL_RPM_FAIL}${NC} unavailable$(printf '%*s' $((62 - ${#i_rpm_clean})) '')${CYAN}║${NC}"
-
-  local i_fp_clean="  Flatpak:    ${INSTALL_FP_OK} installed, ${INSTALL_FP_FAIL} failed"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}Flatpak:${NC}    ${GREEN}${INSTALL_FP_OK}${NC} installed, ${YELLOW}${INSTALL_FP_FAIL}${NC} failed$(printf '%*s' $((62 - ${#i_fp_clean})) '')${CYAN}║${NC}"
-
-  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-  echo -e "  ${CYAN}║${NC}  ${DIM}──────────────────────────────────────────────────────────${NC}  ${CYAN}║${NC}"
-  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-
-  # The headline items follow the steps they came from: a step that
-  # failed must not be reported as installed.
-  local _theme_txt="MacTahoe-Dark (GNOME ${GNOME_VER})"
-  if [ "$(_step_status install_mactahoe_theme)" = "failed" ]; then
-    _theme_txt="not installed"
-  fi
-  local i_gtk_clean="  GTK Theme:  ${_theme_txt}"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}GTK Theme:${NC}  ${_theme_txt}$(printf '%*s' $((62 - ${#i_gtk_clean})) '')${CYAN}║${NC}"
-
-  local i_ico="  Icon Theme: MacTahoe-dark"
-  if [ "$(_step_status install_mactahoe_theme)" = "failed" ]; then
-    i_ico="  Icon Theme: not installed"
-    echo -e "  ${CYAN}║${NC}  ${BOLD}Icon Theme:${NC} not installed$(printf '%*s' $((62 - ${#i_ico})) '')${CYAN}║${NC}"
-  else
-    echo -e "  ${CYAN}║${NC}  ${BOLD}Icon Theme:${NC} MacTahoe-dark$(printf '%*s' $((62 - ${#i_ico})) '')${CYAN}║${NC}"
-  fi
-
-  local _font_txt="SF Pro Display"
-  if [ "$(_step_status install_font)" = "failed" ]; then
-    _font_txt="not installed"
-  fi
-  local i_fnt="  Font:       ${_font_txt}"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}Font:${NC}       ${_font_txt}$(printf '%*s' $((62 - ${#i_fnt})) '')${CYAN}║${NC}"
-
-  local _shell_txt="Fish (default after logout)"
-  if [ "$(_step_status setup_shell)" = "failed" ]; then
-    _shell_txt="not installed"
-  fi
-  local i_shl_clean="  Shell:      ${_shell_txt}"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}Shell:${NC}      ${_shell_txt}$(printf '%*s' $((62 - ${#i_shl_clean})) '')${CYAN}║${NC}"
-
-  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-  echo -e "  ${CYAN}║${NC}  ${DIM}──────────────────────────────────────────────────────────${NC}  ${CYAN}║${NC}"
-  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-
-  local i_dsk="  Disk Usage: ${theme_disk} for themes, icons, fonts"
-  echo -e "  ${CYAN}║${NC}  ${BOLD}Disk Usage:${NC} ${theme_disk} for themes, icons, fonts$(printf '%*s' $((62 - ${#i_dsk})) '')${CYAN}║${NC}"
-
-  echo -e "  ${CYAN}║${NC}                                                              ${CYAN}║${NC}"
-  echo -e "  ${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
-  echo ""
-
-  _print_missing_pieces
-}
-
 # ── The pieces that are missing, and how to add each one ──────
 # Only pieces that were actually attempted and failed are listed here.
 # An optional extra that was deliberately left out is not "missing" —
@@ -2444,11 +2314,14 @@ install_browsers() {
   fi
 
   # Chrome — create repo file directly (--from-repofile not supported by Google)
-  if ! rpm -q google-chrome-stable &>/dev/null; then
+  if [ "$(uname -m)" != "x86_64" ]; then
+    warn "Google Chrome RPM is supported only on x86_64 — skipping Chrome on $(uname -m)"
+  elif ! rpm -q google-chrome-stable &>/dev/null; then
     if ! sudo rpm --import https://dl.google.com/linux/linux_signing_key.pub 2>/dev/null; then
       warn "Failed to import Google signing key — Chrome repo may not be trusted"
     fi
-    sudo tee /etc/yum.repos.d/google-chrome.repo > /dev/null <<-EOF
+    if [ ! -e /etc/yum.repos.d/google-chrome.repo ] && [ ! -L /etc/yum.repos.d/google-chrome.repo ]; then
+      if ! sudo sh -c 'set -C; cat > /etc/yum.repos.d/google-chrome.repo' <<-EOF
 [google-chrome]
 name=google-chrome
 baseurl=https://dl.google.com/linux/chrome/rpm/stable/x86_64
@@ -2456,6 +2329,11 @@ enabled=1
 gpgcheck=1
 gpgkey=https://dl.google.com/linux/linux_signing_key.pub
 EOF
+      then
+        warn "Could not create Chrome repository — existing configuration preserved"
+        _step_fail=1
+      fi
+    fi
     # Install from repo, with direct RPM as offline fallback
     if ! sudo dnf install -y google-chrome-stable 2>/dev/null && \
        ! sudo dnf install -y https://dl.google.com/linux/direct/google-chrome-stable_current_x86_64.rpm; then
@@ -2664,7 +2542,24 @@ install_mactahoe_theme() {
 }
 
 # ── Icon themes + custom macOS app icons (standalone step for `update icons`) ──
+_resize_app_icon() {
+  local png="$1" stage
+  local -a writer=()
+  if [ "${2:-}" = system ]; then writer=(sudo); fi
+  stage=$(mktemp "${TMPDIR:-/tmp}/mactahoe-icon.XXXXXXXXXX.png") || return 1
+  if { magick -regard-warnings "$png" -trim +repage -resize 256x256 -gravity center -background transparent -extent 256x256 "$stage" 2>/dev/null ||
+       convert -regard-warnings "$png" -trim +repage -resize 256x256 -gravity center -background transparent -extent 256x256 "$stage"; } &&
+     [ -s "$stage" ] && "${writer[@]}" cp -f "$stage" "$png"; then
+    rm -f -- "$stage"
+    return 0
+  fi
+  rm -f -- "$stage"
+  warn "Could not resize icon: $png — continuing with other assets"
+  return 1
+}
+
 install_icons() {
+  local _step_fail=0
   local theme_src="$BUNDLE/themes"
   local user_hicolor="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor"
   [[ "$user_hicolor" = /* ]] || user_hicolor="$HOME/.local/share/icons/hicolor"
@@ -2676,8 +2571,12 @@ install_icons() {
   done
 
   for icon in MacTahoe MacTahoe-dark; do
-    mkdir -p "$HOME/.local/share/icons"
-    cp -a "$theme_src/$icon" "$HOME/.local/share/icons/"
+    if ! mkdir -p "$HOME/.local/share/icons" ||
+       ! cp -a "$theme_src/$icon" "$HOME/.local/share/icons/"; then
+      warn "Could not install required icon theme: $icon"
+      _step_fail=1
+      continue
+    fi
     # Fix ownership of any pre-existing root-owned subdirs (e.g. symbolic/actions/
     # from a previous run) so later mkdir/cp operations don't fail with EACCES.
     sudo chown -R "$(whoami):$(id -gn)" "$HOME/.local/share/icons/$icon" 2>/dev/null || true
@@ -2831,7 +2730,7 @@ install_icons() {
     done
   done
 
-  ok "Icon themes installed (MacTahoe + MacTahoe-dark)"
+  if [ "$_step_fail" -eq 0 ]; then ok "Icon themes installed (MacTahoe + MacTahoe-dark)"; fi
 
   # Custom macOS app icons (SVG+PNG) — ALWAYS OVERRIDE on conflict
   local icon_src="$BUNDLE/icons/256x256"
@@ -2841,20 +2740,24 @@ install_icons() {
       "$HOME/.local/share/icons/MacTahoe/apps/scalable"
       "$user_hicolor/256x256/apps"
     )
-    mkdir -p "${targets[@]}"
+    if ! mkdir -p "${targets[@]}"; then warn "Could not prepare custom icon destinations"; return 1; fi
 
     # Copy SVGs first (preferred format for scalable)
     for svg in "$icon_src"/*.svg; do
       [ -f "$svg" ] || continue
       f=$(basename "$svg")
-      for t in "${targets[@]}"; do cp -f "$svg" "$t/$f"; done
+      for t in "${targets[@]}"; do
+        if ! cp -f "$svg" "$t/$f"; then warn "Could not copy icon: $f"; _step_fail=1; fi
+      done
     done
 
     # Also copy PNGs as fallback for older apps
     for png in "$icon_src"/*.png; do
       [ -f "$png" ] || continue
       f=$(basename "$png")
-      for t in "${targets[@]}"; do cp -f "$png" "$t/$f"; done
+      for t in "${targets[@]}"; do
+        if ! cp -f "$png" "$t/$f"; then warn "Could not copy icon: $f"; _step_fail=1; fi
+      done
     done
 
     # Flatpak app IDs need their full reverse-DNS name to get themed
@@ -2875,7 +2778,9 @@ install_icons() {
       local alias_svg="${fp_aliases[${base_noext}.png]:-}"
       [ -z "$alias_svg" ] && continue
       local alias_svg_name="${alias_svg%.png}.svg"
-      for t in "${targets[@]}"; do cp -f "$svg" "$t/$alias_svg_name"; done
+      for t in "${targets[@]}"; do
+        if ! cp -f "$svg" "$t/$alias_svg_name"; then warn "Could not copy icon alias: $alias_svg_name"; _step_fail=1; fi
+      done
     done
     # PNG aliases
     for png in "$icon_src"/*.png; do
@@ -2883,15 +2788,16 @@ install_icons() {
       local base; base=$(basename "$png")
       local alias_png="${fp_aliases[$base]:-}"
       [ -z "$alias_png" ] && continue
-      for t in "${targets[@]}"; do cp -f "$png" "$t/$alias_png"; done
+      for t in "${targets[@]}"; do
+        if ! cp -f "$png" "$t/$alias_png"; then warn "Could not copy icon alias: $alias_png"; _step_fail=1; fi
+      done
     done
 
     # Trim padding + resize to 256×256 (PNGs only — SVGs are already correct)
     for t in "${targets[@]}"; do
       for png in "$t"/*.png; do
         [ -f "$png" ] || continue
-        magick "$png" -trim +repage -resize 256x256 -gravity center -background transparent -extent 256x256 "$png" 2>/dev/null || \
-        convert "$png" -trim +repage -resize 256x256 -gravity center -background transparent -extent 256x256 "$png"
+        if ! _resize_app_icon "$png"; then _step_fail=1; fi
       done
     done
 
@@ -2921,10 +2827,10 @@ install_icons() {
 
     # ── System-wide: copy all icons + aliases so EVERY user gets them ──
     local sys="/usr/share/icons/hicolor/256x256/apps"
-    sudo mkdir -p "$sys"
+    if ! sudo mkdir -p "$sys"; then warn "Could not prepare system app icon destination"; _step_fail=1; fi
     for f in "$icon_src"/*.svg "$icon_src"/*.png; do
       [ -f "$f" ] || continue
-      sudo cp -f "$f" "$sys/"
+      if ! sudo cp -f "$f" "$sys/"; then warn "Could not copy system icon: $f"; _step_fail=1; fi
     done
     # Flatpak aliases system-wide (PNG)
     for f in "$icon_src"/*.png; do
@@ -2932,7 +2838,7 @@ install_icons() {
       local base; base=$(basename "$f")
       local alias="${fp_aliases[$base]:-}"
       [ -z "$alias" ] && continue
-      sudo cp -f "$f" "$sys/$alias"
+      if ! sudo cp -f "$f" "$sys/$alias"; then warn "Could not copy system icon alias: $alias"; _step_fail=1; fi
     done
     # Flatpak aliases system-wide (SVG)
     for f in "$icon_src"/*.svg; do
@@ -2942,19 +2848,24 @@ install_icons() {
       local alias="${fp_aliases[${base_noext}.png]:-}"
       [ -z "$alias" ] && continue
       local alias_svg_name="${alias%.png}.svg"
-      sudo cp -f "$f" "$sys/$alias_svg_name"
+      if ! sudo cp -f "$f" "$sys/$alias_svg_name"; then warn "Could not copy system icon alias: $alias_svg_name"; _step_fail=1; fi
     done
     # Trim + resize system-wide PNGs
     for png in "$sys"/*.png; do
       [ -f "$png" ] || continue
-      sudo magick "$png" -trim +repage -resize 256x256 -gravity center -background transparent -extent 256x256 "$png" 2>/dev/null || \
-      sudo convert "$png" -trim +repage -resize 256x256 -gravity center -background transparent -extent 256x256 "$png"
+      if ! _resize_app_icon "$png" system; then _step_fail=1; fi
     done
     # Rebuild system icon cache
     sudo gtk-update-icon-cache /usr/share/icons/hicolor/ 2>/dev/null || warn "System-wide icon cache update failed"
 
-  ok "Custom macOS app icons installed ($(ls "$icon_src"/*.png 2>/dev/null | wc -l) PNGs + $(ls "$icon_src"/*.svg 2>/dev/null | wc -l) SVGs)"
+    if [ "$_step_fail" -eq 0 ]; then
+      ok "Custom macOS app icons installed ($(ls "$icon_src"/*.png 2>/dev/null | wc -l) PNGs + $(ls "$icon_src"/*.svg 2>/dev/null | wc -l) SVGs)"
+    fi
+  else
+    warn "Required custom app icons are missing from $icon_src"
+    _step_fail=1
   fi
+  return "$_step_fail"
 }
 
 install_font() {
@@ -3996,18 +3907,21 @@ ensure_celluloid_default() {
 # (Nautilus 46+ no longer exposes sort-directories-first as a gsetting)
 configure_nautilus_defaults() {
   next_step "Nautilus Per-Folder Defaults"
+  local _step_fail=0 folder sort reverse
   # ── 1. Per‑folder sort order (via GVFS metadata — what Nautilus 50 actually reads) ──
-  gio set "$HOME/Downloads"  metadata::nautilus-icon-view-sort-by        date_modified  2>/dev/null || true
-  gio set "$HOME/Downloads"  metadata::nautilus-icon-view-sort-reversed  true           2>/dev/null || true
-  ok "Downloads → sort by Last Modified (newest first)"
-
-  for folder in "$HOME/Pictures" "$HOME/Videos" "$HOME/Music" "$HOME/Documents"; do
+  for folder in "$HOME/Downloads" "$HOME/Pictures" "$HOME/Videos" "$HOME/Music" "$HOME/Documents"; do
     if [ -d "$folder" ]; then
-      gio set "$folder"  metadata::nautilus-icon-view-sort-by       name  2>/dev/null || true
-      gio set "$folder"  metadata::nautilus-icon-view-sort-reversed false 2>/dev/null || true
+      sort=name; reverse=false
+      if [ "$folder" = "$HOME/Downloads" ]; then sort=date_modified; reverse=true; fi
+      if gio set "$folder" metadata::nautilus-icon-view-sort-by "$sort" &&
+         gio set "$folder" metadata::nautilus-icon-view-sort-reversed "$reverse"; then
+        ok "${folder##*/} → sort by $sort (reversed: $reverse)"
+      else
+        warn "Could not set Nautilus sorting for ${folder##*/}"
+        _step_fail=1
+      fi
     fi
   done
-  ok "Pictures, Videos, Music, Documents → sort by Name (A–Z)"
 
   # GTK3, GTK4 and Nautilus share gtk-3.0/bookmarks. Never rebuild a user's list.
   # Remove only the exact literal line emitted by older project installers.
@@ -4017,9 +3931,14 @@ configure_nautilus_defaults() {
   fi
 
   # ── 3. File-chooser dialogs: do NOT sort folders before files ──
-  gsettings set org.gtk.Settings.FileChooser sort-directories-first false 2>/dev/null || true
-  gsettings set org.gtk.gtk4.Settings.FileChooser sort-directories-first false 2>/dev/null || true
-  ok "File chooser: 'Sort folders before files' turned off"
+  if gsettings set org.gtk.Settings.FileChooser sort-directories-first false &&
+     gsettings set org.gtk.gtk4.Settings.FileChooser sort-directories-first false; then
+    ok "File chooser: 'Sort folders before files' turned off"
+  else
+    warn "Could not configure file chooser sorting"
+    _step_fail=1
+  fi
+  return "$_step_fail"
 }
 
 _remove_project_trash_bookmark() {
@@ -4065,33 +3984,31 @@ PY
 setup_gdm() {
   next_step "GDM Login Screen Theme"
 
-  # User said "n" to the GDM prompt — skip everything
-  if [ "${INSTALL_LOGIN_WALLPAPER:-true}" != "true" ]; then
-    ok "GDM login screen skipped (user opted out)"
+  local _gdm_requested=0
+  if [ "${INSTALL_LOGIN_WALLPAPER:-true}" = "true" ]; then
+    _gdm_requested=1
+  else
     _VISUAL_SKIP_REASON='not requested'
-    return
   fi
 
   local wp="$BUNDLE/wallpapers"
   local bg=""
-
-  if [ "${INSTALL_LOGIN_WALLPAPER:-true}" = "true" ]; then
-    if [ -f "$wp/login/Himeno Fedora LoginScreen.jpg" ]; then
-      bg="$wp/login/Himeno Fedora LoginScreen.jpg"
-    elif [ -f "$wp/desktop/Himeno Fedora.jpg" ]; then
-      bg="$wp/desktop/Himeno Fedora.jpg"
-    fi
-  fi
-
-  # ── Apply with the runtime engine (FedoraTahoe-GDM) ──
-  # This is the same engine `gdm` uses and the only one verified against the
-  # live GNOME release. Upstream tweaks.sh stays as a fallback for the rare
-  # case where the engine cannot be fetched.
   local engine="$HOME/.local/share/mactahoe-gdm"
   local engine_script="$engine/gdm-wallpaper.sh"
   local _gdm_ok=0
   local _gdm_fb_ok=0
 
+  if [ "$_gdm_requested" -eq 1 ]; then
+    if [ -f "$wp/login/Himeno Fedora LoginScreen.jpg" ]; then
+      bg="$wp/login/Himeno Fedora LoginScreen.jpg"
+    elif [ -f "$wp/desktop/Himeno Fedora.jpg" ]; then
+      bg="$wp/desktop/Himeno Fedora.jpg"
+    fi
+
+  # ── Apply with the runtime engine (FedoraTahoe-GDM) ──
+  # This is the same engine `gdm` uses and the only one verified against the
+  # live GNOME release. Upstream tweaks.sh stays as a fallback for the rare
+  # case where the engine cannot be fetched.
   if [ ! -f "$engine_script" ]; then
     local _engine_tmp="${engine}.clone.$$"
     rm -rf "$_engine_tmp"
@@ -4137,34 +4054,57 @@ setup_gdm() {
     fi
   fi
 
-  # Fallback: upstream tweaks.sh, only when the runtime engine did not run.
-  if [ "$_gdm_ok" -eq 0 ]; then
-    if _mactahoe_get_source /tmp/mactahoe-gtk && [ -f /tmp/mactahoe-gtk/tweaks.sh ]; then
-      local _fb_rc=0
-      if [ -n "$bg" ]; then
-        ( cd /tmp/mactahoe-gtk && sudo ./tweaks.sh -g -nb -nd -b "$bg" ) || _fb_rc=$?
+    # Fallback: upstream tweaks.sh, only when the runtime engine did not run.
+    if [ "$_gdm_ok" -eq 0 ]; then
+      if _mactahoe_get_source /tmp/mactahoe-gtk && [ -f /tmp/mactahoe-gtk/tweaks.sh ]; then
+        local _fb_rc=0
+        if [ -n "$bg" ]; then
+          ( cd /tmp/mactahoe-gtk && sudo ./tweaks.sh -g -nb -nd -b "$bg" ) || _fb_rc=$?
+        else
+          ( cd /tmp/mactahoe-gtk && sudo ./tweaks.sh -g -nb -nd ) || _fb_rc=$?
+        fi
+        if [ "$_fb_rc" -eq 0 ]; then
+          _gdm_fb_ok=1
+          ok "GDM login screen themed via upstream tweaks.sh"
+        else
+          warn "GDM login screen not changed (upstream exit $_fb_rc)"
+          warn "  Apply it later with: gdm default"
+        fi
       else
-        ( cd /tmp/mactahoe-gtk && sudo ./tweaks.sh -g -nb -nd ) || _fb_rc=$?
-      fi
-      if [ "$_fb_rc" -eq 0 ]; then
-        _gdm_fb_ok=1
-        ok "GDM login screen themed via upstream tweaks.sh"
-      else
-        warn "GDM login screen not changed (upstream exit $_fb_rc)"
+        warn "No GDM engine available — login screen not changed"
         warn "  Apply it later with: gdm default"
       fi
-    else
-      warn "No GDM engine available — login screen not changed"
-      warn "  Apply it later with: gdm default"
     fi
   fi
 
   # Hide Fedora logo on GDM login screen (runs regardless of theme)
-  sudo mkdir -p /etc/dconf/db/gdm.d
-  echo -e "[org/gnome/login-screen]\nlogo=''" | sudo tee /etc/dconf/db/gdm.d/01-logo > /dev/null
-  sudo dconf update
-  ok "Fedora logo hidden from GDM login screen"
+  local _logo_fail=0
+  if ! sudo mkdir -p /etc/dconf/db/gdm.d; then
+    warn "Could not prepare the GDM dconf directory — Fedora logo not hidden"
+    _logo_fail=1
+  fi
+  if [ "$_logo_fail" -eq 0 ]; then
+    if ! printf '%s\n' '[org/gnome/login-screen]' "logo=''" | sudo tee /etc/dconf/db/gdm.d/01-logo > /dev/null; then
+      warn "Could not write the GDM logo setting"
+      _logo_fail=1
+    fi
+  fi
+  if [ "$_logo_fail" -eq 0 ]; then
+    if ! sudo dconf update; then
+      warn "Could not apply the GDM logo setting (dconf update failed)"
+      _logo_fail=1
+    fi
+  fi
+  if [ "$_logo_fail" -eq 0 ]; then
+    ok "Fedora logo hidden from GDM login screen"
+  fi
 
+  if [ "$_gdm_requested" -eq 0 ]; then
+    ok "GDM login screen skipped (user opted out)"
+    if [ "$_logo_fail" -ne 0 ]; then return 1; fi
+    return 0
+  fi
+  if [ "$_logo_fail" -ne 0 ]; then return 1; fi
   if [ "$_gdm_ok" -eq 0 ] && [ "$_gdm_fb_ok" -eq 0 ]; then
     return 1
   fi
@@ -4394,42 +4334,44 @@ EOF
 
 install_sounds() {
   next_step "macOS Big Sur System Sounds"
-
+ (
   local sound_src="$BUNDLE/sounds/bigsur"
-  if [ -d "$sound_src" ]; then
-    mkdir -p "$HOME/.local/share/sounds"
-    rm -rf "$HOME/.local/share/sounds/bigsur"
-    cp -r "$sound_src" "$HOME/.local/share/sounds/"
-    gsettings set org.gnome.desktop.sound theme-name "bigsur" 2>/dev/null || true
-    gsettings set org.gnome.desktop.sound event-sounds true 2>/dev/null || true
-    ok "macOS Big Sur sounds installed ($(ls "$sound_src/stereo/"*.oga 2>/dev/null | wc -l) files)"
-    return 0
-  else
+  local stage parent="$HOME/.local/share/sounds" target="$HOME/.local/share/sounds/bigsur"
+  stage=$(mktemp -d "${TMPDIR:-/tmp}/mactahoe-sounds.XXXXXXXXXX") || return 1
+  trap 'rm -rf -- "$stage"' EXIT
+  if [ ! -d "$sound_src" ]; then
     warn "Sounds not bundled — building from source instead"
-    local sounds_built=false
-    if timeout 120 git clone --depth 1 https://github.com/gxanshu/macos-bigsur-sound-theme-linux.git /tmp/mac-sounds 2>/dev/null; then
-      cd /tmp/mac-sounds
-      timeout 120 git clone --depth 1 https://github.com/ThisIsNoahEvans/BigSurSounds.git 2>/dev/null || warn "Failed to clone BigSurSounds"
-      timeout 120 git clone --depth 1 https://github.com/KDE/ocean-sound-theme.git 2>/dev/null || warn "Failed to clone ocean-sound-theme"
-      if make build 2>/dev/null; then
-        make install 2>/dev/null && sounds_built=true || warn "Sound install failed"
-      else
-        warn "Sound build failed"
-      fi
-      cd /tmp
-      rm -rf /tmp/mac-sounds
-    else
-      warn "Failed to clone sound theme repo"
+    if ! timeout 120 git clone --depth 1 https://github.com/gxanshu/macos-bigsur-sound-theme-linux.git "$stage/source" ||
+       ! timeout 120 git clone --depth 1 https://github.com/ThisIsNoahEvans/BigSurSounds.git "$stage/source/BigSurSounds" ||
+       ! timeout 120 git clone --depth 1 https://github.com/KDE/ocean-sound-theme.git "$stage/source/ocean-sound-theme" ||
+       ! (cd "$stage/source" && timeout 180 make build); then
+      warn "Sound source download/build failed — existing sounds preserved"
+      return 1
     fi
-    if [ "$sounds_built" = "true" ]; then
-      gsettings set org.gnome.desktop.sound theme-name "bigsur" 2>/dev/null || true
-      gsettings set org.gnome.desktop.sound event-sounds true 2>/dev/null || true
-      ok "macOS Big Sur sounds built from source"
-      return 0
-    fi
-    warn "Sounds not installed — build failed"
+    sound_src="$stage/source/theme/bigsur"
+  fi
+  if [ ! -s "$sound_src/index.theme" ] ||
+     ! find "$sound_src/stereo" -type f -name '*.oga' -print -quit 2>/dev/null | grep -q .; then
+    warn "Sound payload is incomplete — existing sounds preserved"
     return 1
   fi
+  # Add missing bundled sounds, never replace a user's existing sound data.
+  if [ -L "$target" ] || { [ -e "$target" ] && [ ! -d "$target" ]; }; then
+    warn "Sound destination is not a regular directory — preserved"
+    return 1
+  fi
+  if ! mkdir -p "$parent" "$target" || ! cp -an "$sound_src/." "$target/"; then
+    warn "Could not install sounds — existing files retained"
+    return 1
+  fi
+  if ! gsettings set org.gnome.desktop.sound theme-name "bigsur" ||
+     ! gsettings set org.gnome.desktop.sound event-sounds true; then
+    warn "Sounds copied but sound preferences could not be applied"
+    return 1
+  fi
+  ok "macOS Big Sur sounds installed (existing sound files preserved)"
+  return 0
+ )
 }
 
 # ── PHASE 4b: UPDATE NOTIFIER ──────────────────────────────
@@ -4540,24 +4482,70 @@ DNF_AUTOMATIC_MERGE
 
 install_updater() {
   next_step "Fedora MacTahoe Update Notifier"
+ (
 
   local updater_src="$BUNDLE/configs/updater"
   local _step_fail=0
-  if [ ! -d "$updater_src" ]; then
-    warn "Updater files not found at $updater_src — skipping"
+  local source destination backup committed=0 item rollback_failed=0
+  local was_enabled=0 was_active=0 activation_started=0
+  local -a sources=("$updater_src/fedora-mactahoe-updater.sh" "$updater_src/fedora-mactahoe-updater.service" "$updater_src/fedora-mactahoe-updater.timer"
+    "$updater_src/update-rescue.fish" "$BUNDLE/configs/fish/functions/__fish_default_command_not_found_handler.fish")
+  for source in "${sources[@]}"; do
+    if [ ! -s "$source" ] || [ ! -f "$source" ]; then
+      warn "Required updater payload missing or empty: $source"
+      return 1
+    fi
+  done
+  if ! bash -n "${sources[0]}" ||
+     ! fish --no-config -n "${sources[3]}" || ! fish --no-config -n "${sources[4]}" ||
+     ! grep -qxF 'ExecStart=%h/.local/bin/fedora-mactahoe-updater.sh' "${sources[1]}" ||
+     ! grep -q '^OnUnitActiveSec=' "${sources[2]}"; then
+    warn "Updater payload validation failed — existing installation preserved"
     return 1
   fi
+  backup=$(mktemp -d "${TMPDIR:-/tmp}/mactahoe-updater.XXXXXXXXXX") || return 1
+  local -a destinations=("$HOME/.local/bin/fedora-mactahoe-updater.sh" "$HOME/.config/systemd/user/fedora-mactahoe-updater.service" "$HOME/.config/systemd/user/fedora-mactahoe-updater.timer")
+  for item in 0 1 2; do
+    destination="${destinations[$item]}"
+    if [ -L "$destination" ] || { [ -e "$destination" ] && [ ! -f "$destination" ]; }; then
+      warn "Updater destination is not a regular file: $destination"
+      rm -rf -- "$backup"
+      return 1
+    fi
+    if [ -e "$destination" ]; then
+      if ! cp -p "$destination" "$backup/$item"; then rm -rf -- "$backup"; return 1; fi
+    fi
+  done
+  if systemctl --user is-enabled fedora-mactahoe-updater.timer &>/dev/null; then was_enabled=1; fi
+  if systemctl --user is-active fedora-mactahoe-updater.timer &>/dev/null; then was_active=1; fi
+  trap 'if [ "$committed" -eq 0 ]; then
+    if [ "$activation_started" -eq 1 ]; then
+      if [ "$was_active" -eq 0 ]; then systemctl --user stop fedora-mactahoe-updater.timer || rollback_failed=1; fi
+      if [ "$was_enabled" -eq 0 ]; then systemctl --user disable fedora-mactahoe-updater.timer || rollback_failed=1; fi
+    fi
+    for item in 0 1 2; do
+      if [ -f "$backup/$item" ]; then
+        cp -p "$backup/$item" "${destinations[$item]}" || rollback_failed=1
+      else rm -f -- "${destinations[$item]}" || rollback_failed=1; fi
+    done
+    systemctl --user daemon-reload || rollback_failed=1
+    if [ "$activation_started" -eq 1 ] && [ "$was_active" -eq 1 ]; then
+      systemctl --user restart fedora-mactahoe-updater.timer || rollback_failed=1
+    fi
+  fi
+  if [ "$rollback_failed" -eq 0 ]; then rm -rf -- "$backup";
+  else warn "Updater recovery needs attention; original payload retained at $backup"; fi' EXIT
 
   # 1. Install the script
-  mkdir -p "$HOME/.local/bin"
-  cp "$updater_src/fedora-mactahoe-updater.sh" "$HOME/.local/bin/fedora-mactahoe-updater.sh"
-  chmod +x "$HOME/.local/bin/fedora-mactahoe-updater.sh"
+  mkdir -p "$HOME/.local/bin" || return 1
+  cp "$updater_src/fedora-mactahoe-updater.sh" "$HOME/.local/bin/fedora-mactahoe-updater.sh" || return 1
+  chmod +x "$HOME/.local/bin/fedora-mactahoe-updater.sh" || return 1
   log "Updater script installed to ~/.local/bin/"
 
   # 2. Install systemd user units
-  mkdir -p "$HOME/.config/systemd/user"
-  cp "$updater_src/fedora-mactahoe-updater.service" "$HOME/.config/systemd/user/"
-  cp "$updater_src/fedora-mactahoe-updater.timer" "$HOME/.config/systemd/user/"
+  mkdir -p "$HOME/.config/systemd/user" || return 1
+  cp "$updater_src/fedora-mactahoe-updater.service" "$HOME/.config/systemd/user/" || return 1
+  cp "$updater_src/fedora-mactahoe-updater.timer" "$HOME/.config/systemd/user/" || return 1
   log "Systemd timer and service installed"
 
   # 2.5 System-wide rescue detector — a tiny standalone 'update' function
@@ -4568,29 +4556,36 @@ install_updater() {
   #      so a wiped fish config still suggests command fixes. Refreshed on
   #      every full install; 'update configs' keeps both current in between.
   local sys_fish_dir="/etc/fish/functions"
-  sudo mkdir -p "$sys_fish_dir" 2>/dev/null
+  sudo mkdir -p "$sys_fish_dir" || return 1
   if [ -f "$BUNDLE/configs/updater/update-rescue.fish" ]; then
-    sudo cp "$BUNDLE/configs/updater/update-rescue.fish" "$sys_fish_dir/update.fish"
-    sudo chmod 644 "$sys_fish_dir/update.fish"
+    sudo cp "$BUNDLE/configs/updater/update-rescue.fish" "$sys_fish_dir/update.fish" || return 1
+    sudo chmod 644 "$sys_fish_dir/update.fish" || return 1
     log "Rescue detector installed (root-owned, outside the home folder)"
   fi
   if [ -f "$BUNDLE/configs/fish/functions/__fish_default_command_not_found_handler.fish" ]; then
-    sudo cp "$BUNDLE/configs/fish/functions/__fish_default_command_not_found_handler.fish" "$sys_fish_dir/"
-    sudo chmod 644 "$sys_fish_dir/__fish_default_command_not_found_handler.fish"
+    sudo cp "$BUNDLE/configs/fish/functions/__fish_default_command_not_found_handler.fish" "$sys_fish_dir/" || return 1
+    sudo chmod 644 "$sys_fish_dir/__fish_default_command_not_found_handler.fish" || return 1
     log "Did-you-mean handler installed (root-owned, outside the home folder)"
   fi
 
   # 3. Reload, enable, start
-  systemctl --user daemon-reload 2>/dev/null || true
-  systemctl --user enable fedora-mactahoe-updater.timer 2>/dev/null || true
-  systemctl --user start fedora-mactahoe-updater.timer 2>/dev/null || true
+  activation_started=1
+  if ! systemctl --user daemon-reload ||
+     ! systemctl --user enable fedora-mactahoe-updater.timer ||
+     ! systemctl --user start fedora-mactahoe-updater.timer; then
+    warn "Could not activate update notifier — restoring previous user payload"
+    return 1
+  fi
 
-  if systemctl --user is-enabled fedora-mactahoe-updater.timer &>/dev/null; then
+  if systemctl --user is-enabled fedora-mactahoe-updater.timer &>/dev/null &&
+     systemctl --user is-active fedora-mactahoe-updater.timer &>/dev/null; then
     ok "Update notifier active (checks GitHub every 2 hours)"
   else
     warn "Update notifier timer could not be enabled"
     _step_fail=1
   fi
+  if [ "$_step_fail" -ne 0 ]; then return 1; fi
+  committed=1
 
   # 4. Automatic security updates — dnf5-plugin-automatic in download + notify mode.
   #    Downloads security patches silently, NEVER installs by itself — you
@@ -4625,6 +4620,7 @@ install_updater() {
     return 1
   fi
   return 0
+ )
 }
 
 # ── PHASE 4c: KTHEME WATCHER ────────────────────────────────
@@ -4633,14 +4629,22 @@ install_ktheme_watcher() {
   next_step "Kitty Auto-Theme Watcher (ktheme)"
 
   local ktheme_src="$BUNDLE/configs/systemd"
-  if [ ! -f "$ktheme_src/ktheme-watcher.service" ]; then
+  if [ ! -s "$ktheme_src/ktheme-watcher.service" ] ||
+     [ ! -s "$HOME/.config/fish/functions/ktheme.fish" ] ||
+     ! command -v fish >/dev/null 2>&1 || ! command -v gsettings >/dev/null 2>&1 ||
+     ! command -v python3 >/dev/null 2>&1 || ! command -v magick >/dev/null 2>&1; then
     warn "ktheme-watcher.service not found at $ktheme_src — skipping"
+    return 1
+  fi
+  if ! fish --no-config -n "$HOME/.config/fish/functions/ktheme.fish" ||
+     ! grep -q '^ExecStart=.*ktheme watch' "$ktheme_src/ktheme-watcher.service"; then
+    warn "ktheme watcher payload or installed function is invalid — preserved"
     return 1
   fi
 
   # 1. Install the unit
-  mkdir -p "$HOME/.config/systemd/user"
-  cp "$ktheme_src/ktheme-watcher.service" "$HOME/.config/systemd/user/"
+  mkdir -p "$HOME/.config/systemd/user" || return 1
+  cp "$ktheme_src/ktheme-watcher.service" "$HOME/.config/systemd/user/" || return 1
   log "ktheme-watcher.service installed"
 
   # 2. Preserve the user's choice. The watcher is opt-in: a fresh install
@@ -4653,11 +4657,14 @@ install_ktheme_watcher() {
     _kt_was_enabled=1
   fi
 
-  systemctl --user daemon-reload 2>/dev/null || true
+  if ! systemctl --user daemon-reload; then warn "Could not reload the user service manager"; return 1; fi
 
   if [ "$_kt_was_enabled" -eq 1 ]; then
-    systemctl --user enable ktheme-watcher.service 2>/dev/null || true
-    systemctl --user start ktheme-watcher.service 2>/dev/null || true
+    if ! systemctl --user enable ktheme-watcher.service ||
+       ! systemctl --user start ktheme-watcher.service; then
+      warn "ktheme watcher was enabled but could not be started (run: ktheme on)"
+      return 1
+    fi
     if systemctl --user is-active ktheme-watcher.service &>/dev/null; then
       ok "Auto-theme watcher kept on — kitty follows your wallpaper"
       return 0
@@ -4674,15 +4681,22 @@ install_ktheme_watcher() {
 
 setup_terminal() {
   next_step "Kitty as Default Terminal"
+  local _step_fail=0
 
   # Select Kitty through desktop settings, never replace system terminal binaries.
   # This is independent of the optional old-terminal removal choice.
-  gsettings set org.gnome.desktop.default-applications.terminal exec 'kitty' 2>/dev/null || true
+  if ! gsettings set org.gnome.desktop.default-applications.terminal exec 'kitty'; then
+    warn "Could not select Kitty as the default terminal"
+    _step_fail=1
+  fi
 
   # Copy desktop entry with Name=Terminal (from repo, fallback to system)
-  mkdir -p "$HOME/.local/share/applications"
-  cp "$BUNDLE/desktop/kitty.desktop" "$HOME/.local/share/applications/kitty.desktop" 2>/dev/null || \
-    cp /usr/share/applications/kitty.desktop "$HOME/.local/share/applications/kitty.desktop" 2>/dev/null
+  if ! mkdir -p "$HOME/.local/share/applications" ||
+     { ! cp "$BUNDLE/desktop/kitty.desktop" "$HOME/.local/share/applications/kitty.desktop" 2>/dev/null &&
+       ! cp /usr/share/applications/kitty.desktop "$HOME/.local/share/applications/kitty.desktop"; }; then
+    warn "Could not install Kitty desktop entry (bundle and system fallback failed)"
+    _step_fail=1
+  fi
 
   # Scan all users for stale kitty.desktop referencing deleted kitty-maximized wrapper
   # or with Name=kitty (won't match GNOME "Terminal" search)
@@ -4695,9 +4709,12 @@ setup_terminal() {
       if [ -f "$_entry" ] && grep -q "kitty-maximized\|^Name=kitty$" "$_entry" 2>/dev/null; then
         _owner=$(stat -c '%U' "$_h" 2>/dev/null || echo root)
         if [ "$_owner" != "root" ]; then
-          cp "$desktop_src" "$_entry" 2>/dev/null || warn "Failed to copy kitty.desktop for $_owner"
-          chown "$_owner:" "$_entry" 2>/dev/null || warn "Failed to chown kitty.desktop for $_owner"
-          log "Fixed stale kitty.desktop for $_owner"
+          if cp "$desktop_src" "$_entry" && chown "$_owner:" "$_entry"; then
+            log "Fixed stale kitty.desktop for $_owner"
+          else
+            warn "Could not repair kitty.desktop for $_owner"
+            _step_fail=1
+          fi
         fi
       fi
       unset _entry _owner
@@ -4705,7 +4722,9 @@ setup_terminal() {
   fi
   unset desktop_src _h
 
+  if [ "$_step_fail" -ne 0 ]; then return 1; fi
   ok "Kitty is now the default terminal"
+  return 0
 }
 
 setup_shell() {
@@ -4863,6 +4882,99 @@ EXTENSION_MERGE
   return 0
 }
 
+_extension_payload() {
+  # Validate archives before any live replacement. Keep previous user data in
+  # persistent backups; failed validation/extraction/schema compilation is inert.
+  python3 - "$@" <<'EXTENSION_PAYLOAD'
+import json, os, pathlib, re, shutil, stat, subprocess, sys, tempfile, zipfile
+mode, source, uuid, shell = sys.argv[1:]
+stage = None
+try:
+    def metadata(root):
+        if root.is_symlink():
+            raise ValueError('symlinked extension directory preserved')
+        path = root / 'metadata.json'
+        if path.is_symlink() or not path.is_file() or path.stat().st_size > 1048576:
+            raise ValueError('missing or unsafe metadata.json')
+        data = json.loads(path.read_text())
+        if not isinstance(data, dict) or data.get('uuid') != uuid:
+            raise ValueError('extension UUID does not match requested payload')
+        if not all(isinstance(data.get(key), str) and data[key].strip()
+                   for key in ('name', 'description')):
+            raise ValueError('missing required extension name or description')
+        versions = data.get('shell-version')
+        if not isinstance(versions, list) or not versions or not all(isinstance(v, str) for v in versions):
+            raise ValueError('invalid shell-version metadata')
+        parts = shell.split('.')
+        major = int(parts[0])
+        wanted = parts[0] if major >= 40 else '.'.join(parts[:2])
+        if not any(re.fullmatch(r'\d+(?:\.\d+){0,2}', v) and
+                   (v.split('.')[0] == wanted if major >= 40 else '.'.join(v.split('.')[:2]) == wanted)
+                   for v in versions):
+            raise ValueError(f'extension does not support GNOME Shell {shell}')
+        if not (root / 'extension.js').is_file() or (root / 'extension.js').is_symlink():
+            raise ValueError('missing extension.js')
+    if not re.fullmatch(r'[A-Za-z0-9_.@+-]+', uuid):
+        raise ValueError('unsafe extension UUID')
+    if mode == 'check':
+        metadata(pathlib.Path(source))
+    elif mode == 'install':
+        parent = pathlib.Path.home() / '.local/share/gnome-shell/extensions'
+        parent.mkdir(parents=True, exist_ok=True)
+        if parent.is_symlink():
+            raise ValueError('symlinked extension directory preserved')
+        stage = pathlib.Path(tempfile.mkdtemp(prefix='.mactahoe-extension-', dir=parent))
+        if pathlib.Path(source).stat().st_size > 134217728:
+            raise ValueError('extension ZIP exceeds compressed size limit')
+        with zipfile.ZipFile(source) as archive:
+            entries = archive.infolist()
+            if len(entries) > 10000 or sum(i.file_size for i in entries) > 268435456:
+                raise ValueError('extension archive exceeds limits')
+            seen = set()
+            for item in entries:
+                name = item.filename
+                path = pathlib.PurePosixPath(name)
+                kind = stat.S_IFMT(item.external_attr >> 16)
+                if (not name or '\\' in name or '\x00' in name or path.is_absolute() or
+                    '..' in path.parts or path.as_posix() != name.rstrip('/') or
+                    name.rstrip('/') in seen or item.flag_bits & 1 or
+                    kind not in (0, stat.S_IFREG, stat.S_IFDIR) or
+                    item.file_size > 67108864 or
+                    item.file_size > max(1048576, item.compress_size * 1000)):
+                    raise ValueError('unsafe extension archive member')
+                seen.add(name.rstrip('/'))
+            archive.extractall(stage)
+        metadata(stage)
+        schemas = stage / 'schemas'
+        if schemas.is_dir():
+            subprocess.run(['glib-compile-schemas', '--strict', str(schemas)], check=True, timeout=30)
+        target = parent / uuid
+        previous = None
+        if os.path.lexists(target):
+            if target.is_symlink() or not target.is_dir():
+                raise ValueError('unsafe existing extension destination preserved')
+            backups = pathlib.Path.home() / '.local/share/fedora-mactahoe/extension-backups'
+            backups.mkdir(parents=True, exist_ok=True, mode=0o700)
+            previous = pathlib.Path(tempfile.mkdtemp(prefix=uuid + '-', dir=backups)) / uuid
+            os.rename(target, previous)
+        try:
+            os.rename(stage, target)
+            stage = None
+        except BaseException:
+            if previous is not None:
+                os.rename(previous, target)
+            raise
+    else:
+        raise ValueError('unknown extension payload operation')
+except (OSError, ValueError, zipfile.BadZipFile, RuntimeError, subprocess.SubprocessError) as error:
+    print(f'Extension {uuid}: {error}', file=sys.stderr)
+    sys.exit(1)
+finally:
+    if stage is not None:
+        shutil.rmtree(stage)
+EXTENSION_PAYLOAD
+}
+
 install_extensions() {
   next_step "GNOME Extensions"
   _force_popup_blur_off || return 1
@@ -4887,7 +4999,10 @@ install_extensions() {
 
   # Install from EGO using API (CLI install $uuid requires browser session)
   local shell_version ext_ok=0 ext_fail=0
-  shell_version=$(gnome-shell --version 2>/dev/null | grep -oP '\d+\.\d+' | head -1 || echo "50")
+  shell_version=$(gnome-shell --version 2>/dev/null | grep -oE '[0-9]+(\.[0-9]+)+' | head -1) || true
+  if [ -z "$shell_version" ]; then warn "Cannot determine GNOME Shell compatibility"; return 1; fi
+  local ext_stage
+  ext_stage=$(mktemp -d "${TMPDIR:-/tmp}/mactahoe-extensions.XXXXXXXXXX") || return 1
   for uuid in "${extensions[@]}"; do
     local dl_url
     dl_url=$(curl -s --max-time 25 "https://extensions.gnome.org/extension-info/?uuid=$uuid&shell_version=$shell_version" | jq -r '.download_url // empty' 2>/dev/null) || true
@@ -4896,26 +5011,29 @@ install_extensions() {
       ext_fail=$((ext_fail + 1))
       continue
     fi
-    rm -f /tmp/ext-"$uuid".zip
-    if ! _net_download "https://extensions.gnome.org$dl_url" /tmp/ext-"$uuid".zip --max-time 25; then
+    if ! _net_download "https://extensions.gnome.org$dl_url" "$ext_stage/$uuid.zip" --max-time 25; then
       warn "Failed to download extension $uuid"
       ext_fail=$((ext_fail + 1))
+      if [ -s "${_FED_NET_STOP:-/dev/null}" ]; then rm -rf -- "$ext_stage"; return 1; fi
       continue
     fi
-    if gnome-extensions install --force /tmp/ext-"$uuid".zip 2>/dev/null; then
+    if _extension_payload install "$ext_stage/$uuid.zip" "$uuid" "$shell_version"; then
       ext_ok=$((ext_ok + 1))
     else
       warn "Failed to install extension $uuid"
       ext_fail=$((ext_fail + 1))
     fi
-    rm -f /tmp/ext-"$uuid".zip
+    rm -f "$ext_stage/$uuid.zip"
   done
 
   # Enable all installed extensions via direct gsettings (no D-Bus needed).
   # MERGE, never replace: the user's enabled/disabled choices are preserved.
   local -a ext_uuids=()
   for uuid in "${extensions[@]}"; do
-    if [ -d "$HOME/.local/share/gnome-shell/extensions/$uuid" ] || [ -d "/usr/share/gnome-shell/extensions/$uuid" ]; then
+    if _extension_payload check "$HOME/.local/share/gnome-shell/extensions/$uuid" "$uuid" "$shell_version" 2>/dev/null ||
+       { [ ! -e "$HOME/.local/share/gnome-shell/extensions/$uuid" ] &&
+         [ ! -L "$HOME/.local/share/gnome-shell/extensions/$uuid" ] &&
+         _extension_payload check "/usr/share/gnome-shell/extensions/$uuid" "$uuid" "$shell_version" 2>/dev/null; }; then
       ext_uuids+=("$uuid")
     fi
   done
@@ -4954,8 +5072,7 @@ install_extensions() {
   local wtp_pk="10319"
   local wtp_installed=false
 
-  # Always override — clean slate every time
-  rm -rf "$wtp_target" 2>/dev/null || true
+  # Keep the installed copy until a complete compatible replacement is ready.
 
   # Try 1: the GitHub release asset — always the newest build.
   # The release tag is resolved from the GitHub API so a new WTP version
@@ -4977,9 +5094,8 @@ install_extensions() {
   local wtp_version_try
   for wtp_version_try in $wtp_candidates; do
     local wtp_gh_url="https://github.com/eprahemi/window-title-pro-topbar/releases/download/v${wtp_version_try}/window-title-pro-v${wtp_version_try}.zip"
-    if _net_download "$wtp_gh_url" /tmp/window-title-pro.zip --max-time 40; then
-      if unzip -qo /tmp/window-title-pro.zip -d "$wtp_target" 2>/dev/null; then
-        glib-compile-schemas "$wtp_target/schemas" 2>/dev/null || true
+    if _net_download "$wtp_gh_url" "$ext_stage/window-title-pro.zip" --max-time 40; then
+      if _extension_payload install "$ext_stage/window-title-pro.zip" "$wtp_uuid" "$shell_version"; then
         wtp_installed=true
         ok "Window Title Pro v${wtp_version_try} installed from the GitHub release"
         ext_ok=$((ext_ok + 1))
@@ -4988,22 +5104,14 @@ install_extensions() {
         warn "Failed to extract Window Title Pro v${wtp_version_try} from the GitHub release"
       fi
     fi
-    rm -f /tmp/window-title-pro.zip 2>/dev/null || true
+    if [ -s "${_FED_NET_STOP:-/dev/null}" ]; then rm -rf -- "$ext_stage"; return 1; fi
+    rm -f "$ext_stage/window-title-pro.zip"
   done
   if [ "$wtp_installed" = false ]; then
     warn "GitHub release download failed for Window Title Pro — falling back to EGO"
   fi
 
-  # Try 2: install via gnome-extensions CLI with EGO page URL
-  if [ "$wtp_installed" = false ]; then
-    if gnome-extensions install "https://extensions.gnome.org/extension/$wtp_pk/window-title-pro/" --force 2>/dev/null; then
-      ok "Window Title Pro installed from EGO"
-      ext_ok=$((ext_ok + 1))
-      wtp_installed=true
-    fi
-  fi
-
-  # Try 3: download from EGO API and extract manually
+  # EGO fallback uses the same staged metadata/archive checks as GitHub.
   if [ "$wtp_installed" = false ]; then
     local wtp_api_url="https://extensions.gnome.org/extension-info/?pk=$wtp_pk&shell_version=$shell_version"
     local wtp_dl_url
@@ -5017,10 +5125,8 @@ except:
 " 2>/dev/null || true)
 
     if [ -n "$wtp_dl_url" ]; then
-      mkdir -p "$wtp_target"
-      if _net_download "https://extensions.gnome.org$wtp_dl_url" /tmp/window-title-pro.zip --max-time 25; then
-        if unzip -qo /tmp/window-title-pro.zip -d "$wtp_target" 2>/dev/null; then
-          glib-compile-schemas "$wtp_target/schemas" 2>/dev/null || true
+      if _net_download "https://extensions.gnome.org$wtp_dl_url" "$ext_stage/window-title-pro.zip" --max-time 25; then
+        if _extension_payload install "$ext_stage/window-title-pro.zip" "$wtp_uuid" "$shell_version"; then
           wtp_installed=true
           ok "Window Title Pro installed from EGO"
           ext_ok=$((ext_ok + 1))
@@ -5028,7 +5134,7 @@ except:
           warn "Failed to extract Window Title Pro"
           ext_fail=$((ext_fail + 1))
         fi
-        rm -f /tmp/window-title-pro.zip
+        rm -f "$ext_stage/window-title-pro.zip"
       else
         warn "Failed to download Window Title Pro from EGO"
         ext_fail=$((ext_fail + 1))
@@ -5038,6 +5144,8 @@ except:
       ext_fail=$((ext_fail + 1))
     fi
   fi
+
+  rm -rf -- "$ext_stage"
 
   # Enable Window Title Pro without disturbing the merged list.
   if [ "$wtp_installed" = true ]; then
@@ -5564,7 +5672,7 @@ phase_divider "PHASE 3 : THEMES" 8 9
 _run_step "install_mactahoe_theme" install_mactahoe_theme
 _run_step "install_font" install_font
 
-phase_divider "PHASE 4 : CONFIGURATION" 11 23
+phase_divider "PHASE 4 : CONFIGURATION" 10 23
 _run_step "apply_desktop_entries" apply_desktop_entries
 _run_step "ensure_celluloid_default" ensure_celluloid_default
 _run_step "configure_nautilus_defaults" configure_nautilus_defaults
