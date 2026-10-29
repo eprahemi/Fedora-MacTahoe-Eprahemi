@@ -801,7 +801,11 @@ _FED_ID=$(tr -dc 'a-zA-Z0-9' < /dev/urandom 2>/dev/null | head -c 8)
 _FED_DATE_STAMP=$(date '+%Y-%m-%d.%H-%M-%S' 2>/dev/null || echo "unknown")
 _FED_LOG="$HOME/FedoraTahoe_log.${_FED_DATE_STAMP}.${_FED_ID}${_FED_TAG_EXT}.txt"
 export _FED_ID _FED_DATE_STAMP _FED_LOG
-touch "$_FED_LOG" 2>/dev/null || true
+# Create privately without changing the caller's umask; fail before logging if unsafe.
+if ! (umask 077; touch "$_FED_LOG") || ! chmod 600 "$_FED_LOG"; then
+  printf 'Cannot create a private session log: %s\n' "$_FED_LOG" >&2
+  exit 1
+fi
 # Preserve original stdout/stderr, then redirect all output to both terminal and log
 exec 5>&1 6>&2
 exec > >(tee -a "$_FED_LOG") 2>&1
@@ -839,6 +843,7 @@ _fed_log_finalize() {
   if [ -n "${_FED_LOG:-}" ] && [ -f "$_FED_LOG" ]; then
     LC_ALL=C sed -i 's/\x1b\[[0-9;]*[a-zA-Z]//g' "$_FED_LOG" 2>/dev/null || true
     LC_ALL=C sed -i 's/\x1b\][0-9;]*[^\x07\x1b]*[\x07\x1b]//g' "$_FED_LOG" 2>/dev/null || true
+    chmod 600 "$_FED_LOG" || printf 'Warning: could not secure session log permissions.\n' >&2
     # Set custom icon for this log file (icon may not exist yet on first bootstrap run — silently ignored)
     command -v gio &>/dev/null && [ -f "${HOME}/.local/share/icons/fedora-mactahoe/mactahoe_log_icon.png" ] && \
       gio set "$_FED_LOG" metadata::custom-icon "file://${HOME}/.local/share/icons/fedora-mactahoe/mactahoe_log_icon.png" 2>/dev/null || true

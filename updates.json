@@ -1,14 +1,21 @@
 {
- "latest_version": "3.7.29",
- "bootstrap_sha256": "2155ca934c9037c22f1ce513a6fa1b5e63334da8824f662dcb1021691d978388",
- "install_sha256": "23caf324e9b645c45aebac569b463bbee30c6d92d4b8b72869152b40264d759f",
+ "latest_version": "3.7.30",
+ "bootstrap_sha256": "46749fe5bfd4436c0f67ec787683d43f4f98b8c95a816b188dcad8775940f05b",
+ "install_sha256": "1960e2f13817f343992dbaec95595788fcfa36d41faa6e6dde788181aad486a7",
  "update_sha256": "6557a0c69e03959deef629958b166cf1983db4e1f7d1359db9c67c46ca6c9479",
  "asset_helper_sha256": "df36b62f1c2b7a0717f295e4aa1f136aa27216d9143a59ad66deabb46284a22a",
  "changelog": [
   {
+   "version": "3.7.30",
+   "changes": [
+    "Create bootstrap and direct installer session transcripts privately with mode 0600, independently of the caller's umask; stop before logging if private creation fails.",
+    "Correct published 3.7.29 changelog wording. Existing EXIT-time ANSI cleanup is unchanged; native Fedora smoke testing remains pending."
+   ]
+  },
+  {
    "version": "3.7.29",
    "changes": [
-    "Unpublished development candidate: report icon conversion, terminal desktop-entry, updater payload/service and Nautilus metadata failures honestly while continuing later installer steps. Validate watcher dependencies without enabling an opted-out watcher.",
+    "Report icon conversion, terminal desktop-entry, updater payload/service and Nautilus metadata failures honestly while continuing later installer steps. Validate watcher dependencies without enabling an opted-out watcher.",
     "Validate extension ZIP paths, UUID and running-shell compatibility in private staging before replacement or enabling; retain previous extensions in local backups. Use private bounded sound-source builds and preserve existing sound files. Skip unsupported ARM Chrome without Google repository changes and preserve existing Chrome repo files. Correct the established Phase 4 divider range.",
     "Keep the Fedora logo hidden on GDM even when login wallpaper theming is declined; the opt-out now skips only the wallpaper. Remove the dead legacy summary that printed zero RPM/Flatpak counts on skipped steps.",
     "The full RPM list resolves against isolated Fedora 45, Cisco OpenH264 and RPM Fusion metadata with --assumeno; no packages installed. Native Fedora/Kitty installation, service and GNOME/GDM reboot smoke tests remain pending; no zero-error guarantee."
