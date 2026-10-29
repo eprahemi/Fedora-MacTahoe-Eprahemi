@@ -1,10 +1,19 @@
 {
- "latest_version": "3.7.30",
- "bootstrap_sha256": "46749fe5bfd4436c0f67ec787683d43f4f98b8c95a816b188dcad8775940f05b",
+ "latest_version": "3.7.31",
+ "bootstrap_sha256": "593f6a9454bd237602532a17f7ba6860da493ca25ba99ae77e4ec1ca31c33c0f",
  "install_sha256": "1960e2f13817f343992dbaec95595788fcfa36d41faa6e6dde788181aad486a7",
- "update_sha256": "6557a0c69e03959deef629958b166cf1983db4e1f7d1359db9c67c46ca6c9479",
+ "update_sha256": "dc2745ad7bbd096eaa36aeabb2292f49e9750cd23cf66edfa26edc7c8f6ce306",
  "asset_helper_sha256": "df36b62f1c2b7a0717f295e4aa1f136aa27216d9143a59ad66deabb46284a22a",
  "changelog": [
+  {
+   "version": "3.7.31",
+   "changes": [
+    "Development candidate: extend the shared waiting/active checklist to quick/full manifest, installer download and fingerprint verification; retain one private log through the foreground bootstrap handoff. Verify targeted installer and sourced bootstrap payloads before child execution.",
+    "Add shared repository preparation and guarded-uninstall work lifecycles; preserve typed removal words, countdown cancellation and native upstream consent. Keep audited noninteractive output private even without a TTY; check/menu fetch diagnostics use private cache logs without artificial waits.",
+    "Extend the same real-work lifecycle to initial app eligibility/status queries, firewall status, Wallvault settings publication, GTK file copies and targeted payload verification. Preserve data-only query results and empty selections; fix the GTK copy loop's read-only Fish variable collision. Stage settings privately without logging archive keys.",
+    "Separate native authentication from noninteractive metadata/journal cleanup and keep updater-owned non-TTY child diagnostics private. Native authentication, Git credential interaction and necessary upstream tooling remain visible and are not universally recorded. Missing/old local UI libraries safely use plain status; native Fedora/Kitty smoke testing remains pending."
+   ]
+  },
   {
    "version": "3.7.30",
    "changes": [

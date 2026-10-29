@@ -259,6 +259,10 @@ _ui_init() {
     exec >>"$_FED_LOG" 2>&1
     printf '\033[?1049h\033[?25l' >&7
     _ui_resume
+  elif [ "${_FED_QUIET:-0}" = 1 ]; then
+    # Updater-owned non-TTY runs retain diagnostics without streaming internals.
+    # Native interaction still explicitly uses the original descriptors below.
+    exec >>"$_FED_LOG" 2>&1
   fi
 }
 _ui_task() { _UI_MODE=work; _UI_TASK="$1"; _UI_TRANSFER_DONE=0; _UI_TRANSFER_TOTAL=0; _UI_TRANSFER_DETAIL=''; _ui_resume; }
@@ -659,7 +663,11 @@ _ui_native_run() {
       _ui_resume
     fi
   else
-    "$@" || rc=$?
+    if [ "${_FED_QUIET:-0}" = 1 ]; then
+      "$@" >&5 2>&6 || rc=$?
+    else
+      "$@" || rc=$?
+    fi
   fi
   return "$rc"
 }
@@ -680,7 +688,7 @@ _net_package_run() {
     rc=0
     native_ui=${_UI_ACTIVE:-0}
     _ui_native_run _net_package_once "$@" || rc=$?
-    if [ "$native_ui" = 1 ] && [ -n "${_FED_LOG:-}" ]; then cat "$capture" >>"$_FED_LOG"; fi
+    if { [ "$native_ui" = 1 ] || [ "${_FED_QUIET:-0}" = 1 ]; } && [ -n "${_FED_LOG:-}" ]; then cat "$capture" >>"$_FED_LOG"; fi
     if [ "$rc" -eq 0 ]; then rm -f "$capture"; return 0; fi
     diagnostic=$(grep -Ei 'Curl error \((5|6|7|28|52|55|56)\)|Could not resolve host|Could not connect to' "$capture" || true)
     endpoint=$(printf '%s\n' "$diagnostic" | grep -Eo 'https?://[^[:space:]<>]+' | head -1 | sed 's/[]),;"]*$//' || true)
@@ -799,7 +807,7 @@ _FED_TAG_EXT=""
 _FED_ID=$(tr -dc 'a-zA-Z0-9' < /dev/urandom 2>/dev/null | head -c 8)
 [ -z "$_FED_ID" ] && _FED_ID="X$(date +%s 2>/dev/null | sha256sum 2>/dev/null | head -c7 || echo "00000001")"
 _FED_DATE_STAMP=$(date '+%Y-%m-%d.%H-%M-%S' 2>/dev/null || echo "unknown")
-_FED_LOG="$HOME/FedoraTahoe_log.${_FED_DATE_STAMP}.${_FED_ID}${_FED_TAG_EXT}.txt"
+_FED_LOG="${_FED_LOG:-$HOME/FedoraTahoe_log.${_FED_DATE_STAMP}.${_FED_ID}${_FED_TAG_EXT}.txt}"
 export _FED_ID _FED_DATE_STAMP _FED_LOG
 # Create privately without changing the caller's umask; fail before logging if unsafe.
 if ! (umask 077; touch "$_FED_LOG") || ! chmod 600 "$_FED_LOG"; then

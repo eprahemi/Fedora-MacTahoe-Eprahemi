@@ -91,7 +91,11 @@ function _update_ui_begin --argument-names retry library
         set -g __update_ui_log (mktemp "$HOME/FedoraTahoe_log."(date +%Y-%m-%d.%H-%M-%S)".XXXXXXXX ( UPDATE ).txt")
         or return 1
     end
-    chmod 600 "$__update_ui_log"
+    chmod 600 "$__update_ui_log"; or begin
+        set -e __update_ui_log
+        printf '  Cannot secure the session log; no work started.\n' >&2
+        return 1
+    end
     printf 'Fedora MacTahoe — %s\nNative authentication/input is never recorded. Native interactive output remains on the terminal.\n' "$retry" >> "$__update_ui_log"
     if test -z "$library"
         set library "$HOME/.local/share/fedora-mactahoe/ui-library.sh"
@@ -103,9 +107,9 @@ function _update_ui_begin --argument-names retry library
     end
     # A pre-dashboard bootstrap ignores unknown arguments and would INSTALL.
     # Never execute an older library merely because its fingerprint is valid.
-    if test -t 1; and test -t 2; and test "$TERM" != dumb; and test -f "$library"; and command grep -Fq 'if [ "${1:-}" = --ui-events ]; then' "$library"
+    if begin; test -t 1; or test "$__update_ui_stderr" = 1; end; and test -t 2; and test "$TERM" != dumb; and test -f "$library"; and command grep -Fq 'if [ "${1:-}" = --ui-events ]; then' "$library"
         set -g __update_ui_dir (mktemp -d /tmp/mactahoe-ui.XXXXXXXX)
-        bash "$library" --ui-events "$__update_ui_dir" "$__update_ui_log" "$fish_pid" "$retry" &
+        bash "$library" --ui-events "$__update_ui_dir" "$__update_ui_log" "$fish_pid" "$retry" >&2 &
         set -g __update_ui_pid $last_pid
         _update_ui_publish work
     end
@@ -115,6 +119,9 @@ function _update_ui_begin --argument-names retry library
         end
         set -g __update_ui_failed 1
         set -g __update_ui_cancel 1
+    end
+    function __update_ui_terminate --on-signal TERM
+        __update_ui_interrupt
     end
 end
 
@@ -146,13 +153,8 @@ function _update_ui_quiet
         return $status
     end
     set -l rc 0
-    if test -t 1; and test -t 2
-        $argv >> "$__update_ui_log" 2>&1
-        set rc $status
-    else
-        $argv 2>&1 | tee -a "$__update_ui_log"
-        set rc $pipestatus[1]
-    end
+    $argv >> "$__update_ui_log" 2>&1
+    set rc $status
     if test $rc -ne 0
         set -g __update_ui_failed 1
         _update_ui_task $__update_ui_current failed
@@ -160,6 +162,60 @@ function _update_ui_quiet
         printf '\n  Failed: %s (exit %s). Retry: %s\n  Details: %s\n' "$__update_ui_labels[$__update_ui_current]" $rc "$__update_ui_retry" "$__update_ui_log" >&2
     end
     return $rc
+end
+
+function _update_ui_result --argument-names label
+    # Data-returning, audited noninteractive work. Keep stdout out of the UI,
+    # execute in the owner Fish, and reuse the current session across prompts.
+    set -l owns 0
+    if not set -q __update_ui_log
+        set -g __update_ui_stderr 1
+        _update_ui_begin 'update menu' '' "$label" >&2
+        set -l begin_code $status
+        set -e __update_ui_stderr
+        test $begin_code -eq 0; or return $begin_code
+        set owns 1
+        _update_ui_task 1 running >&2
+    else
+        _update_ui_publish work
+    end
+    set -l result (mktemp /tmp/mactahoe-result.XXXXXXXX 2>> "$__update_ui_log")
+    or begin
+        _update_ui_task $__update_ui_current failed >&2
+        _update_ui_publish pause
+        printf '  Cannot prepare this task. Details: %s\n' "$__update_ui_log" >&2
+        test $owns -eq 1; and _update_ui_end 1 >&2
+        return 1
+    end
+    _update_ui_quiet _update_capture_result "$result" $argv[2..-1] >&2
+    set -l code $status
+    if test $owns -eq 1
+        set -l log "$__update_ui_log"
+        set -l state ok
+        test $code -ne 0; and set state failed
+        _update_ui_task 1 $state >&2
+        _update_ui_end $code >&2
+        set -l finish_code $status
+        test $finish_code -eq 130; and set code 130
+        set -g __update_fetch_log "$log"
+    end
+    if test $code -eq 0
+        command cat -- "$result"
+    end
+    command rm -f -- "$result"
+    return $code
+end
+
+function _update_capture_result --argument-names file
+    $argv[2..-1] > "$file" 2>> "$__update_ui_log"
+end
+
+function _update_ui_admin
+    # Authentication is native/foreground; the following audited operation cannot
+    # prompt again (-n) and its noninteractive diagnostics belong in the log.
+    _update_ui_native sudo -v; or return $status
+    _update_ui_publish work
+    _update_ui_quiet sudo -n $argv
 end
 
 function _update_ui_native
@@ -210,9 +266,10 @@ function _update_ui_end --argument-names code
     end
     printf 'Operation exit: %s; task failures: %s\n' $code $__update_ui_failed >> "$__update_ui_log"
     command sed -i 's/\x1b\[[0-9;]*[a-zA-Z]//g' "$__update_ui_log"
+    chmod 600 "$__update_ui_log"
     set -l failed $__update_ui_failed
     set -e __update_ui_log __update_ui_dir __update_ui_pid __update_ui_cancel
-    functions -e __update_ui_interrupt
+    functions -e __update_ui_interrupt __update_ui_terminate
     test $code -ne 0; and return $code
     return $failed
 end
@@ -243,15 +300,22 @@ function _update_fetch_manifest --description 'fetch the version manifest from G
     mkdir -p "$cache_dir"; or return 1
     set -l stage (mktemp -d "$cache_dir/.manifest.XXXXXXXX")
     or return 1
+    # Read-only check/menu routes stay immediate, without an animation lifecycle,
+    # but transport diagnostics still belong in a private file, not the screen.
+    set -l diagnostic "$__update_ui_log"
+    if test -z "$diagnostic"
+        set diagnostic (mktemp "$cache_dir/manifest-fetch.XXXXXXXX.log")
+        or begin; rm -rf -- "$stage"; return 1; end
+    end
     set -l url "https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/updates.json"
     set -l valid 0
-    if command curl -q -fsSL --proto '=https' --proto-redir '=https' --max-redirs 3 --connect-timeout 5 --max-time 15 --max-filesize 1048576 "$url" -o "$stage/manifest.json"
+    if command curl -q -fsSL --proto '=https' --proto-redir '=https' --max-redirs 3 --connect-timeout 5 --max-time 15 --max-filesize 1048576 "$url" -o "$stage/manifest.json" 2>> "$diagnostic"
         if _update_validate_manifest "$stage/manifest.json"
             set valid 1
         end
     end
     if test $valid -eq 0
-        if command curl -q -fsSL --proto '=https' --proto-redir '=https' --max-redirs 3 --connect-timeout 5 --max-time 20 --max-filesize 2097152 "https://api.github.com/repos/eprahemi/Fedora-MacTahoe-Eprahemi/contents/updates.json?ref=main" -o "$stage/api.json"
+        if command curl -q -fsSL --proto '=https' --proto-redir '=https' --max-redirs 3 --connect-timeout 5 --max-time 20 --max-filesize 2097152 "https://api.github.com/repos/eprahemi/Fedora-MacTahoe-Eprahemi/contents/updates.json?ref=main" -o "$stage/api.json" 2>> "$diagnostic"
             if command python3 -I -c 'import json,sys,base64
 try:
     d = json.load(open(sys.argv[1]))
@@ -273,6 +337,9 @@ except Exception:
         set result $status
     end
     command rm -rf -- "$stage"
+    if test $result -ne 0
+        printf '  Version check details: %s\n' "$diagnostic" >&2
+    end
     return $result
 end
 
@@ -928,32 +995,50 @@ end
 # Supply-chain check first: the file must match the sha256 pinned in
 # updates.json (same repo, same commit), and a changed fingerprint
 # needs a human yes before anything is executed.
-function _update_run --description 'fetch + verify + run the real installer; log the outcome'
+function _update_run --description 'prepare privately, then hand off to the foreground installer'
+    _update_ui_begin "update $argv[2]" '' 'Fetch version manifest' 'Download installer' 'Verify installer fingerprint'
+    or return 1
+    _update_run_work $argv
+    set -l code $status
+    # Handoff already closes preparation; early failure/cancel closes it here.
+    if set -q __update_ui_log
+        _update_ui_task $__update_ui_current failed
+        _update_ui_end $code
+    end
+    return $code
+end
+
+function _update_run_work --description 'fetch + verify + run the real installer; log the outcome'
     set -l mode $argv[1]
     set -l label $argv[2]
     set -l frm $argv[3]
     set -l to $argv[4]
 
     # fresh manifest — it pins the hash of the very file we are about to run
-    if not _update_fetch_manifest
+    _update_ui_task 1 running
+    if not _update_ui_quiet _update_fetch_manifest
         printf "\n  \e[1;31m✘ Could not fetch a complete, valid version manifest. Nothing was run.\e[0m\n"
         return 1
     end
+    _update_ui_task 1 ok
     set -l expected (_update_manifest_hash bootstrap_sha256)
     if test -z "$expected"
         printf "\n  \e[1;31m✘ The version manifest has no pinned fingerprint.\e[0m\n"
         return 1
     end
 
-    printf "\n  \e[1;37mFetching the installer from GitHub...\e[0m\n"
+    _update_ui_task 2 running
     set -l base "https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main"
     set -l tmpfile (mktemp /tmp/mactahoe-bootstrap.XXXXXX)
-    command curl -q -fsSL --proto '=https' --proto-redir '=https' --max-redirs 3 --connect-timeout 5 --max-time 120 "$base/bootstrap.sh" -o "$tmpfile"
-    if test $status -ne 0
+    _update_ui_quiet curl -q -fsSL --proto '=https' --proto-redir '=https' --max-redirs 3 --connect-timeout 5 --max-time 120 "$base/bootstrap.sh" -o "$tmpfile"
+    set -l download_code $status
+    if test $download_code -ne 0
         rm -f "$tmpfile"
         printf "\n  \e[1;31m✘ Could not download the installer.\e[0m\n"
-        return 1
+        return $download_code
     end
+    _update_ui_task 2 ok
+    _update_ui_task 3 running
     set -l got (_update_sha256 "$tmpfile")
     if test -z "$got"; or not test "$got" = "$expected"
         rm -f "$tmpfile"
@@ -975,17 +1060,27 @@ function _update_run --description 'fetch + verify + run the real installer; log
     end
 
     # human check: first run saves the fingerprint, changes ask for trust
+    _update_ui_publish pause
     if not _update_fingerprint_check "$expected"
         rm -f "$tmpfile"
         return 1
     end
 
+    _update_ui_task 3 ok
+    set -l preparation_log "$__update_ui_log"
+    _update_ui_end 0
+    or begin
+        set -l code $status
+        rm -f "$tmpfile"
+        return $code
+    end
     if test "$mode" = full
-        env UPDATE_MODE=full INSTALL_SOURCE=update-$label bash "$tmpfile"
+        env _FED_QUIET=1 _FED_LOG="$preparation_log" UPDATE_MODE=full INSTALL_SOURCE=update-$label bash "$tmpfile"
     else
-        env UPDATE_MODE=incremental INSTALL_SOURCE=update-$label bash "$tmpfile"
+        env _FED_QUIET=1 _FED_LOG="$preparation_log" UPDATE_MODE=incremental INSTALL_SOURCE=update-$label bash "$tmpfile"
     end
     set -l code $status
+    printf 'Installer child exit: %s\n' $code >> "$preparation_log"
     rm -f "$tmpfile"
     if test $code -eq 0
         _update_log_add $label $frm $to ok (string upper -- "update-$label")
@@ -1009,20 +1104,37 @@ end
 # The clone runs in the background with a live spinner; Ctrl+C aborts it
 # cleanly (git dies → cancel path, cursor restored, temp dir removed).
 function _update_fetch_bundle --description 'clone the repo bundle; echoes the temp dir path'
+    # This function is used in command substitutions: presentation is stderr,
+    # and the caller still receives precisely one bundle pathname.
+    set -g __update_ui_stderr 1
+    _update_ui_begin 'update menu' '' 'Fetch repository bundle' >&2
+    set -l begin_code $status
+    set -e __update_ui_stderr
+    test $begin_code -eq 0; or return $begin_code
+    _update_ui_task 1 running >&2
+    _update_ui_publish pause
+    set -l log "$__update_ui_log"
+    set -g __update_fetch_log "$log"
+    set -l bundle (_update_fetch_bundle_work)
+    set -l code $status
+    set -l state ok
+    test $code -ne 0; and set state failed
+    _update_ui_task 1 $state >&2
+    _update_ui_end $code >&2
+    if test $code -eq 0
+        set -g __update_fetch_log "$log"
+        printf '%s\n' "$bundle"
+    end
+    return $code
+end
+
+function _update_fetch_bundle_work
     if not command -q git
         printf "\n  \e[1;31m✘ git is not installed — can't fetch the files.\e[0m\n" >&2
         return 1
     end
     set -l tmp (mktemp -d /tmp/mactahoe-target.XXXXXX)
     or return 1
-    set -g __update_fetch_log (mktemp "$HOME/FedoraTahoe_log."(date +%Y-%m-%d.%H-%M-%S)".XXXXXXXX ( UPDATE ).txt")
-    or begin
-        rm -rf "$tmp"
-        set -e __update_fetch_log
-        printf '  Cannot create the session log; no bundle work started.\n' >&2
-        return 1
-    end
-    chmod 600 "$__update_fetch_log"
     printf '  Fetching the latest files from GitHub…\n' >&2
     # Git is foreground; its real status is authoritative. No command output is
     # discarded, no artificial percentage and no non-TTY cursor escapes.
@@ -1281,7 +1393,7 @@ function _update_configs_work --argument-names tmp
     end
     # fastfetch
     if test -f "$cfg/fastfetch/config.jsonc"
-        sed "s|PLACEHOLDER_USER_HOME|$HOME|g" "$cfg/fastfetch/config.jsonc" > "$HOME/.config/fastfetch/config.jsonc"
+        _update_ui_quiet _update_capture_result "$HOME/.config/fastfetch/config.jsonc" sed "s|PLACEHOLDER_USER_HOME|$HOME|g" "$cfg/fastfetch/config.jsonc"
         or return 1
         set desktop_files (math $desktop_files + 1)
         for img in "$cfg/fastfetch/"*.png "$cfg/fastfetch/"*.gif
@@ -1344,6 +1456,31 @@ end
 # Ctrl+C mid-run: the bundle is cleaned up and the cancel is logged —
 # nothing is left half-done (verified --on-signal behavior).
 function _update_run_step --description 'run installer steps from a bundle clone'
+    _update_ui_result 'Verify installer payloads' _update_verify_bundle "$argv[1]"
+    or return $status
+    _update_run_verified_step $argv
+end
+
+function _update_verify_bundle --argument-names bundle
+    # install.sh sources bootstrap.sh immediately. Verify BOTH payloads before
+    # entering that child, rather than trusting executable UI code from a clone.
+    set -l verified 1
+    _update_validate_manifest "$bundle/updates.json"; or set verified 0
+    for pair in bootstrap_sha256:bootstrap.sh install_sha256:install.sh
+        set -l fields (string split : -- "$pair")
+        set -l expected (python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1]))[sys.argv[2]])' "$bundle/updates.json" "$fields[1]")
+        if test -z "$expected"; or test (_update_sha256 "$bundle/$fields[2]") != "$expected"
+            set verified 0
+        end
+    end
+    if test $verified -ne 1
+        printf '  Installer verification failed. Nothing was run; fetch a fresh bundle.\n' >&2
+        return 1
+    end
+    return 0
+end
+
+function _update_run_verified_step
     set -g __update_clean_tmp "$argv[1]"
     function __update_step_cleanup --on-signal INT
         printf '\e[?25h\r  %*s\r' 78 '' >&2
@@ -1389,7 +1526,7 @@ function _update_run_step --description 'run installer steps from a bundle clone
         case 'clean*'
             set tag clean
     end
-    set -l cmd env UPDATE_STEPS=$steps
+    set -l cmd env _FED_QUIET=1 UPDATE_STEPS=$steps
     for kv in $argv
         set -a cmd $kv
     end
@@ -1621,11 +1758,18 @@ end
 function _update_target_gtk --description 'refresh GTK settings + Flatpak GTK runtime'
     set -l tmp (_update_fetch_bundle)
     or return 1
+    _update_ui_result 'Refresh GTK settings' _update_gtk_copy "$tmp"
+    or begin; rm -rf -- "$tmp"; return 1; end
+    _update_run_step "$tmp" "setup_flatpak_theme"
+    return $status
+end
+
+function _update_gtk_copy --argument-names tmp
     set -l failed 0
     mkdir -p "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0"; or set failed 1
-    for version in 3.0 4.0
-        if test -f "$tmp/configs/gtk-$version/settings.ini"
-            cp -f "$tmp/configs/gtk-$version/settings.ini" "$HOME/.config/gtk-$version/"; or set failed 1
+    for gtk_version in 3.0 4.0
+        if test -f "$tmp/configs/gtk-$gtk_version/settings.ini"
+            cp -f "$tmp/configs/gtk-$gtk_version/settings.ini" "$HOME/.config/gtk-$gtk_version/"; or set failed 1
         else
             set failed 1
         end
@@ -1635,9 +1779,7 @@ function _update_target_gtk --description 'refresh GTK settings + Flatpak GTK ru
         rm -rf "$tmp"
         return 1
     end
-    _update_run_step "$tmp" "setup_flatpak_theme"
-    set -l code $status
-    return $code
+    return 0
 end
 
 function _update_target_videos --description 're-download the optional video edits'
@@ -1682,8 +1824,8 @@ function _update_target_services --description 're-apply the RAM-saving services
     # ── firewalld: ALWAYS ask (live state shown, default = OFF) ──
     # The saved answer is NOT reused here — every run checks the live
     # state and asks again, so the choice always reflects right now.
-    set -l fw_on false
-    systemctl is-active firewalld >/dev/null 2>&1; and set fw_on true
+    set -l fw_on (_update_ui_result 'Check firewall status' _update_firewall_status)
+    or return $status
     printf "\n"
     _update_box_top
     if test "$fw_on" = true
@@ -1722,6 +1864,14 @@ function _update_target_services --description 're-apply the RAM-saving services
     or return 1
     _update_run_step "$tmp" "optimize_system_resources" "INSTALL_DISABLE_FIREWALLD=$want"
     return $status
+end
+
+function _update_firewall_status
+    if systemctl is-active firewalld >/dev/null
+        printf 'true\n'
+    else
+        printf 'false\n'
+    end
 end
 
 function _update_target_defaults --description 're-apply desktop renames + defaults'
@@ -1787,7 +1937,7 @@ function _update_target_clean --description 'flush caches and trim logs'
         end
     end
     _update_ui_task 4 running
-    _update_ui_native sudo dnf clean all
+    _update_ui_admin dnf clean all
     _update_ui_task 4 ok
     _update_ui_task 5 running
     # Native transaction/authorization/consent must remain foreground and visible.
@@ -1797,7 +1947,7 @@ function _update_target_clean --description 'flush caches and trim logs'
     _update_ui_native sudo dnf --setopt=assumeyes=False --setopt=assumeno=False --setopt=defaultyes=False autoremove
     _update_ui_task 6 ok
     _update_ui_task 7 running
-    _update_ui_native sudo journalctl --vacuum-time=3d
+    _update_ui_admin journalctl --vacuum-time=3d
     _update_ui_task 7 ok
     _update_ui_task 8 running
     set -l icons 0
@@ -1883,6 +2033,25 @@ end
 # `update wallvault <google-drive-link>` and an optional key override
 # with `update wallvault pass <key>` — stored in
 # ~/.cache/fedora-mactahoe/wallvault.conf (chmod 600).
+function _update_wallvault_save --argument-names cfg url key
+    set -l dir (path dirname -- "$cfg")
+    mkdir -p -- "$dir"; or return 1
+    set -l stage (mktemp "$dir/.wallvault.XXXXXXXX"); or return 1
+    begin
+        printf 'URL=%s\n' "$url"
+        if test -n "$key"
+            printf 'PASSWORD=%s\n' "$key"
+        end
+    end > "$stage"
+    set -l code $status
+    if test $code -eq 0
+        chmod 600 "$stage"; and mv -f -- "$stage" "$cfg"
+        set code $status
+    end
+    rm -f -- "$stage"
+    return $code
+end
+
 function _update_target_wallvault --description 'Wallvault asset vault — gated bundle, boxed live transfer, decrypted, staged into Downloads'
     set -l cfg_dir "$HOME/.cache/fedora-mactahoe"
     set -l cfg "$cfg_dir/wallvault.conf"
@@ -1914,9 +2083,8 @@ function _update_target_wallvault --description 'Wallvault asset vault — gated
                 set url "$stored"
             end
         end
-        mkdir -p "$cfg_dir"
-        printf 'URL=%s\nPASSWORD=%s\n' "$url" "$key" > "$cfg"
-        chmod 600 "$cfg"
+        _update_ui_result 'Save Wallvault settings' _update_wallvault_save "$cfg" "$url" "$key"
+        or return $status
         printf "\n  \e[1;32m✓ Decryption key stored — credentials persisted (chmod 600).\e[0m\n"
         return 0
     end
@@ -1944,13 +2112,8 @@ function _update_target_wallvault --description 'Wallvault asset vault — gated
                     set newkey "$oldkey"
                 end
             end
-            mkdir -p "$cfg_dir"
-            if test -n "$newkey"
-                printf 'URL=%s\nPASSWORD=%s\n' "https://drive.usercontent.google.com/download?id=$id[2]&export=download&confirm=t" "$newkey" > "$cfg"
-            else
-                printf 'URL=%s\n' "https://drive.usercontent.google.com/download?id=$id[2]&export=download&confirm=t" > "$cfg"
-            end
-            chmod 600 "$cfg"
+            _update_ui_result 'Save Wallvault settings' _update_wallvault_save "$cfg" "https://drive.usercontent.google.com/download?id=$id[2]&export=download&confirm=t" "$newkey"
+            or return $status
             printf "\n  \e[1;32m✓ Endpoint registered — configuration persisted (chmod 600).\e[0m\n"
             return 0
         end
@@ -2175,6 +2338,20 @@ end
 #   3. uninstall.sh's own per-phase confirmations (60s each)
 # Flag: --purge   also removes RPMs, Flatpaks and third-party repos
 function _update_target_uninstall --description 'guarded full removal via uninstall.sh'
+    for a in $argv
+        if contains -- (string lower -- "$a") h help -h --help
+            _update_target_help uninstall
+            return 0
+        end
+    end
+    _update_ui_begin 'update uninstall' '' 'Check GitHub availability' 'Download removal bundle' 'Extract removal bundle' 'Native guarded removal'; or return 1
+    _update_uninstall_work $argv
+    set -l code $status
+    _update_ui_end $code
+    return $code
+end
+
+function _update_uninstall_work
     set -l purge 0
     for a in $argv
         switch (string lower -- "$a")
@@ -2187,8 +2364,8 @@ function _update_target_uninstall --description 'guarded full removal via uninst
     end
 
     # ── network preflight — offline users should not go through the gates ──
-    printf "\n  \e[1;37mChecking connection to GitHub...\e[0m"
-    if not curl -sfI --max-time 10 "https://codeload.github.com/eprahemi/Fedora-MacTahoe-Eprahemi/tar.gz/refs/heads/main" -o /dev/null 2>/dev/null
+    _update_ui_task 1 running
+    if not _update_ui_quiet curl -sfI --max-time 10 "https://codeload.github.com/eprahemi/Fedora-MacTahoe-Eprahemi/tar.gz/refs/heads/main" -o /dev/null
         printf " \e[1;31mOFFLINE\e[0m\n\n"
         _update_box_top
         _update_box_title "NO INTERNET — NOTHING HAPPENED" "1;31"
@@ -2213,7 +2390,8 @@ function _update_target_uninstall --description 'guarded full removal via uninst
         _update_box_bottom
         return 1
     end
-    printf " \e[1;32mOK\e[0m\n"
+    _update_ui_task 1 ok
+    _update_ui_publish pause
 
     # ── gate 1: typed word — exact, case-sensitive ──
     set -l magic "REMOVE"
@@ -2303,6 +2481,9 @@ function _update_target_uninstall --description 'guarded full removal via uninst
         if read -t 1 -n 1 -s cancel_key 2>/dev/null
             printf "\n\n  \e[1;31m✘ Cancelled — everything stays.\e[0m\n"
             return 1
+        else if test $status -ne 142
+            printf '\n  Input closed — removal cancelled.\n' >&2
+            return 1
         end
         if test $i -le 10
             printf "\e[1;31m%2ds\e[0m  " $i
@@ -2313,19 +2494,21 @@ function _update_target_uninstall --description 'guarded full removal via uninst
     printf "\n"
 
     # ── gate 3: fresh bundle + fingerprint, then run ──
-    printf "\n  \e[1;37mDownloading the MacTahoe bundle from GitHub...\e[0m\n"
+    _update_ui_task 2 running
     set -l tmpdir (mktemp -d /tmp/mactahoe-uninstall.XXXXXX 2>/dev/null)
     if test -z "$tmpdir"; or not test -d "$tmpdir"
         printf "\n  \e[1;31m✘ Could not create a temp folder.\e[0m\n"
         return 1
     end
-    curl -fsSL --max-time 120 "https://codeload.github.com/eprahemi/Fedora-MacTahoe-Eprahemi/tar.gz/refs/heads/main" -o "$tmpdir/bundle.tar.gz" 2>/dev/null
+    _update_ui_quiet curl -fsSL --max-time 120 "https://codeload.github.com/eprahemi/Fedora-MacTahoe-Eprahemi/tar.gz/refs/heads/main" -o "$tmpdir/bundle.tar.gz"
     if test $status -ne 0
         rm -rf "$tmpdir"
         printf "\n  \e[1;31m✘ Could not download the bundle — check your connection.\e[0m\n"
         return 1
     end
-    tar -xzf "$tmpdir/bundle.tar.gz" -C "$tmpdir" 2>/dev/null
+    _update_ui_task 2 ok
+    _update_ui_task 3 running
+    _update_ui_quiet tar -xzf "$tmpdir/bundle.tar.gz" -C "$tmpdir"
     if test $status -ne 0
         rm -rf "$tmpdir"
         printf "\n  \e[1;31m✘ Could not extract the bundle.\e[0m\n"
@@ -2339,6 +2522,8 @@ function _update_target_uninstall --description 'guarded full removal via uninst
     end
 
     set -l got_hash (string match -r '^[0-9a-f]+' (sha256sum "$bundle_dir/uninstall.sh" 2>/dev/null))
+    _update_ui_task 3 ok
+    _update_ui_publish pause
     printf "\n"
     _update_box_top
     _update_box_text "uninstall.sh fingerprint" "1;37"
@@ -2346,12 +2531,16 @@ function _update_target_uninstall --description 'guarded full removal via uninst
     _update_box_bottom
     printf "\n"
 
+    _update_ui_task 4 running
     if test $purge -eq 1
-        bash "$bundle_dir/uninstall.sh" --purge-packages
+        _update_ui_native bash "$bundle_dir/uninstall.sh" --purge-packages
     else
-        bash "$bundle_dir/uninstall.sh"
+        _update_ui_native bash "$bundle_dir/uninstall.sh"
     end
     set -l rc $status
+    if test $rc -eq 0
+        _update_ui_task 4 ok
+    end
     rm -rf "$tmpdir" 2>/dev/null
     return $rc
 end
@@ -2439,15 +2628,19 @@ end
 # Empty output = missing; query failure = unknown (never interpreted as missing).
 # Every installed Flatpak branch and scope is shown and explicitly approved.
 function _update_apps_probe --argument-names kind id
+    _update_ui_result 'Check desktop app status' _update_apps_probe_work $kind $id
+end
+
+function _update_apps_probe_work --argument-names kind id
     if test "$kind" = rpm
-        set -l packages (rpm -qa --queryformat '%{NAME}\n')
+        set -l packages (rpm -qa --queryformat '%{NAME}\n' 2>> "$__update_ui_log")
         test $status -eq 0; or return 1
         if contains -- "$id" $packages
             echo rpm
         end
     else
         for scope in user system
-            set -l refs (flatpak list --$scope --app --columns=ref)
+            set -l refs (flatpak list --$scope --app --columns=ref 2>> "$__update_ui_log")
             test $status -eq 0; or return 1
             for ref in $refs
                 set -l parts (string split / -- "$ref")
@@ -2489,12 +2682,26 @@ end
 
 # Output stable catalog IDs, never display numbers. Unknown states fail closed.
 function _update_apps_eligible --argument-names mode
+    set -g __update_apps_unknown
+    set -l eligible (_update_ui_result 'Find eligible desktop apps' _update_apps_eligible_work $mode)
+    set -l code $status
+    for label in $__update_apps_unknown
+        printf '  %s: status unknown; excluded.\n' "$label" >&2
+    end
+    set -e __update_apps_unknown
+    if test (count $eligible) -gt 0
+        printf '%s\n' $eligible
+    end
+    return $code
+end
+
+function _update_apps_eligible_work --argument-names mode
     set -l catalog (_update_apps_catalog)
     for n in (seq (count $catalog))
         set -l fields (string split '|' -- "$catalog[$n]")
         set -l refs (_update_apps_probe $fields[2] $fields[3])
         if test $status -ne 0
-            printf '  %s: status unknown; excluded.\n' "$fields[1]" >&2
+            set -a __update_apps_unknown "$fields[1]"
             continue
         end
         if test "$mode" = install; and test (count $refs) -eq 0
@@ -2723,7 +2930,7 @@ function _update_target_apps
         if test "$fields[2]" = rpm
             if test "$mode" = remove
                 # No -y: the user must review the native dependency transaction.
-                if not dnf remove --help | string match -q '*--no-autoremove*'
+                if not _update_ui_result 'Check safe removal support' dnf remove --help | string match -q '*--no-autoremove*'
                     printf '  Safe removal flag unsupported; skipping %s.\n' "$fields[1]"
                     set rc 1
                 else
