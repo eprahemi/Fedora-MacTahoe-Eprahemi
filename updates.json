@@ -1,10 +1,18 @@
 {
- "latest_version": "3.7.27",
+ "latest_version": "3.7.28",
  "bootstrap_sha256": "2155ca934c9037c22f1ce513a6fa1b5e63334da8824f662dcb1021691d978388",
- "install_sha256": "7309e6ac8420fcd1f5af80868519e4ec87c27bebf47f5eba612b5223a0a2035f",
- "update_sha256": "f863c40cd6acb6a921506f0a1d48605f2c7299704b441f2730816c735c8529c1",
+ "install_sha256": "cbff769dc5be420c6075ec3f3b0fb8d1be5f4698a6b2eb3d333e639958649f3d",
+ "update_sha256": "6557a0c69e03959deef629958b166cf1983db4e1f7d1359db9c67c46ca6c9479",
  "asset_helper_sha256": "df36b62f1c2b7a0717f295e4aa1f136aa27216d9143a59ad66deabb46284a22a",
  "changelog": [
+  {
+   "version": "3.7.28",
+   "changes": [
+     "Use calm, factual wording when an installer fingerprint changes. Explain that the download matches the published manifest; preserve verification, saved fingerprints and explicit default-No consent.",
+     "Attempt opted-in Billie/Jinx and Gintama downloads independently; report partial failures for retry while honoring network Stop before the next download. Preserve archive validation and user-file protections.",
+     "Suggest the supported project installer retry (update full) for failed browser installation instead of an inconsistent Flatpak Chrome command."
+   ]
+  },
   {
    "version": "3.7.27",
    "changes": [
@@ -42,8 +50,8 @@
    "changes": [
     "Hide unrequested optional videos from the live checklist and completion counts, with contiguous visible numbering while retaining the 29-step saved-state contract.",
     "Wait indefinitely for installer/bootstrap answers and Firefox close consent. EOF cancels preferences without consent and finishes the restart question without rebooting. Preserve bounded network operations and native sudo authentication.",
-     "Preserve both active wallpaper URIs, options/colors and recursive XML image dependencies before configuration writes. Clean only exact original-checksum Fedora RPM wallpaper/avatar files; keep modified stock paths, custom collections and active dependencies. Stage/validate before publication and roll back failed publication/Trash operations.",
-     "Decide wallpaper and avatar packs independently: both installed keeps both with no pack prompt; extra only offers replace with normal, add normal, or leave (default/EOF). Normal only refreshes without an extra prompt. Preserve existing wallpaper/account selections and unknown legacy files; caller/saved choices cannot silently remove either installed collection.",
+    "Preserve both active wallpaper URIs, options/colors and recursive XML image dependencies before configuration writes. Clean only exact original-checksum Fedora RPM wallpaper/avatar files; keep modified stock paths, custom collections and active dependencies. Stage/validate before publication and roll back failed publication/Trash operations.",
+    "Decide wallpaper and avatar packs independently: both installed keeps both with no pack prompt; extra only offers replace with normal, add normal, or leave (default/EOF). Normal only refreshes without an extra prompt. Preserve existing wallpaper/account selections and unknown legacy files; caller/saved choices cannot silently remove either installed collection.",
     "Use gio Trash for retired known collections, verified asset helper code, immutable desktop image copies and shared installer/updater safety hooks. Preserve prior successful pack metadata across direct bootstrap state resets. Native Fedora installation, authorization, system Trash and reboot smoke tests remain unverified."
    ]
   },

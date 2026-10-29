@@ -385,7 +385,7 @@ _step_fix() {
     case "$1" in
         install_rpmfusion)            echo "dnf install rpmfusion-{free,nonfree}-release" ;;
         install_nvidia)               echo "dnf install akmod-nvidia xorg-x11-drv-nvidia-cuda" ;;
-        install_browsers)             echo "flatpak install com.google.Chrome" ;;
+        install_browsers)             echo "update full" ;;
         install_flatpaks)             echo "flatpak install <app-id>" ;;
         install_mactahoe_theme)       echo "update theme" ;;
         install_font)                 echo "update fonts" ;;
@@ -3876,7 +3876,7 @@ download_optional_videos() {
   # ── Download if opted in ──
   if [ "${INSTALL_BILLIE_VIDEOS:-false}" = "true" ]; then
     log "Fetching hot Billie & Jinx edits… 🔥"
-    local dl_dest _video_tmp
+    local dl_dest _video_tmp _video_failed=0
     dl_dest=$(xdg-user-dir DOWNLOAD 2>/dev/null) || dl_dest=""
     case "$dl_dest" in /*) ;; *) dl_dest="$HOME/Downloads" ;; esac
     dl_dest="$dl_dest/Billie Hot Body"
@@ -3884,7 +3884,9 @@ download_optional_videos() {
     local zip_tmp="$_video_tmp/billie.zip"
     if [ "${SKIP_VIDEOS:-false}" = "true" ]; then
       warn "Skipping the video edits — the hosted link is dead"
-      _VISUAL_SKIP_REASON='hosted asset unavailable; skipped by request'
+      if [ "${SKIP_GINTAMA:-false}" = "true" ]; then
+        _VISUAL_SKIP_REASON='hosted assets unavailable; skipped by request'
+      fi
     elif _net_download "$DOWNLOADS_URL" "$zip_tmp" --max-time 90 -b "download_warning=1"; then
       local _extracted=false
       if is_valid_zip "$zip_tmp"; then
@@ -3906,8 +3908,19 @@ download_optional_videos() {
           warn "Billie & Jinx archive could not be extracted (may be corrupted)"
         fi
       fi
+      [ "$_extracted" = true ] || _video_failed=1
       rm -f "$zip_tmp" 2>/dev/null || true
-      # Sequential: now download Gintama
+    else
+      _drive_failed "video edits" "update videos"
+      _video_failed=1
+    fi
+    # A transport Stop is different from an ordinary per-asset failure.
+    if [ -s "${_FED_NET_STOP:-/dev/null}" ]; then
+      rm -f -- "$_video_tmp/billie.zip"
+      rmdir -- "$_video_tmp" 2>/dev/null || true
+      return 1
+    fi
+      # Independently attempt the second requested asset.
       log "Fetching Gintama video edits..."
       local gintama_tmp="$_video_tmp/gintama"
       if [ "${SKIP_GINTAMA:-false}" = "true" ]; then
@@ -3932,16 +3945,17 @@ download_optional_videos() {
           warn "Gintama download has unknown type ($gintama_mime) — file may be corrupted or deleted"
           _drive_failed "video edit (mp4)" "update videos"
         fi
+        [ "$_gintama_ok" = true ] || _video_failed=1
         rm -f "$gintama_tmp" 2>/dev/null || true
       else
         warn "Gintama download failed"
         _drive_failed "video edit (mp4)" "update videos"
+        _video_failed=1
       fi
-    else
-      _drive_failed "video edits" "update videos"
-    fi
     rm -f -- "$_video_tmp/billie.zip" "$_video_tmp/gintama"
     rmdir -- "$_video_tmp" 2>/dev/null || true
+    # A partially installed pair must remain eligible for retry.
+    [ "$_video_failed" -eq 0 ] || return 1
   fi
 }
 

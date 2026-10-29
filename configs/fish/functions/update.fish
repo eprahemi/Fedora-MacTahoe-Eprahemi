@@ -323,16 +323,16 @@ function _update_fingerprint_check --description 'trust-store check for the inst
     end
     printf "\n"
     _update_box_top
-    _update_box_title "INSTALLER FINGERPRINT CHANGED" "1;33"
+    _update_box_title "NEW INSTALLER FINGERPRINT" "1;36"
     _update_box_rule
-    _update_box_text "The installer's fingerprint is new:" "1;37"
+    _update_box_text "This fingerprint differs from your saved version." "1;37"
     _update_box_text "  before  "(string sub -l 16 -- $old)"…" "2;37"
     _update_box_text "  now     "(string sub -l 16 -- $hash)"…" "1;37"
     _update_box_text ""
-    _update_box_text "Normal when a new version is released." "1;37"
-    _update_box_text "Could also mean a tampered download." "1;33"
+    _update_box_text "The download matches the published manifest." "1;37"
+    _update_box_text "A new release normally changes this fingerprint." "2;37"
     _update_box_text ""
-    _update_box_text "Trust this new fingerprint?" "1;37"
+    _update_box_text "Continue with this version?" "1;37"
     _update_box_text "y = yes   n = no (default)" "1;37"
     _update_box_bottom
     read -l fpr -P "  Your choice [y/N]: "
