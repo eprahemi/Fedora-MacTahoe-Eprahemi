@@ -400,16 +400,42 @@ def account_icon():
 
 
 def validate_image(path):
+    with Path(path).open('rb') as stream:
+        header = stream.read(64)
+    coder = None
+    if header.startswith(b'\xff\xd8\xff'):
+        coder = 'JPEG'
+    elif header.startswith(b'\x89PNG\r\n\x1a\n'):
+        coder = 'PNG'
+    elif header[:6] in (b'GIF87a', b'GIF89a'):
+        coder = 'GIF'
+    elif header[:4] == b'RIFF' and header[8:12] == b'WEBP':
+        coder = 'WEBP'
+    elif header.startswith(b'BM'):
+        coder = 'BMP'
+    elif header.startswith(b'\xff\x0a') or header.startswith(b'\x00\x00\x00\x0cJXL \r\n\x87\n'):
+        coder = 'JXL'
+    elif header[4:8] == b'ftyp' and header[8:12] in (b'avif', b'avis', b'heic', b'heix', b'hevc', b'hevx', b'mif1'):
+        coder = 'HEIC'
+    if not coder:
+        raise ValueError(f'Unrecognized raster image: {Path(path).name}')
     tool = shutil.which('magick') or shutil.which('identify')
     if not tool:
         raise RuntimeError('ImageMagick is required to validate asset packs')
     args = [tool] + (['identify'] if Path(tool).name == 'magick' else [])
     # Decode rather than trusting a ZIP signature or image header. Warnings from
     # truncated/corrupt payloads are failures, before any installed file moves.
-    result = run(*args, '-regard-warnings', '-format', '%w %h', str(path) + '[0]')
+    limits = ['-limit', 'memory', '256MiB', '-limit', 'map', '512MiB',
+              '-limit', 'disk', '1GiB', '-limit', 'time', '30']
+    image = coder + ':' + str(path) + '[0]'
+    result = run(*args, *limits, '-regard-warnings', '-format', '%w %h', image, timeout=40)
     dims = result.split()
-    if len(dims) != 2 or min(map(int, dims)) < 1:
+    if len(dims) != 2 or min(map(int, dims)) < 1 or int(dims[0]) * int(dims[1]) > 100000000:
         raise ValueError(f'Invalid image: {path.name}')
+    decoder = shutil.which('magick') or shutil.which('convert')
+    if not decoder:
+        raise RuntimeError('ImageMagick is required to decode asset packs')
+    run(decoder, *limits, '-regard-warnings', image, 'null:', timeout=40)
     return tuple(map(int, dims))
 
 
@@ -418,18 +444,42 @@ def collect_archive(archive, dest, prefix=''):
         total = 0
         for entry in source.infolist():
             p = Path(entry.filename)
-            if p.is_absolute() or '..' in p.parts or '\\' in entry.filename or stat.S_ISLNK(entry.external_attr >> 16):
+            mode = entry.external_attr >> 16
+            if (p.is_absolute() or '..' in p.parts or '\\' in entry.filename or
+                    '\x00' in entry.orig_filename or entry.flag_bits & 1 or
+                    (stat.S_IFMT(mode) not in (0, stat.S_IFREG, stat.S_IFDIR))):
                 raise ValueError('Unsafe path/link in asset archive')
             total += entry.file_size
-            if total > 2 * 1024 ** 3 or len(source.infolist()) > 10000:
+            if (total > 2 * 1024 ** 3 or len(source.infolist()) > 10000 or
+                    entry.file_size > 128 * 1024 ** 2 or
+                    entry.file_size > max(1, entry.compress_size) * 1000):
                 raise ValueError('Asset archive exceeds staging limits')
             if entry.is_dir() or p.name.startswith('.') or '__MACOSX' in p.parts:
                 continue
-            if p.suffix.lower() not in IMAGES:
+            if p.suffix and p.suffix.lower() not in IMAGES:
                 raise ValueError(f'Unexpected asset archive file: {p.name}')
-            target = dest / (prefix + p.name)
+            suffix = ''
+            if not p.suffix:
+                # The published wallpaper archive contains a regular JPEG named
+                # "80". Only recognize raster signatures, never delegate/script
+                # formats, and still decode the staged media before accepting it.
+                with source.open(entry) as stream:
+                    header = stream.read(16)
+                if header.startswith(b'\xff\xd8\xff'):
+                    suffix = '.jpg'
+                elif header.startswith(b'\x89PNG\r\n\x1a\n'):
+                    suffix = '.png'
+                elif header[:6] in (b'GIF87a', b'GIF89a'):
+                    suffix = '.gif'
+                elif header[:4] == b'RIFF' and header[8:12] == b'WEBP':
+                    suffix = '.webp'
+                else:
+                    raise ValueError(f'Unrecognized extensionless asset image: {p.name}')
+            target = dest / (prefix + p.name + suffix)
             with target.open('xb') as out, source.open(entry) as stream:
                 shutil.copyfileobj(stream, out)
+            if suffix:
+                validate_image(target)
 
 
 def build(kind, variant, mode, bundle, stage, archives, legacy_state=None):

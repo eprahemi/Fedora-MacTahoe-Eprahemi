@@ -819,6 +819,13 @@ if [ -z "${UPDATE_STEPS:-}" ]; then
   _UI_STEP_IDS=(preflight remove_ptyxis remove_gnome_weather install_rpmfusion install_nvidia install_rpm_packages install_browsers install_flatpaks install_mactahoe_theme install_font apply_desktop_entries ensure_celluloid_default configure_nautilus_defaults apply_configs apply_dconf optimize_system_resources apply_wallpapers install_custom_avatars setup_gdm setup_firefox_theme setup_flatpak_theme install_sounds install_updater install_ktheme_watcher setup_terminal setup_shell install_extensions download_optional_videos finalize)
   _UI_STEP_LABELS=('Preflight' 'Old terminal' 'GNOME Weather' 'RPM Fusion and codecs' 'NVIDIA drivers' 'RPM packages' 'Browsers' 'Flatpak apps' 'GTK and icon themes' 'SF Pro font' 'Desktop entries' 'Celluloid defaults' 'Nautilus defaults' 'Configuration files' 'GNOME settings' 'System resources' 'Wallpapers' 'Custom avatars' 'Login theme' 'Firefox theme' 'Flatpak GTK runtime' 'Big Sur sounds' 'Update notifier' 'Kitty theme watcher' 'Kitty terminal' 'Fish shell' 'GNOME extensions' 'Optional videos' 'Cleanup and finalize')
   for _sid in "${_UI_STEP_IDS[@]}"; do _UI_STEP_STATES+=(waiting); _UI_STEP_REASONS+=(''); done
+else
+  IFS=',' read -r -a _UI_STEP_IDS <<< "$UPDATE_STEPS"
+  for _sid in "${_UI_STEP_IDS[@]}"; do
+    _UI_STEP_LABELS+=("$_sid")
+    _UI_STEP_STATES+=(waiting)
+    _UI_STEP_REASONS+=('')
+  done
 fi
 if [ -z "${UPDATE_STEPS:-}" ]; then _ui_progress 0 "$TOTAL_STEPS"; fi
 STEP=0
@@ -1194,6 +1201,11 @@ next_step() {
   STEP=$((STEP + 1))
   CURRENT_STEP_LABEL="$1"
   if [ "${_UI_ACTIVE:-0}" = 1 ]; then _ui_task "$1"; fi
+  if [ -n "${UPDATE_STEPS:-}" ]; then
+    # Starting a selected task is not processed work or a completed install.
+    printf '\nSelected task: %s\n' "$1"
+    return 0
+  fi
   local pct=$((STEP * 100 / TOTAL_STEPS))
   local filled=$((STEP * 30 / TOTAL_STEPS))
   local empty=$((30 - filled))
@@ -5375,25 +5387,37 @@ if [ -n "${UPDATE_STEPS:-}" ]; then
     case "$_ustep" in
       install_mactahoe_theme|install_icons|install_font|apply_desktop_entries|ensure_celluloid_default|configure_nautilus_defaults|apply_dconf|optimize_system_resources|apply_wallpapers|install_custom_avatars|setup_gdm|setup_flatpak_theme|install_sounds|install_updater|install_extensions|download_optional_videos)
         CURRENT_STEP_LABEL="$_ustep"
+        _VISUAL_SKIP_REASON=''
+        _ui_step "$_ustep" running
         _target_rc=0
         "$_ustep" || _target_rc=$?
         if [ -s "${_FED_NET_STOP:-/dev/null}" ]; then
           _step_failed "$_ustep" 130 stopped
+          _ui_step "$_ustep" failed 'interrupted; retry this task'
           _clear_step_state "$_ustep" || warn "Could not clear interrupted task state: $_ustep"
           _UI_COMPLETION='Stopped safely. Completed work is kept.'
           exit 130
         fi
         if [ "$_target_rc" -ne 0 ]; then
           _step_failed "$_ustep" "$_target_rc"
+          _ui_step "$_ustep" failed "exit $_target_rc; retry: $(_step_fix "$_ustep")"
           _clear_step_state "$_ustep" || \
             warn "Could not clear saved state for $_ustep — it may be skipped on the next run"
           _target_failed=1
         else
+          _step_record "$_ustep" ok "$CURRENT_STEP_LABEL"
+          if [ -n "$_VISUAL_SKIP_REASON" ]; then
+            _ui_step "$_ustep" skipped "$_VISUAL_SKIP_REASON"
+          else
+            _ui_step "$_ustep" ok
+          fi
           _update_step_state "$_ustep"
         fi
         ;;
       *)
         warn "Unknown update step: $_ustep"
+        _step_record "$_ustep" failed "$_ustep"
+        _ui_step "$_ustep" failed 'unknown task; no work performed'
         _target_failed=1
         ;;
     esac

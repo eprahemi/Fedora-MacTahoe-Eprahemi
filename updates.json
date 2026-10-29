@@ -1,10 +1,17 @@
 {
- "latest_version": "3.7.24",
- "bootstrap_sha256": "d92e7da774b997ac7342000aaf3fb6f1b62b822b9e4582797473e34c93af200e",
- "install_sha256": "f6fc8636257cd8697befc39325ececbedb8bd0a3fe5ae257581de100933821f8",
+ "latest_version": "3.7.25",
+ "bootstrap_sha256": "9c71b400cae88630c700985ce6a6c3d3e67c8bb967bc56b472711d2873f55dd4",
+ "install_sha256": "8d63b9344419923a79fc04393ac6865140baf765097dff1164d8ff0d5aac04ae",
  "update_sha256": "cb7a2fb49d5a77347365cae263ca30d27334a83187f1e276e1580147ae3fc9d0",
- "asset_helper_sha256": "780bff6ee435af864aec79c3d24526ca72dd8adf96ed16851b4fbbd042378dd1",
+ "asset_helper_sha256": "df36b62f1c2b7a0717f295e4aa1f136aa27216d9143a59ad66deabb46284a22a",
  "changelog": [
+  {
+   "version": "3.7.25",
+   "changes": [
+    "Development candidate: accept signature-verified, fully decoded extensionless raster assets such as the published wallpaper archive's JPEG named 80, normalizing its staged extension. Retain strict ZIP path/type/size protections; reject encrypted entries, special files, excessive compression and invalid media. Bound image decoding resources and runtime.",
+    "Report actual selected installer-task outcomes and deliberate skips, including failed-state retry handling. Failed completion is red; completion percentage measures processed registered tasks, and early aborts or targeted updates never claim a complete installation. Updater styling remains deferred. Native Fedora smoke test pending."
+   ]
+  },
   {
    "version": "3.7.24",
    "changes": [

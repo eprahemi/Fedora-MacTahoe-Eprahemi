@@ -14,12 +14,13 @@ _UI_NOTICE_COLORS=()
 _UI_WARNINGS=()
 _UI_FINAL_TASKS=() _UI_FINAL_ATTENTION=()
 _UI_FINAL_COMPLETED=0 _UI_FINAL_SKIPPED=0 _UI_FINAL_FAILED=0
+_UI_FINAL_PERCENT=0
 _UI_TRANSFER_DONE=0 _UI_TRANSFER_TOTAL=0 _UI_TRANSFER_DETAIL=''
 _UI_STEP_IDS=() _UI_STEP_LABELS=() _UI_STEP_STATES=() _UI_STEP_REASONS=()
 _UI_STEP_CURRENT=0
 # Visibility is presentation-only: keep every registered/state-tracked step.
 _ui_step_visible() {
-  [ "$1" != download_optional_videos ] || [ "${INSTALL_BILLIE_VIDEOS:-false}" = true ]
+  [ -n "${UPDATE_STEPS:-}" ] || [ "$1" != download_optional_videos ] || [ "${INSTALL_BILLIE_VIDEOS:-false}" = true ]
 }
 _ui_step() {
   local i
@@ -372,15 +373,19 @@ _ui_finish_dashboard() {
   _ui_finish_brand
   printf '\n' >&5
   if [ "$issues" -eq 1 ]; then
-    printf '  %s              F I N I S H E D   W I T H   I S S U E S%s\n\n' "$co" "$c0" >&5
+    printf '  %s              F I N I S H E D   W I T H   I S S U E S%s\n\n' "$cr" "$c0" >&5
+  elif [ -n "${UPDATE_STEPS:-}" ]; then
+    printf '  %s              S E L E C T E D   T A S K S   F I N I S H E D%s\n\n' "$cg" "$c0" >&5
   else
     printf '  %s              I N S T A L L A T I O N   C O M P L E T E%s\n\n' "$cg" "$c0" >&5
   fi
   _ui_finish_badges "$completed" "$skipped" "$failed"
-  local bar
-  printf -v bar '%*s' 40 ''
+  local bar empty filled=$((40 * _UI_FINAL_PERCENT / 100))
+  printf -v bar '%*s' "$filled" ''
   bar=${bar// /█}
-  printf '\n       %s%s%s  %s100%%%s\n\n' "$cb" "$bar" "$c0" "$cg" "$c0" >&5
+  printf -v empty '%*s' "$((40-filled))" ''
+  empty=${empty// /░}
+  printf '\n       %s%s%s%s  %s%s%% processed%s\n\n' "$cb" "$bar" "$empty" "$c0" "$cd" "$_UI_FINAL_PERCENT" "$c0" >&5
   for entry in "${_UI_FINAL_TASKS[@]}"; do
     group=${entry%%|*}
     label=${entry#*|}; label=${label%|*}
@@ -434,10 +439,14 @@ _ui_finish_compact() {
   local entry group label state mark color status cur_group=''
   printf '  %sFedora MacTahoe - Eprahemi Edition%s\n' "$cw" "$c0" >&5
   if [ "$issues" -eq 1 ]; then
-    printf '  %sFinished with issues%s\n\n' "$co" "$c0" >&5
+    printf '  %sFinished with issues%s\n\n' "$cr" "$c0" >&5
+  elif [ -n "${UPDATE_STEPS:-}" ]; then
+    printf '  %sSelected tasks finished%s\n\n' "$cg" "$c0" >&5
   else
     printf '  %sInstallation complete%s\n\n' "$cg" "$c0" >&5
   fi
+  printf '  %s completed / %s skipped / %s failed\n  %s%% processed\n' \
+    "$_UI_FINAL_COMPLETED" "$_UI_FINAL_SKIPPED" "$_UI_FINAL_FAILED" "$_UI_FINAL_PERCENT" >&5
   for entry in "${_UI_FINAL_TASKS[@]}"; do
     group=${entry%%|*}
     label=${entry#*|}; label=${label%|*}
@@ -472,7 +481,7 @@ _ui_finish_compact() {
 _ui_finish() {
   if [ "${_UI_ACTIVE:-0}" = 1 ]; then
     _ui_cleanup
-    local rows cols issues=0
+    local rows cols issues=0 total=0 processed=0 _i
     read -r rows cols < <(stty size < /dev/tty 2>/dev/null) || cols=80
     [ "${cols:-0}" -ge 4 ] || cols=4
     case "$1" in *ISSUES*|*issues*|*stopped*|*Stopped*|*failed*) issues=1 ;; esac
@@ -484,6 +493,9 @@ _ui_finish() {
       for _index in "${!_UI_STEP_IDS[@]}"; do
         _ui_step_visible "${_UI_STEP_IDS[$_index]}" || continue
         _state=${_UI_STEP_STATES[$_index]}
+        if [ -n "${UPDATE_STEPS:-}" ]; then
+          _UI_FINAL_TASKS+=("SELECTED TASKS|${_UI_STEP_LABELS[$_index]}|$_state")
+        fi
         case "$_state" in
           ok) _UI_FINAL_COMPLETED=$((_UI_FINAL_COMPLETED + 1)) ;;
           skipped) _UI_FINAL_SKIPPED=$((_UI_FINAL_SKIPPED + 1)) ;;
@@ -491,6 +503,14 @@ _ui_finish() {
         esac
       done
     fi
+    for _i in "${!_UI_STEP_IDS[@]}"; do
+      _ui_step_visible "${_UI_STEP_IDS[$_i]}" || continue
+      total=$((total+1))
+      case "${_UI_STEP_STATES[$_i]}" in ok|skipped|failed) processed=$((processed+1));; esac
+    done
+    _UI_FINAL_PERCENT=0
+    if [ "$total" -gt 0 ]; then _UI_FINAL_PERCENT=$((processed*100/total)); fi
+    if [ "$_UI_FINAL_FAILED" -gt 0 ] || [ "$processed" -lt "$total" ]; then issues=1; fi
     if [ "$cols" -ge 68 ]; then
       _ui_finish_dashboard "$issues" "$cols"
     else
