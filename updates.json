@@ -1,10 +1,17 @@
 {
- "latest_version": "3.7.31",
+ "latest_version": "3.7.32",
  "bootstrap_sha256": "593f6a9454bd237602532a17f7ba6860da493ca25ba99ae77e4ec1ca31c33c0f",
- "install_sha256": "1960e2f13817f343992dbaec95595788fcfa36d41faa6e6dde788181aad486a7",
- "update_sha256": "dc2745ad7bbd096eaa36aeabb2292f49e9750cd23cf66edfa26edc7c8f6ce306",
+ "install_sha256": "47e340ba635b00aa3d1329f992e9954f146fc2827319e85dd027bcc1d783274e",
+ "update_sha256": "a8040ad88c4a88f436c39393d2279e0dbeaf1c2fbc6e323bb131283163255c1b",
  "asset_helper_sha256": "df36b62f1c2b7a0717f295e4aa1f136aa27216d9143a59ad66deabb46284a22a",
  "changelog": [
+  {
+   "version": "3.7.32",
+   "changes": [
+    "Development candidate: retire only the verified pre-3.7.5 project fastfetch startup call during installer configuration and update configs, leaving the current conf.d snippet as its owner. Preserve all other config.fish bytes, aliases, environment, functions and deliberate custom commands; keep a private original backup and validate Fish syntax without executing startup code.",
+    "Refuse unsafe file targets or failed migration publication. Ambiguous or edited historical blocks remain untouched with a manual-review warning; intentional extra fastfetch commands are not disabled. Native Fedora/Kitty smoke testing remains pending."
+   ]
+  },
   {
    "version": "3.7.31",
    "changes": [

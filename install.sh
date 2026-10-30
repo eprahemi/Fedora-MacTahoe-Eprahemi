@@ -2989,6 +2989,16 @@ apply_configs() {
     fi
     mkdir -p "$HOME/.config/fish/functions" "$HOME/.config/fish/conf.d"
 
+    # Use the bundled helper before activating the snippet, never as root.
+    if [ ! -f "$cfg/fish/conf.d/50-fedora-mactahoe.fish" ]; then
+      warn "Fish settings snippet missing from the bundle"
+      return 1
+    fi
+    if ! fish --no-config -c 'source "$argv[1]"; and __mactahoe_migrate_fastfetch "$argv[2]"' \
+         "$cfg/fish/functions/__mactahoe_migrate_fastfetch.fish" "$HOME/.config/fish/config.fish"; then
+      warn "Could not safely migrate legacy Fish startup; settings snippet not refreshed"
+      return 1
+    fi
     if [ -f "$cfg/fish/conf.d/50-fedora-mactahoe.fish" ]; then
       if ! cp -f "$cfg/fish/conf.d/50-fedora-mactahoe.fish" \
            "$HOME/.config/fish/conf.d/50-fedora-mactahoe.fish"; then
@@ -3004,12 +3014,6 @@ apply_configs() {
       cp -f "$cfg/fish/functions/"*.fish "$HOME/.config/fish/functions/" 2>/dev/null || true
     fi
 
-    # A pre-3.7.5 install may still carry the old project block inside
-    # config.fish. It is left untouched; the snippet is additive. Mention the
-    # duplicate once so a double fastfetch banner is not a mystery.
-    if [ -f "$HOME/.config/fish/config.fish" ] && grep -q 'ANI_CLI_PLAYER vlc' "$HOME/.config/fish/config.fish" 2>/dev/null; then
-      warn "config.fish still contains the old MacTahoe block; project settings now load from conf.d/50-fedora-mactahoe.fish (the duplicate lines are safe to remove)"
-    fi
     ok "Fish config ($(ls "$HOME/.config/fish/functions/"*.fish 2>/dev/null | wc -l) functions)"
   fi
 

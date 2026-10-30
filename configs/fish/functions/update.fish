@@ -1310,7 +1310,7 @@ function _update_configs_work --argument-names tmp
         return 1
     end
     # Every destination is created even when missing — project-owned files
-    # always overwrite; ~/.config/fish/config.fish is never written.
+    # always overwrite; config.fish changes only for verified legacy migration.
     _update_ui_quiet mkdir -p "$HOME/.config/kitty" "$HOME/.config/fish/functions" "$HOME/.config/fish/conf.d" "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0" "$HOME/.config/fastfetch" "$HOME/.config/systemd/user" "$HOME/.local/bin"
     or return 1
     # Auto-backup the live fish config before touching anything (keeps last 5)
@@ -1347,9 +1347,16 @@ function _update_configs_work --argument-names tmp
     end
     # fish — project settings + every function (update.fish included, so the
     # running copy is replaced with the freshly fetched one).
-    # config.fish is USER-OWNED: never copy over it. Project settings live in
+    # config.fish is USER-OWNED: never copy over it. Only verified legacy fastfetch
+    # is retired with a private backup. Project settings live in
     # conf.d/50-fedora-mactahoe.fish, which fish sources before config.fish,
     # so user aliases/env/functions/startup commands survive every refresh.
+    if not test -f "$cfg/fish/conf.d/50-fedora-mactahoe.fish"
+        printf '\n  Fish settings snippet missing from the bundle — config.fish left untouched.\n' >&2
+        return 1
+    end
+    _update_ui_quiet fish --no-config -c 'source "$argv[1]"; and __mactahoe_migrate_fastfetch "$argv[2]"' "$cfg/fish/functions/__mactahoe_migrate_fastfetch.fish" "$HOME/.config/fish/config.fish"
+    or return 1
     if test -f "$cfg/fish/conf.d/50-fedora-mactahoe.fish"
         _update_ui_quiet cp -f "$cfg/fish/conf.d/50-fedora-mactahoe.fish" "$HOME/.config/fish/conf.d/"; or return 1
     else
@@ -1358,9 +1365,6 @@ function _update_configs_work --argument-names tmp
     end
     for f in "$cfg/fish/functions/"*.fish
         _update_ui_quiet cp -f "$f" "$HOME/.config/fish/functions/"; or return 1
-    end
-    if test -f "$HOME/.config/fish/config.fish"; and grep -q 'ANI_CLI_PLAYER vlc' "$HOME/.config/fish/config.fish" 2>/dev/null
-        printf '\n  \e[1;33m⚠ config.fish still has the old MacTahoe block; project settings now load from conf.d/50-fedora-mactahoe.fish (duplicate lines are safe to remove).\e[0m\n'
     end
     # system-wide fish helpers — the rescue detector (tiny standalone
     # 'update' when the user copy is gone) + the did-you-mean handler.
