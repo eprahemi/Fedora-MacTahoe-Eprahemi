@@ -532,6 +532,7 @@ _install_asset_pack() {
   if [ "$kind" = avatar ] && ! sudo -v; then
     rm -rf -- "$stage"; return 1
   fi
+  echo "DEBUG_ASSET: INSTALL_ASSET_FORCE=${INSTALL_ASSET_FORCE:-unset} current=$current variant=$variant mode=$mode kind=$kind" >&2
   if ! plan=$(_asset_tool build "$kind" "$variant" "$mode" "$BUNDLE" "$stage" "$legacy" "${archives[@]}"); then
     warn 'Asset validation failed — the installed collection is unchanged'
     rm -rf -- "$stage"; return 1
