@@ -498,6 +498,7 @@ def build(kind, variant, mode, bundle, stage, archives, legacy_state=None):
         variant, mode = 'keep', 'add'
     elif current == 'normal' and not force:
         mode = 'add'
+    sys.stderr.write(f'asset build: kind={kind} current={current} variant={variant} mode={mode} force={force} INSTALL_ASSET_FORCE={os.environ.get(\"INSTALL_ASSET_FORCE\")!r}\\n')
     wanted = [] if variant == 'keep' else (['normal', '18'] if variant == 'both' else [variant])
     if mode == 'replace' and kind == 'wallpaper':
         changes = {str(t): None for t in targets}
