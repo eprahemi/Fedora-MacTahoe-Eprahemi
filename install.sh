@@ -472,7 +472,9 @@ _install_asset_pack() {
   local kind="$1" variant=normal mode=replace current stage legacy plan active_snapshot image preserve_settings=false choice
   [ "${INSTALL_WALLPAPER_18:-false}" != true ] || variant=18
   [ "${INSTALL_WALLPAPER_BOTH:-false}" != true ] || variant=both
-  [ "${INSTALL_WALLPAPER_ADD:-false}" != true ] || mode=add
+  # INSTALL_WALLPAPER_ADD is intentionally ignored: mode is controlled by
+  # INSTALL_ASSET_FORCE and the explicit variant. Add-mode keeps the other
+  # pack by NOT setting force; force mode replaces. Never silently add.
   stage=$(mktemp -d "${TMPDIR:-/tmp}/mactahoe-assets.XXXXXXXX") || return 1
   legacy="$stage/initial-state.json"
   if [ -n "${_ASSET_INITIAL_STATE_JSON:-}" ]; then
@@ -532,7 +534,6 @@ _install_asset_pack() {
   if [ "$kind" = avatar ] && ! sudo -v; then
     rm -rf -- "$stage"; return 1
   fi
-  echo "DEBUG_ASSET: INSTALL_ASSET_FORCE=${INSTALL_ASSET_FORCE:-unset} current=$current variant=$variant mode=$mode kind=$kind" >&2
   if ! plan=$(_asset_tool build "$kind" "$variant" "$mode" "$BUNDLE" "$stage" "$legacy" "${archives[@]}"); then
     warn 'Asset validation failed — the installed collection is unchanged'
     rm -rf -- "$stage"; return 1
