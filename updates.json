@@ -1,632 +1,641 @@
 {
- "latest_version": "3.7.32",
- "bootstrap_sha256": "593f6a9454bd237602532a17f7ba6860da493ca25ba99ae77e4ec1ca31c33c0f",
- "install_sha256": "47e340ba635b00aa3d1329f992e9954f146fc2827319e85dd027bcc1d783274e",
- "update_sha256": "a8040ad88c4a88f436c39393d2279e0dbeaf1c2fbc6e323bb131283163255c1b",
- "asset_helper_sha256": "df36b62f1c2b7a0717f295e4aa1f136aa27216d9143a59ad66deabb46284a22a",
- "changelog": [
-  {
-   "version": "3.7.32",
-   "changes": [
-    "Development candidate: retire only the verified pre-3.7.5 project fastfetch startup call during installer configuration and update configs, leaving the current conf.d snippet as its owner. Preserve all other config.fish bytes, aliases, environment, functions and deliberate custom commands; keep a private original backup and validate Fish syntax without executing startup code.",
-    "Refuse unsafe file targets or failed migration publication. Ambiguous or edited historical blocks remain untouched with a manual-review warning; intentional extra fastfetch commands are not disabled. Native Fedora/Kitty smoke testing remains pending."
-   ]
-  },
-  {
-   "version": "3.7.31",
-   "changes": [
-    "Development candidate: extend the shared waiting/active checklist to quick/full manifest, installer download and fingerprint verification; retain one private log through the foreground bootstrap handoff. Verify targeted installer and sourced bootstrap payloads before child execution.",
-    "Add shared repository preparation and guarded-uninstall work lifecycles; preserve typed removal words, countdown cancellation and native upstream consent. Keep audited noninteractive output private even without a TTY; check/menu fetch diagnostics use private cache logs without artificial waits.",
-    "Extend the same real-work lifecycle to initial app eligibility/status queries, firewall status, Wallvault settings publication, GTK file copies and targeted payload verification. Preserve data-only query results and empty selections; fix the GTK copy loop's read-only Fish variable collision. Stage settings privately without logging archive keys.",
-    "Separate native authentication from noninteractive metadata/journal cleanup and keep updater-owned non-TTY child diagnostics private. Native authentication, Git credential interaction and necessary upstream tooling remain visible and are not universally recorded. Missing/old local UI libraries safely use plain status; native Fedora/Kitty smoke testing remains pending."
-   ]
-  },
-  {
-   "version": "3.7.30",
-   "changes": [
-    "Create bootstrap and direct installer session transcripts privately with mode 0600, independently of the caller's umask; stop before logging if private creation fails.",
-    "Correct published 3.7.29 changelog wording. Existing EXIT-time ANSI cleanup is unchanged; native Fedora smoke testing remains pending."
-   ]
-  },
-  {
-   "version": "3.7.29",
-   "changes": [
-    "Report icon conversion, terminal desktop-entry, updater payload/service and Nautilus metadata failures honestly while continuing later installer steps. Validate watcher dependencies without enabling an opted-out watcher.",
-    "Validate extension ZIP paths, UUID and running-shell compatibility in private staging before replacement or enabling; retain previous extensions in local backups. Use private bounded sound-source builds and preserve existing sound files. Skip unsupported ARM Chrome without Google repository changes and preserve existing Chrome repo files. Correct the established Phase 4 divider range.",
-    "Keep the Fedora logo hidden on GDM even when login wallpaper theming is declined; the opt-out now skips only the wallpaper. Remove the dead legacy summary that printed zero RPM/Flatpak counts on skipped steps.",
-    "The full RPM list resolves against isolated Fedora 45, Cisco OpenH264 and RPM Fusion metadata with --assumeno; no packages installed. Native Fedora/Kitty installation, service and GNOME/GDM reboot smoke tests remain pending; no zero-error guarantee."
-   ]
-  },
-  {
-   "version": "3.7.28",
-   "changes": [
-     "Use calm, factual wording when an installer fingerprint changes. Explain that the download matches the published manifest; preserve verification, saved fingerprints and explicit default-No consent.",
-     "Attempt opted-in Billie/Jinx and Gintama downloads independently; report partial failures for retry while honoring network Stop before the next download. Preserve archive validation and user-file protections.",
-     "Suggest the supported project installer retry (update full) for failed browser installation instead of an inconsistent Flatpak Chrome command."
-   ]
-  },
-  {
-   "version": "3.7.27",
-   "changes": [
-    "Development candidate: reject interrupted, malformed or unpinned manifest responses before publishing the cache. Stage bounded HTTPS transfers, validate all four SHA256 fields and use a validated API fallback. Failed refreshes never authorize execution from an old cache. Preserve installer hash matching and fingerprint-change consent. Installed older updater copies require a separately verified migration; no live installation or native Fedora smoke test performed."
-   ]
-  },
-  {
-   "version": "3.7.26",
-   "changes": [
-    "Animate gray waiting tasks with Braille frames while preserving the cyan running spinner. Reuse the installer presentation engine for updater-owned configuration, app, cleanup and Wallvault tasks, with checked foreground operations and measured task outcomes. Remove timed pretend progress and duplicate installer success reports.",
-    "Keep native authentication and package consent visible; native interaction takes priority over suppression. Check configuration copies, service changes, app postconditions/data Trash and Wallvault extraction/publication failures. Wallvault progress measures tasks, not transfer bytes. Audited noninteractive output is retained in the session log; native direct-TTY output is not universally captured. Menus, preparation and uninstall retain plain presentation. Native Fedora/Kitty/package smoke testing remains pending."
-   ]
-  },
-  {
-   "version": "3.7.25",
-   "changes": [
-    "Development candidate: accept signature-verified, fully decoded extensionless raster assets such as the published wallpaper archive's JPEG named 80, normalizing its staged extension. Retain strict ZIP path/type/size protections; reject encrypted entries, special files, excessive compression and invalid media. Bound image decoding resources and runtime.",
-    "Report actual selected installer-task outcomes and deliberate skips, including failed-state retry handling. Failed completion is red; completion percentage measures processed registered tasks, and early aborts or targeted updates never claim a complete installation. Updater styling remains deferred. Native Fedora smoke test pending."
-   ]
-  },
-  {
-   "version": "3.7.24",
-   "changes": [
-    "Development candidate: retain question mode between consecutive installer questions instead of briefly painting the checklist. Resume progress on actual task, step, transfer or processed-work transitions, without presentation delays. Acknowledge painter trap readiness before replacement so animation cannot run installer EXIT cleanup. Synchronize pipeline painter suspension before native sudo authentication; keep password input hidden and outside the log. Native Fedora smoke test pending."
-   ]
-  },
-  {
-   "version": "3.7.23",
-   "changes": [
-    "Fix avatar protection scans on root-only AccountsService metadata using narrow read-only privileged enumeration when permission is denied. Validate all returned icon paths and fail closed on read errors; preserve all users' active avatars without changing system permissions or account selections. Development candidate; native Fedora smoke test pending."
-   ]
-  },
-  {
-   "version": "3.7.22",
-   "changes": [
-    "Hide unrequested optional videos from the live checklist and completion counts, with contiguous visible numbering while retaining the 29-step saved-state contract.",
-    "Wait indefinitely for installer/bootstrap answers and Firefox close consent. EOF cancels preferences without consent and finishes the restart question without rebooting. Preserve bounded network operations and native sudo authentication.",
-    "Preserve both active wallpaper URIs, options/colors and recursive XML image dependencies before configuration writes. Clean only exact original-checksum Fedora RPM wallpaper/avatar files; keep modified stock paths, custom collections and active dependencies. Stage/validate before publication and roll back failed publication/Trash operations.",
-    "Decide wallpaper and avatar packs independently: both installed keeps both with no pack prompt; extra only offers replace with normal, add normal, or leave (default/EOF). Normal only refreshes without an extra prompt. Preserve existing wallpaper/account selections and unknown legacy files; caller/saved choices cannot silently remove either installed collection.",
-    "Use gio Trash for retired known collections, verified asset helper code, immutable desktop image copies and shared installer/updater safety hooks. Preserve prior successful pack metadata across direct bootstrap state resets. Native Fedora installation, authorization, system Trash and reboot smoke tests remain unverified."
-   ]
-  },
-  {
-   "version": "3.7.21",
-   "changes": [
-    "Redesign the completion screen around the installer's Fedora figlet mark: MACTAHOE · EPRAHEMI header box, colored 29-step completed/skipped/failed badges, grouped dotted task rows, NEEDS ATTENTION retry commands, formatted elapsed time and the log filename. Routine warnings stay in the log; only real failures are surfaced.",
-    "Send downloader output to the log and paint the live progress bar from measured byte counts and transfer speed, so raw Download objects lines no longer overwrite the interface."
-   ]
-  },
-  {
-   "version": "3.7.20",
-   "changes": [
-    "Preserve existing Kitty palettes during install/config refresh; seed only a missing palette and fail honestly on seed errors or broken palette links. Wallpaper palette reapplication now requires an already-enabled ktheme watcher, with the existing installer symlink fallback. Config refresh never enables the watcher; disabled watcher palettes remain untouched."
-   ]
-  },
-  {
-   "version": "3.7.19",
-   "changes": [
-    "Add update apps: 27 installer desktop apps with measured RPM and user/system Flatpak status, numeric multiple selection and ranges. Installed selections remove; missing selections install. Exact scoped plans require explicit consent, default No; EOF cancels safely.",
-    "Protect active Kitty removal, preserve app data, disable DNF autoremove and retain native dependency transaction review. Existing repositories only: no admin repo overwrite or unrelated browser installations. Unknown status fails closed; refresh actual status after attempts. Add read-only help, menu entry and safe typo suggestions. apply_configs bumped to 3.7.19; updater re-pinned, installer/bootstrap unchanged."
-   ]
-  },
-  {
-   "version": "3.7.18",
-   "changes": [
-    "Replace ICMP-only network gating with TLS-verified HTTPS project downloads: raw GitHub first, GitHub fallback; either verified response permits installation. Validate an immutable small manifest's exact SHA-256 to reject portal/error bodies.",
-    "Bound each probe to 3 seconds connecting and 8 seconds total, with no retries and HTTPS-only redirects. Missing curl gives a prerequisite message; failed probes suggest DNS/proxy/portal/clock/CA checks without claiming all internet is absent. Preflight always runs even with current saved state; other guards and step versions unchanged."
-   ]
-  },
-  {
-   "version": "3.7.17",
-   "changes": [
-    "Correct both installer update-notifier interval messages to every 2 hours, matching the existing 2h timer. Text only: timer, behavior and step versions unchanged."
-   ]
-  },
-  {
-   "version": "3.7.16",
-   "changes": [
-    "Stop adding the custom Trash folder bookmark. Remove only the exact old installer-generated line; preserve all other bookmarks, labels and order. Native GNOME Trash and deleted files are untouched.",
-    "Nautilus configuration no longer rebuilds the user's bookmark list. Cleanup honors XDG_CONFIG_HOME and publishes atomically; configure_nautilus_defaults step bumped to 3.7.16 for existing installs."
-   ]
-  },
-  {
-   "version": "3.7.15",
-   "changes": [
-    "Keep GNOME file indexing at its existing/default state for fast file search: remove legacy Tracker masking and Tracker3 disabling from installer runs. LocalSearch packages and other service optimizations are unchanged; remove the indexer RAM-saving claim.",
-    "Existing indexer masks/disables are NOT repaired automatically: old changes have no ownership record and may be deliberate user choices. Uninstall also leaves indexing untouched; targeted repair requires separate review and consent. No step bump: this removes disabling behavior, not a migration."
-   ]
-  },
-  {
-   "version": "3.7.14",
-   "changes": [
-    "Force only Blur My Shell Popup blur OFF on configuration-applying install/update runs, overriding saved ON. No runtime lockdown; help/check/notifier paths and other blur settings unchanged.",
-    "Configuration, dconf restore and extension install routes enforce the exact dconf key without requiring extension schemas. Write/load failures fail honestly; installer and updater re-pinned."
-   ]
-  },
-  {
-   "version": "3.7.13",
-   "changes": [
-    "Blur My Shell Popup blur is OFF for fresh or unset settings. The extension-settings restore preserves an existing explicit ON or OFF choice for /org/gnome/shell/extensions/blur-my-shell/popup/blur; other bundled settings are unchanged.",
-    "Uses dconf before extension schema installation, with read/restore failures reported rather than overwriting an unknown choice. apply_dconf version is 3.7.13; install.sh re-pinned, bootstrap and updater unchanged. No unrelated audit items changed."
-   ]
-  },
-  {
-   "version": "3.7.12",
-   "changes": [
-    "Use DNF5 group install for multimedia and the workstation recovery suggestions. Multimedia failures remain visible and fail the step without stopping later installer steps; repo, codec and exhausted ffmpeg fallback failures also retain honest retry status.",
-    "Only approved Tier 2 #19 changed. install_rpmfusion version is 3.7.12; install.sh re-pinned, bootstrap and updater unchanged. No live package operations performed."
-   ]
-  },
-  {
-   "version": "3.7.11",
-   "changes": [
-    "Flatpak icon lookup: merge hicolor declarations for 48x48/apps, 256x256/apps and scalable/apps, including complete size/context/type sections. Existing theme metadata, custom directories, sections and comments are preserved. Unsafe or malformed indexes fail without clobbering them.",
-    "Initial icon installation, final Flatpak mirroring and refresh icons share the same merge. Local hicolor paths respect absolute XDG_DATA_HOME; caches refresh even when only declarations changed. Cache failure remains noncritical. install.sh re-pinned; bootstrap.sh and update.fish unchanged. Theme/icons, configs and finalize versions use 3.7.11 to reach existing and legacy installs. Other audit items are unchanged."
-   ]
-  },
-  {
-   "version": "3.7.10",
-   "changes": [
-    "Declined optional video downloads stay silent, without changing progress accounting. Optional videos remain available through update videos; requested download output and errors are unchanged."
-   ]
-  },
-  {
-   "version": "3.7.9",
-   "changes": [
-    "Old-terminal removal preserves system terminal binaries and verifies that the Ptyxis package actually disappeared before reporting success. Declining removal still leaves it untouched.",
-    "Firefox is closed only after explicit consent. No consent or no terminal safely skips theming; a failed close is bounded to ten seconds and reports failure. A closed Firefox needs no prompt.",
-    "Optional downloaded videos go exclusively into the XDG Downloads subfolder Billie Hot Body (HOME/Downloads fallback). Nested archive videos are flattened safely, archive traversal and links are rejected, existing filenames are preserved, and only newly installed files receive fresh timestamps.",
-    "The installer no longer runs automatic DNF autoremove. GDM engine pinning and Fedora asset removal are unchanged. install.sh re-pinned; bootstrap.sh and update.fish unchanged. Affected step versions use 3.7.9 to remain above legacy overall-version step records; the legacy-first gate and environment priority are unchanged."
-   ]
-  },
-  {
-   "version": "3.7.8",
-   "changes": [
-    "Preserve system terminal binaries: setup_terminal no longer replaces /usr/bin/gnome-terminal or /usr/bin/x-terminal-emulator with Kitty symlinks, regardless of the old-terminal removal answer. Kitty remains selected through the existing GNOME settings and desktop entry.",
-    "install.sh re-pinned; bootstrap.sh and update.fish unchanged. setup_terminal bumped to 1.1. Previously replaced executables are not automatically recovered: package restoration requires a separate, reviewed repair. The independent remove_ptyxis cleanup is unchanged."
-   ]
-  },
-  {
-   "version": "3.7.7",
-   "changes": [
-    "THE KTHEME WATCHER IS OPT-IN — install.sh used to enable and start ktheme-watcher.service on every install, so kitty re-themed itself from the wallpaper whether you wanted it or not. A fresh install now installs the unit but leaves it disabled and stopped; the step reports \"off by default\" and tells you to run: ktheme on. An install where you had already enabled the watcher keeps it enabled and running — the installer never turns it off for you. The check also recognizes the default.target.wants symlink when no user manager is reachable, and an enabled-but-unstartable watcher fails the step instead of claiming success.",
-    "`update configs` follows the same rule: it copies the unit and starts it only when it is already enabled, never enables it. install.sh and update.fish changed, so install_sha256 and update_sha256 were re-pinned; bootstrap.sh is untouched. No step version was bumped — existing installs keep their current watcher state exactly."
-   ]
-  },
-  {
-   "version": "3.7.6",
-   "changes": [
-    "THE DESKTOP WALLPAPER IS NOW A QUESTION — install.sh used to set the Himeno desktop wallpaper automatically on every run of the wallpaper step, with no prompt and no way to decline. A new DESKTOP WALLPAPER box asks once per manifest version (default Yes). Answer No and picture-uri is left exactly as it was; the wallpaper files are still installed so the Himeno image stays available in the GNOME picker. `update wallpaper` passes INSTALL_DESKTOP_WALLPAPER explicitly and is never prompted.",
-    "The answer is saved as wallpaper_desktop and only when the question was actually asked, so a targeted update cannot overwrite a saved No. install.sh changed, so install_sha256 was re-pinned; update.fish and bootstrap.sh are untouched. apply_wallpapers was bumped to 1.3 so existing installs re-run it and see the question."
-   ]
-  },
-  {
-   "version": "3.7.5",
-   "changes": [
-    "FISH CONFIG IS NOW USER-OWNED — install.sh and update configs no longer overwrite ~/.config/fish/config.fish. Project settings (fastfetch, starship, TERM/TERMINAL, ANI_CLI_PLAYER and the kitty socket hardening) are installed as conf.d/50-fedora-mactahoe.fish, which fish sources before config.fish, so aliases, environment variables, functions and startup commands survive every install and update. A pre-3.7.5 config.fish is left untouched; the duplicate project block is reported, never edited. uninstall.sh removes the snippet.",
-    "CUSTOM KEYBINDINGS ARE MERGED, NOT REPLACED — the ten MacTahoe shortcuts are added to the existing custom-keybindings list instead of replacing it. Existing paths and occupied slots are preserved byte-for-byte, a key combination already in use is reported and left alone, and a failed write leaves the slot unlisted so the next run reuses it instead of creating a duplicate. New users still get every default.",
-    "GNOME EXTENSION CHOICES ARE PRESERVED — enabled-extensions and disabled-extensions are merged instead of overwritten. Extensions you enabled stay enabled; an extension you explicitly disabled is never re-enabled (the conflict is reported). The Fedora defaults are moved to disabled only when enabled-extensions is still the schema default, so a fresh install hides them and a user who enabled one keeps it. Window Title Pro uses the same merge.",
-    "/etc/dnf/automatic.conf IS MERGED, NOT REWRITTEN — administrator settings, comments, mode and ownership are preserved; only commands.upgrade_type=security, download_updates=yes and apply_updates=no are enforced, and emitters.emit_via=motd is added only when unset. The result is validated before an atomic, no-clobber publish; a symlinked or concurrently changed file is preserved and the step fails instead of guessing.",
-    "install.sh and update.fish changed, so install_sha256 and update_sha256 were re-pinned; bootstrap.sh is untouched. apply_configs, apply_dconf, install_updater and install_extensions step versions were bumped so existing installs re-run exactly those steps. Because latest_version moved to 3.7.5, saved prompt answers are re-asked once on the next run."
-   ]
-  },
-  {
-   "version": "3.7.4",
-   "changes": [
-    "Preserve other systemd-logind drop-ins when installing our override.",
-    "Stage RPM Fusion downloads privately and remove only those files; never wipe /tmp/*.rpm.",
-    "Replace installer edits to /etc/sudoers with a root-staged, visudo-validated, commented-only /etc/sudoers.d/90-fedora-mactahoe template. Existing targets and sudo policy are preserved; passwordless sudo is not enabled.",
-    "install.sh re-pinned; bootstrap.sh and update.fish unchanged. Other audit items remain pending."
-   ]
-  },
-  {
-   "version": "3.7.3",
-   "changes": [
-    "FAILED STEPS NOW RETRY — a step that failed was still recorded with the version of an earlier successful run, so once finalize() wrote the overall version the next run skipped it forever. A failed step is now removed from install-state.json, which makes _step_should_run() fall back to 0.0 and retry exactly that step. The overall version, the install date and every saved prompt answer are preserved; a corrupt state file is left untouched and reported instead of being overwritten.",
-    "TWENTY STEPS AND THE FLATPAK ICON MIRROR NO LONGER RETURN A FALSE OK — a broken theme, a missing SF Pro font, a GDM apply that never changed the login screen, a failed Flatpak runtime, missing extensions, an empty wallpaper pack, failed avatar copies, a missing sound theme, a dead updater timer, an inactive wallpaper watcher, a failed chsh, a failed dconf apply, failed desktop-entry copies, failed browser installs, failed RPMs or failed Flatpak installs could still be recorded as installed after printing a warning. Those steps now return non-zero, _run_step() records them as failed, clears their saved version and the next run retries them. The Flatpak icon mirror reports its failures too, but finalize() still warns and completes because icons are cosmetic. Every success path was re-tested, including the deliberate GDM and +18 skip paths.",
-    "UPDATE <TARGET> NOW REPORTS THE TRUTH TOO — update icons, theme, fonts, gdm, gtk, sounds, services, defaults, dconf, notifier, extensions, wallpaper, pfp and videos used to call the step directly and record it as ok no matter what the step returned, then exit 0. The targeted runner now checks the exit code, records a failed step as failed, clears its saved version and exits non-zero, so the updater log and the command result agree with what actually happened.",
-    "install.sh changed, so install_sha256 was re-pinned. update.fish and bootstrap.sh are untouched and keep their hashes. Because latest_version moved to 3.7.3, saved prompt answers are re-asked once on the next run, exactly as the per-release prompt rule says."
-   ]
-  },
-  {
-   "version": "3.7.2",
-   "changes": [
-    "THE LOGIN PROMPT NOW DOES WHAT IT SAYS — answering Yes to LOGIN SCREEN WALLPAPER? used to change nothing: the prompt and the step were gated separately, so setup_gdm could be skipped while the box promised it would run. A Yes answer now forces the step, and the login screen is applied with the runtime engine (FedoraTahoe-GDM) instead of upstream tweaks.sh. The engine exit code is checked and the gresource is hashed before and after — no more green OK after a silent failure.",
-    "PROMPTS ASK AGAIN — saved answers were sticky forever because _prompt_should_ask() ignored PR_VER. An answer saved by an older release is now re-asked once per release; a same-version answer stays silent. The login prompt and the firewalld prompt reappear after this update.",
-    "REMOVE OLD TERMINAL? IS BACK — the prompt was deleted in 3.7. It is restored and appears only when Ptyxis is actually installed (rpm, command or flatpak). Answering Yes forces remove_ptyxis to run even when the step is already recorded. No Ptyxis means no prompt.",
-    "gdm default NO LONGER HANGS — the Himeno rainbow flourish was a while-true loop with no exit. It now runs two cycles and returns. The wallpaper was being applied correctly all along; the command just never came back.",
-    "install.sh changed, so install_sha256 was re-pinned. update.fish and bootstrap.sh are untouched and keep their hashes."
-   ]
-  },
-  {
-   "version": "3.7.1",
-   "changes": [
-    "THE LOGOUT PROMPT IS GONE — update icons, theme, fonts, extensions, gdm, wallpaper and gtk used to end with an 11-line LOG OUT NOW box and a y/n question. The command now finishes and returns. The per-target help still says when a logout helps, so the information is kept and the question is not asked.",
-    "update.fish changed, so update_sha256 was re-pinned. install.sh and bootstrap.sh are untouched and keep their hashes."
-   ]
-  },
-  {
-   "version": "3.7",
-   "changes": [
-    "THE INSTALLER NO LONGER DIES ON A BAD STEP — a failing step is captured instead of aborting the run. The step is recorded as failed, the install continues with the next one, and the piece is listed at the end with the exact command that adds it. A failed step is NOT written to install-state.json, so the next run retries exactly what did not finish. Preflight stays fatal: a machine that is not a supported target has nothing to continue with.",
-    "NINE QUESTIONS BECOME TWO — Discord, the desktop wallpaper, the optional wallpaper packs, the video edits and the removal of the old terminal now have a default instead of a question. The GDM login screen keeps its question (the 'ARE YOU SURE?' box right after it is gone) and firewalld keeps its question, because it changes what the machine does. The defaults are applied after the saved answers are loaded, so a saved choice or an env var from `update` still wins — the defaults only fill the gaps. The optional extras stay reachable through `update`.",
-    "THE SUMMARY TELLS THE TRUTH — Status is Incomplete when a step failed, the step count is the real count (ran / skipped / failed), the RPM and Flatpak numbers are measured instead of hardcoded, and the theme, font and shell lines follow the step they came from: a step that failed is never reported as installed. The unverifiable 'Browsers:' line is gone.",
-    "NEW MISSING PIECES BLOCK — every piece that is absent is listed with the command that adds it later. Only pieces that were actually attempted and failed are listed; an optional extra that was deliberately left out is not 'missing'.",
-    "HOSTED LINKS ARE CHECKED, NOT ASSUMED — the extra wallpaper packs, the extra profile pictures and the video edits live on Google Drive, which answers a dead link with an HTML error page. A HEAD request now reports the state of a link before anything is downloaded. The check is informational and never blocks the install.",
-    "WHEN A HOSTED LINK IS DEAD AND THE USER ASKED FOR THAT ASSET, the installer asks once whether to continue without it, and the download is skipped instead of attempted again. The piece is reported as missing either way.",
-    "A DOWNLOAD THAT CANNOT SUCCEED SAYS SO WHERE IT HAPPENS — what failed, that the hosted file is gone, and the command that adds the piece later. The piece is listed in MISSING PIECES.",
-    "ALL FOUR git clone CALLS GET A 120 SECOND TIMEOUT — a hung clone used to hang the whole install.",
-    "`update videos` ALWAYS ASKS — it used to read a saved answer that the installer no longer creates, so the command was a dead end. It now asks, exactly like `update services` already does for firewalld.",
-    "The installer exits non-zero when a step failed, after the summary has told the user what is missing.",
-    "install.sh and update.fish changed, so install_sha256 and update_sha256 were re-pinned. bootstrap.sh is untouched and keeps its hash."
-   ]
-  },
-  {
-   "version": "3.6",
-   "changes": [
-    "GNOME 51 SUPPORT (Fedora 45) — Window Title Pro is now installed from its GitHub release instead of extensions.gnome.org. This is the change that makes the extension actually work on GNOME 51: the shell refuses to enable an extension whose metadata does not list the running shell version, and the EGO copy still said 45-50. The GitHub release is published with the source tag, so it always carries the newest shell-version metadata; EGO stays as the fallback.",
-    "Window Title Pro v15 — metadata.json gains shell-version \"51\" (extension version 14 -> 15). Every breaking change in the GNOME 51 porting guide was audited against the source and none of them needed a code change: Shell.GLSLEffect, ui/pointerWatcher.js, the St \"vertical\" property, async disable(), Gio.DBus.makeProxyWrapper(), Clutter.get_default_backend(), St.ButtonMask and the popupMenu open()/close() parameters object are all unused.",
-    "Window Title Pro v15 also honours the GNOME 51 reduced-motion setting (St.Settings.get().reducedMotion vs St.ReducedMotion.REDUCE) — the fade animations are applied instantly when the user asks for reduced motion. St.Settings and St.ReducedMotion do not exist on GNOME 45-50, so the lookup is guarded and older shells animate exactly as before.",
-    "The install_extensions step is bumped 1.7 -> 1.8 so machines re-run it and pick up Window Title Pro v15. Only install.sh changed, so only install_sha256 was re-pinned; bootstrap.sh and update.fish are untouched and keep their hashes.",
-    "EGO note for the owner: the v15 zip still has to be uploaded to extensions.gnome.org by hand (there is no API token on this machine). Until then the GitHub path in install.sh is what delivers GNOME 51 support — it works today, the EGO upload is a redundancy, not a blocker."
-   ]
-  },
-  {
-   "version": "3.5.7",
-   "changes": [
-    "THE GDM BUG — 'gdm <image>' and 'gdm current' never changed the login screen. The prepared wallpaper (the JPEG conversion or the blurred copy) was deleted from the private cache three lines BEFORE the wallpaper engine read it, so the engine aborted with \"image file not found\" while gdm still printed \"GDM wallpaper updated!\". The cache is now cleaned only after the engine has read the file",
-    "gdm no longer reports a false success — the engine's exit code is checked, a failed apply reports the error and returns non-zero, and a missing prepared image is caught before the engine is even called",
-    "gdm protect on had never worked on any machine: restore.sh was committed to the FedoraTahoe-GDM repo without the executable bit, so the \"engine required\" check always failed and the boot-time wrapper could not exec it. The bit is fixed in the repo and both engine scripts are made executable after every clone and refresh",
-    "GDM engine v3 — the login theme bundle compile is now verified: a failed compile no longer leaves the stock bundle in place while reporting success. restore.sh also normalises the wallpaper through ImageMagick like the engine does, so a restored bundle is pixel-identical to an applied one",
-    "gdm now detects a stale wallpaper engine (new ENGINE_VERSION marker) and pulls the fix on machines that already have an older clone. The clone is staged and swapped in only after it succeeds, so a failed download can no longer destroy a working engine",
-    "The wallpaper engine quotes every path it passes to ImageMagick and cp — wallpapers with spaces in the name (e.g. \"Wallvault Wallpapers + 18/22.jpg\") were being word-split",
-    "Fixed the stray '%%' in the JPEG-conversion and blur messages"
-   ]
-  },
-  {
-   "version": "3.5.6",
-   "changes": [
-    "HOTFIX — the installer no longer dies at step 4 (RPM Fusion + Codecs). mirrors.rpmfusion.org had started redirecting release-RPM downloads to dead mirrors (ftp.cc.uoc.gr times out, repos.eggycrew.com no longer resolves), and a single dead mirror aborted the whole dnf transaction — which, under set -e, killed the install at 4 of 29",
-    "The release RPMs are now downloaded from a healthy mirror list (download1.rpmfusion.org first), verified to be real packages, and installed as local files — no metalink, no random redirect, no dead mirror",
-    "The RPM Fusion repos are marked skip_if_unavailable, so one broken mirror inside the metalink set can never abort a dnf transaction again",
-    "The step no longer blocks the install: if RPM Fusion or the codec packages are unreachable, the installer warns and continues with the rest of the theming instead of stopping dead",
-    "Hardened every remaining fatal dnf transaction the same way — the NVIDIA driver set, the ~50-package bulk set, Firefox and VS Code now warn and continue instead of stopping the install",
-    "The bulk package set now falls back to a one-by-one retry and names the exact packages that were unavailable (package names change between Fedora releases), and the load-bearing ones (kitty, fish, fastfetch, ImageMagick, fzf) are verified afterwards so a silent gap cannot break later steps",
-    "Fixed two misaligned rows in the main 'update help' box (update quick was 1 column over, update uninstall was 8 over) — every rendered row is exactly 66 columns again",
-    "Step install_rpmfusion bumped to 1.1 so every machine re-runs it on the next update"
-   ]
-  },
-  {
-   "version": "3.5.5",
-   "changes": [
-    "GDM WALLPAPER PROTECTION — gdm protect on installs a boot-time auto-restore (systemd unit + system-wide restore wrapper) so your login wallpaper survives every GNOME update and theme refresh. gdm protect status shows restore engine, saved wallpaper, boot service and last restore result; gdm protect off removes it cleanly",
-    "gdm reload — re-apply your saved GDM wallpaper after any update, and gdm info — a full details box for the last applied wallpaper (file, image info, resolution, source) with private paths hidden as 'Local storage'",
-    "Smarter gdm search & preview — searches 13 user folders system-wide, shows a Kitty inline image preview before applying, a picker when several files match, and a blur preview loop you can retry until you like it",
-    "Fixed every emoji box edge in gdm — VS16 emoji rows (protect/info titles) were 1 column short, plain emoji rows (help, save, blur sections) 1 column over, and two lines poked past the box: all boxes now render perfectly aligned",
-    "refresh is far more reliable — per-step hard timeout (300s default) so a hung step can't stall the whole refresh, a stale flatpak-lock preflight, and a fix for a false ❌ on every step (process-group timeout kill)"
-   ]
-  },
-  {
-   "version": "3.5.4",
-   "changes": [
-    "update wallvault: hand-rolled boxed progress bar replaces curl --progress-bar — animated 'Downloading…' title, 52-char bar with real percent, MB-of-MB totals from a HEAD size probe, and live MB/s; painted only on a real terminal (piped runs stay clean)",
-    "New Apple-style flow: Wallvault. intro box (with a +18 heads-up), spaced big-digit YOUR CODE gate, and a 'WALLVAULT — READY' outro with the wallpaper count and path — closer: 'Enjoy the view.'",
-    "UI copy no longer mentions mechanics (no 'progress bar'/'authorization code' language) in help or usage rows",
-    "Fixed fish math fractions breaking the bar fill (string repeat: invalid integer) — all bar math now truncates with math -s0"
-   ]
-  },
-  {
-   "version": "3.5.3",
-   "changes": [
-    "update wallvault: the archive decryption key is now baked in and applied automatically in the background — the user is never asked for it and never sees it; the one-time authorization code remains the only credential",
-    "Download now shows a live progress bar (curl --progress-bar) instead of the braille spinner",
-    "Encryption is detected via 7z listing (no password round-trip); plain archives verify with no key at all",
-    "Help/usage copy cleaned up (no key language); 'update wallvault pass <key>' remains as an optional override for custom endpoints",
-    "Fixed 1-char overflow on the 'update wallvault <url>' help row (was <link>, 23 chars > 22-col name column)"
-   ]
-  },
-  {
-   "version": "3.5.2",
-   "changes": [
-    "HOTFIX — update wallvault is repaired: the vault archive is AES-256 encrypted (compression method 99), which Info-ZIP's unzip cannot verify or extract — every run died with 'The download is not a valid zip' even though the payload was intact. The deployment now uses the 7-Zip backend (7z): full integrity verification, decryption with the archive key, and extraction are handled natively",
-    "New: update wallvault pass <key> stores the archive decryption key in ~/.cache/fedora-mactahoe/wallvault.conf (chmod 600); without a stored key the tool prompts silently (no echo) at run time. update wallvault <link> [key] registers a custom endpoint and optionally the key in one call",
-    "Hardened transfer: HTTP errors now fail the download (curl -f), transient interruptions auto-retry (3 attempts) plus one full automatic retry of the entire transfer, and a truncated payload is caught by the 7z integrity test instead of producing misleading errors",
-    "Clear failure diagnostics: wrong decryption key vs corrupt payload vs missing 7zip backend are now reported as distinct errors with the exact remedy",
-    "Professional-grade output: all wallvault UI copy was rewritten in a corporate/data-center register — asset bundle, authorized transfer, integrity verification, staging, credentials persisted, operation aborted",
-    "7zip added to the RPM Packages step (step bumped so every machine installs it on the next update)"
-   ]
-  },
-  {
-   "version": "3.5.1",
-   "changes": [
-    "HOTFIX — the ( TAG ) now lands in the log filename on EVERY path. 3.5 stamped install.sh-created logs, but the bootstrap one-liner (curl|bash) creates the log itself and hands it to the installer — so those files came out untagged. Bootstrap now computes the same tag (BASH for the one-liner, UPDATE-FULL / UPDATE-QUICK when the updater drives it) and stamps it into its own log name, keeping filename and installer header consistent",
-    "update quick dropped its 8-second loading ritual — quick means quick. It now runs exactly like menu [1]: straight to the incremental update, no prompts, no spinner",
-    "Both fingerprints re-pinned (bootstrap.sh and update.fish changed)"
-   ]
-  },
-  {
-   "version": "3.5",
-   "changes": [
-    "Every install/update run now stamps WHO ran it into the log filename: FedoraTahoe_log.<date>.<time>.<ID> ( TAG ).txt — ( BASH ) for the curl|bash one-liner, ( MANUAL ) for running install.sh directly, ( UPDATE-QUICK ) / ( UPDATE-FULL ) / ( UPDATE-CONFIG ) and one tag per target (UPDATE-ICONS, UPDATE-THEME, UPDATE-FONTS, UPDATE-SOUNDS, UPDATE-EXTENSIONS, UPDATE-GDM, UPDATE-WALLPAPER, UPDATE-PFP, UPDATE-GTK, UPDATE-VIDEOS, UPDATE-SERVICES, UPDATE-DEFAULTS, UPDATE-DCONF, UPDATE-NOTIFIER, UPDATE-CLEAN, UPDATE-WALLVAULT) for the updater",
-    "The same tag appears in the log header box (new Method row), is saved into install-state.json (source field) and shows up in the update log history — one quick look tells you how every run was started",
-    "New command: update quick — the incremental update with your saved answers, no prompts, straight from the shell (identical to menu [1])"
-   ]
-  },
-  {
-   "version": "3.4",
-   "changes": [
-    "HOTFIX — installs no longer die at 'RPM Packages'. Two codec package names in the v3.2 driver batch did not exist on Fedora 44 (gstreamer1-plugins-good-extra and gstreamer1-plugins-bad): dnf rejected the whole 43-package transaction, so every fresh install and every update rerun of that step stopped with 'No match for argument'. They're replaced with the real packages — gstreamer1-plugins-good and gstreamer1-plugins-bad-free (with -freeworld and -free-extras already installed from the RPM Fusion step) — and the full transaction was dry-run verified to resolve: 43 names, all found, zero errors",
-    "Step version bumped so every machine re-runs the repaired RPM Packages step on the next update"
-   ]
-  },
-  {
-   "version": "3.3",
-   "changes": [
-    "New: update wallvault (aliases: update wall, update w) — the 500+ wallpaper vault, downloaded right from your terminal",
-    "Free and private: a one-time 6-digit code is shown in the terminal (no email, no account), you type it and the ~623 MB vault downloads behind a live braille spinner — then it's verified, unzipped and landed in ~/Downloads/Wallvault-Pack, temp files cleaned up",
-    "Safe by design: 3 code attempts with a 10-minute expiry, Ctrl+C aborts the download and leaves nothing behind",
-    "Custom link: update wallvault <google-drive-link> points the vault at any file you own — the link is saved in your private cache (chmod 600) and used for every future download",
-    "update wallvault help box added to per-target help, the usage box and the menu ([16] wallvault)"
-   ]
-  },
-  {
-   "version": "3.2",
-   "changes": [
-    "Your settings are safe forever — installs and updates no longer overwrite your personal config: PATH lines you added to fish (set -gx PATH, fish_add_path, fish_user_paths) are migrated once into conf.d/50-user-path.fish and never touched again. The opencode-style path wipe is gone",
-    "Kitty gained user.conf — a file of your own that installs and updates never touch; put anything you like there and it survives every refresh, always winning over the theme",
-    "Media & hardware drivers built in: Intel Media Driver + VA-API (hardware video on Intel/AMD), the full GStreamer codec suite (libav + good-extra + bad + ugly), Mozilla OpenH264, ALSA SOF firmware for modern laptops",
-    "Storage & sharing: NTFS-3G read/write for Windows drives, Samba client + CIFS utils so the smb function works out of the box",
-    "Printing: cups-filters + HPLIP driver stack",
-    "Emoji picker: Super+. opens GNOME Characters — pick emoji anywhere, no setup needed",
-    "update.fish re-pinned with a fresh fingerprint"
-   ]
-  },
-  {
-   "version": "3.1",
-   "changes": [
-    "Per-target help: update <target> help shows a dedicated box for every part of the update — what it does, what it asks, its flags and whether a fresh session is needed. update help <target> works too, and the main help lists both. 16 targets covered (icons, theme, fonts, sounds, extensions, gdm, wallpaper, pfp, gtk, videos, services, defaults, dconf, notifier, clean, menu). Read-only: never prompts, never downloads, never touches your setup"
-   ]
-  },
-  {
-   "version": "3.0",
-   "changes": [
-    "HEIC image support — now built in. Fedora MacTahoe 3.0 introduces native HEIC/HEIF decoding: open Apple's photo format directly in your GNOME Image Viewer, see thumbnails in Files, and convert anytime with heif-convert. No new apps, no viewer changes — your iPhone photos just work. Powered by libheif-freeworld (RPM Fusion free, already enabled by the installer) plus the heif-tools conversion suite. Fresh installs get it out of the box; existing setups can grab it with: sudo dnf install libheif-freeworld libheif-tools"
-   ]
-  },
-  {
-   "version": "2.9",
-   "changes": [
-    "update wallpaper and update pfp now offer a Both option: pick 3 in the pack picker to wipe BOTH packs (normal + +18 folders and XMLs) and re-download them fresh in one go",
-    "update wallpaper both also works as update wallpaper both — same for pfp",
-    "help box gained update wallpaper both / update pfp both rows"
-   ]
-  },
-  {
-   "version": "2.8",
-   "changes": [
-    "update services now ALWAYS asks about firewalld — it checks the live state first (FIREWALLD IS RUNNING / FIREWALLD IS OFF box) and asks every time instead of silently reusing the saved answer",
-    "turning firewalld OFF is now the default everywhere: pressing Enter in update services or the installer's firewalld question disables it (was No/keep before)",
-    "the installer's firewalld prompt now defaults to Yes — press Enter to disable and save ~30-50 MB"
-   ]
-  },
-  {
-   "version": "2.7",
-   "changes": [
-    "fix update wallpaper / update pfp ignoring your pick: the saved answer from the original install (+18) was overriding the choice you make in the picker, so picking Normal still downloaded the +18 pack. Env vars passed by update <target> now always win over saved answers (saved answers still apply on full installs and when the target passes nothing)",
-    "same fix protects update gdm, update videos and update services — their forced settings can no longer be overridden by an old saved answer"
-   ]
-  },
-  {
-   "version": "2.6",
-   "changes": [
-    "fix incremental updates getting stuck: a machine installed on an older version stored per-step versions as that overall version (e.g. 2.2), which is higher than today's per-step manifest values (1.x) — every step was skipped and the version never moved. Now an older overall version forces all steps to re-run, then normal per-step gating resumes"
-   ]
-  },
-  {
-   "version": "2.5",
-   "changes": [
-    "update help redesigned: gradient title, diamond section tags, aligned two-column command table (bold white names, bold gray descriptions), tag-cloud toolbox, divider footer",
-    "all help text is now bold so it stays readable on light auto-theme backgrounds",
-    "fixed command-row width so the box right edge is a straight line"
-   ]
-  },
-  {
-   "version": "2.4",
-   "changes": [
-    "the recovery warning is now BIG and bold: a red ERROR/RESCUE/WARNING banner replaces the fish welcome when the config is missing, and the instructions are bold",
-    "the guard message is refreshed on existing machines automatically via update configs (same marker-replace mechanism)"
-   ]
-  },
-  {
-   "version": "2.3",
-   "changes": [
-    "- A tiny system-wide rescue detector now guards 'update': if ~/.config/fish/functions/update.fish is ever deleted, the /etc copy detects it, explains the missing dependencies and offers to download the latest update function (yes is the default, 5 tries, fingerprint-verified) — the updater never runs until the user copy is restored",
-    "update configs replaces the old system-wide copy with the rescue detector — /etc/fish/functions/update.fish is now the tiny detector, the full updater lives only in ~/.config/fish/functions/",
-    "- update configs now refreshes the did-you-mean command handler in /etc too — a wiped fish config still suggests command fixes (it was the only nice thing missing after a reset)",
-    "- no more silent skips: when the sudo cache is cold, update configs pops the polkit password dialog (pkexec) once and copies the system-wide fish helpers (rescue detector + did-you-mean handler) anyway — cancel and it tells you it skipped",
-    "- the did-you-mean fallback loads from /etc/fish/config.fish whenever your own handler file is gone (fish won't autoload event handlers from /etc by itself) — wiped configs still suggest command fixes",
-    "- the recovery warning in every terminal is now plain language: 'type update, press Enter' — no more wall-of-text one-liner (update configs refreshes it on existing machines too)"
-   ]
-  },
-  {
-   "version": "2.2",
-   "changes": [
-    "Quick updates are now truly quiet — no more questions: your saved answers are reused (Discord, wallpapers, videos) once you've answered them once",
-    "- Picker validation messages (Invalid/Cancelled) now go to stderr, keeping command-substitution output pure",
-    "- update wallpaper add / update pfp add (also --add, -add) install the other pack alongside — without the flag the chosen pack replaces the other (folder + XML)",
-    "All setup prompts moved from bootstrap into the installer — bootstrap is just the start button now: splash, verify, download, hand off",
-    "Discord's answer is now saved too (it was the only prompt without persistence)",
-    "Bootstrap no longer prints its own system-info box — the dashboard shows once, from the installer",
-    "Bootstrap no longer prints its own SECURE TUNNEL box — the tunnel shows once, from the installer",
-    "Tunnel location is hidden — a generic 'Location: Secure' row instead of fake CDN node details",
-    "The installer download now shows a live progress bar — the clone runs quietly in the background, no more raw git text",
-    "The download progress bar now matches the updater's loader — braille spinner, rotating status, [███░░░] bar with real percent (re-pinned bootstrap fingerprint)",
-    "Fixed the download progress bar crashing on the first tick (grep no-match tripped the ERR trap under set -euo pipefail); percent now only moves forward",
-    "Fish config backups keep the same 5-snapshot limit as dconf (was 10) — 6th and older auto-deleted on every config apply",
-    "The start screen waits 60 seconds max — no key press and bootstrap closes itself (just run it again when you're ready)",
-    "Closing bootstrap early (Ctrl+C forced exit or the 60s auto-close) leaves no log behind — the temp log is deleted, since nothing ran",
-    "Running install.sh directly now behaves the same: every wait and yes/no question auto-closes after 60s of silence, and closing it early (Ctrl+C twice or the timeout) deletes the log too",
-    "A closed installer is no longer reported as a failure — the updater says 'closed before finishing' and you just run it again when ready",
-    "Fixed the crooked log-header box (blank rows and data rows now line up with the 62-wide border) and the 'More from Eprahemi' box (links no longer poke past the right edge)",
-    "The kitty one-liner no longer bursts out of its box — it's now shown as a clean code line under both warning boxes (bootstrap + installer)",
-    "Deep-scan cleanup: removed dead code (unused _save_prompt_answers_all, stray _rc captures, unused PINK color in bootstrap) and re-pinned the bootstrap fingerprint",
-    "Fixed kitty terminal boxes: ✦/⚠ title rows padded correctly for narrow glyphs; removed leftover over-padding on the \"Press any key\" rows",
-    "The update menu no longer lists every step that will re-run — just what's new, then the choice. Cleaner.",
-    "Fixed the progress bar showing '�' blocks — the bar builder used tr (byte-based, mangles multi-byte █); now built with string concat like install.sh's sed bars, byte-perfect in any locale",
-    "MacTahoe GTK source is now vendored in the repo (vendor/MacTahoe-gtk-theme) — if the upstream repo is ever deleted or unreachable, the theme still compiles fresh for your GNOME version, and GDM + Firefox theming still work via the vendored tweaks.sh",
-    "The firewalld question moved up front — it now appears with the Discord/wallpaper/video prompts before Phase 1, so the installation never pauses mid-flow; the actual disable (or keep/enable) still happens in the 'Disable RAM-wasting Services' step, and your answer is saved like the others",
-    "update menu — per-target toolbox: re-run a single part of the setup with update <target> (icons, gtk, extensions, wallpaper, pfp, theme, fonts, sounds, videos, services, gdm, defaults, dconf, notifier, clean) — no full reinstall needed",
-    "update <target> asks about logging out when the change needs a fresh session — per-target reason in the box (theme/gtk/extensions/gdm/wallpaper/icons/fonts), strict y/n with no default so Enter alone never logs you out",
-    "Every update fetch now shows a live braille spinner while cloning — same style as the installer's loader, no more static 'Fetching...' text",
-    "Ctrl+C is now safe everywhere: cancelling mid-install or mid-fetch prints '✘ Cancelled — nothing was changed.', never touches your setup, and cleans up the temp files",
-    "Fixed the download spinner never noticing a failed clone (fish's wait always reported success) — git's real exit code is read from the temp bundle now, so connection errors are reported honestly",
-    "Self-healing 'update' command — if update.fish is ever deleted (say, a wiped fish config), the boot + 2-hour updater timer restores it automatically, fingerprint-verified against the pinned sha256 so unverified code is never installed",
-    "System-wide rescue copy — the installer keeps a root-owned copy of update.fish outside your home folder: even with the entire fish config wiped, the 'update' command still answers",
-    "update configs now refreshes every config location — kitty, fish (config + all 40 functions), starship, GTK, fastfetch, systemd units AND the update notifier (script + timer): every folder is created if missing, every file overwrites if present, and your fish config is auto-backed up before any override",
-    "update configs also keeps the system-wide rescue copy current — done silently, without asking for a password or printing anything extra",
-    "update configs no longer leaks ktheme's raw error if the wallpaper file ever goes missing — the live re-theme is fully silent now",
-    "update configs confirms with '✓ Rescue copy (system-wide) updated.' only when the system-wide copy was actually refreshed (warm sudo window); with no cached credentials it stays silent and skips"
-   ]
-  },
-  {
-   "version": "2.1",
-   "changes": [
-    "Security hardening pass — the full audit is in:",
-    "Verified update chain — installs are fingerprint-checked, tamper-proof downloads, a trust prompt the first time, hard refusal on any mismatch",
-    "Your settings are safe — a full dconf snapshot is saved before anything touches your GNOME settings (restore with one command)",
-    "gdm wallpaper switching no longer uses shared /tmp — everything stays in your private cache",
-    "Kitty control sockets are private now — no other user can connect to your terminal",
-    "Automatic security downloads — patches download in the background nightly (never installed without your say-so)",
-    "Backup snapshots are private too — folder and files locked to you only"
-   ]
-  },
-  {
-   "version": "2.0",
-   "changes": [
-    "Fish config safety net — every config refresh auto-backups your live fish folder first (last 10 snapshots kept)",
-    "The can't-lose-it guard — a root-owned warning in the system fish config: if your fish config is ever deleted, every terminal shows the exact one-line recovery"
-   ]
-  },
-  {
-   "version": "1.9",
-   "changes": [
-    "Kitty follows your wallpaper — ktheme pulls the colors out of your desktop picture and re-themes every kitty window, live. A quiet background watcher does it automatically every time the wallpaper changes (ktheme on/off to control it)",
-    "Kitty Colorful Edition — a fresh full palette, interactive kittens (ctrl+shift+f4 themes, ctrl+shift+d diff) and remote control from any terminal",
-    "hint — a little teacher in your terminal: shortcuts, functions, the palette, and live demos, all in one menu",
-    "fastfetch shows your terminal; old kitty/fastfetch config backups cleaned up"
-   ]
-  },
-  {
-   "version": "1.8",
-   "changes": [
-    "New Fish function: smb — full Samba file sharing manager (setup, users, shares, passwords, data export, service control)",
-    "Updated 18+ wallpaper pack with new backgrounds"
-   ]
-  },
-  {
-   "version": "1.7",
-   "changes": [
-    "Window Title Pro Topbar v8 — separator dropdown, font size control, smart row sensitivity, readable shortcuts (Super+Y)",
-    "New Fish functions: kit (Kitty theme toggle), ghlogin (GitHub auth + git config with auto-fetch), pfp (profile picture with cropped preview)",
-    "install.sh: 28 proper steps — Celluloid default player + Nautilus per-folder defaults now tracked steps",
-    "Kitty close warning enabled (confirm_os_window_close 1)"
-   ]
-  },
-  {
-   "version": "1.6",
-   "changes": [
-    "Window Title Pro now installs from GNOME Extensions (EGO) instead of GitHub releases — extension #10319 approved and active"
-   ]
-  },
-  {
-   "version": "1.5",
-   "changes": [
-    "Window Title Pro updated to v4 — fixed-width default now off (set <default>false</default> in gschema)"
-   ]
-  },
-  {
-   "version": "1.4",
-   "changes": [
-    "Window Title Pro updated to v3 — EGO review fixes (destroy(), no try-catch, no gschemas.compiled, no donations)"
-   ]
-  },
-  {
-   "version": "1.3",
-   "changes": [
-    "WTP v2 URL fix: asset is window-title-pro-v2.zip (not window-title-pro.zip)"
-   ]
-  },
-  {
-   "version": "1.2",
-   "changes": [
-    "Window Title Pro v2 — show-title now defaults to off (set <default>false</default> in gschema)",
-    "update.fish ANSI escape fix: replaced echo with printf (Fish echo ignores \\033)",
-    "update.fish read prompt fix: plain text in -P instead of \\e codes",
-    "Update check timer: OnBootSec reduced from 5min to 2min",
-    "Fix 'Update Now' not opening Kitty: replaced nohup+inline with temp launcher script"
-   ]
-  },
-  {
-   "version": "1.1",
-   "changes": [
-    "FRESH START — consolidated baseline for all Fedora MacTahoe features",
-    "Full re-install: bash bootstrap.sh deletes state and runs all 27 steps fresh",
-    "Incremental update: update.fish + 'Update Now' use UPDATE_MODE=incremental",
-    "Version-only updater: notification fires on version bumps, not every commit",
-    "install-state.json: per-step versions + overall install version, atomic writes",
-    "GTK theme compiles for GNOME 47/48, per-step caching",
-    "SF Pro fonts, Big Sur sounds, GDM theme, Firefox userChrome",
-    "Flatpak GTK runtime, Kitty terminal, Fish shell, Dash-to-Dock, UWG, blur",
-    "Kitty-only updater with boot-aware two-cache persistence",
-    "Prompt persistence: answers saved once, never re-asked",
-    "Step versions: apply_configs 1.1, install_updater 1.1, finalize 1.1"
-   ]
-  },
-  {
-   "version": "1.0",
-   "changes": [
-    "INITIAL: Complete Fedora MacTahoe setup — all steps",
-    "GTK theme compiles for GNOME 47/48",
-    "SF Pro fonts, Big Sur sounds, GDM theme, Firefox userChrome",
-    "Flatpak GTK runtime, Kitty terminal, Fish shell",
-    "Dash-to-Dock, UWG, blur extensions",
-    "Update notifier with two-cache persistence (boot-aware)",
-    "MATE terminal family fix (single-string -e syntax)",
-    "Kitty-first terminal detection",
-    "Refresh.fish --chrome flag (Singleton lock clearance)",
-    "Window Title Pro crash fix (a99d9489)"
-   ]
+  "latest_version": "3.7.33",
+  "bootstrap_sha256": "753ee03fdb172b3e45e0400bfa7b6177071bcde5b5b9dc4c1229d841433a1ff9",
+  "install_sha256": "87bfb56c5434ce3086822d6cdd612d1625be95bdbd0381428dceec64f420f701",
+  "update_sha256": "827b2341a932a84cf6fbfe74fd85b93263d7b3560d7368f65ffedd52a670daaf",
+  "uninstall_sha256": "cceaeecce187adf5fb81afe72c3108dc23683141257227333312d929aa84f4cb",
+  "asset_helper_sha256": "4f167843ec030f07034742f9fd70deb4e10e8c4aa15b8f4168ce9da89593d32b",
+  "changelog": [
+    {
+      "version": "3.7.33",
+      "changes": [
+        "Development candidate: keep audited routine installer/package diagnostics private in TTY and plain modes, preserve caller captures, authenticate natively before sudo-n work and never blindly replay a failed package transaction. Unknown upstream theme/GDM/Firefox/Starship scripts and native dependency review remain visible, not recorded as shell source or password input.",
+        "Use checked standalone removal phases, shared local dashboard or embedded plain fallback, private diagnostics, fresh global consent even with --yes and fail-closed EOF. Move exact project user collections to Trash, preserve custom configuration, shared system assets, app data and recovery snapshots; do not sweep temporary/user-file globs or claim unverified restoration.",
+        "Require a published uninstall fingerprint before downloading/executing removal code; validate both uninstaller and UI bytes without extracting an archive. Keep existing typed-word/countdown guards. Legacy four-pin manifests remain readable but cannot authorize removal; new releases require five pins. Native Fedora/Kitty/package/GDM smoke testing remains pending."
+      ]
+    },
+    {
+      "version": "3.7.32",
+      "changes": [
+        "Development candidate: retire only the verified pre-3.7.5 project fastfetch startup call during installer configuration and update configs, leaving the current conf.d snippet as its owner. Preserve all other config.fish bytes, aliases, environment, functions and deliberate custom commands; keep a private original backup and validate Fish syntax without executing startup code.",
+        "Refuse unsafe file targets or failed migration publication. Ambiguous or edited historical blocks remain untouched with a manual-review warning; intentional extra fastfetch commands are not disabled. Native Fedora/Kitty smoke testing remains pending."
+      ]
+    },
+    {
+      "version": "3.7.31",
+      "changes": [
+        "Development candidate: extend the shared waiting/active checklist to quick/full manifest, installer download and fingerprint verification; retain one private log through the foreground bootstrap handoff. Verify targeted installer and sourced bootstrap payloads before child execution.",
+        "Add shared repository preparation and guarded-uninstall work lifecycles; preserve typed removal words, countdown cancellation and native upstream consent. Keep audited noninteractive output private even without a TTY; check/menu fetch diagnostics use private cache logs without artificial waits.",
+        "Extend the same real-work lifecycle to initial app eligibility/status queries, firewall status, Wallvault settings publication, GTK file copies and targeted payload verification. Preserve data-only query results and empty selections; fix the GTK copy loop's read-only Fish variable collision. Stage settings privately without logging archive keys.",
+        "Separate native authentication from noninteractive metadata/journal cleanup and keep updater-owned non-TTY child diagnostics private. Native authentication, Git credential interaction and necessary upstream tooling remain visible and are not universally recorded. Missing/old local UI libraries safely use plain status; native Fedora/Kitty smoke testing remains pending."
+      ]
+    },
+    {
+      "version": "3.7.30",
+      "changes": [
+        "Create bootstrap and direct installer session transcripts privately with mode 0600, independently of the caller's umask; stop before logging if private creation fails.",
+        "Correct published 3.7.29 changelog wording. Existing EXIT-time ANSI cleanup is unchanged; native Fedora smoke testing remains pending."
+      ]
+    },
+    {
+      "version": "3.7.29",
+      "changes": [
+        "Report icon conversion, terminal desktop-entry, updater payload/service and Nautilus metadata failures honestly while continuing later installer steps. Validate watcher dependencies without enabling an opted-out watcher.",
+        "Validate extension ZIP paths, UUID and running-shell compatibility in private staging before replacement or enabling; retain previous extensions in local backups. Use private bounded sound-source builds and preserve existing sound files. Skip unsupported ARM Chrome without Google repository changes and preserve existing Chrome repo files. Correct the established Phase 4 divider range.",
+        "Keep the Fedora logo hidden on GDM even when login wallpaper theming is declined; the opt-out now skips only the wallpaper. Remove the dead legacy summary that printed zero RPM/Flatpak counts on skipped steps.",
+        "The full RPM list resolves against isolated Fedora 45, Cisco OpenH264 and RPM Fusion metadata with --assumeno; no packages installed. Native Fedora/Kitty installation, service and GNOME/GDM reboot smoke tests remain pending; no zero-error guarantee."
+      ]
+    },
+    {
+      "version": "3.7.28",
+      "changes": [
+        "Use calm, factual wording when an installer fingerprint changes. Explain that the download matches the published manifest; preserve verification, saved fingerprints and explicit default-No consent.",
+        "Attempt opted-in Billie/Jinx and Gintama downloads independently; report partial failures for retry while honoring network Stop before the next download. Preserve archive validation and user-file protections.",
+        "Suggest the supported project installer retry (update full) for failed browser installation instead of an inconsistent Flatpak Chrome command."
+      ]
+    },
+    {
+      "version": "3.7.27",
+      "changes": [
+        "Development candidate: reject interrupted, malformed or unpinned manifest responses before publishing the cache. Stage bounded HTTPS transfers, validate all four SHA256 fields and use a validated API fallback. Failed refreshes never authorize execution from an old cache. Preserve installer hash matching and fingerprint-change consent. Installed older updater copies require a separately verified migration; no live installation or native Fedora smoke test performed."
+      ]
+    },
+    {
+      "version": "3.7.26",
+      "changes": [
+        "Animate gray waiting tasks with Braille frames while preserving the cyan running spinner. Reuse the installer presentation engine for updater-owned configuration, app, cleanup and Wallvault tasks, with checked foreground operations and measured task outcomes. Remove timed pretend progress and duplicate installer success reports.",
+        "Keep native authentication and package consent visible; native interaction takes priority over suppression. Check configuration copies, service changes, app postconditions/data Trash and Wallvault extraction/publication failures. Wallvault progress measures tasks, not transfer bytes. Audited noninteractive output is retained in the session log; native direct-TTY output is not universally captured. Menus, preparation and uninstall retain plain presentation. Native Fedora/Kitty/package smoke testing remains pending."
+      ]
+    },
+    {
+      "version": "3.7.25",
+      "changes": [
+        "Development candidate: accept signature-verified, fully decoded extensionless raster assets such as the published wallpaper archive's JPEG named 80, normalizing its staged extension. Retain strict ZIP path/type/size protections; reject encrypted entries, special files, excessive compression and invalid media. Bound image decoding resources and runtime.",
+        "Report actual selected installer-task outcomes and deliberate skips, including failed-state retry handling. Failed completion is red; completion percentage measures processed registered tasks, and early aborts or targeted updates never claim a complete installation. Updater styling remains deferred. Native Fedora smoke test pending."
+      ]
+    },
+    {
+      "version": "3.7.24",
+      "changes": [
+        "Development candidate: retain question mode between consecutive installer questions instead of briefly painting the checklist. Resume progress on actual task, step, transfer or processed-work transitions, without presentation delays. Acknowledge painter trap readiness before replacement so animation cannot run installer EXIT cleanup. Synchronize pipeline painter suspension before native sudo authentication; keep password input hidden and outside the log. Native Fedora smoke test pending."
+      ]
+    },
+    {
+      "version": "3.7.23",
+      "changes": [
+        "Fix avatar protection scans on root-only AccountsService metadata using narrow read-only privileged enumeration when permission is denied. Validate all returned icon paths and fail closed on read errors; preserve all users' active avatars without changing system permissions or account selections. Development candidate; native Fedora smoke test pending."
+      ]
+    },
+    {
+      "version": "3.7.22",
+      "changes": [
+        "Hide unrequested optional videos from the live checklist and completion counts, with contiguous visible numbering while retaining the 29-step saved-state contract.",
+        "Wait indefinitely for installer/bootstrap answers and Firefox close consent. EOF cancels preferences without consent and finishes the restart question without rebooting. Preserve bounded network operations and native sudo authentication.",
+        "Preserve both active wallpaper URIs, options/colors and recursive XML image dependencies before configuration writes. Clean only exact original-checksum Fedora RPM wallpaper/avatar files; keep modified stock paths, custom collections and active dependencies. Stage/validate before publication and roll back failed publication/Trash operations.",
+        "Decide wallpaper and avatar packs independently: both installed keeps both with no pack prompt; extra only offers replace with normal, add normal, or leave (default/EOF). Normal only refreshes without an extra prompt. Preserve existing wallpaper/account selections and unknown legacy files; caller/saved choices cannot silently remove either installed collection.",
+        "Use gio Trash for retired known collections, verified asset helper code, immutable desktop image copies and shared installer/updater safety hooks. Preserve prior successful pack metadata across direct bootstrap state resets. Native Fedora installation, authorization, system Trash and reboot smoke tests remain unverified."
+      ]
+    },
+    {
+      "version": "3.7.21",
+      "changes": [
+        "Redesign the completion screen around the installer's Fedora figlet mark: MACTAHOE \u00b7 EPRAHEMI header box, colored 29-step completed/skipped/failed badges, grouped dotted task rows, NEEDS ATTENTION retry commands, formatted elapsed time and the log filename. Routine warnings stay in the log; only real failures are surfaced.",
+        "Send downloader output to the log and paint the live progress bar from measured byte counts and transfer speed, so raw Download objects lines no longer overwrite the interface."
+      ]
+    },
+    {
+      "version": "3.7.20",
+      "changes": [
+        "Preserve existing Kitty palettes during install/config refresh; seed only a missing palette and fail honestly on seed errors or broken palette links. Wallpaper palette reapplication now requires an already-enabled ktheme watcher, with the existing installer symlink fallback. Config refresh never enables the watcher; disabled watcher palettes remain untouched."
+      ]
+    },
+    {
+      "version": "3.7.19",
+      "changes": [
+        "Add update apps: 27 installer desktop apps with measured RPM and user/system Flatpak status, numeric multiple selection and ranges. Installed selections remove; missing selections install. Exact scoped plans require explicit consent, default No; EOF cancels safely.",
+        "Protect active Kitty removal, preserve app data, disable DNF autoremove and retain native dependency transaction review. Existing repositories only: no admin repo overwrite or unrelated browser installations. Unknown status fails closed; refresh actual status after attempts. Add read-only help, menu entry and safe typo suggestions. apply_configs bumped to 3.7.19; updater re-pinned, installer/bootstrap unchanged."
+      ]
+    },
+    {
+      "version": "3.7.18",
+      "changes": [
+        "Replace ICMP-only network gating with TLS-verified HTTPS project downloads: raw GitHub first, GitHub fallback; either verified response permits installation. Validate an immutable small manifest's exact SHA-256 to reject portal/error bodies.",
+        "Bound each probe to 3 seconds connecting and 8 seconds total, with no retries and HTTPS-only redirects. Missing curl gives a prerequisite message; failed probes suggest DNS/proxy/portal/clock/CA checks without claiming all internet is absent. Preflight always runs even with current saved state; other guards and step versions unchanged."
+      ]
+    },
+    {
+      "version": "3.7.17",
+      "changes": [
+        "Correct both installer update-notifier interval messages to every 2 hours, matching the existing 2h timer. Text only: timer, behavior and step versions unchanged."
+      ]
+    },
+    {
+      "version": "3.7.16",
+      "changes": [
+        "Stop adding the custom Trash folder bookmark. Remove only the exact old installer-generated line; preserve all other bookmarks, labels and order. Native GNOME Trash and deleted files are untouched.",
+        "Nautilus configuration no longer rebuilds the user's bookmark list. Cleanup honors XDG_CONFIG_HOME and publishes atomically; configure_nautilus_defaults step bumped to 3.7.16 for existing installs."
+      ]
+    },
+    {
+      "version": "3.7.15",
+      "changes": [
+        "Keep GNOME file indexing at its existing/default state for fast file search: remove legacy Tracker masking and Tracker3 disabling from installer runs. LocalSearch packages and other service optimizations are unchanged; remove the indexer RAM-saving claim.",
+        "Existing indexer masks/disables are NOT repaired automatically: old changes have no ownership record and may be deliberate user choices. Uninstall also leaves indexing untouched; targeted repair requires separate review and consent. No step bump: this removes disabling behavior, not a migration."
+      ]
+    },
+    {
+      "version": "3.7.14",
+      "changes": [
+        "Force only Blur My Shell Popup blur OFF on configuration-applying install/update runs, overriding saved ON. No runtime lockdown; help/check/notifier paths and other blur settings unchanged.",
+        "Configuration, dconf restore and extension install routes enforce the exact dconf key without requiring extension schemas. Write/load failures fail honestly; installer and updater re-pinned."
+      ]
+    },
+    {
+      "version": "3.7.13",
+      "changes": [
+        "Blur My Shell Popup blur is OFF for fresh or unset settings. The extension-settings restore preserves an existing explicit ON or OFF choice for /org/gnome/shell/extensions/blur-my-shell/popup/blur; other bundled settings are unchanged.",
+        "Uses dconf before extension schema installation, with read/restore failures reported rather than overwriting an unknown choice. apply_dconf version is 3.7.13; install.sh re-pinned, bootstrap and updater unchanged. No unrelated audit items changed."
+      ]
+    },
+    {
+      "version": "3.7.12",
+      "changes": [
+        "Use DNF5 group install for multimedia and the workstation recovery suggestions. Multimedia failures remain visible and fail the step without stopping later installer steps; repo, codec and exhausted ffmpeg fallback failures also retain honest retry status.",
+        "Only approved Tier 2 #19 changed. install_rpmfusion version is 3.7.12; install.sh re-pinned, bootstrap and updater unchanged. No live package operations performed."
+      ]
+    },
+    {
+      "version": "3.7.11",
+      "changes": [
+        "Flatpak icon lookup: merge hicolor declarations for 48x48/apps, 256x256/apps and scalable/apps, including complete size/context/type sections. Existing theme metadata, custom directories, sections and comments are preserved. Unsafe or malformed indexes fail without clobbering them.",
+        "Initial icon installation, final Flatpak mirroring and refresh icons share the same merge. Local hicolor paths respect absolute XDG_DATA_HOME; caches refresh even when only declarations changed. Cache failure remains noncritical. install.sh re-pinned; bootstrap.sh and update.fish unchanged. Theme/icons, configs and finalize versions use 3.7.11 to reach existing and legacy installs. Other audit items are unchanged."
+      ]
+    },
+    {
+      "version": "3.7.10",
+      "changes": [
+        "Declined optional video downloads stay silent, without changing progress accounting. Optional videos remain available through update videos; requested download output and errors are unchanged."
+      ]
+    },
+    {
+      "version": "3.7.9",
+      "changes": [
+        "Old-terminal removal preserves system terminal binaries and verifies that the Ptyxis package actually disappeared before reporting success. Declining removal still leaves it untouched.",
+        "Firefox is closed only after explicit consent. No consent or no terminal safely skips theming; a failed close is bounded to ten seconds and reports failure. A closed Firefox needs no prompt.",
+        "Optional downloaded videos go exclusively into the XDG Downloads subfolder Billie Hot Body (HOME/Downloads fallback). Nested archive videos are flattened safely, archive traversal and links are rejected, existing filenames are preserved, and only newly installed files receive fresh timestamps.",
+        "The installer no longer runs automatic DNF autoremove. GDM engine pinning and Fedora asset removal are unchanged. install.sh re-pinned; bootstrap.sh and update.fish unchanged. Affected step versions use 3.7.9 to remain above legacy overall-version step records; the legacy-first gate and environment priority are unchanged."
+      ]
+    },
+    {
+      "version": "3.7.8",
+      "changes": [
+        "Preserve system terminal binaries: setup_terminal no longer replaces /usr/bin/gnome-terminal or /usr/bin/x-terminal-emulator with Kitty symlinks, regardless of the old-terminal removal answer. Kitty remains selected through the existing GNOME settings and desktop entry.",
+        "install.sh re-pinned; bootstrap.sh and update.fish unchanged. setup_terminal bumped to 1.1. Previously replaced executables are not automatically recovered: package restoration requires a separate, reviewed repair. The independent remove_ptyxis cleanup is unchanged."
+      ]
+    },
+    {
+      "version": "3.7.7",
+      "changes": [
+        "THE KTHEME WATCHER IS OPT-IN \u2014 install.sh used to enable and start ktheme-watcher.service on every install, so kitty re-themed itself from the wallpaper whether you wanted it or not. A fresh install now installs the unit but leaves it disabled and stopped; the step reports \"off by default\" and tells you to run: ktheme on. An install where you had already enabled the watcher keeps it enabled and running \u2014 the installer never turns it off for you. The check also recognizes the default.target.wants symlink when no user manager is reachable, and an enabled-but-unstartable watcher fails the step instead of claiming success.",
+        "`update configs` follows the same rule: it copies the unit and starts it only when it is already enabled, never enables it. install.sh and update.fish changed, so install_sha256 and update_sha256 were re-pinned; bootstrap.sh is untouched. No step version was bumped \u2014 existing installs keep their current watcher state exactly."
+      ]
+    },
+    {
+      "version": "3.7.6",
+      "changes": [
+        "THE DESKTOP WALLPAPER IS NOW A QUESTION \u2014 install.sh used to set the Himeno desktop wallpaper automatically on every run of the wallpaper step, with no prompt and no way to decline. A new DESKTOP WALLPAPER box asks once per manifest version (default Yes). Answer No and picture-uri is left exactly as it was; the wallpaper files are still installed so the Himeno image stays available in the GNOME picker. `update wallpaper` passes INSTALL_DESKTOP_WALLPAPER explicitly and is never prompted.",
+        "The answer is saved as wallpaper_desktop and only when the question was actually asked, so a targeted update cannot overwrite a saved No. install.sh changed, so install_sha256 was re-pinned; update.fish and bootstrap.sh are untouched. apply_wallpapers was bumped to 1.3 so existing installs re-run it and see the question."
+      ]
+    },
+    {
+      "version": "3.7.5",
+      "changes": [
+        "FISH CONFIG IS NOW USER-OWNED \u2014 install.sh and update configs no longer overwrite ~/.config/fish/config.fish. Project settings (fastfetch, starship, TERM/TERMINAL, ANI_CLI_PLAYER and the kitty socket hardening) are installed as conf.d/50-fedora-mactahoe.fish, which fish sources before config.fish, so aliases, environment variables, functions and startup commands survive every install and update. A pre-3.7.5 config.fish is left untouched; the duplicate project block is reported, never edited. uninstall.sh removes the snippet.",
+        "CUSTOM KEYBINDINGS ARE MERGED, NOT REPLACED \u2014 the ten MacTahoe shortcuts are added to the existing custom-keybindings list instead of replacing it. Existing paths and occupied slots are preserved byte-for-byte, a key combination already in use is reported and left alone, and a failed write leaves the slot unlisted so the next run reuses it instead of creating a duplicate. New users still get every default.",
+        "GNOME EXTENSION CHOICES ARE PRESERVED \u2014 enabled-extensions and disabled-extensions are merged instead of overwritten. Extensions you enabled stay enabled; an extension you explicitly disabled is never re-enabled (the conflict is reported). The Fedora defaults are moved to disabled only when enabled-extensions is still the schema default, so a fresh install hides them and a user who enabled one keeps it. Window Title Pro uses the same merge.",
+        "/etc/dnf/automatic.conf IS MERGED, NOT REWRITTEN \u2014 administrator settings, comments, mode and ownership are preserved; only commands.upgrade_type=security, download_updates=yes and apply_updates=no are enforced, and emitters.emit_via=motd is added only when unset. The result is validated before an atomic, no-clobber publish; a symlinked or concurrently changed file is preserved and the step fails instead of guessing.",
+        "install.sh and update.fish changed, so install_sha256 and update_sha256 were re-pinned; bootstrap.sh is untouched. apply_configs, apply_dconf, install_updater and install_extensions step versions were bumped so existing installs re-run exactly those steps. Because latest_version moved to 3.7.5, saved prompt answers are re-asked once on the next run."
+      ]
+    },
+    {
+      "version": "3.7.4",
+      "changes": [
+        "Preserve other systemd-logind drop-ins when installing our override.",
+        "Stage RPM Fusion downloads privately and remove only those files; never wipe /tmp/*.rpm.",
+        "Replace installer edits to /etc/sudoers with a root-staged, visudo-validated, commented-only /etc/sudoers.d/90-fedora-mactahoe template. Existing targets and sudo policy are preserved; passwordless sudo is not enabled.",
+        "install.sh re-pinned; bootstrap.sh and update.fish unchanged. Other audit items remain pending."
+      ]
+    },
+    {
+      "version": "3.7.3",
+      "changes": [
+        "FAILED STEPS NOW RETRY \u2014 a step that failed was still recorded with the version of an earlier successful run, so once finalize() wrote the overall version the next run skipped it forever. A failed step is now removed from install-state.json, which makes _step_should_run() fall back to 0.0 and retry exactly that step. The overall version, the install date and every saved prompt answer are preserved; a corrupt state file is left untouched and reported instead of being overwritten.",
+        "TWENTY STEPS AND THE FLATPAK ICON MIRROR NO LONGER RETURN A FALSE OK \u2014 a broken theme, a missing SF Pro font, a GDM apply that never changed the login screen, a failed Flatpak runtime, missing extensions, an empty wallpaper pack, failed avatar copies, a missing sound theme, a dead updater timer, an inactive wallpaper watcher, a failed chsh, a failed dconf apply, failed desktop-entry copies, failed browser installs, failed RPMs or failed Flatpak installs could still be recorded as installed after printing a warning. Those steps now return non-zero, _run_step() records them as failed, clears their saved version and the next run retries them. The Flatpak icon mirror reports its failures too, but finalize() still warns and completes because icons are cosmetic. Every success path was re-tested, including the deliberate GDM and +18 skip paths.",
+        "UPDATE <TARGET> NOW REPORTS THE TRUTH TOO \u2014 update icons, theme, fonts, gdm, gtk, sounds, services, defaults, dconf, notifier, extensions, wallpaper, pfp and videos used to call the step directly and record it as ok no matter what the step returned, then exit 0. The targeted runner now checks the exit code, records a failed step as failed, clears its saved version and exits non-zero, so the updater log and the command result agree with what actually happened.",
+        "install.sh changed, so install_sha256 was re-pinned. update.fish and bootstrap.sh are untouched and keep their hashes. Because latest_version moved to 3.7.3, saved prompt answers are re-asked once on the next run, exactly as the per-release prompt rule says."
+      ]
+    },
+    {
+      "version": "3.7.2",
+      "changes": [
+        "THE LOGIN PROMPT NOW DOES WHAT IT SAYS \u2014 answering Yes to LOGIN SCREEN WALLPAPER? used to change nothing: the prompt and the step were gated separately, so setup_gdm could be skipped while the box promised it would run. A Yes answer now forces the step, and the login screen is applied with the runtime engine (FedoraTahoe-GDM) instead of upstream tweaks.sh. The engine exit code is checked and the gresource is hashed before and after \u2014 no more green OK after a silent failure.",
+        "PROMPTS ASK AGAIN \u2014 saved answers were sticky forever because _prompt_should_ask() ignored PR_VER. An answer saved by an older release is now re-asked once per release; a same-version answer stays silent. The login prompt and the firewalld prompt reappear after this update.",
+        "REMOVE OLD TERMINAL? IS BACK \u2014 the prompt was deleted in 3.7. It is restored and appears only when Ptyxis is actually installed (rpm, command or flatpak). Answering Yes forces remove_ptyxis to run even when the step is already recorded. No Ptyxis means no prompt.",
+        "gdm default NO LONGER HANGS \u2014 the Himeno rainbow flourish was a while-true loop with no exit. It now runs two cycles and returns. The wallpaper was being applied correctly all along; the command just never came back.",
+        "install.sh changed, so install_sha256 was re-pinned. update.fish and bootstrap.sh are untouched and keep their hashes."
+      ]
+    },
+    {
+      "version": "3.7.1",
+      "changes": [
+        "THE LOGOUT PROMPT IS GONE \u2014 update icons, theme, fonts, extensions, gdm, wallpaper and gtk used to end with an 11-line LOG OUT NOW box and a y/n question. The command now finishes and returns. The per-target help still says when a logout helps, so the information is kept and the question is not asked.",
+        "update.fish changed, so update_sha256 was re-pinned. install.sh and bootstrap.sh are untouched and keep their hashes."
+      ]
+    },
+    {
+      "version": "3.7",
+      "changes": [
+        "THE INSTALLER NO LONGER DIES ON A BAD STEP \u2014 a failing step is captured instead of aborting the run. The step is recorded as failed, the install continues with the next one, and the piece is listed at the end with the exact command that adds it. A failed step is NOT written to install-state.json, so the next run retries exactly what did not finish. Preflight stays fatal: a machine that is not a supported target has nothing to continue with.",
+        "NINE QUESTIONS BECOME TWO \u2014 Discord, the desktop wallpaper, the optional wallpaper packs, the video edits and the removal of the old terminal now have a default instead of a question. The GDM login screen keeps its question (the 'ARE YOU SURE?' box right after it is gone) and firewalld keeps its question, because it changes what the machine does. The defaults are applied after the saved answers are loaded, so a saved choice or an env var from `update` still wins \u2014 the defaults only fill the gaps. The optional extras stay reachable through `update`.",
+        "THE SUMMARY TELLS THE TRUTH \u2014 Status is Incomplete when a step failed, the step count is the real count (ran / skipped / failed), the RPM and Flatpak numbers are measured instead of hardcoded, and the theme, font and shell lines follow the step they came from: a step that failed is never reported as installed. The unverifiable 'Browsers:' line is gone.",
+        "NEW MISSING PIECES BLOCK \u2014 every piece that is absent is listed with the command that adds it later. Only pieces that were actually attempted and failed are listed; an optional extra that was deliberately left out is not 'missing'.",
+        "HOSTED LINKS ARE CHECKED, NOT ASSUMED \u2014 the extra wallpaper packs, the extra profile pictures and the video edits live on Google Drive, which answers a dead link with an HTML error page. A HEAD request now reports the state of a link before anything is downloaded. The check is informational and never blocks the install.",
+        "WHEN A HOSTED LINK IS DEAD AND THE USER ASKED FOR THAT ASSET, the installer asks once whether to continue without it, and the download is skipped instead of attempted again. The piece is reported as missing either way.",
+        "A DOWNLOAD THAT CANNOT SUCCEED SAYS SO WHERE IT HAPPENS \u2014 what failed, that the hosted file is gone, and the command that adds the piece later. The piece is listed in MISSING PIECES.",
+        "ALL FOUR git clone CALLS GET A 120 SECOND TIMEOUT \u2014 a hung clone used to hang the whole install.",
+        "`update videos` ALWAYS ASKS \u2014 it used to read a saved answer that the installer no longer creates, so the command was a dead end. It now asks, exactly like `update services` already does for firewalld.",
+        "The installer exits non-zero when a step failed, after the summary has told the user what is missing.",
+        "install.sh and update.fish changed, so install_sha256 and update_sha256 were re-pinned. bootstrap.sh is untouched and keeps its hash."
+      ]
+    },
+    {
+      "version": "3.6",
+      "changes": [
+        "GNOME 51 SUPPORT (Fedora 45) \u2014 Window Title Pro is now installed from its GitHub release instead of extensions.gnome.org. This is the change that makes the extension actually work on GNOME 51: the shell refuses to enable an extension whose metadata does not list the running shell version, and the EGO copy still said 45-50. The GitHub release is published with the source tag, so it always carries the newest shell-version metadata; EGO stays as the fallback.",
+        "Window Title Pro v15 \u2014 metadata.json gains shell-version \"51\" (extension version 14 -> 15). Every breaking change in the GNOME 51 porting guide was audited against the source and none of them needed a code change: Shell.GLSLEffect, ui/pointerWatcher.js, the St \"vertical\" property, async disable(), Gio.DBus.makeProxyWrapper(), Clutter.get_default_backend(), St.ButtonMask and the popupMenu open()/close() parameters object are all unused.",
+        "Window Title Pro v15 also honours the GNOME 51 reduced-motion setting (St.Settings.get().reducedMotion vs St.ReducedMotion.REDUCE) \u2014 the fade animations are applied instantly when the user asks for reduced motion. St.Settings and St.ReducedMotion do not exist on GNOME 45-50, so the lookup is guarded and older shells animate exactly as before.",
+        "The install_extensions step is bumped 1.7 -> 1.8 so machines re-run it and pick up Window Title Pro v15. Only install.sh changed, so only install_sha256 was re-pinned; bootstrap.sh and update.fish are untouched and keep their hashes.",
+        "EGO note for the owner: the v15 zip still has to be uploaded to extensions.gnome.org by hand (there is no API token on this machine). Until then the GitHub path in install.sh is what delivers GNOME 51 support \u2014 it works today, the EGO upload is a redundancy, not a blocker."
+      ]
+    },
+    {
+      "version": "3.5.7",
+      "changes": [
+        "THE GDM BUG \u2014 'gdm <image>' and 'gdm current' never changed the login screen. The prepared wallpaper (the JPEG conversion or the blurred copy) was deleted from the private cache three lines BEFORE the wallpaper engine read it, so the engine aborted with \"image file not found\" while gdm still printed \"GDM wallpaper updated!\". The cache is now cleaned only after the engine has read the file",
+        "gdm no longer reports a false success \u2014 the engine's exit code is checked, a failed apply reports the error and returns non-zero, and a missing prepared image is caught before the engine is even called",
+        "gdm protect on had never worked on any machine: restore.sh was committed to the FedoraTahoe-GDM repo without the executable bit, so the \"engine required\" check always failed and the boot-time wrapper could not exec it. The bit is fixed in the repo and both engine scripts are made executable after every clone and refresh",
+        "GDM engine v3 \u2014 the login theme bundle compile is now verified: a failed compile no longer leaves the stock bundle in place while reporting success. restore.sh also normalises the wallpaper through ImageMagick like the engine does, so a restored bundle is pixel-identical to an applied one",
+        "gdm now detects a stale wallpaper engine (new ENGINE_VERSION marker) and pulls the fix on machines that already have an older clone. The clone is staged and swapped in only after it succeeds, so a failed download can no longer destroy a working engine",
+        "The wallpaper engine quotes every path it passes to ImageMagick and cp \u2014 wallpapers with spaces in the name (e.g. \"Wallvault Wallpapers + 18/22.jpg\") were being word-split",
+        "Fixed the stray '%%' in the JPEG-conversion and blur messages"
+      ]
+    },
+    {
+      "version": "3.5.6",
+      "changes": [
+        "HOTFIX \u2014 the installer no longer dies at step 4 (RPM Fusion + Codecs). mirrors.rpmfusion.org had started redirecting release-RPM downloads to dead mirrors (ftp.cc.uoc.gr times out, repos.eggycrew.com no longer resolves), and a single dead mirror aborted the whole dnf transaction \u2014 which, under set -e, killed the install at 4 of 29",
+        "The release RPMs are now downloaded from a healthy mirror list (download1.rpmfusion.org first), verified to be real packages, and installed as local files \u2014 no metalink, no random redirect, no dead mirror",
+        "The RPM Fusion repos are marked skip_if_unavailable, so one broken mirror inside the metalink set can never abort a dnf transaction again",
+        "The step no longer blocks the install: if RPM Fusion or the codec packages are unreachable, the installer warns and continues with the rest of the theming instead of stopping dead",
+        "Hardened every remaining fatal dnf transaction the same way \u2014 the NVIDIA driver set, the ~50-package bulk set, Firefox and VS Code now warn and continue instead of stopping the install",
+        "The bulk package set now falls back to a one-by-one retry and names the exact packages that were unavailable (package names change between Fedora releases), and the load-bearing ones (kitty, fish, fastfetch, ImageMagick, fzf) are verified afterwards so a silent gap cannot break later steps",
+        "Fixed two misaligned rows in the main 'update help' box (update quick was 1 column over, update uninstall was 8 over) \u2014 every rendered row is exactly 66 columns again",
+        "Step install_rpmfusion bumped to 1.1 so every machine re-runs it on the next update"
+      ]
+    },
+    {
+      "version": "3.5.5",
+      "changes": [
+        "GDM WALLPAPER PROTECTION \u2014 gdm protect on installs a boot-time auto-restore (systemd unit + system-wide restore wrapper) so your login wallpaper survives every GNOME update and theme refresh. gdm protect status shows restore engine, saved wallpaper, boot service and last restore result; gdm protect off removes it cleanly",
+        "gdm reload \u2014 re-apply your saved GDM wallpaper after any update, and gdm info \u2014 a full details box for the last applied wallpaper (file, image info, resolution, source) with private paths hidden as 'Local storage'",
+        "Smarter gdm search & preview \u2014 searches 13 user folders system-wide, shows a Kitty inline image preview before applying, a picker when several files match, and a blur preview loop you can retry until you like it",
+        "Fixed every emoji box edge in gdm \u2014 VS16 emoji rows (protect/info titles) were 1 column short, plain emoji rows (help, save, blur sections) 1 column over, and two lines poked past the box: all boxes now render perfectly aligned",
+        "refresh is far more reliable \u2014 per-step hard timeout (300s default) so a hung step can't stall the whole refresh, a stale flatpak-lock preflight, and a fix for a false \u274c on every step (process-group timeout kill)"
+      ]
+    },
+    {
+      "version": "3.5.4",
+      "changes": [
+        "update wallvault: hand-rolled boxed progress bar replaces curl --progress-bar \u2014 animated 'Downloading\u2026' title, 52-char bar with real percent, MB-of-MB totals from a HEAD size probe, and live MB/s; painted only on a real terminal (piped runs stay clean)",
+        "New Apple-style flow: Wallvault. intro box (with a +18 heads-up), spaced big-digit YOUR CODE gate, and a 'WALLVAULT \u2014 READY' outro with the wallpaper count and path \u2014 closer: 'Enjoy the view.'",
+        "UI copy no longer mentions mechanics (no 'progress bar'/'authorization code' language) in help or usage rows",
+        "Fixed fish math fractions breaking the bar fill (string repeat: invalid integer) \u2014 all bar math now truncates with math -s0"
+      ]
+    },
+    {
+      "version": "3.5.3",
+      "changes": [
+        "update wallvault: the archive decryption key is now baked in and applied automatically in the background \u2014 the user is never asked for it and never sees it; the one-time authorization code remains the only credential",
+        "Download now shows a live progress bar (curl --progress-bar) instead of the braille spinner",
+        "Encryption is detected via 7z listing (no password round-trip); plain archives verify with no key at all",
+        "Help/usage copy cleaned up (no key language); 'update wallvault pass <key>' remains as an optional override for custom endpoints",
+        "Fixed 1-char overflow on the 'update wallvault <url>' help row (was <link>, 23 chars > 22-col name column)"
+      ]
+    },
+    {
+      "version": "3.5.2",
+      "changes": [
+        "HOTFIX \u2014 update wallvault is repaired: the vault archive is AES-256 encrypted (compression method 99), which Info-ZIP's unzip cannot verify or extract \u2014 every run died with 'The download is not a valid zip' even though the payload was intact. The deployment now uses the 7-Zip backend (7z): full integrity verification, decryption with the archive key, and extraction are handled natively",
+        "New: update wallvault pass <key> stores the archive decryption key in ~/.cache/fedora-mactahoe/wallvault.conf (chmod 600); without a stored key the tool prompts silently (no echo) at run time. update wallvault <link> [key] registers a custom endpoint and optionally the key in one call",
+        "Hardened transfer: HTTP errors now fail the download (curl -f), transient interruptions auto-retry (3 attempts) plus one full automatic retry of the entire transfer, and a truncated payload is caught by the 7z integrity test instead of producing misleading errors",
+        "Clear failure diagnostics: wrong decryption key vs corrupt payload vs missing 7zip backend are now reported as distinct errors with the exact remedy",
+        "Professional-grade output: all wallvault UI copy was rewritten in a corporate/data-center register \u2014 asset bundle, authorized transfer, integrity verification, staging, credentials persisted, operation aborted",
+        "7zip added to the RPM Packages step (step bumped so every machine installs it on the next update)"
+      ]
+    },
+    {
+      "version": "3.5.1",
+      "changes": [
+        "HOTFIX \u2014 the ( TAG ) now lands in the log filename on EVERY path. 3.5 stamped install.sh-created logs, but the bootstrap one-liner (curl|bash) creates the log itself and hands it to the installer \u2014 so those files came out untagged. Bootstrap now computes the same tag (BASH for the one-liner, UPDATE-FULL / UPDATE-QUICK when the updater drives it) and stamps it into its own log name, keeping filename and installer header consistent",
+        "update quick dropped its 8-second loading ritual \u2014 quick means quick. It now runs exactly like menu [1]: straight to the incremental update, no prompts, no spinner",
+        "Both fingerprints re-pinned (bootstrap.sh and update.fish changed)"
+      ]
+    },
+    {
+      "version": "3.5",
+      "changes": [
+        "Every install/update run now stamps WHO ran it into the log filename: FedoraTahoe_log.<date>.<time>.<ID> ( TAG ).txt \u2014 ( BASH ) for the curl|bash one-liner, ( MANUAL ) for running install.sh directly, ( UPDATE-QUICK ) / ( UPDATE-FULL ) / ( UPDATE-CONFIG ) and one tag per target (UPDATE-ICONS, UPDATE-THEME, UPDATE-FONTS, UPDATE-SOUNDS, UPDATE-EXTENSIONS, UPDATE-GDM, UPDATE-WALLPAPER, UPDATE-PFP, UPDATE-GTK, UPDATE-VIDEOS, UPDATE-SERVICES, UPDATE-DEFAULTS, UPDATE-DCONF, UPDATE-NOTIFIER, UPDATE-CLEAN, UPDATE-WALLVAULT) for the updater",
+        "The same tag appears in the log header box (new Method row), is saved into install-state.json (source field) and shows up in the update log history \u2014 one quick look tells you how every run was started",
+        "New command: update quick \u2014 the incremental update with your saved answers, no prompts, straight from the shell (identical to menu [1])"
+      ]
+    },
+    {
+      "version": "3.4",
+      "changes": [
+        "HOTFIX \u2014 installs no longer die at 'RPM Packages'. Two codec package names in the v3.2 driver batch did not exist on Fedora 44 (gstreamer1-plugins-good-extra and gstreamer1-plugins-bad): dnf rejected the whole 43-package transaction, so every fresh install and every update rerun of that step stopped with 'No match for argument'. They're replaced with the real packages \u2014 gstreamer1-plugins-good and gstreamer1-plugins-bad-free (with -freeworld and -free-extras already installed from the RPM Fusion step) \u2014 and the full transaction was dry-run verified to resolve: 43 names, all found, zero errors",
+        "Step version bumped so every machine re-runs the repaired RPM Packages step on the next update"
+      ]
+    },
+    {
+      "version": "3.3",
+      "changes": [
+        "New: update wallvault (aliases: update wall, update w) \u2014 the 500+ wallpaper vault, downloaded right from your terminal",
+        "Free and private: a one-time 6-digit code is shown in the terminal (no email, no account), you type it and the ~623 MB vault downloads behind a live braille spinner \u2014 then it's verified, unzipped and landed in ~/Downloads/Wallvault-Pack, temp files cleaned up",
+        "Safe by design: 3 code attempts with a 10-minute expiry, Ctrl+C aborts the download and leaves nothing behind",
+        "Custom link: update wallvault <google-drive-link> points the vault at any file you own \u2014 the link is saved in your private cache (chmod 600) and used for every future download",
+        "update wallvault help box added to per-target help, the usage box and the menu ([16] wallvault)"
+      ]
+    },
+    {
+      "version": "3.2",
+      "changes": [
+        "Your settings are safe forever \u2014 installs and updates no longer overwrite your personal config: PATH lines you added to fish (set -gx PATH, fish_add_path, fish_user_paths) are migrated once into conf.d/50-user-path.fish and never touched again. The opencode-style path wipe is gone",
+        "Kitty gained user.conf \u2014 a file of your own that installs and updates never touch; put anything you like there and it survives every refresh, always winning over the theme",
+        "Media & hardware drivers built in: Intel Media Driver + VA-API (hardware video on Intel/AMD), the full GStreamer codec suite (libav + good-extra + bad + ugly), Mozilla OpenH264, ALSA SOF firmware for modern laptops",
+        "Storage & sharing: NTFS-3G read/write for Windows drives, Samba client + CIFS utils so the smb function works out of the box",
+        "Printing: cups-filters + HPLIP driver stack",
+        "Emoji picker: Super+. opens GNOME Characters \u2014 pick emoji anywhere, no setup needed",
+        "update.fish re-pinned with a fresh fingerprint"
+      ]
+    },
+    {
+      "version": "3.1",
+      "changes": [
+        "Per-target help: update <target> help shows a dedicated box for every part of the update \u2014 what it does, what it asks, its flags and whether a fresh session is needed. update help <target> works too, and the main help lists both. 16 targets covered (icons, theme, fonts, sounds, extensions, gdm, wallpaper, pfp, gtk, videos, services, defaults, dconf, notifier, clean, menu). Read-only: never prompts, never downloads, never touches your setup"
+      ]
+    },
+    {
+      "version": "3.0",
+      "changes": [
+        "HEIC image support \u2014 now built in. Fedora MacTahoe 3.0 introduces native HEIC/HEIF decoding: open Apple's photo format directly in your GNOME Image Viewer, see thumbnails in Files, and convert anytime with heif-convert. No new apps, no viewer changes \u2014 your iPhone photos just work. Powered by libheif-freeworld (RPM Fusion free, already enabled by the installer) plus the heif-tools conversion suite. Fresh installs get it out of the box; existing setups can grab it with: sudo dnf install libheif-freeworld libheif-tools"
+      ]
+    },
+    {
+      "version": "2.9",
+      "changes": [
+        "update wallpaper and update pfp now offer a Both option: pick 3 in the pack picker to wipe BOTH packs (normal + +18 folders and XMLs) and re-download them fresh in one go",
+        "update wallpaper both also works as update wallpaper both \u2014 same for pfp",
+        "help box gained update wallpaper both / update pfp both rows"
+      ]
+    },
+    {
+      "version": "2.8",
+      "changes": [
+        "update services now ALWAYS asks about firewalld \u2014 it checks the live state first (FIREWALLD IS RUNNING / FIREWALLD IS OFF box) and asks every time instead of silently reusing the saved answer",
+        "turning firewalld OFF is now the default everywhere: pressing Enter in update services or the installer's firewalld question disables it (was No/keep before)",
+        "the installer's firewalld prompt now defaults to Yes \u2014 press Enter to disable and save ~30-50 MB"
+      ]
+    },
+    {
+      "version": "2.7",
+      "changes": [
+        "fix update wallpaper / update pfp ignoring your pick: the saved answer from the original install (+18) was overriding the choice you make in the picker, so picking Normal still downloaded the +18 pack. Env vars passed by update <target> now always win over saved answers (saved answers still apply on full installs and when the target passes nothing)",
+        "same fix protects update gdm, update videos and update services \u2014 their forced settings can no longer be overridden by an old saved answer"
+      ]
+    },
+    {
+      "version": "2.6",
+      "changes": [
+        "fix incremental updates getting stuck: a machine installed on an older version stored per-step versions as that overall version (e.g. 2.2), which is higher than today's per-step manifest values (1.x) \u2014 every step was skipped and the version never moved. Now an older overall version forces all steps to re-run, then normal per-step gating resumes"
+      ]
+    },
+    {
+      "version": "2.5",
+      "changes": [
+        "update help redesigned: gradient title, diamond section tags, aligned two-column command table (bold white names, bold gray descriptions), tag-cloud toolbox, divider footer",
+        "all help text is now bold so it stays readable on light auto-theme backgrounds",
+        "fixed command-row width so the box right edge is a straight line"
+      ]
+    },
+    {
+      "version": "2.4",
+      "changes": [
+        "the recovery warning is now BIG and bold: a red ERROR/RESCUE/WARNING banner replaces the fish welcome when the config is missing, and the instructions are bold",
+        "the guard message is refreshed on existing machines automatically via update configs (same marker-replace mechanism)"
+      ]
+    },
+    {
+      "version": "2.3",
+      "changes": [
+        "- A tiny system-wide rescue detector now guards 'update': if ~/.config/fish/functions/update.fish is ever deleted, the /etc copy detects it, explains the missing dependencies and offers to download the latest update function (yes is the default, 5 tries, fingerprint-verified) \u2014 the updater never runs until the user copy is restored",
+        "update configs replaces the old system-wide copy with the rescue detector \u2014 /etc/fish/functions/update.fish is now the tiny detector, the full updater lives only in ~/.config/fish/functions/",
+        "- update configs now refreshes the did-you-mean command handler in /etc too \u2014 a wiped fish config still suggests command fixes (it was the only nice thing missing after a reset)",
+        "- no more silent skips: when the sudo cache is cold, update configs pops the polkit password dialog (pkexec) once and copies the system-wide fish helpers (rescue detector + did-you-mean handler) anyway \u2014 cancel and it tells you it skipped",
+        "- the did-you-mean fallback loads from /etc/fish/config.fish whenever your own handler file is gone (fish won't autoload event handlers from /etc by itself) \u2014 wiped configs still suggest command fixes",
+        "- the recovery warning in every terminal is now plain language: 'type update, press Enter' \u2014 no more wall-of-text one-liner (update configs refreshes it on existing machines too)"
+      ]
+    },
+    {
+      "version": "2.2",
+      "changes": [
+        "Quick updates are now truly quiet \u2014 no more questions: your saved answers are reused (Discord, wallpapers, videos) once you've answered them once",
+        "- Picker validation messages (Invalid/Cancelled) now go to stderr, keeping command-substitution output pure",
+        "- update wallpaper add / update pfp add (also --add, -add) install the other pack alongside \u2014 without the flag the chosen pack replaces the other (folder + XML)",
+        "All setup prompts moved from bootstrap into the installer \u2014 bootstrap is just the start button now: splash, verify, download, hand off",
+        "Discord's answer is now saved too (it was the only prompt without persistence)",
+        "Bootstrap no longer prints its own system-info box \u2014 the dashboard shows once, from the installer",
+        "Bootstrap no longer prints its own SECURE TUNNEL box \u2014 the tunnel shows once, from the installer",
+        "Tunnel location is hidden \u2014 a generic 'Location: Secure' row instead of fake CDN node details",
+        "The installer download now shows a live progress bar \u2014 the clone runs quietly in the background, no more raw git text",
+        "The download progress bar now matches the updater's loader \u2014 braille spinner, rotating status, [\u2588\u2588\u2588\u2591\u2591\u2591] bar with real percent (re-pinned bootstrap fingerprint)",
+        "Fixed the download progress bar crashing on the first tick (grep no-match tripped the ERR trap under set -euo pipefail); percent now only moves forward",
+        "Fish config backups keep the same 5-snapshot limit as dconf (was 10) \u2014 6th and older auto-deleted on every config apply",
+        "The start screen waits 60 seconds max \u2014 no key press and bootstrap closes itself (just run it again when you're ready)",
+        "Closing bootstrap early (Ctrl+C forced exit or the 60s auto-close) leaves no log behind \u2014 the temp log is deleted, since nothing ran",
+        "Running install.sh directly now behaves the same: every wait and yes/no question auto-closes after 60s of silence, and closing it early (Ctrl+C twice or the timeout) deletes the log too",
+        "A closed installer is no longer reported as a failure \u2014 the updater says 'closed before finishing' and you just run it again when ready",
+        "Fixed the crooked log-header box (blank rows and data rows now line up with the 62-wide border) and the 'More from Eprahemi' box (links no longer poke past the right edge)",
+        "The kitty one-liner no longer bursts out of its box \u2014 it's now shown as a clean code line under both warning boxes (bootstrap + installer)",
+        "Deep-scan cleanup: removed dead code (unused _save_prompt_answers_all, stray _rc captures, unused PINK color in bootstrap) and re-pinned the bootstrap fingerprint",
+        "Fixed kitty terminal boxes: \u2726/\u26a0 title rows padded correctly for narrow glyphs; removed leftover over-padding on the \"Press any key\" rows",
+        "The update menu no longer lists every step that will re-run \u2014 just what's new, then the choice. Cleaner.",
+        "Fixed the progress bar showing '\ufffd' blocks \u2014 the bar builder used tr (byte-based, mangles multi-byte \u2588); now built with string concat like install.sh's sed bars, byte-perfect in any locale",
+        "MacTahoe GTK source is now vendored in the repo (vendor/MacTahoe-gtk-theme) \u2014 if the upstream repo is ever deleted or unreachable, the theme still compiles fresh for your GNOME version, and GDM + Firefox theming still work via the vendored tweaks.sh",
+        "The firewalld question moved up front \u2014 it now appears with the Discord/wallpaper/video prompts before Phase 1, so the installation never pauses mid-flow; the actual disable (or keep/enable) still happens in the 'Disable RAM-wasting Services' step, and your answer is saved like the others",
+        "update menu \u2014 per-target toolbox: re-run a single part of the setup with update <target> (icons, gtk, extensions, wallpaper, pfp, theme, fonts, sounds, videos, services, gdm, defaults, dconf, notifier, clean) \u2014 no full reinstall needed",
+        "update <target> asks about logging out when the change needs a fresh session \u2014 per-target reason in the box (theme/gtk/extensions/gdm/wallpaper/icons/fonts), strict y/n with no default so Enter alone never logs you out",
+        "Every update fetch now shows a live braille spinner while cloning \u2014 same style as the installer's loader, no more static 'Fetching...' text",
+        "Ctrl+C is now safe everywhere: cancelling mid-install or mid-fetch prints '\u2718 Cancelled \u2014 nothing was changed.', never touches your setup, and cleans up the temp files",
+        "Fixed the download spinner never noticing a failed clone (fish's wait always reported success) \u2014 git's real exit code is read from the temp bundle now, so connection errors are reported honestly",
+        "Self-healing 'update' command \u2014 if update.fish is ever deleted (say, a wiped fish config), the boot + 2-hour updater timer restores it automatically, fingerprint-verified against the pinned sha256 so unverified code is never installed",
+        "System-wide rescue copy \u2014 the installer keeps a root-owned copy of update.fish outside your home folder: even with the entire fish config wiped, the 'update' command still answers",
+        "update configs now refreshes every config location \u2014 kitty, fish (config + all 40 functions), starship, GTK, fastfetch, systemd units AND the update notifier (script + timer): every folder is created if missing, every file overwrites if present, and your fish config is auto-backed up before any override",
+        "update configs also keeps the system-wide rescue copy current \u2014 done silently, without asking for a password or printing anything extra",
+        "update configs no longer leaks ktheme's raw error if the wallpaper file ever goes missing \u2014 the live re-theme is fully silent now",
+        "update configs confirms with '\u2713 Rescue copy (system-wide) updated.' only when the system-wide copy was actually refreshed (warm sudo window); with no cached credentials it stays silent and skips"
+      ]
+    },
+    {
+      "version": "2.1",
+      "changes": [
+        "Security hardening pass \u2014 the full audit is in:",
+        "Verified update chain \u2014 installs are fingerprint-checked, tamper-proof downloads, a trust prompt the first time, hard refusal on any mismatch",
+        "Your settings are safe \u2014 a full dconf snapshot is saved before anything touches your GNOME settings (restore with one command)",
+        "gdm wallpaper switching no longer uses shared /tmp \u2014 everything stays in your private cache",
+        "Kitty control sockets are private now \u2014 no other user can connect to your terminal",
+        "Automatic security downloads \u2014 patches download in the background nightly (never installed without your say-so)",
+        "Backup snapshots are private too \u2014 folder and files locked to you only"
+      ]
+    },
+    {
+      "version": "2.0",
+      "changes": [
+        "Fish config safety net \u2014 every config refresh auto-backups your live fish folder first (last 10 snapshots kept)",
+        "The can't-lose-it guard \u2014 a root-owned warning in the system fish config: if your fish config is ever deleted, every terminal shows the exact one-line recovery"
+      ]
+    },
+    {
+      "version": "1.9",
+      "changes": [
+        "Kitty follows your wallpaper \u2014 ktheme pulls the colors out of your desktop picture and re-themes every kitty window, live. A quiet background watcher does it automatically every time the wallpaper changes (ktheme on/off to control it)",
+        "Kitty Colorful Edition \u2014 a fresh full palette, interactive kittens (ctrl+shift+f4 themes, ctrl+shift+d diff) and remote control from any terminal",
+        "hint \u2014 a little teacher in your terminal: shortcuts, functions, the palette, and live demos, all in one menu",
+        "fastfetch shows your terminal; old kitty/fastfetch config backups cleaned up"
+      ]
+    },
+    {
+      "version": "1.8",
+      "changes": [
+        "New Fish function: smb \u2014 full Samba file sharing manager (setup, users, shares, passwords, data export, service control)",
+        "Updated 18+ wallpaper pack with new backgrounds"
+      ]
+    },
+    {
+      "version": "1.7",
+      "changes": [
+        "Window Title Pro Topbar v8 \u2014 separator dropdown, font size control, smart row sensitivity, readable shortcuts (Super+Y)",
+        "New Fish functions: kit (Kitty theme toggle), ghlogin (GitHub auth + git config with auto-fetch), pfp (profile picture with cropped preview)",
+        "install.sh: 28 proper steps \u2014 Celluloid default player + Nautilus per-folder defaults now tracked steps",
+        "Kitty close warning enabled (confirm_os_window_close 1)"
+      ]
+    },
+    {
+      "version": "1.6",
+      "changes": [
+        "Window Title Pro now installs from GNOME Extensions (EGO) instead of GitHub releases \u2014 extension #10319 approved and active"
+      ]
+    },
+    {
+      "version": "1.5",
+      "changes": [
+        "Window Title Pro updated to v4 \u2014 fixed-width default now off (set <default>false</default> in gschema)"
+      ]
+    },
+    {
+      "version": "1.4",
+      "changes": [
+        "Window Title Pro updated to v3 \u2014 EGO review fixes (destroy(), no try-catch, no gschemas.compiled, no donations)"
+      ]
+    },
+    {
+      "version": "1.3",
+      "changes": [
+        "WTP v2 URL fix: asset is window-title-pro-v2.zip (not window-title-pro.zip)"
+      ]
+    },
+    {
+      "version": "1.2",
+      "changes": [
+        "Window Title Pro v2 \u2014 show-title now defaults to off (set <default>false</default> in gschema)",
+        "update.fish ANSI escape fix: replaced echo with printf (Fish echo ignores \\033)",
+        "update.fish read prompt fix: plain text in -P instead of \\e codes",
+        "Update check timer: OnBootSec reduced from 5min to 2min",
+        "Fix 'Update Now' not opening Kitty: replaced nohup+inline with temp launcher script"
+      ]
+    },
+    {
+      "version": "1.1",
+      "changes": [
+        "FRESH START \u2014 consolidated baseline for all Fedora MacTahoe features",
+        "Full re-install: bash bootstrap.sh deletes state and runs all 27 steps fresh",
+        "Incremental update: update.fish + 'Update Now' use UPDATE_MODE=incremental",
+        "Version-only updater: notification fires on version bumps, not every commit",
+        "install-state.json: per-step versions + overall install version, atomic writes",
+        "GTK theme compiles for GNOME 47/48, per-step caching",
+        "SF Pro fonts, Big Sur sounds, GDM theme, Firefox userChrome",
+        "Flatpak GTK runtime, Kitty terminal, Fish shell, Dash-to-Dock, UWG, blur",
+        "Kitty-only updater with boot-aware two-cache persistence",
+        "Prompt persistence: answers saved once, never re-asked",
+        "Step versions: apply_configs 1.1, install_updater 1.1, finalize 1.1"
+      ]
+    },
+    {
+      "version": "1.0",
+      "changes": [
+        "INITIAL: Complete Fedora MacTahoe setup \u2014 all steps",
+        "GTK theme compiles for GNOME 47/48",
+        "SF Pro fonts, Big Sur sounds, GDM theme, Firefox userChrome",
+        "Flatpak GTK runtime, Kitty terminal, Fish shell",
+        "Dash-to-Dock, UWG, blur extensions",
+        "Update notifier with two-cache persistence (boot-aware)",
+        "MATE terminal family fix (single-string -e syntax)",
+        "Kitty-first terminal detection",
+        "Refresh.fish --chrome flag (Singleton lock clearance)",
+        "Window Title Pro crash fix (a99d9489)"
+      ]
+    }
+  ],
+  "steps": {
+    "preflight": "1.0",
+    "remove_ptyxis": "3.7.22",
+    "remove_gnome_weather": "1.0",
+    "install_rpmfusion": "3.7.12",
+    "install_nvidia": "1.0",
+    "install_rpm_packages": "1.3",
+    "install_browsers": "3.7.29",
+    "install_flatpaks": "1.0",
+    "install_mactahoe_theme": "3.7.11",
+    "install_icons": "3.7.29",
+    "install_font": "1.0",
+    "apply_desktop_entries": "1.0",
+    "ensure_celluloid_default": "1.0",
+    "configure_nautilus_defaults": "3.7.29",
+    "apply_configs": "3.7.22",
+    "apply_dconf": "3.7.22",
+    "optimize_system_resources": "1.1",
+    "apply_wallpapers": "3.7.22",
+    "install_custom_avatars": "3.7.22",
+    "download_optional_videos": "3.7.9",
+    "setup_gdm": "3.7.29",
+    "setup_firefox_theme": "3.7.9",
+    "setup_flatpak_theme": "1.0",
+    "install_sounds": "3.7.29",
+    "install_updater": "3.7.29",
+    "install_ktheme_watcher": "3.7.29",
+    "setup_terminal": "3.7.29",
+    "setup_shell": "1.0",
+    "install_extensions": "3.7.29",
+    "mirror_flatpak_icons": "1.0",
+    "finalize": "3.7.11"
   }
- ],
- "steps": {
-  "preflight": "1.0",
-  "remove_ptyxis": "3.7.22",
-  "remove_gnome_weather": "1.0",
-  "install_rpmfusion": "3.7.12",
-  "install_nvidia": "1.0",
-  "install_rpm_packages": "1.3",
-  "install_browsers": "3.7.29",
-  "install_flatpaks": "1.0",
-  "install_mactahoe_theme": "3.7.11",
-  "install_icons": "3.7.29",
-  "install_font": "1.0",
-  "apply_desktop_entries": "1.0",
-  "ensure_celluloid_default": "1.0",
-  "configure_nautilus_defaults": "3.7.29",
-  "apply_configs": "3.7.22",
-  "apply_dconf": "3.7.22",
-  "optimize_system_resources": "1.1",
-  "apply_wallpapers": "3.7.22",
-  "install_custom_avatars": "3.7.22",
-  "download_optional_videos": "3.7.9",
-  "setup_gdm": "3.7.29",
-  "setup_firefox_theme": "3.7.9",
-  "setup_flatpak_theme": "1.0",
-  "install_sounds": "3.7.29",
-  "install_updater": "3.7.29",
-  "install_ktheme_watcher": "3.7.29",
-  "setup_terminal": "3.7.29",
-  "setup_shell": "1.0",
-  "install_extensions": "3.7.29",
-  "mirror_flatpak_icons": "1.0",
-  "finalize": "3.7.11"
- }
 }

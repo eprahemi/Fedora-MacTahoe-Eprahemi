@@ -291,6 +291,10 @@ try:
     assert isinstance(d.get("latest_version"),str) and re.fullmatch(r"[0-9]+(?:\.[0-9]+)*",d["latest_version"])
     for k in ("bootstrap_sha256","install_sha256","update_sha256","asset_helper_sha256"):
         assert isinstance(d.get(k),str) and re.fullmatch(r"[0-9a-f]{64}",d[k])
+    # Old four-pin manifests remain readable for legacy updates; removal always
+    # requires the new pin. New releases cannot silently omit it.
+    if "uninstall_sha256" in d or tuple(map(int,d["latest_version"].split("."))) >= (3,7,33):
+        assert isinstance(d.get("uninstall_sha256"),str) and re.fullmatch(r"[0-9a-f]{64}",d["uninstall_sha256"])
 except Exception:
     sys.exit(1)' "$file"
 end
@@ -1175,25 +1179,14 @@ function _update_sync_system_fish --description 'refresh the root-owned fish hel
     end
     if command -q sudo
         and sudo -n true 2>/dev/null
-        sudo mkdir -p "$sys_fish_dir"; or return 1
-        sudo cp -f "$detector" "$sys_fish_dir/update.fish"
-        and sudo chmod 644 "$sys_fish_dir/update.fish"
-        and sudo cp -f "$handler" "$sys_fish_dir/"
+        sudo -n mkdir -p "$sys_fish_dir"; or return 1
+        sudo -n cp -f "$detector" "$sys_fish_dir/update.fish"
+        and sudo -n chmod 644 "$sys_fish_dir/update.fish"
+        and sudo -n cp -f "$handler" "$sys_fish_dir/"
         and printf '\n  \e[1;32m✓ System-wide fish helpers updated (rescue detector + did-you-mean handler).\e[0m\n'
         or return 1
-    else if command -q pkexec
-        printf '\n  \e[1;33mSystem-wide fish helpers need your password — a dialog will pop up once.\e[0m\n'
-        pkexec mkdir -p "$sys_fish_dir"
-        and pkexec cp -f "$detector" "$sys_fish_dir/update.fish"
-        and pkexec chmod 644 "$sys_fish_dir/update.fish"
-        and pkexec cp -f "$handler" "$sys_fish_dir/__fish_default_command_not_found_handler.fish"
-        and printf '\n  \e[1;32m✓ System-wide fish helpers updated (rescue detector + did-you-mean handler).\e[0m\n'
-        or begin
-            printf '\n  \e[1;31m✘ System-wide fish helpers not updated — authorization/operation failed.\e[0m\n'
-            return 1
-        end
     else
-        printf '\n  System-wide Fish helpers require sudo or pkexec.\n' >&2
+        printf '\n  System-wide Fish helper credentials expired; rerun to authorize.\n' >&2
         return 1
     end
     # /etc/fish/config.fish — the did-you-mean fallback source block (once).
@@ -1204,11 +1197,10 @@ function _update_sync_system_fish --description 'refresh the root-owned fish hel
         set -l block "\n# ── Fedora MacTahoe did-you-mean fallback (fedora-mactahoe-handler) ──\nif not test -f \"\$HOME/.config/fish/functions/__fish_default_command_not_found_handler.fish\"\n    and test -f /etc/fish/functions/__fish_default_command_not_found_handler.fish\n    source /etc/fish/functions/__fish_default_command_not_found_handler.fish\nend\n# ── end of fedora-mactahoe-handler ──\n"
         if command -q sudo
             and sudo -n true 2>/dev/null
-            printf '%b' "$block" | sudo tee -a /etc/fish/config.fish >/dev/null
+            printf '%b' "$block" | sudo -n tee -a /etc/fish/config.fish >/dev/null
             test $pipestatus[2] -eq 0; or return 1
-        else if command -q pkexec
-            printf '%b' "$block" | pkexec tee -a /etc/fish/config.fish >/dev/null
-            test $pipestatus[2] -eq 0; or return 1
+        else
+            return 1
         end
     end
     # /etc/fish/config.fish — keep the guard message friendly + current
@@ -1241,10 +1233,7 @@ with open(path, "w") as fh:
         set -l guard_rc 1
         if command -q sudo
             and sudo -n true 2>/dev/null
-            sudo python3 -c "$py" "$sys_cfg" "$gstart" "$gend" "$tmp_block"
-            set guard_rc $status
-        else if command -q pkexec
-            pkexec python3 -c "$py" "$sys_cfg" "$gstart" "$gend" "$tmp_block"
+            sudo -n python3 -c "$py" "$sys_cfg" "$gstart" "$gend" "$tmp_block"
             set guard_rc $status
         end
         rm -f "$tmp_block"
@@ -1373,7 +1362,8 @@ function _update_configs_work --argument-names tmp
     _update_ui_task 3 ok
     _update_ui_task 4 running
     if test -f "$cfg/updater/update-rescue.fish"; or test -f "$cfg/fish/functions/__fish_default_command_not_found_handler.fish"
-        _update_ui_native _update_sync_system_fish "$cfg"
+        _update_ui_native sudo -v; or return 1
+        _update_ui_quiet _update_sync_system_fish "$cfg"
         or return 1
         _update_ui_task 4 ok
     else
@@ -1431,7 +1421,7 @@ function _update_configs_work --argument-names tmp
     _update_ui_quiet systemctl --user start fedora-mactahoe-updater.timer; or return 1
     # Wallpaper colors are opt-in too, not just the background watcher.
     if test "$kt_palette_enabled" -eq 1; and functions -q ktheme
-        _update_ui_native ktheme apply --silent; or return 1
+        _update_ui_quiet ktheme apply --silent; or return 1
     end
     _update_ui_task 6 ok
     _update_ui_task 7 running
@@ -1661,11 +1651,14 @@ function _update_target_gdm --description 're-apply the GDM login theme'
     return $code
 end
 
-function _update_target_wallpaper --description 'reinstall wallpapers: normal, +18 or both — add keeps the other pack'
-    # Default refresh delegates installed-pack decisions to the safety handler.
-    # update wallpaper add    → install the chosen pack alongside the other one
-    # update wallpaper --add  → same (also: -add)
-    # update wallpaper both   → validate and transactionally refresh both packs
+function _update_target_wallpaper --description 'reinstall wallpapers: normal, +18 or both'
+    # update wallpaper          → refresh what is installed (normal / +18 / both)
+    #                             both installed: prompt to delete one or both
+    # update wallpaper add      → choose a pack; 1/2 remove the other, 3 = both
+    # update wallpaper --add    → same
+    # update wallpaper both     → refresh both packs
+    # update wallpaper 18       → refresh only the +18 pack
+    # update wallpaper normal   → refresh only the normal pack
     set -l add_mode false
     if set -q argv[1]
         switch (string lower -- "$argv[1]")
@@ -1673,32 +1666,88 @@ function _update_target_wallpaper --description 'reinstall wallpapers: normal, +
                 set add_mode true
         end
     end
+
+    # Detect which packs are currently installed (system-wide Wallvault dirs).
+    set -l has_normal false; set -l has_18 false
+    if test -d '/usr/share/backgrounds/Wallvault Wallpapers'
+        set has_normal true
+    end
+    if test -d '/usr/share/backgrounds/Wallvault Wallpapers +18'
+        set has_18 true
+    end
+
     set -l title "UPDATE WALLPAPER"
     if test "$add_mode" = true
         set title "UPDATE WALLPAPER — ADD"
     end
+
     set -l pick normal
+    set -l force false
     if test "$add_mode" = true
         set pick (_update_pick_pack $title)
+        switch $pick
+            case cancel
+                return 1
+        end
+        # Any explicit pick retires the other pack unless "both" is chosen.
+        set force true
     else if contains -- "$argv[1]" both 18 normal
         set pick "$argv[1]"
+        set force true
+    else if test "$has_normal" = true -a "$has_18" = true
+        # Both installed: ask which one to retire (or update both).
+        begin
+            printf "\n"
+            _update_box_top
+            _update_box_title "UPDATE WALLPAPER" "1;36"
+            _update_box_rule
+            _update_box_text "Both wallpaper packs are installed." "1;37"
+            _update_box_text "[1] Delete +18, update normal" "1;36"
+            _update_box_text "[2] Delete normal, update +18" "1;36"
+            _update_box_text "[3] Update both" "1;36"
+            _update_box_text "[4] Cancel" "1;37"
+            _update_box_bottom
+        end >&2
+        read -l choice -P "  Your choice [1-4]: "
+        if test $status -ne 0
+            printf "\n  \e[1;31m✘ Cancelled.\e[0m\n" >&2
+            return 1
+        end
+        switch $choice
+            case 1
+                set pick normal
+            case 2
+                set pick 18
+            case 3
+                set pick both
+            case 4 q 0
+                return 1
+            case '*'
+                printf "  \e[1;31m✘ Invalid choice.\e[0m\n" >&2
+                return 1
+        end
+        set force true
+    else if test "$has_18" = true -a "$has_normal" = false
+        set pick 18
+        set force true
+    else if test "$has_normal" = true -a "$has_18" = false
+        set pick normal
+        set force true
     end
+
     set -l want false
     set -l both_mode false
     switch $pick
-        case cancel
-            return 1
         case 18
             set want true
         case both
             set want true
             set both_mode true
     end
+
     set -l tmp (_update_fetch_bundle)
     or return 1
-    # Both installed: no prompt, preserve both. Extra only: fresh three-way choice.
-    # Existing normal and active settings are never silently removed/reset.
-    set -l envs "INSTALL_WALLPAPER_18=$want" "INSTALL_DESKTOP_WALLPAPER=true"
+    set -l envs "INSTALL_WALLPAPER_18=$want" "INSTALL_DESKTOP_WALLPAPER=true" "INSTALL_ASSET_FORCE=$force"
     if test "$add_mode" = true
         set -a envs "INSTALL_WALLPAPER_ADD=true"
     end
@@ -1706,8 +1755,7 @@ function _update_target_wallpaper --description 'reinstall wallpapers: normal, +
         set -a envs "INSTALL_WALLPAPER_BOTH=true"
     end
     _update_run_step "$tmp" "apply_wallpapers" $envs
-    set -l code $status
-    return $code
+    return $status
 end
 
 function _update_target_pfp --description 'reinstall profile pictures: normal, +18 or both — add keeps the other pack'
@@ -2348,7 +2396,7 @@ function _update_target_uninstall --description 'guarded full removal via uninst
             return 0
         end
     end
-    _update_ui_begin 'update uninstall' '' 'Check GitHub availability' 'Download removal bundle' 'Extract removal bundle' 'Native guarded removal'; or return 1
+    _update_ui_begin 'update uninstall' '' 'Verify removal manifest' 'Download removal files' 'Verify removal files' 'Guarded removal'; or return 1
     _update_uninstall_work $argv
     set -l code $status
     _update_ui_end $code
@@ -2367,9 +2415,17 @@ function _update_uninstall_work
         end
     end
 
-    # ── network preflight — offline users should not go through the gates ──
+    # Validate fresh published metadata BEFORE gates/downloads. Old four-pin
+    # manifests cannot authorize removal. TOFU/HTTPS consistency, not signing.
     _update_ui_task 1 running
-    if not _update_ui_quiet curl -sfI --max-time 10 "https://codeload.github.com/eprahemi/Fedora-MacTahoe-Eprahemi/tar.gz/refs/heads/main" -o /dev/null
+    _update_ui_quiet _update_fetch_manifest; or return 1
+    set -l uninstall_pin (_update_manifest_hash uninstall_sha256)
+    if test (string length -- "$uninstall_pin") -ne 64
+        printf '  This manifest cannot verify removal. No uninstaller was run.\n' >&2
+        return 1
+    end
+    set -l bootstrap_pin (_update_manifest_hash bootstrap_sha256)
+    if not _update_ui_quiet curl -q -sfI --proto '=https' --proto-redir '=https' --max-time 10 "https://raw.githubusercontent.com/eprahemi/Fedora-MacTahoe-Eprahemi/main/uninstall.sh" -o /dev/null
         printf " \e[1;31mOFFLINE\e[0m\n\n"
         _update_box_top
         _update_box_title "NO INTERNET — NOTHING HAPPENED" "1;31"
@@ -2406,17 +2462,17 @@ function _update_uninstall_work
     _update_box_top
     _update_box_title "UNINSTALL — EVERYTHING WILL BE REMOVED" "1;31"
     _update_box_rule
-    _update_box_text "Themes, icons, fonts, sounds, extensions, GDM," "1;37"
-    _update_box_text "wallpapers and services are removed; your old" "1;37"
-    _update_box_text "dconf/fish snapshots and stock Fedora defaults" "1;37"
-    _update_box_text "are restored to pre-MacTahoe state." "1;37"
+    _update_box_text "Named project user collections go to Trash." "1;37"
+    _update_box_text "Settings and service changes are checked." "1;37"
+    _update_box_text "Custom files, shared assets, app data and" "1;37"
+    _update_box_text "recovery snapshots are kept for review." "1;37"
     if test $purge -eq 1
         _update_box_text ""
         _update_box_tag "LET'S TALK FIRST — SERIOUSLY"
         _update_box_text ""
-        _update_box_text "Purge erases every app, Flatpak, browser and" "1;31"
-        _update_box_text "ALL their data. If something is broken this" "1;31"
-        _update_box_text "won't fix it — it just deletes everything." "1;31"
+        _update_box_text "Purge offers named desktop RPM app removal." "1;31"
+        _update_box_text "Review native dependency changes carefully." "1;31"
+        _update_box_text "App data, Flatpaks and custom repos are kept." "1;31"
         _update_box_text "  update full     — fresh reinstall, fixes most bugs" "1;36"
         _update_box_text "  update check    — status + health at a glance" "1;36"
         _update_box_text "Report the bug instead — Discord .3ar. or" "1;33"
@@ -2439,9 +2495,9 @@ function _update_uninstall_work
     _update_box_text "Anything else cancels and keeps everything." "1;33"
     if test $purge -eq 1
         _update_box_rule
-        _update_box_text "HIGH RISK — this also wipes every MacTahoe" "1;31"
-        _update_box_text "app, ALL Flatpaks, Chrome/Edge/VS Code," "1;31"
-        _update_box_text "their repos and ALL their saved data." "1;31"
+        _update_box_text "HIGH RISK — package dependency changes can" "1;31"
+        _update_box_text "affect other apps. Review the native plan." "1;31"
+        _update_box_text "Saved app data and custom repos stay kept." "1;31"
         _update_box_text ""
         _update_box_text "For purge mode the word is  REMOVE ALL" "1;33"
         _update_box_text "not just REMOVE — think twice first." "1;33"
@@ -2497,14 +2553,16 @@ function _update_uninstall_work
     end
     printf "\n"
 
-    # ── gate 3: fresh bundle + fingerprint, then run ──
+    # The uninstaller needs bundle assets (desktop entries, icons, fish
+    # functions), so fetch the full source tarball and verify the two scripts
+    # that may execute before anything runs.
     _update_ui_task 2 running
     set -l tmpdir (mktemp -d /tmp/mactahoe-uninstall.XXXXXX 2>/dev/null)
     if test -z "$tmpdir"; or not test -d "$tmpdir"
         printf "\n  \e[1;31m✘ Could not create a temp folder.\e[0m\n"
         return 1
     end
-    _update_ui_quiet curl -fsSL --max-time 120 "https://codeload.github.com/eprahemi/Fedora-MacTahoe-Eprahemi/tar.gz/refs/heads/main" -o "$tmpdir/bundle.tar.gz"
+    _update_ui_quiet _update_download_removal "$tmpdir" "$uninstall_pin" "$bootstrap_pin"
     if test $status -ne 0
         rm -rf "$tmpdir"
         printf "\n  \e[1;31m✘ Could not download the bundle — check your connection.\e[0m\n"
@@ -2512,14 +2570,8 @@ function _update_uninstall_work
     end
     _update_ui_task 2 ok
     _update_ui_task 3 running
-    _update_ui_quiet tar -xzf "$tmpdir/bundle.tar.gz" -C "$tmpdir"
-    if test $status -ne 0
-        rm -rf "$tmpdir"
-        printf "\n  \e[1;31m✘ Could not extract the bundle.\e[0m\n"
-        return 1
-    end
-    set -l bundle_dir "$tmpdir/Fedora-MacTahoe-Eprahemi-main"
-    if not test -f "$bundle_dir/uninstall.sh"
+    set -l bundle_dir "$_UPDATE_REMOVAL_BUNDLE"
+    if test -z "$bundle_dir"; or not test -d "$bundle_dir"; or not test -f "$bundle_dir/uninstall.sh"
         rm -rf "$tmpdir"
         printf "\n  \e[1;31m✘ Bundle is missing uninstall.sh — aborting.\e[0m\n"
         return 1
@@ -2547,6 +2599,49 @@ function _update_uninstall_work
     end
     rm -rf "$tmpdir" 2>/dev/null
     return $rc
+end
+
+# Downloaded source is never evaluated to validate it. The full bundle tarball
+# supplies the assets the uninstaller reads; the two scripts that may execute
+# must match the fresh, previously validated manifest pins.
+function _update_download_removal --argument-names directory uninstall_pin bootstrap_pin
+    set -g _UPDATE_REMOVAL_BUNDLE ''
+    string match -qr '^[0-9a-f]{64}$' -- "$uninstall_pin"; or return 1
+    string match -qr '^[0-9a-f]{64}$' -- "$bootstrap_pin"; or return 1
+    set -l archive "$directory/bundle.tar.gz"
+    command curl -q -fsSL --proto '=https' --proto-redir '=https' --max-redirs 3 \
+        --connect-timeout 5 --max-time 300 --max-filesize 536870912 \
+        "https://codeload.github.com/eprahemi/Fedora-MacTahoe-Eprahemi/tar.gz/refs/heads/main" \
+        -o "$archive"; or return 1
+    # Reject HTML error pages and malformed archives before extraction.
+    command tar -tzf "$archive" >/dev/null 2>&1; or return 1
+    command mkdir -p "$directory/extract"; or return 1
+    command tar --no-same-owner --no-same-permissions -xzf "$archive" -C "$directory/extract"; or return 1
+    set -l tops (command find "$directory/extract" -mindepth 1 -maxdepth 1 -type d -name 'Fedora-MacTahoe-Eprahemi-*')
+    if test (count $tops) -ne 1
+        return 1
+    end
+    set -l bundle $tops[1]
+    for pair in "uninstall.sh:$uninstall_pin" "bootstrap.sh:$bootstrap_pin"
+        set -l fields (string split ':' -- "$pair")
+        if not test -f "$bundle/$fields[1]"
+            return 1
+        end
+        if test (_update_sha256 "$bundle/$fields[1]") != "$fields[2]"
+            printf 'Removal payload fingerprint mismatch: %s\n' "$fields[1]" >&2
+            return 1
+        end
+        command bash -n "$bundle/$fields[1]"; or return 1
+    end
+    # The uninstaller sources the shared UI library only when updates.json pins
+    # the exact bootstrap.sh bytes. Reuse the already validated manifest.
+    command cp "$HOME/.cache/fedora-mactahoe/latest-manifest.json" "$bundle/updates.json"; or return 1
+    _update_validate_manifest "$bundle/updates.json"; or return 1
+    # The manifest copy must describe the exact pins selected above, even if
+    # another updater refreshed its cache while this download was in flight.
+    command python3 -I -c 'import json,sys
+d=json.load(open(sys.argv[1])); sys.exit(0 if (d["uninstall_sha256"],d["bootstrap_sha256"])==tuple(sys.argv[2:]) else 1)' "$bundle/updates.json" "$uninstall_pin" "$bootstrap_pin"; or return 1
+    set -g _UPDATE_REMOVAL_BUNDLE "$bundle"
 end
 
 # ══════════════════════════════════════════════════════════════

@@ -4,6 +4,7 @@
 # --ui-library; the online bash -c entry needs no extra download/dependency.
 # Installation functions always execute in the foreground shell. Only painting
 # runs in a child; it never reads input, executes work, or writes the transcript.
+_FED_UI_PROTOCOL=3
 _UI_ACTIVE=0 _UI_PID='' _UI_MODE=work _UI_TASK='Preparing your Fedora desktop'
 _UI_PHASE='Preparation' _UI_DONE=0 _UI_TOTAL=0 _UI_STARTED=${_FED_UI_STARTED:-$EPOCHSECONDS}
 export _FED_UI_STARTED="$_UI_STARTED"
@@ -259,7 +260,7 @@ _ui_init() {
     exec >>"$_FED_LOG" 2>&1
     printf '\033[?1049h\033[?25l' >&7
     _ui_resume
-  elif [ "${_FED_QUIET:-0}" = 1 ]; then
+  else
     # Updater-owned non-TTY runs retain diagnostics without streaming internals.
     # Native interaction still explicitly uses the original descriptors below.
     exec >>"$_FED_LOG" 2>&1
@@ -280,6 +281,8 @@ _ui_notice() {
     _UI_NOTICES+=("$1")
     _UI_NOTICE_COLORS+=("$_UI_NOTICE_COLOR")
     _ui_resume
+  else
+    printf '%s\n' "$1" >&6
   fi
 }
 _ui_question() {
@@ -301,6 +304,8 @@ _ui_question() {
       _ui_wrap "$3" "$cols" '90'
       printf '\033[1;36m   > \033[0m' >&7
     fi
+  else
+    printf '\n%s\n%s\n%s\n' "$1" "${2:-}" "${3:-}" >&6
   fi
 }
 _ui_cleanup() {
@@ -377,7 +382,9 @@ _ui_finish_dashboard() {
   local entry group label state mark color status dots dotstr cur_group=''
   _ui_finish_brand
   printf '\n' >&5
-  if [ "$issues" -eq 1 ]; then
+  if [ -n "${_UI_FINISH_TITLE:-}" ]; then
+    printf '  %s              %s%s\n\n' "$cg" "$_UI_FINISH_TITLE" "$c0" >&5
+  elif [ "$issues" -eq 1 ]; then
     printf '  %s              F I N I S H E D   W I T H   I S S U E S%s\n\n' "$cr" "$c0" >&5
   elif [ -n "${UPDATE_STEPS:-}" ]; then
     printf '  %s              S E L E C T E D   T A S K S   F I N I S H E D%s\n\n' "$cg" "$c0" >&5
@@ -443,7 +450,9 @@ _ui_finish_compact() {
   local cw=$'\033[1;37m' cd=$'\033[90m' c0=$'\033[0m'
   local entry group label state mark color status cur_group=''
   printf '  %sFedora MacTahoe - Eprahemi Edition%s\n' "$cw" "$c0" >&5
-  if [ "$issues" -eq 1 ]; then
+  if [ -n "${_UI_FINISH_TITLE_COMPACT:-}" ]; then
+    printf '  %s%s%s\n\n' "$cg" "$_UI_FINISH_TITLE_COMPACT" "$c0" >&5
+  elif [ "$issues" -eq 1 ]; then
     printf '  %sFinished with issues%s\n\n' "$cr" "$c0" >&5
   elif [ -n "${UPDATE_STEPS:-}" ]; then
     printf '  %sSelected tasks finished%s\n\n' "$cg" "$c0" >&5
@@ -555,7 +564,7 @@ _ui_auth() {
     _UI_MODE="$previous_mode"
     _ui_resume
   else
-    command sudo -v || rc=$?
+    command sudo -v >&5 2>&6 || rc=$?
   fi
   return "$rc"
 }
@@ -672,10 +681,10 @@ _ui_native_run() {
   return "$rc"
 }
 _net_package_once() {
-  # Keep diagnostics for command-boundary recovery; stdin remains native.
-  # sudo authentication is warmed separately, never through this pipe.
+  # Audited managers only: EOF on unexpected stdin, no authentication in a pipe.
+  # tee writes to the CURRENT stdout: outer file/command captures remain valid.
   local rc=0
-  if "$@" 2>&1 | tee "$capture"; then rc=${PIPESTATUS[0]}; else rc=${PIPESTATUS[0]}; fi
+  if "$@" </dev/null 2>&1 | tee "$capture"; then rc=${PIPESTATUS[0]}; else rc=${PIPESTATUS[0]}; fi
   return "$rc"
 }
 _net_package_run() {
@@ -687,8 +696,8 @@ _net_package_run() {
   while :; do
     rc=0
     native_ui=${_UI_ACTIVE:-0}
-    _ui_native_run _net_package_once "$@" || rc=$?
-    if { [ "$native_ui" = 1 ] || [ "${_FED_QUIET:-0}" = 1 ]; } && [ -n "${_FED_LOG:-}" ]; then cat "$capture" >>"$_FED_LOG"; fi
+    _net_package_once "$@" || rc=$?
+    if [ -n "${_FED_LOG:-}" ]; then cat "$capture" >>"$_FED_LOG"; fi
     if [ "$rc" -eq 0 ]; then rm -f "$capture"; return 0; fi
     diagnostic=$(grep -Ei 'Curl error \((5|6|7|28|52|55|56)\)|Could not resolve host|Could not connect to' "$capture" || true)
     endpoint=$(printf '%s\n' "$diagnostic" | grep -Eo 'https?://[^[:space:]<>]+' | head -1 | sed 's/[]),;"]*$//' || true)
@@ -698,27 +707,41 @@ _net_package_run() {
     # Without the actual failed endpoint and an explicit transport diagnostic,
     # this could be a missing package, bad repository, GPG or configuration error.
     if [ -z "$endpoint" ]; then rm -f "$capture"; return "$rc"; fi
-    if ! _net_recover "$endpoint"; then rm -f "$capture"; return 130; fi
+    # A failed manager may already have committed part of a transaction. Never
+    # blindly replay it, even for an explicit transport error. Preserve endpoint
+    # and status for diagnosis; the owning step remains failed/retryable.
+    printf 'Package operation exited %s; failed endpoint: %s. Rerun after reviewing the log.\n' "$rc" "$endpoint"
+    rm -f "$capture"
+    return "$rc"
   done
 }
 flatpak() {
   case "${1:-}" in
-    install) _net_package_run command flatpak "$@" ;;
-    uninstall) _ui_native_run command flatpak "$@" ;;
+    install|uninstall)
+      # Installer routes target the default system installation. Authenticate
+      # before work rather than allowing a hidden Polkit/password interaction.
+      local action=$1; shift
+      sudo flatpak "$action" --noninteractive "$@" ;;
+    remote-add) sudo flatpak "$@" ;;
     *) command flatpak "$@" ;;
   esac
 }
 sudo() {
   # Preserve noninteractive credential checks. For work, warm authentication
   # before invoking the original argv; do not wrap the work in a subshell.
-  if [ "${_UI_ACTIVE:-0}" = 1 ] && [ "${1:-}" != -n ]; then
+  if [ "${1:-}" = -v ]; then _ui_auth; return $?; fi
+  if [ "${1:-}" = -n ]; then command sudo "$@"; return $?; fi
+  if [ "${1:-}" != -n ]; then
     if ! command sudo -n -v 2>/dev/null; then _ui_auth || return $?; fi
   fi
   case "${1:-}:${2:-}:${3:-}" in
-    dnf:install:*|dnf:swap:*|dnf:group:install)
-       _net_package_run command sudo "$@" ;;
-    dnf:*:*|bash:*:*|chsh:*:*|*.sh:*:*) _ui_native_run command sudo "$@" ;;
-    *) command sudo "$@" ;;
+    dnf:install:*|dnf:swap:*|dnf:group:install|dnf:remove:*|dnf:reinstall:*)
+       _net_package_run command sudo -n "$@" ;;
+    flatpak:install:*|flatpak:uninstall:*)
+       local manager=$1 action=$2; shift 2
+       _net_package_run command sudo -n "$manager" "$action" --noninteractive "$@" ;;
+    chsh:*:*) _ui_native_run command sudo -n "$@" ;;
+    *) command sudo -n "$@" ;;
   esac
 }
 

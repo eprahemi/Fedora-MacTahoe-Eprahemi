@@ -432,6 +432,9 @@ _step_failed() {
       echo -e "  ${RED}  ┊   ${NC}  ${DIM}Continuing with the next step — this one is retried on the next run.${NC}"
     fi
     _note_missing "$label" "$(_step_fix "$step_id")"
+    if [ "${_UI_ACTIVE:-0}" != 1 ] && { true >&6; } 2>/dev/null; then
+      printf '%s could not complete. Details: %s\n' "$label" "${_FED_LOG:-session log}" >&6
+    fi
     if [ "${_UI_ACTIVE:-0}" = 1 ]; then
       if [ "${3:-}" = stopped ]; then
         _ui_notice "$label was interrupted. Stopping safely; completed work is kept." '1;33'
@@ -1946,10 +1949,8 @@ remove_ptyxis() {
 
   if rpm -q ptyxis &>/dev/null; then
     log "Removing Ptyxis package..."
-    local _dnf_log="/tmp/_ptyxis-dnf.log" _dnf_rc=0
-    sudo dnf remove -y ptyxis > "$_dnf_log" 2>&1 || _dnf_rc=$?
-    tail -1 "$_dnf_log" 2>/dev/null | sed 's/^/      /' || true
-    rm -f "$_dnf_log" 2>/dev/null || true
+    local _dnf_rc=0
+    sudo dnf remove -y ptyxis || _dnf_rc=$?
     if rpm -q ptyxis &>/dev/null; then
       warn "Ptyxis package removal failed (dnf exit $_dnf_rc) — leaving its settings untouched"
       return 1
@@ -2079,14 +2080,12 @@ install_rpmfusion() {
   rpm_nonfree=$(_rpmfusion_fetch nonfree "$release" "$rpm_dir" || true)
 
   if [ -n "$rpm_free" ] && [ -n "$rpm_nonfree" ]; then
-    if sudo dnf install -y "$rpm_free" "$rpm_nonfree" > /tmp/_rpmfusion-dnf.log 2>&1; then
+    if sudo dnf install -y "$rpm_free" "$rpm_nonfree"; then
       ok "RPM Fusion repos installed"
     else
       warn "RPM Fusion repo install failed — continuing without them"
       _step_fail=1
-      tail -3 /tmp/_rpmfusion-dnf.log 2>/dev/null | sed 's/^/      /' || true
     fi
-    rm -f /tmp/_rpmfusion-dnf.log 2>/dev/null || true
   else
     warn "No RPM Fusion mirror reachable — skipping repos (codecs will be limited)"
     _step_fail=1
@@ -2106,8 +2105,8 @@ install_rpmfusion() {
   # Swap it out cleanly before installing the rest.
   if rpm -q ffmpeg-free &>/dev/null && ! rpm -q ffmpeg &>/dev/null; then
     log "Replacing Fedora's ffmpeg-free with RPM Fusion's ffmpeg..."
-    sudo dnf swap -y ffmpeg-free ffmpeg 2>/dev/null || \
-      sudo dnf install -y --allowerasing ffmpeg 2>/dev/null || {
+    sudo dnf swap -y ffmpeg-free ffmpeg || \
+      sudo dnf install -y --allowerasing ffmpeg || {
         warn "Could not replace ffmpeg-free with ffmpeg"
         _step_fail=1
       }
@@ -2117,15 +2116,12 @@ install_rpmfusion() {
   # die because a third-party repo is unreachable.
   if sudo dnf install -y \
     ffmpeg ffmpegthumbnailer gstreamer1-plugin-libav gstreamer1-plugins-ugly \
-    gstreamer1-plugins-bad-freeworld gstreamer1-plugins-bad-free-extras \
-    > /tmp/_rpmfusion-dnf.log 2>&1; then
+    gstreamer1-plugins-bad-freeworld gstreamer1-plugins-bad-free-extras; then
     ok "Codecs installed"
   else
     warn "Codec packages unavailable — skipping (RPM Fusion repos may be unreachable)"
     _step_fail=1
-    tail -3 /tmp/_rpmfusion-dnf.log 2>/dev/null | sed 's/^/      /' || true
   fi
-  rm -f /tmp/_rpmfusion-dnf.log 2>/dev/null || true
 
   if ! sudo dnf group install -y multimedia; then
     warn "Multimedia group installation failed — continuing; retry with: sudo dnf group install -y multimedia"
@@ -2207,13 +2203,11 @@ n17="  Press any key to continue, or Ctrl+C to update first"
     echo -e "${GREEN}proceeding${NC}"
     # A missing driver package must not kill the install — the desktop
     # still works on the fallback graphics driver.
-    if sudo dnf install -y akmod-nvidia xorg-x11-drv-nvidia-cuda nvidia-settings vdpauinfo libva-utils > /tmp/_nvidia-dnf.log 2>&1; then
+    if sudo dnf install -y akmod-nvidia xorg-x11-drv-nvidia-cuda nvidia-settings vdpauinfo libva-utils; then
       ok "NVIDIA drivers installed — fingers crossed"
     else
       warn "NVIDIA driver packages unavailable — continuing (fallback graphics driver stays)"
-      tail -3 /tmp/_nvidia-dnf.log 2>/dev/null | sed 's/^/      /' || true
     fi
-    rm -f /tmp/_nvidia-dnf.log 2>/dev/null || true
   else
     warn "No NVIDIA gear found — moving on"
     _VISUAL_SKIP_REASON='no NVIDIA GPU detected'
@@ -2248,14 +2242,14 @@ install_rpm_packages() {
   local _step_fail=0
   INSTALL_RPM_OK=0
   INSTALL_RPM_FAIL=0
-  if sudo dnf install -y $pkgs > /tmp/_pkgs-dnf.log 2>&1; then
+  if sudo dnf install -y $pkgs; then
     INSTALL_RPM_OK=$(echo $pkgs | wc -w | tr -d ' ')
     log "RPM packages installed"
   else
     warn "Bulk package install failed — retrying one by one"
     local _p
     for _p in $pkgs; do
-      if ! sudo dnf install -y "$_p" >> /tmp/_pkgs-dnf.log 2>&1; then
+      if ! sudo dnf install -y "$_p"; then
         failed_pkgs="${failed_pkgs} $_p"
         INSTALL_RPM_FAIL=$((INSTALL_RPM_FAIL + 1))
       else
@@ -2270,8 +2264,6 @@ install_rpm_packages() {
       log "RPM packages installed after the one-by-one retry"
     fi
   fi
-  rm -f /tmp/_pkgs-dnf.log 2>/dev/null || true
-
   # Load-bearing packages must be present — later steps depend on them
   # (kitty becomes the default terminal, fish becomes the shell).
   local _crit="kitty fish fastfetch ImageMagick fzf"
@@ -2289,7 +2281,7 @@ install_rpm_packages() {
 
   # Starship prompt (not in Fedora repos — install via official script)
   if ! command -v starship &>/dev/null; then
-    if ! curl -fsSL --max-time 60 https://starship.rs/install.sh | _ui_native_run sh -s -- -y; then
+    if ! curl -fsSL --max-time 60 https://starship.rs/install.sh | sh -s -- -y; then
       warn "Starship install failed — check network or https://starship.rs"
       _step_fail=1
     fi
@@ -2310,12 +2302,10 @@ install_browsers() {
 
   # Firefox
   if ! rpm -q firefox &>/dev/null; then
-    if ! sudo dnf install -y firefox > /tmp/_firefox-dnf.log 2>&1; then
+    if ! sudo dnf install -y firefox; then
       warn "Firefox unavailable — skipping (Fedora repo may be unreachable)"
-      tail -3 /tmp/_firefox-dnf.log 2>/dev/null | sed 's/^/      /' || true
       _step_fail=1
     fi
-    rm -f /tmp/_firefox-dnf.log 2>/dev/null || true
   fi
 
   # Chrome — create repo file directly (--from-repofile not supported by Google)
@@ -2340,7 +2330,7 @@ EOF
       fi
     fi
     # Install from repo, with direct RPM as offline fallback
-    if ! sudo dnf install -y google-chrome-stable 2>/dev/null && \
+    if ! sudo dnf install -y google-chrome-stable && \
        ! sudo dnf install -y https://dl.google.com/linux/direct/google-chrome-stable_current_x86_64.rpm; then
       warn "Chrome installation failed — check network or Google repos"
       _step_fail=1
@@ -2380,12 +2370,10 @@ gpgcheck=1
 gpgkey=https://packages.microsoft.com/keys/microsoft.asc
 EOF
     sudo dnf check-update 2>/dev/null || true
-    if ! sudo dnf install -y code > /tmp/_vscode-dnf.log 2>&1; then
+    if ! sudo dnf install -y code; then
       warn "VS Code unavailable — skipping (Microsoft repo may be unreachable)"
-      tail -3 /tmp/_vscode-dnf.log 2>/dev/null | sed 's/^/      /' || true
       _step_fail=1
     fi
-    rm -f /tmp/_vscode-dnf.log 2>/dev/null || true
   fi
 
   if [ "$_step_fail" -ne 0 ]; then
@@ -2503,7 +2491,7 @@ install_mactahoe_theme() {
   log "Cloning MacTahoe source (GNOME $gtk_version)..."
   if _mactahoe_get_source "$repo"; then
     log "Compiling all theme variants with blur + libadwaita..."
-    if ! _ui_native_run "$repo/install.sh" -t all -b -l; then
+    if ! "$repo/install.sh" -t all -b -l; then
       warn "Compilation failed — theme not installed"
       return 1
     fi
@@ -4184,7 +4172,7 @@ setup_firefox_theme() {
     local reply="" _ff_tty
     # Source fetching and rendering can take time. Recheck before consent.
     if [ -z "$(_firefox_processes)" ]; then
-      _ui_native_run "$repo/tweaks.sh" -f || { FIREFOX_THEME_FAILED=1; return 1; }
+      "$repo/tweaks.sh" -f || { FIREFOX_THEME_FAILED=1; return 1; }
       return 0
     fi
     if ! { exec {_ff_tty}<>/dev/tty; } 2>/dev/null; then
@@ -4228,7 +4216,7 @@ setup_firefox_theme() {
     echo -e "  ${GREEN}  ┊ ✓ ${NC}  Firefox closed — proceeding with theming"
   fi
 
-  if ! _ui_native_run "$repo/tweaks.sh" -f; then
+  if ! "$repo/tweaks.sh" -f; then
     warn "Firefox theming skipped — not yet initialized"
     FIREFOX_THEME_FAILED=1
   fi
