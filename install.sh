@@ -487,8 +487,13 @@ _install_asset_pack() {
     return 1
   fi
   if [ "$current" = both ]; then
-    # Installed reality wins over saved/caller choices: never retire either pack.
-    variant=keep; mode=add; preserve_settings=true
+    # Installed reality wins unless the caller explicitly opted into replacing
+    # a pack (INSTALL_ASSET_FORCE=true, e.g. `update wallpaper` choices).
+    if [ "${INSTALL_ASSET_FORCE:-false}" != "true" ]; then
+      variant=keep; mode=add; preserve_settings=true
+    else
+      preserve_settings=false
+    fi
   elif [ "$current" = 18 ]; then
     _ui_stop
     if [ "${_UI_ACTIVE:-0}" = 1 ]; then printf '\033[2J\033[H\033[?25h' >&7; fi
