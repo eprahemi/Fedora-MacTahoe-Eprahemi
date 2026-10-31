@@ -998,33 +998,58 @@ _prompt_should_ask() {
 # Never overwrite a caller-provided variable here.
 _load_prompt_answers() {
   local ans
-  if [ -z "${INSTALL_DISCORD:-}" ] && ! _prompt_should_ask "discord"; then
-    ans="${PR_ANS['discord']:-}"
-    [ -n "$ans" ] && INSTALL_DISCORD="$ans"
+  # In incremental (quick) mode, always reuse saved answers silently —
+  # never re-ask, even across a version bump.
+  local _incremental=false
+  [ "${UPDATE_MODE:-}" = "incremental" ] && _incremental=true
+  if [ -z "${INSTALL_DISCORD:-}" ]; then
+    if $_incremental; then
+      ans="${PR_ANS['discord']:-}"; [ -n "$ans" ] && INSTALL_DISCORD="$ans"
+    elif ! _prompt_should_ask "discord"; then
+      ans="${PR_ANS['discord']:-}"; [ -n "$ans" ] && INSTALL_DISCORD="$ans"
+    fi
   fi
-  if [ -z "${INSTALL_DESKTOP_WALLPAPER:-}" ] && ! _prompt_should_ask "wallpaper_desktop"; then
-    ans="${PR_ANS['wallpaper_desktop']:-}"
-    [ -n "$ans" ] && INSTALL_DESKTOP_WALLPAPER="$ans"
+  if [ -z "${INSTALL_DESKTOP_WALLPAPER:-}" ]; then
+    if $_incremental; then
+      ans="${PR_ANS['wallpaper_desktop']:-}"; [ -n "$ans" ] && INSTALL_DESKTOP_WALLPAPER="$ans"
+    elif ! _prompt_should_ask "wallpaper_desktop"; then
+      ans="${PR_ANS['wallpaper_desktop']:-}"; [ -n "$ans" ] && INSTALL_DESKTOP_WALLPAPER="$ans"
+    fi
   fi
-  if [ -z "${INSTALL_LOGIN_WALLPAPER:-}" ] && ! _prompt_should_ask "wallpaper_login"; then
-    ans="${PR_ANS['wallpaper_login']:-}"
-    [ -n "$ans" ] && INSTALL_LOGIN_WALLPAPER="$ans"
+  if [ -z "${INSTALL_LOGIN_WALLPAPER:-}" ]; then
+    if $_incremental; then
+      ans="${PR_ANS['wallpaper_login']:-}"; [ -n "$ans" ] && INSTALL_LOGIN_WALLPAPER="$ans"
+    elif ! _prompt_should_ask "wallpaper_login"; then
+      ans="${PR_ANS['wallpaper_login']:-}"; [ -n "$ans" ] && INSTALL_LOGIN_WALLPAPER="$ans"
+    fi
   fi
-  if [ -z "${INSTALL_WALLPAPER_18:-}" ] && ! _prompt_should_ask "wallpaper_18"; then
-    ans="${PR_ANS['wallpaper_18']:-}"
-    [ -n "$ans" ] && INSTALL_WALLPAPER_18="$ans"
+  if [ -z "${INSTALL_WALLPAPER_18:-}" ]; then
+    if $_incremental; then
+      ans="${PR_ANS['wallpaper_18']:-}"; [ -n "$ans" ] && INSTALL_WALLPAPER_18="$ans"
+    elif ! _prompt_should_ask "wallpaper_18"; then
+      ans="${PR_ANS['wallpaper_18']:-}"; [ -n "$ans" ] && INSTALL_WALLPAPER_18="$ans"
+    fi
   fi
-  if [ -z "${INSTALL_BILLIE_VIDEOS:-}" ] && ! _prompt_should_ask "billie_videos"; then
-    ans="${PR_ANS['billie_videos']:-}"
-    [ -n "$ans" ] && INSTALL_BILLIE_VIDEOS="$ans"
+  if [ -z "${INSTALL_BILLIE_VIDEOS:-}" ]; then
+    if $_incremental; then
+      ans="${PR_ANS['billie_videos']:-}"; [ -n "$ans" ] && INSTALL_BILLIE_VIDEOS="$ans"
+    elif ! _prompt_should_ask "billie_videos"; then
+      ans="${PR_ANS['billie_videos']:-}"; [ -n "$ans" ] && INSTALL_BILLIE_VIDEOS="$ans"
+    fi
   fi
-  if [ -z "${INSTALL_DISABLE_FIREWALLD:-}" ] && ! _prompt_should_ask "firewalld"; then
-    ans="${PR_ANS['firewalld']:-}"
-    [ -n "$ans" ] && INSTALL_DISABLE_FIREWALLD="$ans"
+  if [ -z "${INSTALL_DISABLE_FIREWALLD:-}" ]; then
+    if $_incremental; then
+      ans="${PR_ANS['firewalld']:-}"; [ -n "$ans" ] && INSTALL_DISABLE_FIREWALLD="$ans"
+    elif ! _prompt_should_ask "firewalld"; then
+      ans="${PR_ANS['firewalld']:-}"; [ -n "$ans" ] && INSTALL_DISABLE_FIREWALLD="$ans"
+    fi
   fi
-  if [ -z "${INSTALL_REMOVE_OLD_TERMINAL:-}" ] && ! _prompt_should_ask "old_terminal"; then
-    ans="${PR_ANS['old_terminal']:-}"
-    [ -n "$ans" ] && INSTALL_REMOVE_OLD_TERMINAL="$ans"
+  if [ -z "${INSTALL_REMOVE_OLD_TERMINAL:-}" ]; then
+    if $_incremental; then
+      ans="${PR_ANS['old_terminal']:-}"; [ -n "$ans" ] && INSTALL_REMOVE_OLD_TERMINAL="$ans"
+    elif ! _prompt_should_ask "old_terminal"; then
+      ans="${PR_ANS['old_terminal']:-}"; [ -n "$ans" ] && INSTALL_REMOVE_OLD_TERMINAL="$ans"
+    fi
   fi
 }
 
@@ -5585,14 +5610,14 @@ INSTALL_BILLIE_VIDEOS="${INSTALL_BILLIE_VIDEOS:-false}"
 
 # Desktop wallpaper — asked once per manifest version. A saved answer or
 # an INSTALL_DESKTOP_WALLPAPER env var (update wallpaper) wins.
-if [ -z "${INSTALL_DESKTOP_WALLPAPER:-}" ] && _prompt_should_ask "wallpaper_desktop"; then
+if [ -z "${INSTALL_DESKTOP_WALLPAPER:-}" ] && _prompt_should_ask "wallpaper_desktop" && [ "${UPDATE_MODE:-}" != "incremental" ]; then
   prompt_desktop_wallpaper
   _save_prompt_answer "wallpaper_desktop" "${INSTALL_DESKTOP_WALLPAPER:-true}"
 fi
 INSTALL_DESKTOP_WALLPAPER="${INSTALL_DESKTOP_WALLPAPER:-true}"
 
 # GDM login screen — one question, no second confirmation.
-if _prompt_should_ask "wallpaper_login"; then
+if _prompt_should_ask "wallpaper_login" && [ "${UPDATE_MODE:-}" != "incremental" ]; then
   prompt_gdm_login
   _save_prompt_answer "wallpaper_login" "${INSTALL_LOGIN_WALLPAPER:-false}"
 fi
