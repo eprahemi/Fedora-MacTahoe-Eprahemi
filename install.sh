@@ -495,6 +495,9 @@ _install_asset_pack() {
       preserve_settings=false
     fi
   elif [ "$current" = 18 ]; then
+    if [ "${INSTALL_ASSET_FORCE:-false}" = "true" ]; then
+      variant=18; mode=replace; preserve_settings=true
+    else
     _ui_stop
     if [ "${_UI_ACTIVE:-0}" = 1 ]; then printf '\033[2J\033[H\033[?25h' >&7; fi
     printf '\n  Only the extra %s collection is installed.\n  [1] Replace with normal\n  [2] Add normal alongside it\n  [3] Leave untouched (default)\n  Choice [3]: ' "$kind" > /dev/tty 2>/dev/null || true
@@ -507,6 +510,7 @@ _install_asset_pack() {
       *) rm -rf -- "$stage"; _VISUAL_SKIP_REASON='existing collection kept by request'; return 0 ;;
     esac
     preserve_settings=true
+    fi
   elif [ "$current" = normal ]; then
     # A choice may add a pack, never silently remove the installed normal one.
     mode=add; preserve_settings=true
