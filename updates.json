@@ -2,7 +2,7 @@
   "latest_version": "3.7.33",
   "bootstrap_sha256": "753ee03fdb172b3e45e0400bfa7b6177071bcde5b5b9dc4c1229d841433a1ff9",
   "install_sha256": "1e426a64e2e0c05d9102344890f33dbbd26529ce281018dbc024b538e625ff91",
-  "update_sha256": "197d8cccc1d0c33de35d5c0d8694fc64aea50d1b9d513a3bfa2d726d09a779a1",
+  "update_sha256": "80df54f2d5a8f334afa02939be66284e23fe26e3412cb1dc4b8290849509f4c8",
   "uninstall_sha256": "cceaeecce187adf5fb81afe72c3108dc23683141257227333312d929aa84f4cb",
   "asset_helper_sha256": "86f8e3f1b2b025cdedc4b5426853119886c6fbc5fade4dae0c4e4dc6777d9cc1",
   "changelog": [

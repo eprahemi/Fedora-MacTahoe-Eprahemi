@@ -1750,9 +1750,6 @@ function _update_target_wallpaper --description 'reinstall wallpapers: normal, +
     set -l tmp (_update_fetch_bundle)
     or return 1
     set -l envs "INSTALL_WALLPAPER_18=$want" "INSTALL_DESKTOP_WALLPAPER=true" "INSTALL_ASSET_FORCE=$force"
-    if test "$add_mode" = true
-        set -a envs "INSTALL_WALLPAPER_ADD=true"
-    end
     if test "$both_mode" = true
         set -a envs "INSTALL_WALLPAPER_BOTH=true"
     end
