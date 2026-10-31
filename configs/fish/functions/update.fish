@@ -1689,7 +1689,9 @@ function _update_target_wallpaper --description 'reinstall wallpapers: normal, +
             case cancel
                 return 1
         end
-        # Any explicit pick retires the other pack unless "both" is chosen.
+        # Add mode bypasses the "keep both" override so the explicit pick is
+        # honored, but mode stays 'add' (INSTALL_WALLPAPER_ADD) so the other
+        # pack is never removed.
         set force true
     else if contains -- "$argv[1]" both 18 normal
         set pick "$argv[1]"
