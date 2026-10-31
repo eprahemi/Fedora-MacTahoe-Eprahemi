@@ -4,7 +4,7 @@
   "install_sha256": "1e426a64e2e0c05d9102344890f33dbbd26529ce281018dbc024b538e625ff91",
   "update_sha256": "827b2341a932a84cf6fbfe74fd85b93263d7b3560d7368f65ffedd52a670daaf",
   "uninstall_sha256": "cceaeecce187adf5fb81afe72c3108dc23683141257227333312d929aa84f4cb",
-  "asset_helper_sha256": "4f167843ec030f07034742f9fd70deb4e10e8c4aa15b8f4168ce9da89593d32b",
+  "asset_helper_sha256": "86f8e3f1b2b025cdedc4b5426853119886c6fbc5fade4dae0c4e4dc6777d9cc1",
   "changelog": [
     {
       "version": "3.7.33",
