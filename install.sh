@@ -301,7 +301,7 @@ _wait_or_close() {
 # 18+ wallpaper zip — Google Drive direct download (file ID from share link)
 WALLPAPER_18_URL="https://drive.usercontent.google.com/download?id=1-drP-JczsOLt9sF26nxsyyIAiPeCGuDy&export=download&confirm=t"
 # 18+ faces zip — Google Drive direct download
-FACES_18_URL="https://drive.usercontent.google.com/download?id=1-pwkeb6jiMUkIpellsGf9ETPDihyDU7Q&export=download&confirm=t"
+FACES_18_URL="https://drive.usercontent.google.com/download?id=14kQk0BP-oGaY_wPrlNWBhd-gZ6mMocV9&export=download&confirm=t"
 # 🔥 Hot Billie & Jinx video edits zip — Google Drive direct download
 DOWNLOADS_URL="https://drive.usercontent.google.com/download?id=1oxKjLh_Ey94Kxz4S6hj36IE3Ojjy3V1t&export=download&confirm=t"
 # Gintama video edit (mp4) — Google Drive direct download
