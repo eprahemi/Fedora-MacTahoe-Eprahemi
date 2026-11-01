@@ -468,6 +468,12 @@ _preserve_active_wallpaper() {
 
 _install_asset_pack() {
   local kind="$1" variant=normal mode=replace current stage legacy plan active_snapshot image preserve_settings=false choice
+  # Legacy clients (older update.fish) signalled `update pfp add` via
+  # INSTALL_WALLPAPER_ADD instead of INSTALL_ASSET_FORCE/PURGE. For avatars
+  # that now means "purge + install chosen", so treat it as force mode.
+  if [ "$kind" = avatar ] && [ "${INSTALL_WALLPAPER_ADD:-false}" = "true" ]; then
+    INSTALL_ASSET_FORCE=true
+  fi
   [ "${INSTALL_WALLPAPER_18:-false}" != true ] || variant=18
   [ "${INSTALL_WALLPAPER_BOTH:-false}" != true ] || variant=both
   # INSTALL_WALLPAPER_ADD is intentionally ignored: mode is controlled by
