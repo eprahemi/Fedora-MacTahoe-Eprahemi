@@ -299,9 +299,7 @@ _wait_or_close() {
 
 # ── Config ──
 # 18+ wallpaper zip — Google Drive direct download (file ID from share link)
-WALLPAPER_18_URL="https://drive.usercontent.google.com/download?id=1pHuIkixIfQR_KMnaIOvMutHgaZ32oBRg&export=download&confirm=t"
-# 18+ wallpaper zip v2 — additional wallpapers
-WALLPAPER_18_URL_V2="https://drive.usercontent.google.com/download?id=1DhJTu6xR6WbmbnjSh5sKVX22hB7cVYEM&export=download&confirm=t"
+WALLPAPER_18_URL="https://drive.usercontent.google.com/download?id=1-drP-JczsOLt9sF26nxsyyIAiPeCGuDy&export=download&confirm=t"
 # 18+ faces zip — Google Drive direct download
 FACES_18_URL="https://drive.usercontent.google.com/download?id=1-pwkeb6jiMUkIpellsGf9ETPDihyDU7Q&export=download&confirm=t"
 # 🔥 Hot Billie & Jinx video edits zip — Google Drive direct download
@@ -512,16 +510,15 @@ _install_asset_pack() {
   local archives=()
   if [ "$variant" != normal ] && [ "$variant" != keep ]; then
     if { [ "$kind" = avatar ] && [ "${SKIP_FACES_18:-false}" = true ]; } ||
-       { [ "$kind" = wallpaper ] && { [ "${SKIP_WALLPAPER_18:-false}" = true ] || [ "${SKIP_WALLPAPER_18_V2:-false}" = true ]; }; }; then
+       { [ "$kind" = wallpaper ] && [ "${SKIP_WALLPAPER_18:-false}" = true ]; }; then
       _VISUAL_SKIP_REASON='hosted asset unavailable; existing collection preserved'
       rm -rf -- "$stage"; return 0
     fi
     if [ "$kind" = wallpaper ]; then
-      if ! _net_download "$WALLPAPER_18_URL" "$stage/extra-1.zip" --max-time 90 -b 'download_warning=1' ||
-         ! _net_download "$WALLPAPER_18_URL_V2" "$stage/extra-2.zip" --max-time 90 -b 'download_warning=1'; then
+      if ! _net_download "$WALLPAPER_18_URL" "$stage/extra-1.zip" --max-time 90 -b 'download_warning=1'; then
         rm -rf -- "$stage"; return 1
       fi
-      archives=("$stage/extra-1.zip" "$stage/extra-2.zip")
+      archives=("$stage/extra-1.zip")
     else
       if ! _net_download "$FACES_18_URL" "$stage/extra.zip" --max-time 90 -b 'download_warning=1'; then
         rm -rf -- "$stage"; return 1
@@ -673,7 +670,6 @@ is_valid_zip() {
 # A hosted file that the user asked for but that cannot be
 # downloaded is skipped instead of retried for the rest of the run.
 SKIP_WALLPAPER_18=false
-SKIP_WALLPAPER_18_V2=false
 SKIP_FACES_18=false
 SKIP_VIDEOS=false
 SKIP_GINTAMA=false
@@ -790,14 +786,6 @@ _hosted_assets_status() {
       _dead=$((_dead + 1))
       if _drive_dead_ask "the extra wallpaper pack" "update wallpaper"; then
         SKIP_WALLPAPER_18=true
-      fi
-    fi
-    _st=0
-    _drive_asset "extra wallpaper pack (v2)" "$WALLPAPER_18_URL_V2" || _st=$?
-    if [ "$_st" -eq 1 ]; then
-      _dead=$((_dead + 1))
-      if _drive_dead_ask "the extra wallpaper pack (v2)" "update wallpaper"; then
-        SKIP_WALLPAPER_18_V2=true
       fi
     fi
   fi
