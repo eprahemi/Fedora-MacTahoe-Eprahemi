@@ -1,17 +1,18 @@
 {
   "latest_version": "3.7.33",
   "bootstrap_sha256": "753ee03fdb172b3e45e0400bfa7b6177071bcde5b5b9dc4c1229d841433a1ff9",
-  "install_sha256": "beb88b212cdfdbdcb11b58cd9f55599b4c23fdaa5d38699ebec7c5352712cb51",
+  "install_sha256": "295259af1fcf33376fdf0d349653b2dda46002ea94ed1c6c9fe36e52d020c43e",
   "update_sha256": "80df54f2d5a8f334afa02939be66284e23fe26e3412cb1dc4b8290849509f4c8",
   "uninstall_sha256": "cceaeecce187adf5fb81afe72c3108dc23683141257227333312d929aa84f4cb",
-  "asset_helper_sha256": "86f8e3f1b2b025cdedc4b5426853119886c6fbc5fade4dae0c4e4dc6777d9cc1",
+  "asset_helper_sha256": "4f167843ec030f07034742f9fd70deb4e10e8c4aa15b8f4168ce9da89593d32b",
   "changelog": [
     {
       "version": "3.7.33",
       "changes": [
         "Development candidate: keep audited routine installer/package diagnostics private in TTY and plain modes, preserve caller captures, authenticate natively before sudo-n work and never blindly replay a failed package transaction. Unknown upstream theme/GDM/Firefox/Starship scripts and native dependency review remain visible, not recorded as shell source or password input.",
         "Use checked standalone removal phases, shared local dashboard or embedded plain fallback, private diagnostics, fresh global consent even with --yes and fail-closed EOF. Move exact project user collections to Trash, preserve custom configuration, shared system assets, app data and recovery snapshots; do not sweep temporary/user-file globs or claim unverified restoration.",
-        "Require a published uninstall fingerprint before downloading/executing removal code; validate both uninstaller and UI bytes without extracting an archive. Keep existing typed-word/countdown guards. Legacy four-pin manifests remain readable but cannot authorize removal; new releases require five pins. Native Fedora/Kitty/package/GDM smoke testing remains pending."
+        "Require a published uninstall fingerprint before downloading/executing removal code; validate both uninstaller and UI bytes without extracting an archive. Keep existing typed-word/countdown guards. Legacy four-pin manifests remain readable but cannot authorize removal; new releases require five pins. Native Fedora/Kitty/package/GDM smoke testing remains pending.",
+        "Reuse the MacTahoe source tree the theme step already built when applying the Firefox userChrome theme, instead of re-cloning upstream whenever the GDM runtime engine handled the login screen. The routine source-preparation notice is a private log line now; a warning is emitted only when neither upstream nor the vendored snapshot is available."
       ]
     },
     {

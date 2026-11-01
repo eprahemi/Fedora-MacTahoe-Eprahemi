@@ -4175,8 +4175,15 @@ setup_firefox_theme() {
   FIREFOX_THEME_FAILED=0
 
   local repo="/tmp/mactahoe-gtk"
+  # The theme step already builds from /tmp/mactahoe-build during this run.
+  # Reuse that tree for the single `tweaks.sh -f` call instead of cloning the
+  # upstream repo again (the /tmp/mactahoe-gtk copy only exists when the GDM
+  # runtime engine failed and fell back to upstream tweaks.sh).
+  if [ ! -f "$repo/tweaks.sh" ] && [ -f /tmp/mactahoe-build/tweaks.sh ]; then
+    repo="/tmp/mactahoe-build"
+  fi
   if [ ! -f "$repo/tweaks.sh" ]; then
-    warn "MacTahoe source not found — fetching (upstream or vendored)"
+    log "Preparing MacTahoe source for Firefox theming (upstream or vendored)"
     if ! _mactahoe_get_source "$repo"; then
       warn "No MacTahoe source available (upstream + vendored) — Firefox theme not applied"
       FIREFOX_THEME_FAILED=1
