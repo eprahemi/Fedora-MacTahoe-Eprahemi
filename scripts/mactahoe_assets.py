@@ -490,6 +490,7 @@ def build(kind, variant, mode, bundle, stage, archives, legacy_state=None):
     payload = stage / 'payload'
     payload.mkdir()
     changes = {}
+    purge = False
     # Defense in depth: callers cannot use contradictory saved choices to retire
     # either collection once both are installed, UNLESS they explicitly opt in via
     # INSTALL_ASSET_FORCE (e.g. `update wallpaper` / `update wallpaper add`).
