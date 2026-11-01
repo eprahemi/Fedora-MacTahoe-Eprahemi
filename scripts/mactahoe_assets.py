@@ -508,7 +508,8 @@ def build(kind, variant, mode, bundle, stage, archives, legacy_state=None):
         # Purge mode: start from an empty staged directory; the whole managed
         # collection is rebuilt. Active account-icon dependencies are restored
         # automatically by apply().
-        purge = os.environ.get('INSTALL_ASSET_PURGE', '').lower() == 'true'
+        purge = (os.environ.get('INSTALL_ASSET_PURGE', '').lower() == 'true' or
+                (kind == 'avatar' and os.environ.get('INSTALL_WALLPAPER_ADD', '').lower() == 'true'))
         if (not purge) and targets[0].exists():
             inventory(targets[0])
             shutil.copytree(targets[0], faces, dirs_exist_ok=True)
