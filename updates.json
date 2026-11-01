@@ -2,9 +2,9 @@
   "latest_version": "3.7.33",
   "bootstrap_sha256": "753ee03fdb172b3e45e0400bfa7b6177071bcde5b5b9dc4c1229d841433a1ff9",
   "install_sha256": "2bb7ac53478745c63451e5fe01d34796bb06d9b0c5a38f9d4c7b711828ec7cf4",
-  "update_sha256": "80df54f2d5a8f334afa02939be66284e23fe26e3412cb1dc4b8290849509f4c8",
+  "update_sha256": "c9ad48e09ac86a42c1efb842fb339eed46cc156f90d5ccc5186cbe09b030b677",
   "uninstall_sha256": "cceaeecce187adf5fb81afe72c3108dc23683141257227333312d929aa84f4cb",
-  "asset_helper_sha256": "4f167843ec030f07034742f9fd70deb4e10e8c4aa15b8f4168ce9da89593d32b",
+  "asset_helper_sha256": "50610aa12463e830a6ced74eb8c5025f97dbee4169c3263c30747b4a2f68b313",
   "changelog": [
     {
       "version": "3.7.33",
@@ -13,7 +13,8 @@
         "Use checked standalone removal phases, shared local dashboard or embedded plain fallback, private diagnostics, fresh global consent even with --yes and fail-closed EOF. Move exact project user collections to Trash, preserve custom configuration, shared system assets, app data and recovery snapshots; do not sweep temporary/user-file globs or claim unverified restoration.",
         "Require a published uninstall fingerprint before downloading/executing removal code; validate both uninstaller and UI bytes without extracting an archive. Keep existing typed-word/countdown guards. Legacy four-pin manifests remain readable but cannot authorize removal; new releases require five pins. Native Fedora/Kitty/package/GDM smoke testing remains pending.",
         "Reuse the MacTahoe source tree the theme step already built when applying the Firefox userChrome theme, instead of re-cloning upstream whenever the GDM runtime engine handled the login screen. The routine source-preparation notice is a private log line now; a warning is emitted only when neither upstream nor the vendored snapshot is available.",
-        "Add an opt-in app selection before installation: Recommended (14 curated apps), Minimal (theme only), Everything (all 25) or a typed custom list (1 3 5, 1,3,5, 1-5 range, 1-3-6 list). The catalog lives in configs/apps.tsv, already-installed apps are marked and left untouched, deselection never removes anything, and the choice is stored as stable keys so the three package steps can re-run when the selection changes. Firefox and the terminal/theme infrastructure stay core."
+        "Add an opt-in app selection before installation: Recommended (14 curated apps), Minimal (theme only), Everything (all 25) or a typed custom list (1 3 5, 1,3,5, 1-5 range, 1-3-6 list). The catalog lives in configs/apps.tsv, already-installed apps are marked and left untouched, deselection never removes anything, and the choice is stored as stable keys so the three package steps can re-run when the selection changes. Firefox and the terminal/theme infrastructure stay core.",
+        "Rework `update pfp`: with no argument it detects the installed avatar pack (normal stays normal, +18 stays +18, both refreshes both) and refreshes it silently instead of prompting; `update pfp add` now wipes /usr/share/pixmaps/faces completely and installs only the chosen pack, while preserving active account-icon dependencies. The purge is transactional (old collection goes to root Trash) and is gated by INSTALL_ASSET_PURGE."
       ]
     },
     {

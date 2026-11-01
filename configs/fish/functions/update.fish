@@ -749,7 +749,7 @@ function _update_usage --description 'the help box'
     _update_box_cmd "update wallvault" "deploy the 500+ wallpaper vault"
     _update_box_cmd "update wallvault <url>" "register a custom endpoint"
     _update_box_cmd "update wallvault pass" "store an archive key (optional)"
-    _update_box_cmd "update pfp add" "same for profile pictures"
+    _update_box_cmd "update pfp add" "wipe faces, install chosen pack"
     _update_box_cmd "update pfp both" "wipe both packs, fresh install"
     _update_box_cmd "update <target> help" "details for one part"
     _update_box_cmd "update help <target>" "same box, flipped order"
@@ -866,20 +866,20 @@ function _update_target_help --description 'per-target help box'
             _update_box_text ""
             _update_box_text "Aliases: update wall, update w." "1;37"
         case pfp
-            _update_box_text "Stages and validates the selected avatar pack." "1;37"
-            _update_box_text "Both installed: keep both, with no pack prompt." "1;37"
-            _update_box_text "Extra only: replace, add normal, or leave." "1;37"
+            _update_box_text "Detects the installed pack and refreshes it (no prompt)." "1;37"
+            _update_box_text "No argument: normal stays normal, +18 stays +18." "1;37"
+            _update_box_text "add: wipe /usr/share/pixmaps/faces, then install chosen pack." "1;37"
             _update_box_text ""
             _update_box_tag "PACKS"
             _update_box_text ""
-            _update_box_text "Normal only: refresh, preserving your avatar." "1;36"
-            _update_box_text "Extra-only prompt defaults to leave untouched." "1;36"
-            _update_box_text "No installed pack: install normal by default." "1;36"
-            _update_box_text "Use add to explicitly choose an extra pack." "1;37"
+            _update_box_text "update pfp normal    refresh the normal pack" "1;36"
+            _update_box_text "update pfp 18        refresh the +18 pack" "1;36"
+            _update_box_text "update pfp both      refresh both packs" "1;36"
+            _update_box_text "No installed pack: installs normal by default." "1;36"
             _update_box_text ""
             _update_box_tag "FLAGS"
             _update_box_text ""
-            _update_box_cmd "update pfp add" "install the other pack alongside"
+            _update_box_cmd "update pfp add" "wipe faces dir, then install chosen pack"
             _update_box_cmd "update pfp both" "staged refresh of both packs"
             _update_box_cmd "update pfp help" "this box"
         case gtk
@@ -1757,11 +1757,13 @@ function _update_target_wallpaper --description 'reinstall wallpapers: normal, +
     return $status
 end
 
-function _update_target_pfp --description 'reinstall profile pictures: normal, +18 or both — add keeps the other pack'
-    # Default refresh delegates independent avatar decisions to the safety handler.
-    # update pfp add       → install the chosen pack alongside the other one
-    # update pfp --add     → same (also: -add)
-    # update pfp both      → staged, validated refresh of both packs
+function _update_target_pfp --description 'reinstall profile pictures: normal, +18, both, or purge+add'
+    # update pfp             -> detect the installed pack and refresh it (no prompt)
+    # update pfp add         -> wipe /usr/share/pixmaps/faces, then install chosen pack
+    # update pfp --add       -> same
+    # update pfp both        -> refresh both packs
+    # update pfp 18          -> refresh only the +18 pack
+    # update pfp normal      -> refresh only the normal pack
     set -l add_mode false
     if set -q argv[1]
         switch (string lower -- "$argv[1]")
@@ -1769,20 +1771,83 @@ function _update_target_pfp --description 'reinstall profile pictures: normal, +
                 set add_mode true
         end
     end
+    set -l explicit false
+    set -l explicit_variant normal
+    if set -q argv[1]; and test "$add_mode" = false
+        switch (string lower -- "$argv[1]")
+            case normal
+                set explicit true
+                set explicit_variant normal
+            case 18
+                set explicit true
+                set explicit_variant 18
+            case both
+                set explicit true
+                set explicit_variant both
+        end
+    end
+
     set -l title "UPDATE PROFILE PICTURES"
     if test "$add_mode" = true
         set title "UPDATE PROFILE PICTURES — ADD"
     end
-    set -l pick normal
-    if test "$add_mode" = true
-        set pick (_update_pick_pack $title)
-    else if contains -- "$argv[1]" both 18 normal
-        set pick "$argv[1]"
+
+    # Fetch the bundle first so the installed-pack detector can run.
+    set -l tmp (_update_fetch_bundle)
+    or return 1
+    set -l state "$HOME/.cache/fedora-mactahoe/install-state.json"
+    set -l current
+    if test -f "$state"
+        set current (python3 "$tmp/scripts/mactahoe_assets.py" installed avatar "$state" 2>/dev/null)
+    else
+        set current (python3 "$tmp/scripts/mactahoe_assets.py" installed avatar 2>/dev/null)
     end
+    if test -z "$current"
+        set current absent
+    end
+
+    set -l pick normal
     set -l want false
     set -l both_mode false
+    set -l purge false
+    set -l force false
+
+    if test "$add_mode" = true
+        set pick (_update_pick_pack $title)
+        switch $pick
+            case cancel
+                rm -rf -- "$tmp"
+                return 1
+        end
+        # add: wipe /usr/share/pixmaps/faces, then place the chosen pack.
+        set purge true
+        set force true
+    else if test "$explicit" = true
+        set pick "$explicit_variant"
+        set force true
+    else
+        # No argument: refresh whatever pack is currently installed.
+        switch "$current"
+            case 18
+                set pick 18
+            case both
+                set pick both
+                set both_mode true
+            case unknown
+                # Legacy/unmanaged files: keep them, add normal alongside.
+                set pick normal
+            case '*'
+                set pick normal
+        end
+        # Force so the refresh actually runs instead of the keep-both no-op.
+        if test "$current" != unknown
+            set force true
+        end
+    end
+
     switch $pick
         case cancel
+            rm -rf -- "$tmp"
             return 1
         case 18
             set want true
@@ -1790,14 +1855,13 @@ function _update_target_pfp --description 'reinstall profile pictures: normal, +
             set want true
             set both_mode true
     end
-    set -l tmp (_update_fetch_bundle)
-    or return 1
-    # install_custom_avatars keys off the same INSTALL_WALLPAPER_18 answer;
-    # add keeps the other managed pack. Replacement validates first, protects
-    # current AccountsService image dependencies and trashes only known targets.
+
     set -l envs "INSTALL_WALLPAPER_18=$want"
-    if test "$add_mode" = true
-        set -a envs "INSTALL_WALLPAPER_ADD=true"
+    if test "$force" = true
+        set -a envs "INSTALL_ASSET_FORCE=true"
+    end
+    if test "$purge" = true
+        set -a envs "INSTALL_ASSET_PURGE=true"
     end
     if test "$both_mode" = true
         set -a envs "INSTALL_WALLPAPER_BOTH=true"

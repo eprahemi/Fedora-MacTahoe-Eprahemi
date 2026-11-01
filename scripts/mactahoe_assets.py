@@ -505,8 +505,11 @@ def build(kind, variant, mode, bundle, stage, archives, legacy_state=None):
         faces = payload / 'faces'
         faces.mkdir()
         managed = {}
-        # Unknown legacy entries and stock/vendor faces are augmented, not purged.
-        if targets[0].exists():
+        # Purge mode: start from an empty staged directory; the whole managed
+        # collection is rebuilt. Active account-icon dependencies are restored
+        # automatically by apply().
+        purge = os.environ.get('INSTALL_ASSET_PURGE', '').lower() == 'true'
+        if (not purge) and targets[0].exists():
             inventory(targets[0])
             shutil.copytree(targets[0], faces, dirs_exist_ok=True)
             # Managed files may be refreshed in add mode; unrelated/unknown files
@@ -584,14 +587,16 @@ def build(kind, variant, mode, bundle, stage, archives, legacy_state=None):
             changes[str(target)] = str(images)
             changes[str(xml_target)] = str(xml_file)
     if kind == 'avatar' and variant != 'keep':
-        effective = ('unknown' if current == 'unknown' and variant == 'normal' else
+        effective = ('unknown' if (not purge) and current == 'unknown' and variant == 'normal' else
                      ('both' if mode == 'add' and current not in ('absent', 'unknown', variant) else variant))
         write_json(faces / MARKER, {'schema': 1, 'kind': kind, 'variant': effective,
                                    'files': managed})
     # Stock faces share the managed directory. Remove only verified original RPM
     # files from the private candidate, never purge that directory or custom faces.
     stock = stock_changes(kind)
-    if kind == 'avatar' and str(targets[0]) in changes:
+    if purge:
+        stock = {}
+    if kind == 'avatar' and str(targets[0]) in changes and not purge:
         for target in list(stock):
             path = Path(target)
             if path.parent == targets[0]:
