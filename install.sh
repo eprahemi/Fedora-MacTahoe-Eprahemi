@@ -967,6 +967,15 @@ _step_should_run() {
   # without this, every step would be skipped, the finalize step would never
   # re-run, and the machine would stay stuck on its old version forever.
   _ver_lt "$USER_VERSION" "$MANIFEST_VERSION" && return 0
+  # A changed app selection must re-evaluate the package steps even when
+  # their own versions did not move.
+  case "$1" in
+    install_rpm_packages|install_browsers|install_flatpaks)
+      if [ -n "${APPS_PREV_HASH:-}" ] && [ "${APPS_HASH:-}" != "${APPS_PREV_HASH:-}" ]; then
+        return 0
+      fi
+      ;;
+  esac
   local sid="$1"
   local mv="${STEP_MAN_VERS[$sid]:-0.0}"
   local uv="${STEP_USR_VERS[$sid]:-0.0}"
@@ -1052,6 +1061,13 @@ _load_prompt_answers() {
       ans="${PR_ANS['old_terminal']:-}"; [ -n "$ans" ] && INSTALL_REMOVE_OLD_TERMINAL="$ans"
     elif ! _prompt_should_ask "old_terminal"; then
       ans="${PR_ANS['old_terminal']:-}"; [ -n "$ans" ] && INSTALL_REMOVE_OLD_TERMINAL="$ans"
+    fi
+  fi
+  if [ -z "${INSTALL_APPS:-}" ]; then
+    if $_incremental; then
+      ans="${PR_ANS['apps']:-}"; [ -n "$ans" ] && INSTALL_APPS="$ans"
+    elif ! _prompt_should_ask "apps"; then
+      ans="${PR_ANS['apps']:-}"; [ -n "$ans" ] && INSTALL_APPS="$ans"
     fi
   fi
 }
@@ -2248,19 +2264,20 @@ install_rpm_packages() {
   next_step "RPM Packages"
 
   local pkgs="fish kitty fastfetch figlet lolcat eza \
-    celluloid vlc \
-    kdenlive pavucontrol alacarte \
-    nautilus-python gnome-tweaks gnome-characters \
+    nautilus-python \
     adwaita-icon-theme adwaita-icon-theme-legacy \
     ImageMagick fzf ripgrep jq 7zip unzip curl wget git \
     bat cmatrix qrencode podman python3-pip speedtest-cli xdg-utils \
-    libreoffice-writer libreoffice-calc libreoffice-impress \
     libheif-freeworld libheif-tools \
     intel-media-driver mesa-va-drivers \
     gstreamer1-libav gstreamer1-plugins-good gstreamer1-plugins-bad-free gstreamer1-plugins-ugly \
     mozilla-openh264 alsa-sof-firmware \
     ntfs-3g samba-client cifs-utils \
     cups-filters hplip"
+  # Optional desktop apps come from configs/apps.tsv (see _apps_apply_selection).
+  if [ -n "${APPS_DNF_EXTRA:-}" ]; then
+    pkgs="$pkgs $APPS_DNF_EXTRA"
+  fi
 
   # Package names change between Fedora releases. One unknown name must
   # not take the whole transaction — and with it the whole install —
@@ -2337,7 +2354,9 @@ install_browsers() {
   fi
 
   # Chrome — create repo file directly (--from-repofile not supported by Google)
-  if [ "$(uname -m)" != "x86_64" ]; then
+  if ! _apps_wanted chrome; then
+    log 'Google Chrome not selected — skipped'
+  elif [ "$(uname -m)" != "x86_64" ]; then
     warn "Google Chrome RPM is supported only on x86_64 — skipping Chrome on $(uname -m)"
   elif ! rpm -q google-chrome-stable &>/dev/null; then
     if ! sudo rpm --import https://dl.google.com/linux/linux_signing_key.pub 2>/dev/null; then
@@ -2366,7 +2385,9 @@ EOF
   fi
 
   # Edge — create repo file directly (--from-repofile URL is non-standard)
-  if ! rpm -q microsoft-edge-stable &>/dev/null; then
+  if ! _apps_wanted edge; then
+    log 'Microsoft Edge not selected — skipped'
+  elif ! rpm -q microsoft-edge-stable &>/dev/null; then
     if ! sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc 2>/dev/null; then
       warn "Failed to import Microsoft signing key — Edge repo may not be trusted"
     fi
@@ -2385,7 +2406,9 @@ EOF
   fi
 
   # VS Code — repo file (existing working approach)
-  if ! rpm -q code &>/dev/null; then
+  if ! _apps_wanted code; then
+    log 'Visual Studio Code not selected — skipped'
+  elif ! rpm -q code &>/dev/null; then
     if ! sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc 2>/dev/null; then
       warn "Failed to import Microsoft signing key — VS Code repo may not be trusted"
     fi
@@ -2417,36 +2440,40 @@ install_flatpaks() {
 
   INSTALL_FP_OK=0
   INSTALL_FP_FAIL=0
-  local fp_apps=(
-    com.rtosta.zapzap
-    io.github.amit9838.mousam
-    com.mattjakeman.ExtensionManager
-    com.github.tchx84.Flatseal
-    it.mijorus.gearlever
-    fr.handbrake.ghb
-    info.febvre.Komikku
-    md.obsidian.Obsidian
-    com.protonvpn.www
-    com.spotify.Client
-    org.localsend.localsend_app
-  )
+  local _fp
+  local -a fp_apps=()
+
+  if [ -n "${APPS_FLATPAKS:-}" ]; then
+    read -r -a fp_apps <<< "$APPS_FLATPAKS"
+  fi
+  # The legacy Discord answer only applies when no catalog was available.
+  if [ "${APPS_CATALOG_OK:-0}" != 1 ] && [ "${INSTALL_DISCORD:-false}" = "true" ]; then
+    case " ${APPS_FLATPAKS:-} " in
+      *" com.discordapp.Discord "*) ;;
+      *) fp_apps+=("com.discordapp.Discord") ;;
+    esac
+  fi
+
+  if [ "${#fp_apps[@]}" -eq 0 ]; then
+    log 'No Flatpak apps selected'
+    _VISUAL_SKIP_REASON='no Flatpak apps selected'
+    return 0
+  fi
 
   flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true
 
-  for _fp in "${fp_apps[@]}"; do
-    if flatpak install -y flathub "$_fp" 2>/dev/null; then
-      INSTALL_FP_OK=$((INSTALL_FP_OK + 1))
-    else
-      INSTALL_FP_FAIL=$((INSTALL_FP_FAIL + 1))
-    fi
-  done
-
-  if [ "${INSTALL_DISCORD:-}" = "true" ]; then
-    if flatpak install -y flathub com.discordapp.Discord 2>/dev/null; then
-      INSTALL_FP_OK=$((INSTALL_FP_OK + 1))
-    else
-      INSTALL_FP_FAIL=$((INSTALL_FP_FAIL + 1))
-    fi
+  # One transaction is much faster than one call per app; fall back to the
+  # per-app loop when a single ID is unavailable.
+  if flatpak install -y flathub "${fp_apps[@]}" >/dev/null 2>&1; then
+    INSTALL_FP_OK=${#fp_apps[@]}
+  else
+    for _fp in "${fp_apps[@]}"; do
+      if flatpak install -y flathub "$_fp" >/dev/null 2>&1; then
+        INSTALL_FP_OK=$((INSTALL_FP_OK + 1))
+      else
+        INSTALL_FP_FAIL=$((INSTALL_FP_FAIL + 1))
+      fi
+    done
   fi
 
   if [ "$INSTALL_FP_OK" -gt 0 ]; then
@@ -2911,6 +2938,10 @@ install_font() {
 apply_desktop_entries() {
   next_step "Custom Desktop Entries (App Renames)"
 
+  # The selection was probed before installation; refresh it now so entries
+  # for apps installed earlier in this run are kept.
+  _apps_refresh_probe
+
   # Clean up any leftover nautilus-maximized references (wrapper was removed)
   if [ -f "$HOME/.local/share/applications/org.gnome.Nautilus.desktop" ]; then
     if grep -q "nautilus-maximized" "$HOME/.local/share/applications/org.gnome.Nautilus.desktop" 2>/dev/null; then
@@ -2926,10 +2957,43 @@ apply_desktop_entries() {
   fi
 
   mkdir -p "$HOME/.local/share/applications"
-  local _copied=0
-  local _desk
+  local _copied=0 _desk _base _key _keep
   for _desk in "$desktop_src"/*.desktop; do
     [ -f "$_desk" ] || continue
+    _base="${_desk##*/}"
+    _keep=1
+    _key=''
+    case "$_base" in
+      alacarte.desktop) _key=alacarte ;;
+      com.mattjakeman.ExtensionManager.desktop) _key=extension-manager ;;
+      com.rtosta.zapzap.desktop) _key=zapzap ;;
+      io.github.amit9838.mousam.desktop) _key=mousam ;;
+      io.github.celluloid_player.Celluloid.desktop) _key=celluloid ;;
+      libreoffice-calc.desktop) _key=libreoffice-calc ;;
+      libreoffice-impress.desktop) _key=libreoffice-impress ;;
+      libreoffice-writer.desktop) _key=libreoffice-writer ;;
+      org.kde.kdenlive.desktop) _key=kdenlive ;;
+      libreoffice-startcenter.desktop)
+        # The start center is useful only when at least one suite app exists.
+        _keep=0
+        if _apps_wanted libreoffice-writer || _apps_wanted libreoffice-calc ||
+           _apps_wanted libreoffice-impress || _apps_installed_key libreoffice-writer ||
+           _apps_installed_key libreoffice-calc || _apps_installed_key libreoffice-impress; then
+          _keep=1
+        fi
+        ;;
+    esac
+    if [ -n "$_key" ]; then
+      if _apps_wanted "$_key" || _apps_installed_key "$_key"; then
+        _keep=1
+      else
+        _keep=0
+      fi
+    fi
+    if [ "$_keep" -eq 0 ]; then
+      log "Desktop entry $_base skipped — app not selected"
+      continue
+    fi
     if cp "$_desk" "$HOME/.local/share/applications/" 2>/dev/null; then
       _copied=$((_copied + 1))
     fi
@@ -3143,8 +3207,18 @@ EOF
 # New users get every default. Existing users get only the missing defaults
 # whose key combination is not already in use; conflicts are reported.
 _merge_custom_keybindings() {
-  local plan
-  if ! plan=$(python3 - <<'KEYBINDING_MERGE'
+  local plan _kb_allowed=''
+  # Shortcuts for optional apps are only offered when that app is selected or
+  # already installed. An empty list keeps the historical behaviour.
+  _apps_refresh_probe
+  if [ "${APPS_CATALOG_OK:-0}" = 1 ]; then
+    _kb_allowed='Kitty,Nautilus,Task Manager,Notes,Firefox,Settings'
+    if _apps_wanted chrome || _apps_installed_key chrome; then _kb_allowed+=',Chrome'; fi
+    if _apps_wanted pavucontrol || _apps_installed_key pavucontrol; then _kb_allowed+=',Volume'; fi
+    if _apps_wanted spotify || _apps_installed_key spotify; then _kb_allowed+=',Spotify'; fi
+    if _apps_wanted gnome-characters || _apps_installed_key gnome-characters; then _kb_allowed+=',Emoji Picker'; fi
+  fi
+  if ! plan=$(MACTAHOE_KEYBINDINGS="$_kb_allowed" python3 - <<'KEYBINDING_MERGE'
 import ast
 import os
 import subprocess
@@ -3167,6 +3241,11 @@ DEFAULTS = [
     ('Settings', '<Control>i', 'gnome-control-center'),
     ('Emoji Picker', '<Super>period', 'gnome-characters'),
 ]
+
+ALLOWED = os.environ.get('MACTAHOE_KEYBINDINGS', '')
+if ALLOWED:
+    _allowed = set(ALLOWED.split(','))
+    DEFAULTS = [entry for entry in DEFAULTS if entry[0] in _allowed]
 
 
 def run_get(schema, key):
@@ -3538,6 +3617,552 @@ SUDOERS_TEMPLATE
 
 
 
+# ── APP SELECTION (BEGIN) ─────────────────────────────────────
+# The installer's optional desktop apps live in configs/apps.tsv
+# (key|kind|id|label|default|group). Anything that is not listed there is
+# infrastructure (kitty, fish, ImageMagick, fzf, …) and is always installed.
+# `update apps` keeps its own install/remove catalog because it must also
+# manage core packages (Firefox, Kitty) that this prompt never offers.
+#
+# The answer is stored as stable keys, never as display numbers:
+#   preset:recommended | preset:minimal | preset:all | set:key1,key2
+APPS_CATALOG_OK=0
+APPS_SELECTION=''
+APPS_SELECTED=''
+APPS_DNF_EXTRA=''
+APPS_BROWSERS=''
+APPS_FLATPAKS=''
+APPS_HASH=''
+APPS_PREV_HASH=''
+APPS_PROBED=0
+declare -A APP_KIND=() APP_ID=() APP_LABEL=() APP_DEFAULT=() APP_INSTALLED=()
+declare -A APPS_PICK=()
+APP_ORDER=()
+APP_SORTED=()
+
+_apps_catalog_path() {
+  printf '%s/configs/apps.tsv' "${BUNDLE:-.}"
+}
+
+# Parse and validate the catalog. A malformed line rejects the whole file:
+# a half-read catalog could silently drop an app the user selected.
+_apps_load_catalog() {
+  local file line key kind id label dflt group
+  file=$(_apps_catalog_path)
+  APP_ORDER=()
+  APP_SORTED=()
+  APP_KIND=()
+  APP_ID=()
+  APP_LABEL=()
+  APP_DEFAULT=()
+  APP_INSTALLED=()
+  APPS_PROBED=0
+  [ -f "$file" ] || return 1
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in
+      ''|'#'*) continue ;;
+    esac
+    IFS='|' read -r key kind id label dflt group <<< "$line"
+    if [ -z "$key" ] || [ -z "$id" ] || [ -z "$label" ]; then
+      return 1
+    fi
+    case "$kind" in
+      dnf|browser|flatpak) ;;
+      *) return 1 ;;
+    esac
+    case "$dflt" in
+      on|off) ;;
+      *) return 1 ;;
+    esac
+    if [ -n "${APP_KIND[$key]:-}" ]; then
+      return 1
+    fi
+    APP_KIND["$key"]="$kind"
+    APP_ID["$key"]="$id"
+    APP_LABEL["$key"]="$label"
+    APP_DEFAULT["$key"]="$dflt"
+    APP_ORDER+=("$key")
+  done < "$file"
+  if [ "${#APP_ORDER[@]}" -eq 0 ]; then
+    return 1
+  fi
+  while IFS=$'\t' read -r _sortlabel key; do
+    if [ -n "$key" ]; then
+      APP_SORTED+=("$key")
+    fi
+  done < <(for key in "${APP_ORDER[@]}"; do
+             printf '%s\t%s\n' "${APP_LABEL[$key]}" "$key"
+           done | LC_ALL=C sort -f -t $'\t' -k1,1)
+  APPS_CATALOG_OK=1
+  return 0
+}
+
+# One rpm query and one flatpak query, never one probe per app.
+_apps_probe() {
+  local names name key
+  local -A have=()
+  APP_INSTALLED=()
+  names=$(
+    {
+      if command -v rpm >/dev/null 2>&1; then
+        rpm -qa --queryformat '%{NAME}\n' 2>/dev/null || true
+      fi
+      if command -v flatpak >/dev/null 2>&1; then
+        flatpak list --app --columns=application 2>/dev/null || true
+      fi
+    }
+  )
+  while IFS= read -r name; do
+    if [ -n "$name" ]; then
+      have["$name"]=1
+    fi
+  done <<< "$names"
+  for key in "${APP_ORDER[@]}"; do
+    if [ -n "${have[${APP_ID[$key]}]:-}" ]; then
+      APP_INSTALLED["$key"]=1
+    fi
+  done
+  APPS_PROBED=1
+}
+
+# Re-read installed reality after package steps changed the system.
+_apps_refresh_probe() {
+  if [ "${APPS_CATALOG_OK:-0}" = 1 ]; then
+    APPS_PROBED=0
+    _apps_probe
+  fi
+}
+
+_apps_installed_key() {
+  local key="$1" id apps
+  if [ "${APPS_CATALOG_OK:-0}" = 1 ]; then
+    if [ "${APPS_PROBED:-0}" != 1 ]; then
+      _apps_probe
+    fi
+    [ -n "${APP_INSTALLED[$key]:-}" ]
+    return $?
+  fi
+  id="${APP_ID[$key]:-}"
+  [ -n "$id" ] || return 1
+  case "${APP_KIND[$key]:-}" in
+    flatpak)
+      if command -v flatpak >/dev/null 2>&1; then
+        # Capture first: `flatpak list | grep -q` can fail through pipefail
+        # when grep exits early and flatpak gets SIGPIPE.
+        apps=$(flatpak list --app --columns=application 2>/dev/null || true)
+        case $'\n'"$apps"$'\n' in
+          *$'\n'"$id"$'\n'*) return 0 ;;
+        esac
+      fi
+      return 1
+      ;;
+    *)
+      rpm -q "$id" >/dev/null 2>&1
+      return $?
+      ;;
+  esac
+}
+
+_apps_resolve() {
+  local sel="${1:-preset:recommended}" key item
+  local -a items=()
+  local -A seen=()
+  case "$sel" in
+    preset:minimal)
+      return 0
+      ;;
+    preset:recommended)
+      for key in "${APP_ORDER[@]}"; do
+        if [ "${APP_DEFAULT[$key]}" = on ]; then
+          printf '%s\n' "$key"
+        fi
+      done
+      return 0
+      ;;
+    preset:all)
+      for key in "${APP_ORDER[@]}"; do
+        printf '%s\n' "$key"
+      done
+      return 0
+      ;;
+    set:*)
+      IFS=',' read -r -a items <<< "${sel#set:}"
+      for item in "${items[@]}"; do
+        if [ -n "${APP_KIND[$item]:-}" ] && [ -z "${seen[$item]:-}" ]; then
+          seen["$item"]=1
+          printf '%s\n' "$item"
+        fi
+      done
+      return 0
+      ;;
+  esac
+  return 1
+}
+
+# Build the three installer lists and a hash of the resolved selection.
+_apps_apply_selection() {
+  local sel="$1" key
+  case "$sel" in
+    preset:minimal|preset:recommended|preset:all|set:*) ;;
+    *) return 1 ;;
+  esac
+  APPS_SELECTION="$sel"
+  APPS_SELECTED=''
+  APPS_DNF_EXTRA=''
+  APPS_BROWSERS=''
+  APPS_FLATPAKS=''
+  while IFS= read -r key; do
+    if [ -z "$key" ]; then
+      continue
+    fi
+    APPS_SELECTED+=" $key"
+    case "${APP_KIND[$key]}" in
+      dnf) APPS_DNF_EXTRA+=" ${APP_ID[$key]}" ;;
+      browser) APPS_BROWSERS+=" $key" ;;
+      flatpak) APPS_FLATPAKS+=" ${APP_ID[$key]}" ;;
+    esac
+  done < <(_apps_resolve "$sel")
+  APPS_SELECTED="${APPS_SELECTED# }"
+  APPS_DNF_EXTRA="${APPS_DNF_EXTRA# }"
+  APPS_BROWSERS="${APPS_BROWSERS# }"
+  APPS_FLATPAKS="${APPS_FLATPAKS# }"
+  APPS_HASH=$(printf '%s\n' "$APPS_SELECTED" | tr ' ' '\n' | sed '/^$/d' | LC_ALL=C sort | sha256sum | cut -d' ' -f1)
+}
+
+# Fail-safe: no catalog means the historical behaviour — install everything.
+_apps_fallback_lists() {
+  APPS_CATALOG_OK=0
+  APPS_SELECTION='preset:all'
+  APPS_SELECTED=''
+  APPS_DNF_EXTRA='celluloid vlc kdenlive pavucontrol alacarte gnome-tweaks gnome-characters libreoffice-writer libreoffice-calc libreoffice-impress'
+  APPS_BROWSERS='chrome edge code'
+  APPS_FLATPAKS='com.rtosta.zapzap io.github.amit9838.mousam com.mattjakeman.ExtensionManager com.github.tchx84.Flatseal it.mijorus.gearlever fr.handbrake.ghb info.febvre.Komikku md.obsidian.Obsidian com.protonvpn.www com.spotify.Client org.localsend.localsend_app'
+  if [ "${INSTALL_DISCORD:-false}" = true ]; then
+    APPS_FLATPAKS+=' com.discordapp.Discord'
+  fi
+  APPS_HASH=''
+}
+
+# True when the app was selected, or when there is no catalog to consult.
+_apps_wanted() {
+  if [ "${APPS_CATALOG_OK:-0}" != 1 ]; then
+    return 0
+  fi
+  case " ${APPS_SELECTED} " in
+    *" $1 "*) return 0 ;;
+  esac
+  return 1
+}
+
+_apps_trim() {
+  local s="$1"
+  s="${s#"${s%%[![:space:]]*}"}"
+  s="${s%"${s##*[![:space:]]}"}"
+  printf '%s' "$s"
+}
+
+# Accepts 3 5 / 3,5 / 3-5 (range) / 3-5-8 (list) / all / none and returns
+# unique indices, or fails.
+_apps_parse_numbers() {
+  local input="$1" limit="$2" token part first last n
+  local -a tokens=() parts=() out=()
+  input="${input//,/ }"
+  input="${input//$'\t'/ }"
+  read -r -a tokens <<< "$input"
+  if [ "${#tokens[@]}" -eq 0 ]; then
+    return 1
+  fi
+  for token in "${tokens[@]}"; do
+    token="${token,,}"
+    case "$token" in
+      all|a)
+        for ((n=1; n<=limit; n++)); do out+=("$n"); done
+        continue
+        ;;
+      none)
+        continue
+        ;;
+    esac
+    case "$token" in
+      ''|*[!0-9-]*|-*|*-) return 1 ;;
+    esac
+    # Two parts are a range (1-5). Three or more are a dash-separated list
+    # (1-3-6-8 means 1, 3, 6, 8).
+    IFS='-' read -r -a parts <<< "$token"
+    if [ "${#parts[@]}" -eq 2 ]; then
+      first="${parts[0]}"
+      last="${parts[1]}"
+      case "$first$last" in ''|*[!0-9]*) return 1 ;; esac
+      first=$((10#$first))
+      last=$((10#$last))
+      if [ "$first" -lt 1 ] || [ "$last" -gt "$limit" ] || [ "$first" -gt "$last" ]; then
+        return 1
+      fi
+      for ((n=first; n<=last; n++)); do out+=("$n"); done
+      continue
+    fi
+    for part in "${parts[@]}"; do
+      case "$part" in
+        ''|*[!0-9]*) return 1 ;;
+      esac
+      n=$((10#$part))
+      if [ "$n" -lt 1 ] || [ "$n" -gt "$limit" ]; then
+        return 1
+      fi
+      out+=("$n")
+    done
+  done
+  if [ "${#out[@]}" -eq 0 ]; then
+    return 0
+  fi
+  printf '%s\n' "${out[@]}" | awk '!seen[$0]++'
+  return 0
+}
+
+_apps_status_color() {
+  case "$1" in
+    installed) printf '1;32' ;;
+    selected) printf '1;36' ;;
+    *) printf '0' ;;
+  esac
+}
+
+# 27 visible columns: number, label, status mark.
+_apps_cell() {
+  local n="$1" label="$2" status="$3" text pad mark
+  case "$status" in
+    installed) mark='✓' ;;
+    selected) mark='+' ;;
+    *) mark='.' ;;
+  esac
+  text=$(printf '%2d  %s' "$n" "$label")
+  if [ "${#text}" -gt 25 ]; then
+    text="${text:0:24}"
+  fi
+  pad=$((25 - ${#text}))
+  printf '%s%*s %s' "$text" "$pad" '' "$mark"
+}
+
+_apps_print_row() {
+  local left="$1" lstat="$2" right="$3" rstat="$4" lc rc
+  lc=$(_apps_status_color "$lstat")
+  rc=$(_apps_status_color "$rstat")
+  if [ "${_UI_ACTIVE:-0}" = 1 ]; then
+    if [ -n "$right" ]; then
+      printf '\033[0m\033[2K  %s\033[%sm%s\033[0m    %s\033[%sm%s\033[0m\r\n' \
+        "${left%?}" "$lc" "${left: -1}" "${right%?}" "$rc" "${right: -1}" >&7
+    else
+      printf '\033[0m\033[2K  %s\033[%sm%s\033[0m\r\n' \
+        "${left%?}" "$lc" "${left: -1}" >&7
+    fi
+  else
+    if [ -n "$right" ]; then
+      printf '  %s    %s\n' "$left" "$right" >&6
+    else
+      printf '  %s\n' "$left" >&6
+    fi
+  fi
+}
+
+_apps_paint_list() {
+  local err="${1:-}" total half i j key status left right lstat rstat
+  local rows=24 cols=80
+  local -a cells=() stats=()
+  total=${#APP_SORTED[@]}
+  for ((i=0; i<total; i++)); do
+    key="${APP_SORTED[$i]}"
+    status=none
+    if [ -n "${APP_INSTALLED[$key]:-}" ]; then
+      status=installed
+    elif [ -n "${APPS_PICK[$key]:-}" ]; then
+      status=selected
+    fi
+    cells+=("$(_apps_cell $((i + 1)) "${APP_LABEL[$key]}" "$status")")
+    stats+=("$status")
+  done
+  half=$(( (total + 1) / 2 ))
+  if [ "${_UI_ACTIVE:-0}" = 1 ]; then
+    _ui_stop
+    _UI_MODE=question
+    printf '\033[H\033[J\033[?25h\033[0m' >&7
+    read -r rows cols < <({ stty size < /dev/tty; } 2>/dev/null) || { rows=24; cols=80; }
+    if [ "${cols:-0}" -lt 40 ]; then cols=80; fi
+    if [ "${rows:-24}" -ge 30 ]; then
+      _ui_brand "$cols" 44 "$rows"
+      _ui_line '' "$cols"
+    fi
+    _ui_wrap 'APPS - CUSTOM SELECTION' "$cols" '1;36'
+    _ui_wrap "Installed ${#APP_INSTALLED[@]} - selected ${#APPS_PICK[@]} - total ${total}" "$cols" '90'
+    _ui_line '' "$cols"
+  else
+    printf '\n  APPS - CUSTOM SELECTION\n\n' >&6
+  fi
+  for ((i=0; i<half; i++)); do
+    left="${cells[$i]}"
+    lstat="${stats[$i]}"
+    j=$((i + half))
+    if [ "$j" -lt "$total" ]; then
+      right="${cells[$j]}"
+      rstat="${stats[$j]}"
+    else
+      right=''
+      rstat=none
+    fi
+    _apps_print_row "$left" "$lstat" "$right" "$rstat"
+  done
+  if [ "${_UI_ACTIVE:-0}" = 1 ]; then
+    _ui_line '' "$cols"
+    _ui_wrap '✓ installed   + selected   . skipped' "$cols" '90'
+    _ui_wrap 'Type: 1 3 5   1,3,5   1-5 range   1-3-6 list   all   none   b back' "$cols" '90'
+    if [ -n "$err" ]; then
+      _ui_wrap "$err" "$cols" '1;31'
+    fi
+    printf '\033[1;36m   > \033[0m' >&7
+  else
+    printf '\n  ✓ installed   + selected   . skipped\n' >&6
+    printf '  Type: 1 3 5   1,3,5   1-5 range   1-3-6 list   all   none   b back\n' >&6
+    if [ -n "$err" ]; then
+      printf '  %s\n' "$err" >&6
+    fi
+    printf '  Select apps: ' >&6
+  fi
+}
+
+_apps_custom() {
+  local answer='' err='' total key n sel first
+  local -a nums=()
+  APPS_PICK=()
+  total=${#APP_SORTED[@]}
+  while true; do
+    _apps_paint_list "$err"
+    err=''
+    answer=''
+    if ! read -r answer </dev/tty; then
+      echo ''
+      echo 'No input available — installation cancelled without consent.'
+      exit 42
+    fi
+    answer=$(_apps_trim "${answer,,}")
+    case "$answer" in
+      ''|b|back|q|quit) return 1 ;;
+    esac
+    if ! nums=$(_apps_parse_numbers "$answer" "$total"); then
+      err="Use numbers 1-$total: 1 3 5, 1,3,5, 1-5 (range) or 1-3-6 (list); all, none, b back."
+      continue
+    fi
+    APPS_PICK=()
+    for n in $nums; do
+      key="${APP_SORTED[$((n - 1))]}"
+      # Keep installed apps in the saved selection too: it records intent,
+      # so an app removed later can be reinstalled by a later update.
+      APPS_PICK["$key"]=1
+    done
+    break
+  done
+
+  local list='' new_count=0 installed_count=0
+  for key in "${APP_SORTED[@]}"; do
+    if [ -n "${APPS_PICK[$key]:-}" ]; then
+      list+="${APP_LABEL[$key]}, "
+      if [ -n "${APP_INSTALLED[$key]:-}" ]; then
+        installed_count=$((installed_count + 1))
+      else
+        new_count=$((new_count + 1))
+      fi
+    fi
+  done
+  list="${list%, }"
+  if [ "${#APPS_PICK[@]}" -eq 0 ]; then
+    list='(none - theme only)'
+  fi
+  _UI_QUESTION_TITLE='Confirm app selection'
+  _UI_QUESTION_BODY="Install $new_count new apps"
+  if [ "$installed_count" -gt 0 ]; then
+    _UI_QUESTION_BODY+=" ($installed_count already installed)"
+  fi
+  _UI_QUESTION_BODY+=":
+$list"
+  if ! confirm 'Proceed with this selection? [Y/n]: ' Y; then
+    return 1
+  fi
+  sel='set:'
+  first=1
+  for key in "${APP_SORTED[@]}"; do
+    if [ -n "${APPS_PICK[$key]:-}" ]; then
+      if [ "$first" -eq 1 ]; then
+        sel+="$key"
+        first=0
+      else
+        sel+=",$key"
+      fi
+    fi
+  done
+  if [ "$first" -eq 1 ]; then
+    sel='preset:minimal'
+  fi
+  INSTALL_APPS="$sel"
+  return 0
+}
+
+prompt_apps() {
+  local answer='' total installed err=''
+  APPS_PICK=()
+  _apps_probe
+  total=${#APP_ORDER[@]}
+  installed=${#APP_INSTALLED[@]}
+  while true; do
+    _UI_QUESTION_TITLE='Choose your apps'
+    _UI_QUESTION_BODY=$(printf '%s\n' \
+      '[1] Recommended   the curated set' \
+      '[2] Minimal       no extra apps, theme only' \
+      "[3] Everything    all $total apps" \
+      '[4] Custom        choose numbers yourself' \
+      '' \
+      "Already installed: $installed (marked ✓, left untouched)")
+    if [ -n "$err" ]; then
+      _UI_QUESTION_BODY+=$'\n'"$err"
+    fi
+    _ui_question "$_UI_QUESTION_TITLE" "$_UI_QUESTION_BODY"
+    if [ "${_UI_ACTIVE:-0}" = 1 ]; then
+      printf 'Your choice [1-4]: ' >&7
+    else
+      printf '\n  Your choice [1-4]: ' >&6
+    fi
+    answer=''
+    if ! read -r answer </dev/tty; then
+      echo ''
+      echo 'No input available — installation cancelled without consent.'
+      exit 42
+    fi
+    answer=$(_apps_trim "${answer,,}")
+    err=''
+    case "$answer" in
+      ''|1|recommended)
+        INSTALL_APPS='preset:recommended'
+        return 0
+        ;;
+      2|minimal)
+        INSTALL_APPS='preset:minimal'
+        return 0
+        ;;
+      3|everything|all)
+        INSTALL_APPS='preset:all'
+        return 0
+        ;;
+      4|custom)
+        if _apps_custom; then
+          return 0
+        fi
+        continue
+        ;;
+      *)
+        err='Choose 1, 2, 3 or 4.'
+        ;;
+    esac
+  done
+}
+# ── APP SELECTION (END) ───────────────────────────────────────
+
 # ── Desktop wallpaper prompt ─────────────────────────────────
 # Asked once per manifest version. A caller-provided
 # INSTALL_DESKTOP_WALLPAPER (update wallpaper) skips it, so the
@@ -3899,6 +4524,12 @@ download_optional_videos() {
 # Every run re-asserts the association so it sticks
 ensure_celluloid_default() {
   next_step "Celluloid Default (Video Player)"
+  _apps_refresh_probe
+  if [ "${APPS_CATALOG_OK:-0}" = 1 ] && ! _apps_wanted celluloid && ! _apps_installed_key celluloid; then
+    log 'Celluloid not selected — video player default left unchanged'
+    _VISUAL_SKIP_REASON='Celluloid was not selected'
+    return 0
+  fi
   local celluloid_desk="io.github.celluloid_player.Celluloid.desktop"
   local video_mimes=(
     "video/mp4" "video/x-matroska" "video/webm" "video/avi"
@@ -5617,6 +6248,28 @@ _preserve_active_wallpaper || exit 1
 INSTALL_DISCORD="${INSTALL_DISCORD:-false}"
 INSTALL_WALLPAPER_18="${INSTALL_WALLPAPER_18:-false}"
 INSTALL_BILLIE_VIDEOS="${INSTALL_BILLIE_VIDEOS:-false}"
+
+# ── App selection ─────────────────────────────────────────────
+# One question, stored as stable keys. Incremental (quick) updates reuse the
+# saved answer silently; a full run re-asks once per release, like the
+# wallpaper questions. A missing catalog falls back to the full package set.
+APPS_PREV_HASH="${PR_ANS['apps_hash']:-}"
+if ! _apps_load_catalog; then
+  _apps_fallback_lists
+  log 'App catalog unavailable — installing the full package set'
+else
+  if [ -z "${INSTALL_APPS:-}" ] && _prompt_should_ask "apps" && [ "${UPDATE_MODE:-}" != "incremental" ]; then
+    prompt_apps || true
+  fi
+  INSTALL_APPS="${INSTALL_APPS:-preset:recommended}"
+  if ! _apps_apply_selection "$INSTALL_APPS"; then
+    warn "Unknown app selection '$INSTALL_APPS' — using Recommended"
+    INSTALL_APPS='preset:recommended'
+    _apps_apply_selection "$INSTALL_APPS"
+  fi
+  _save_prompt_answer "apps" "$INSTALL_APPS"
+  _save_prompt_answer "apps_hash" "$APPS_HASH"
+fi
 
 # Desktop wallpaper — asked once per manifest version. A saved answer or
 # an INSTALL_DESKTOP_WALLPAPER env var (update wallpaper) wins.

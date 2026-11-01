@@ -1,0 +1,43 @@
+# Fedora MacTahoe - desktop app catalog
+#
+# Installer's optional desktop app catalog.
+# Everything NOT listed here is infrastructure (kitty, fish, fastfetch,
+# ImageMagick, fzf, ripgrep, jq, nautilus-python, ...) and is always installed.
+# `update apps` keeps its own install/remove catalog because it must also
+# manage core packages (Firefox, Kitty) that this selection never offers.
+#
+# Format:  key|kind|id|label|default|group
+#   key      stable identifier - stored in install-state.json, never a number
+#   kind     dnf | browser | flatpak
+#   id       rpm package name, or Flatpak application ID
+#   label    display name
+#   default  on = part of the Recommended preset, off = opt-in
+#   group    Browsers | Media | Productivity | Utilities | Communication
+#
+# Keep lines ASCII. Comments and blank lines are ignored.
+
+celluloid|dnf|celluloid|Celluloid|on|Media
+vlc|dnf|vlc|VLC|on|Media
+kdenlive|dnf|kdenlive|Kdenlive|off|Media
+pavucontrol|dnf|pavucontrol|Volume Control|on|Utilities
+alacarte|dnf|alacarte|Main Menu|on|Utilities
+gnome-tweaks|dnf|gnome-tweaks|GNOME Tweaks|on|Utilities
+gnome-characters|dnf|gnome-characters|GNOME Characters|on|Utilities
+libreoffice-writer|dnf|libreoffice-writer|LibreOffice Writer|off|Productivity
+libreoffice-calc|dnf|libreoffice-calc|LibreOffice Calc|off|Productivity
+libreoffice-impress|dnf|libreoffice-impress|LibreOffice Impress|off|Productivity
+chrome|browser|google-chrome-stable|Google Chrome|on|Browsers
+edge|browser|microsoft-edge-stable|Microsoft Edge|off|Browsers
+code|browser|code|Visual Studio Code|on|Browsers
+zapzap|flatpak|com.rtosta.zapzap|ZapZap|off|Communication
+mousam|flatpak|io.github.amit9838.mousam|Mousam|off|Utilities
+extension-manager|flatpak|com.mattjakeman.ExtensionManager|Extension Manager|on|Utilities
+flatseal|flatpak|com.github.tchx84.Flatseal|Flatseal|on|Utilities
+gear-lever|flatpak|it.mijorus.gearlever|Gear Lever|on|Utilities
+handbrake|flatpak|fr.handbrake.ghb|HandBrake|off|Media
+komikku|flatpak|info.febvre.Komikku|Komikku|off|Media
+obsidian|flatpak|md.obsidian.Obsidian|Obsidian|on|Productivity
+protonvpn|flatpak|com.protonvpn.www|Proton VPN|off|Utilities
+spotify|flatpak|com.spotify.Client|Spotify|on|Media
+localsend|flatpak|org.localsend.localsend_app|LocalSend|on|Utilities
+discord|flatpak|com.discordapp.Discord|Discord|off|Communication
