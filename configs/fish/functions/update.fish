@@ -2715,7 +2715,7 @@ function _update_apps_catalog
     printf '%s\n' 'Kitty|rpm|kitty' 'Celluloid|rpm|celluloid' 'VLC|rpm|vlc' \
         'Kdenlive|rpm|kdenlive' 'Volume Control|rpm|pavucontrol' 'Main Menu|rpm|alacarte' \
         'GNOME Tweaks|rpm|gnome-tweaks' 'GNOME Characters|rpm|gnome-characters' \
-        'LibreOffice Writer|rpm|libreoffice-writer' 'LibreOffice Calc|rpm|libreoffice-calc' \
+        'LibreOffice (all)|rpm|libreoffice' 'LibreOffice Writer|rpm|libreoffice-writer' 'LibreOffice Calc|rpm|libreoffice-calc' \
         'LibreOffice Impress|rpm|libreoffice-impress' 'Firefox|rpm|firefox' \
         'Google Chrome|rpm|google-chrome-stable' 'Microsoft Edge|rpm|microsoft-edge-stable' \
         'Visual Studio Code|rpm|code' 'ZapZap|flatpak|com.rtosta.zapzap' \
@@ -2761,7 +2761,7 @@ end
 # Emit only after validating the entire selection; malformed suffixes do nothing.
 function _update_apps_selection
     set -l input (string replace -a ',' ' ' -- "$argv[1]" | string trim)
-    set -l limit 27
+    set -l limit 28
     set -q argv[2]; and set limit $argv[2]
     if contains -- (string lower -- "$input") a all
         test $limit -gt 0; or return 1

@@ -26,6 +26,7 @@ gnome-characters|dnf|gnome-characters|GNOME Characters|on|Utilities
 libreoffice-writer|dnf|libreoffice-writer|LibreOffice Writer|off|Productivity
 libreoffice-calc|dnf|libreoffice-calc|LibreOffice Calc|off|Productivity
 libreoffice-impress|dnf|libreoffice-impress|LibreOffice Impress|off|Productivity
+libreoffice|dnf|libreoffice|LibreOffice (all)|off|Productivity
 chrome|browser|google-chrome-stable|Google Chrome|on|Browsers
 edge|browser|microsoft-edge-stable|Microsoft Edge|off|Browsers
 code|browser|code|Visual Studio Code|on|Browsers
