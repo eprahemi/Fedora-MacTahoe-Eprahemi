@@ -1,11 +1,17 @@
 {
-  "latest_version": "3.7.33",
+  "latest_version": "3.7.34",
   "bootstrap_sha256": "753ee03fdb172b3e45e0400bfa7b6177071bcde5b5b9dc4c1229d841433a1ff9",
   "install_sha256": "43bce10969f54ffa2f2e5429878f346c69194a5eb14455cb4844056c30c429e0",
   "update_sha256": "76c75bef34e49dfb39d1be1d6e3e3ac3ff6f41e27ddd7301d10171e309247399",
   "uninstall_sha256": "cceaeecce187adf5fb81afe72c3108dc23683141257227333312d929aa84f4cb",
   "asset_helper_sha256": "d66234cbf78b0d875828157623d0f49e8106e976a6fa8c0a276c39892288299e",
   "changelog": [
+    {
+      "version": "3.7.34",
+      "changes": [
+        "Fix both SMB Windows connection instructions to print a literal UNC path with two leading backslashes and one share separator."
+      ]
+    },
     {
       "version": "3.7.33",
       "changes": [

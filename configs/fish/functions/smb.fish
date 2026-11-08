@@ -750,7 +750,7 @@ function smb --description 'Samba file sharing manager'
         # ── Complete ──
         set -l local_ip (__smb_ip)
         set -l smb_url "smb://$local_ip/$smb_user"
-        set -l win_url "\\\\$local_ip\\\\$smb_user"
+        set -l win_url (printf '%s%s%s%s' '\\\\' "$local_ip" '\\' "$smb_user")
         set -l sep (printf '%*s' 62 '' | tr ' ' '─')
 
         printf "  $C╭$sep╮$N\n"
@@ -781,7 +781,7 @@ function smb --description 'Samba file sharing manager'
         printf "  $C║$N\n"
         printf "  $C║$N  WINDOWS:\n"
         printf "  $C║$N    File Explorer address bar > paste:\n"
-        printf "  $C║$N    $B$win_url$N\n"
+        printf '  %s║%s    %s%s%s\n' "$C" "$N" "$B" "$win_url" "$N"
         printf "  $C║$N    When prompted, use your SMB password.\n"
         printf "  $C║$N\n"
         printf "  $C║$N  NAUTILUS (Fedora):\n"
@@ -1818,7 +1818,7 @@ function smb --description 'Samba file sharing manager'
         printf "  $C║$N\n"
         printf "  $C║$N  WINDOWS:\n"
         printf "  $C║$N    File Explorer address bar > paste:\n"
-        printf "  $C║$N    $B \\\\$local_ip\\\\$smb_user$N\n"
+        printf '  %s║%s    %s %s%s%s%s%s\n' "$C" "$N" "$B" '\\\\' "$local_ip" '\\' "$smb_user" "$N"
         printf "  $C║$N    When prompted, use your SMB password.\n"
         printf "  $C║$N\n"
         printf "  $C║$N  NAUTILUS (Fedora):\n"
