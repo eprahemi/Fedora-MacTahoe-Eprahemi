@@ -28,9 +28,9 @@ function smb --description 'Samba file sharing manager'
     set -g PASS_FILE "$CONF_DIR/.password"
     set -g SMB_CONF  "/etc/samba/smb.conf"
 
-    # ── Ctrl+C handling ──
+    # Input interruption cancels the current operation without installing a
+    # process-wide signal trap in the calling interactive shell.
     set -g __smb_ctrl_c 0
-    trap __smb_ctrl_c SIGINT
 
     # ════════════════════════════════════════════════════════════
     # HELPERS
@@ -45,12 +45,178 @@ function smb --description 'Samba file sharing manager'
     end
 
     function __smb_user_exists
+        string match -qr '^[a-z_][a-z0-9_-]*[$]?$' -- "$argv[1]"; or return 1
         type -q pdbedit; or return 1
-        sudo pdbedit -L 2>/dev/null | grep -q "^$argv[1]:"
+        set -l records (sudo pdbedit -L); or return 1
+        for record in $records
+            set -l fields (string split -m1 : -- "$record")
+            test "$fields[1]" = "$argv[1]"; and return 0
+        end
+        return 1
+    end
+
+    function __smb_users
+        set -l records (sudo pdbedit -L); or begin
+            printf '  Could not query Samba accounts.\n' >&2
+            return 1
+        end
+        for record in $records
+            if not string match -qr '^[^:]+:[0-9]+:' -- "$record"
+                printf '  Unrecognized Samba account query result.\n' >&2
+                return 1
+            end
+        end
+        for record in $records
+            if test "$argv[1]" = names
+                set -l fields (string split -m1 : -- "$record")
+                printf '%s\n' "$fields[1]"
+            else
+                printf '%s\n' "$record"
+            end
+        end
     end
 
     function __smb_share_exists
-        grep -q "^\[$argv[1]\]" "$SMB_CONF" 2>/dev/null
+        string match -qr '^[A-Za-z0-9_][A-Za-z0-9_.-]{0,79}$' -- "$argv[1]"; or return 1
+        grep -Fqx -- "[$argv[1]]" "$SMB_CONF" 2>/dev/null
+    end
+
+    function __smb_edit_share
+        # One root-owned transaction; never writes through user-controlled temp files.
+        sudo /usr/bin/python3 -I -c '
+import fcntl, os, pathlib, re, shutil, stat, subprocess, sys, tempfile
+action, name, value, user = sys.argv[1:]
+conf = pathlib.Path("/etc/samba/smb.conf")
+backup = None
+def valid(name):
+    if not re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_.-]{0,79}", name) or name.lower() == "global":
+        raise ValueError("Unsafe or reserved share name")
+def run(*args):
+    subprocess.run(args, check=True, stdout=subprocess.DEVNULL)
+try:
+    valid(name)
+    if action not in ("add", "rename", "remove"):
+        raise ValueError("Unknown share edit")
+    if action == "rename":
+        valid(value)
+    if action == "add":
+        if not re.fullmatch(r"[a-z_][a-z0-9_-]*[$]?", user):
+            raise ValueError("Unsafe account name")
+        if re.search(r"[\x00-\x1f\x7f%\\]", value) or not value.startswith("/"):
+            raise ValueError("Unsafe share path")
+        value = str(pathlib.Path(value).resolve(strict=True))
+        if not pathlib.Path(value).is_dir():
+            raise ValueError("Share path is not a directory")
+    lock = os.open("/run/mactahoe-smb-reset.lock", os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    s = conf.lstat()
+    if not stat.S_ISREG(s.st_mode) or s.st_nlink != 1 or s.st_uid != 0 or conf.parent.is_symlink():
+        raise ValueError("Unsafe config target")
+    original = conf.read_bytes()
+    text = original.decode("utf-8")
+    if re.search(r"(?im)^\s*(include|config backend|registry shares|copy)\s*=", text) or re.search(r"\\\r?\n", text):
+        raise ValueError("Complex included/registry config needs manual review")
+    run("testparm", "-s", str(conf))
+    blocks, names, current = [], [], None
+    for line in text.splitlines(keepends=True):
+        match = re.fullmatch(r"\s*\[([^]\r\n]+)\]\s*(?:[#;][^\r\n]*)?[\r\n]*", line)
+        if match:
+            current = match[1].strip()
+            if current.lower() in [n.lower() for n in names]:
+                raise ValueError("Duplicate config section")
+            names.append(current)
+            blocks.append([current, [line]])
+        elif line.lstrip().startswith("["):
+            raise ValueError("Ambiguous config section header")
+        elif current is None:
+            if line.strip() and not line.lstrip().startswith(("#", ";")):
+                raise ValueError("Ambiguous config preamble")
+            blocks.append([None, [line]])
+        else:
+            blocks[-1][1].append(line)
+    matches = [n for n in names if n.lower() == name.lower()]
+    if action == "add" and matches or action != "add" and len(matches) != 1:
+        raise ValueError("Share already exists or was not found")
+    if action == "rename" and value.lower() in [n.lower() for n in names]:
+        raise ValueError("Replacement share already exists")
+    result = []
+    for section, lines in blocks:
+        if section and section.lower() == name.lower():
+            if action == "remove":
+                continue
+            lines[0] = "[" + value + "]\n"
+        result.extend(lines)
+    candidate = "".join(result)
+    if action == "add":
+        candidate += ("\n[" + name + "]\n    path = " + value + "\n    browseable = yes\n"
+                      "    read only = no\n    guest ok = no\n    valid users = " + user + "\n")
+    parent = pathlib.Path("/var/backups")
+    if parent.is_symlink() or not parent.is_dir() or parent.stat().st_uid != 0 or parent.stat().st_mode & 0o022:
+        raise ValueError("Unsafe backup parent")
+    backup = pathlib.Path(tempfile.mkdtemp(prefix="mactahoe-smb-config-", dir=parent))
+    os.chmod(backup, 0o700)
+    saved = backup / "smb.conf"
+    saved.write_bytes(original)
+    os.chmod(saved, 0o600)
+    with saved.open("rb") as f:
+        os.fsync(f.fileno())
+    if saved.read_bytes() != original:
+        raise ValueError("Backup verification failed")
+    fd, tmp = tempfile.mkstemp(prefix=".smb-edit-", dir=conf.parent)
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(candidate)
+            f.flush()
+            os.fsync(f.fileno())
+        os.chown(tmp, s.st_uid, s.st_gid)
+        os.chmod(tmp, stat.S_IMODE(s.st_mode))
+        run("testparm", "-s", tmp)
+        now = conf.lstat()
+        if (now.st_dev, now.st_ino, now.st_mtime_ns) != (s.st_dev, s.st_ino, s.st_mtime_ns) or conf.read_bytes() != original:
+            raise ValueError("Config changed during edit")
+        os.replace(tmp, conf)
+        run("restorecon", str(conf))
+    finally:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+    print("Share configuration saved. Recovery backup: " + str(backup))
+except Exception as e:
+    print("Share edit failed: " + str(e), file=sys.stderr)
+    if backup:
+        print("Recovery backup retained: " + str(backup), file=sys.stderr)
+    sys.exit(1)
+' "$argv[1]" "$argv[2]" "$argv[3]" (whoami)
+    end
+
+    function __smb_client
+        # Feed an smbclient authentication file over an inherited descriptor.
+        # No password in argv, environment, or a persistent temporary pathname.
+        set -l user "$argv[1]"
+        set -l password "$argv[2]"
+        set -e argv[1..2]
+        string match -qr '^[A-Za-z0-9_.@-]+$' -- "$user"; or return 1
+        string match -qr '[\r\n]' -- "$password"; and return 1
+        if test (string trim -- "$password") != "$password"
+            printf '  Leading/trailing password whitespace is unsupported by the authentication-file format.\n' >&2
+            return 1
+        end
+        printf 'username = %s\npassword = %s\n' "$user" "$password" | python3 -I -c '
+import os, subprocess, sys
+try:
+    # memfd keeps credentials off disk; smbclient opens the inherited fd path.
+    fd = os.memfd_create("smb-auth", 0)
+    os.fchmod(fd, 0o600)
+    data = sys.stdin.buffer.read()
+    os.write(fd, data)
+    os.lseek(fd, 0, os.SEEK_SET)
+    result = subprocess.run(["timeout", "10", "smbclient", "-A", "/proc/self/fd/" + str(fd),
+                             ] + sys.argv[1:], pass_fds=(fd,), stdin=subprocess.DEVNULL)
+    os.close(fd)
+    sys.exit(result.returncode)
+except Exception as e:
+    print("SMB client failed: " + str(e), file=sys.stderr)
+    sys.exit(1)
+' $argv
     end
 
     function __smb_find_share_by_path
@@ -87,23 +253,7 @@ function smb --description 'Samba file sharing manager'
     end
 
     function __smb_remove_share_section
-        # Remove a [section] block from smb.conf by name
-        set -l target_name $argv[1]
-        set -l SMB_TMP (mktemp)
-        set -l in_section 0
-        while read -l line
-            set -l sec (string match -r '^\[([^\]]+)\]' "$line" | tail -1)
-            if test -n "$sec"; and test "$sec" = "$target_name"
-                set in_section 1
-                continue
-            else if test -n "$sec"
-                set in_section 0
-            end
-            if test $in_section -eq 0
-                printf '%s\n' "$line" >> "$SMB_TMP"
-            end
-        end < "$SMB_CONF"
-        sudo mv "$SMB_TMP" "$SMB_CONF"
+        __smb_edit_share remove "$argv[1]" ''
     end
 
     function __smb_get_scope
@@ -132,7 +282,189 @@ function smb --description 'Samba file sharing manager'
     end
 
     function __smb_pkexec
-        pkexec cat /etc/shadow >/dev/null 2>&1
+        pkexec /usr/bin/true
+        return $status
+    end
+
+    function __smb_reset_consent
+        printf '%s\n' '  Setup replaces ALL Samba config/share definitions and Samba accounts.' \
+            '  Existing connections will be disconnected. Recovery backups are root-private.' \
+            '  Linux accounts and shared files are NEVER deleted.'
+        set -l answer ''
+        read -P '  Type RESET SAMBA to continue (anything else cancels): ' answer; or return 1
+        test "$answer" = 'RESET SAMBA'
+    end
+
+    function __smb_activate
+        contains -- "$argv[1]" start restart; or return 1
+        sudo testparm -s "$SMB_CONF" >/dev/null; or return 1
+        sudo systemctl "$argv[1]" smb; or return 1
+        systemctl is-active --quiet smb
+    end
+
+    function __smb_service_state
+        set -l state (systemctl show --property=ActiveState --value smb); or return 1
+        contains -- "$state" active inactive failed activating deactivating; or return 1
+        printf '%s\n' "$state"
+    end
+
+    function __smb_reset_server
+        # Password travels only over stdin, never in argv or an environment variable.
+        sudo -v; or return 1
+        printf '%s\n' "$argv[4]" | sudo -n /usr/bin/python3 -I -c '
+import os, pathlib, re, shutil, stat, subprocess, sys, tempfile, fcntl
+
+def run(*args, **kw):
+    return subprocess.run(args, check=True, **kw)
+
+def query(name):
+    return run("testparm", "-s", "--parameter-name=" + name, str(conf),
+               stdout=subprocess.PIPE, text=True).stdout.strip()
+
+def plain_tree(path):
+    if not path.exists():
+        if path.is_symlink():
+            raise RuntimeError("Broken symlink: " + str(path))
+        return
+    for base, dirs, files in os.walk(path, followlinks=False):
+        for p in [pathlib.Path(base)] + [pathlib.Path(base) / n for n in dirs + files]:
+            s = p.lstat()
+            if not (stat.S_ISDIR(s.st_mode) or stat.S_ISREG(s.st_mode)) or s.st_nlink > 1 and stat.S_ISREG(s.st_mode):
+                raise RuntimeError("Unsafe linked/special backup source: " + str(p))
+
+def snapshot(source, destination):
+    shutil.copytree(source, destination, copy_function=shutil.copy2)
+    for base, dirs, files in os.walk(source):
+        for name in files:
+            p = pathlib.Path(base) / name
+            copied = destination / p.relative_to(source)
+            if p.read_bytes() != copied.read_bytes():
+                raise RuntimeError("Backup verification failed: " + str(p))
+            s = p.stat()
+            os.chown(copied, s.st_uid, s.st_gid)
+
+user, scope, home = sys.argv[1:]
+conf = pathlib.Path("/etc/samba/smb.conf")
+state = pathlib.Path("/var/lib/samba")
+backup = None
+stopped = False
+try:
+    if not re.fullmatch(r"[a-z_][a-z0-9_-]*[$]?", user) or scope not in ("1", "2"):
+        raise RuntimeError("Unsupported username or scope")
+    import pwd
+    selected = pwd.getpwnam(user)
+    home = selected.pw_dir
+    if not home.startswith("/") or re.search(r"[\r\n%]", home):
+        raise RuntimeError("Unsafe home path")
+    password = sys.stdin.readline().rstrip("\n")
+    if not password or "\r" in password or "\x00" in password:
+        raise RuntimeError("Invalid password input")
+    lock = os.open("/run/mactahoe-smb-reset.lock", os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    plain_tree(conf.parent)
+    plain_tree(state)
+    if conf.exists():
+        original = conf.read_bytes()
+        # Includes, registry and external backends need a separately reviewed backup plan.
+        text = original.decode("utf-8")
+        if re.search(r"(?im)^\s*(include|config backend|registry shares|copy)\s*=", text) or re.search(r"\\\r?\n", text):
+            raise RuntimeError("Includes/registry/copy/continued config is unsupported; nothing reset")
+        run("testparm", "-s", str(conf), stdout=subprocess.DEVNULL)
+        if query("server role").lower() != "standalone server":
+            raise RuntimeError("Only standalone Samba servers can be reset")
+        if query("security").lower() != "user":
+            raise RuntimeError("Domain/ADS security is unsupported")
+        if query("passdb backend") not in ("tdbsam", "tdbsam:/var/lib/samba/private/passdb.tdb"):
+            raise RuntimeError("Only the local default tdbsam backend is supported")
+        for name, expected in (("private dir", "/var/lib/samba/private"), ("state directory", "/var/lib/samba")):
+            if query(name) != expected:
+                raise RuntimeError("Custom " + name + " is unsupported")
+    else:
+        original = None
+        if state.exists() and any(state.rglob("*.tdb")):
+            raise RuntimeError("Missing config with existing Samba databases needs manual review")
+    for service in ("samba", "samba-ad-dc", "winbind", "nmb"):
+        if subprocess.run(("systemctl", "is-active", "--quiet", service)).returncode == 0:
+            raise RuntimeError("Stop/review non-smb Samba service first: " + service)
+    parent = pathlib.Path("/var/backups")
+    if parent.is_symlink() or not parent.is_dir() or parent.stat().st_uid != 0 or parent.stat().st_mode & 0o022:
+        raise RuntimeError("Unsafe backup parent")
+    backup = pathlib.Path(tempfile.mkdtemp(prefix="mactahoe-smb-reset-", dir=parent))
+    os.chmod(backup, 0o700)
+    print("Recovery backup: " + str(backup), flush=True)
+    snapshot(conf.parent, backup / "etc-samba")
+    run("systemctl", "stop", "smb")
+    stopped = True
+    if subprocess.run(("systemctl", "is-active", "--quiet", "smb")).returncode == 0:
+        raise RuntimeError("smb did not stop")
+    # Stopped-server snapshot includes passdb, secrets, registry and account policy.
+    # No Samba state directory or database is deleted by this reset.
+    plain_tree(state)
+    if state.exists():
+        snapshot(state, backup / "var-lib-samba")
+    for base, dirs, files in os.walk(backup):
+        for name in files:
+            with open(pathlib.Path(base) / name, "rb") as f:
+                os.fsync(f.fileno())
+    with open(backup / "RECOVERY.txt", "w") as f:
+        f.write("Samba stopped for reset. Original config: etc-samba; original databases: var-lib-samba.\n"
+                "Keep services stopped when restoring. Review ownership and SELinux labels.\n"
+                "This backup contains password hashes/secrets; keep root-private.\n")
+        f.flush()
+        os.fsync(f.fileno())
+    share = "root_share" if scope == "2" else user
+    path = "/" if scope == "2" else home
+    candidate = ("[global]\n    workgroup = WORKGROUP\n    security = user\n"
+                 "    server role = standalone server\n    passdb backend = tdbsam\n"
+                 "    private dir = /var/lib/samba/private\n    state directory = /var/lib/samba\n"
+                 "    map to guest = Never\n    usershare max shares = 0\n"
+                 "    load printers = no\n    disable spoolss = yes\n"
+                 "\n[" + share + "]\n    path = " + path + "\n    browseable = yes\n"
+                 "    read only = no\n    guest ok = no\n    valid users = " + user + "\n"
+                 "    create mask = 0600\n    directory mask = 0700\n")
+    staged = backup / "candidate.conf"
+    staged.write_text(candidate)
+    os.chmod(staged, 0o600)
+    run("testparm", "-s", str(staged), stdout=subprocess.DEVNULL)
+    if (conf.read_bytes() if conf.exists() else None) != original:
+        raise RuntimeError("Config changed during backup; refusing reset")
+    # Enumerate before activation; failed enumeration must never mean zero accounts.
+    accounts = run("pdbedit", "-L", "-s", str(staged), stdout=subprocess.PIPE, text=True).stdout.splitlines()
+    names = []
+    for line in accounts:
+        name = line.split(":", 1)[0]
+        if not re.fullmatch(r"[a-z_][a-z0-9_-]*[$]?", name):
+            raise RuntimeError("Unrecognized account record; refusing reset")
+        names.append(name)
+    fd, tmp = tempfile.mkstemp(prefix=".smb-reset-", dir=conf.parent)
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(candidate)
+            f.flush()
+            os.fsync(f.fileno())
+        os.chmod(tmp, 0o644)
+        os.replace(tmp, conf)
+    finally:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+    run("restorecon", str(conf))
+    run("testparm", "-s", str(conf), stdout=subprocess.DEVNULL)
+    for name in names:
+        run("pdbedit", "-x", "-u", name, "-s", str(conf))
+    run("smbpasswd", "-c", str(conf), "-a", "-s", user,
+        input=password + "\n" + password + "\n", text=True)
+    remaining = run("pdbedit", "-L", "-s", str(conf), stdout=subprocess.PIPE, text=True).stdout.splitlines()
+    if len(remaining) != 1 or remaining[0].split(":", 1)[0] != user:
+        raise RuntimeError("Account reset postcondition failed")
+    print("Config replaced; only selected Samba account remains. Backup retained.")
+except (Exception, KeyboardInterrupt) as e:
+    print("Reset failed: " + str(e), file=sys.stderr)
+    if backup:
+        print("Recovery files retained at " + str(backup), file=sys.stderr)
+    if stopped:
+        print("Samba remains stopped; partial changes may exist. Review recovery backup before restarting.", file=sys.stderr)
+    sys.exit(1)
+' "$argv[1]" "$argv[2]" "$argv[3]"
         return $status
     end
 
@@ -178,6 +510,7 @@ function smb --description 'Samba file sharing manager'
     function __smb_set_password
         set -l user $argv[1]
         set -l pass $argv[2]
+        string match -qr '^[a-z_][a-z0-9_-]*[$]?$' -- "$user"; or return 1
         # Check Linux user exists — smbpasswd requires it
         if not id "$user" >/dev/null 2>&1
             printf "  $R✗$N  Linux user '$W$user$N' does not exist.\n"
@@ -185,10 +518,8 @@ function smb --description 'Samba file sharing manager'
             return 1
         end
         set -l user_exists 0
-        if type -q pdbedit
-            if sudo pdbedit -L 2>/dev/null | grep -q "^$user:"
-                set user_exists 1
-            end
+        if __smb_user_exists "$user"
+            set user_exists 1
         end
         set -l _smb_err ""
         if test $user_exists -eq 1
@@ -211,19 +542,61 @@ function smb --description 'Samba file sharing manager'
         set -l pass $argv[2]
         # Primary: gnome-keyring (encrypted at rest, unlocked on login)
         if __smb_has_keyring
-            __smb_keyring_delete "$user" 2>/dev/null
             __smb_keyring_save "$user" "$pass"
-            return 0
+            return $status
         end
-        # Fallback: encrypted file
-        mkdir -p "$CONF_DIR"
-        if test -f "$PASS_FILE"
-            grep -v "^$user:" "$PASS_FILE" > "$PASS_FILE.tmp" 2>/dev/null
-            mv "$PASS_FILE.tmp" "$PASS_FILE" 2>/dev/null
-        end
-        printf '%s:%s\n' "$user" "$pass" >> "$PASS_FILE"
-        chmod 700 "$CONF_DIR"
-        chmod 600 "$PASS_FILE"
+        # Legacy fallback is plaintext, protected by filesystem permissions only.
+        printf '%s' "$pass" | __smb_password_file save "$user"
+        return $status
+    end
+
+    function __smb_password_file
+        python3 -I -c '
+import os, pathlib, re, stat, sys, tempfile
+action, user, dirname = sys.argv[1:]
+try:
+    if not re.fullmatch(r"[a-z_][a-z0-9_-]*[$]?", user):
+        raise ValueError("Invalid username")
+    directory = pathlib.Path(dirname)
+    if not directory.exists() and action == "save":
+        directory.mkdir(mode=0o700)
+    s = directory.lstat()
+    if not stat.S_ISDIR(s.st_mode) or s.st_uid != os.getuid():
+        raise ValueError("Unsafe password directory")
+    os.chmod(directory, 0o700)
+    path = directory / ".password"
+    rows = []
+    if path.exists() or path.is_symlink():
+        s = path.lstat()
+        if not stat.S_ISREG(s.st_mode) or s.st_nlink != 1 or s.st_uid != os.getuid():
+            raise ValueError("Unsafe password file")
+        rows = path.read_text().splitlines()
+    if action == "get":
+        matches = [r.split(":", 1)[1] for r in rows if r.startswith(user + ":")]
+        if not matches:
+            sys.exit(1)
+        print(matches[0])
+        sys.exit(0)
+    rows = [r for r in rows if not r.startswith(user + ":")]
+    if action == "save":
+        password = sys.stdin.read()
+        if not password or any(c in password for c in ("\n", "\r", "\x00")):
+            raise ValueError("Invalid password")
+        rows.append(user + ":" + password)
+    fd, tmp = tempfile.mkstemp(prefix=".password-", dir=directory)
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write("".join(r + "\n" for r in rows))
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+    finally:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+except Exception as e:
+    print("Password storage failed: " + str(e), file=sys.stderr)
+    sys.exit(1)
+' "$argv[1]" "$argv[2]" "$CONF_DIR"
     end
 
     function __smb_get_password
@@ -234,11 +607,8 @@ function smb --description 'Samba file sharing manager'
             return $status
         end
         # Fallback: file
-        if test -f "$PASS_FILE"
-            grep "^$user:" "$PASS_FILE" 2>/dev/null | head -1 | cut -d: -f2-
-            return 0
-        end
-        return 1
+        __smb_password_file get "$user"
+        return $status
     end
 
     function __smb_delete_password
@@ -249,12 +619,8 @@ function smb --description 'Samba file sharing manager'
             return $status
         end
         # Fallback: file
-        if test -f "$PASS_FILE"
-            grep -v "^$user:" "$PASS_FILE" > "$PASS_FILE.tmp" 2>/dev/null
-            mv "$PASS_FILE.tmp" "$PASS_FILE" 2>/dev/null
-            return 0
-        end
-        return 1
+        __smb_password_file delete "$user"
+        return $status
     end
 
     function __smb_ctrl_c
@@ -263,23 +629,9 @@ function smb --description 'Samba file sharing manager'
 
     function __smb_stop_check
         set -l _st $status
-        # Ctrl+C: status 130 = SIGINT. Counter tracks "warned" state.
-        if test $_st -eq 130
-            if test $__smb_ctrl_c -eq 1
-                # Already warned → second press → stop
-                set -g __smb_ctrl_c 0
-                trap - SIGINT
-                set -e __smb_ctrl_c
-                printf "\n  Stopped.\n"
-                return 1
-            else
-                # First press → warn
-                set -g __smb_ctrl_c 1
-                printf "\n  Press Ctrl+C again to stop.\n"
-            end
-        else
-            # Not SIGINT — reset warn flag
-            set -g __smb_ctrl_c 0
+        if test $_st -ne 0
+            printf '\n  Input cancelled or failed.\n'
+            return 1
         end
         return 0
     end
@@ -288,6 +640,28 @@ function smb --description 'Samba file sharing manager'
     # HELP
     # ════════════════════════════════════════════════════════════
 
+    if contains -- "$argv[1]" user password status secure security
+        type -q pdbedit; or begin
+            printf '  Samba account tools are missing; account state is unknown. Run smb setup first.\n'
+            return 1
+        end
+    end
+    if test "$argv[1]" = user
+        for account in $argv[3..4]
+            string match -qr '^[a-z_][a-z0-9_-]*[$]?$' -- "$account"; or begin
+                printf '  Unsupported account name; use a simple existing Linux username.\n'
+                return 1
+            end
+        end
+    end
+    if test "$argv[1]" = share; and test "$argv[2]" = list
+        test -r "$SMB_CONF"; or begin
+            printf '  Samba configuration is missing or unreadable; shares are unknown.\n'
+            return 1
+        end
+        testparm -s "$SMB_CONF" >/dev/null; or return 1
+        printf '  Listing definitions in smb.conf only (not expanded includes or runtime availability).\n'
+    end
     if test (count $argv) -eq 0; or test "$argv[1]" = "help"; or test "$argv[1]" = "-help"; or test "$argv[1]" = "--help"
         printf "\n"
         printf "  $C╭──────────────────────────────────────────────────────────────╮$N\n"
@@ -301,7 +675,7 @@ function smb --description 'Samba file sharing manager'
         printf "  ────────────────────────────────────────────────────────────────\n"
         printf "  $BOLDC SETUP$N\n"
         printf "  ────────────────────────────────────────────────────────────────\n"
-        printf "    $W smb setup$N                   Full guided setup (installs samba,\n"
+        printf "    $W smb setup$N                   Guided reset (replaces config/accounts,\n"
         printf "                                     configures firewall, creates user,\n"
         printf "                                     enables service). Run this first.\n"
         printf "\n"
@@ -348,16 +722,14 @@ function smb --description 'Samba file sharing manager'
         printf "  ────────────────────────────────────────────────────────────────\n"
         printf "  $B DATA$N\n"
         printf "  ────────────────────────────────────────────────────────────────\n"
-        printf "    $W smb data$N                    Export smb.conf + passwords to a\n"
-        printf "                                     password-protected zip in ~/Documents\n"
+        printf "    $W smb data$N                    Password export disabled (unsafe legacy ZIP).\n"
         printf "    $W smb data list$N               List all saved export zips\n"
         printf "    $W smb data clean$N              Delete all saved exports\n"
         printf "\n"
         printf "  ────────────────────────────────────────────────────────────────\n"
         printf "  $BOLDR DANGER$N\n"
         printf "  ────────────────────────────────────────────────────────────────\n"
-        printf "    $W smb nuke$N                   Completely remove Samba and all\n"
-        printf "                                     traces (users, config, packages)\n"
+        printf "    $W smb nuke$N                   Disabled: unsafe legacy recursive purge.\n"
         printf "\n"
         printf "  ────────────────────────────────────────────────────────────────\n"
         printf "  $C INFO$N\n"
@@ -380,8 +752,8 @@ function smb --description 'Samba file sharing manager'
         printf "    1. Run $W'smb setup'$N first — it does everything in one shot.\n"
         printf "    2. After sharing, connect from other devices using:\n"
         printf "       $D smb://<your-ip>/<share-name>$N\n"
-        printf "    3. Passwords are stored securely.\n"
-        printf "       Encrypted at rest, never exposed.\n"
+        printf '    3. Keyring passwords are encrypted at rest.\n'
+        printf '       File fallback is private plaintext, not encryption.\n'
         printf "    4. Run $W'smb status'$N to check everything at a glance.\n"
         printf "    5. Run $W'smb restart'$N after editing smb.conf manually.\n"
         printf "\n"
@@ -393,6 +765,14 @@ function smb --description 'Samba file sharing manager'
     # ════════════════════════════════════════════════════════════
 
     if test "$argv[1]" = "setup"
+        test (count $argv) -eq 1; or begin
+            printf '  Usage: smb setup (no flags bypass reset consent)\n'
+            return 1
+        end
+        __smb_reset_consent; or begin
+            printf '  Setup cancelled. Nothing changed.\n'
+            return 1
+        end
         printf "\n"
         printf "  $C╭──────────────────────────────────────────────────────────╮$N\n"
         printf "  $C│$N                    SMB SETUP WIZARD                       \n"
@@ -418,18 +798,11 @@ function smb --description 'Samba file sharing manager'
                 return 1
             end
         end
-        # Ensure smb.conf exists and is valid — nuke removes it, reinstall may give broken skeleton
-        printf "  Verifying smb.conf...\n"
-        if not testparm -s 2>/dev/null | head -1 | grep -q '\[global\]'
-            printf "  Creating default smb.conf...\n"
-            printf '[global]\n   workgroup = WORKGROUP\n   server string = Samba Server\n   security = user\n   map to guest = Bad Password\n   dns proxy = no\n\n[homes]\n   comment = Home Directories\n   browseable = no\n   writable = yes\n   valid users = %%S\n' | sudo tee /etc/samba/smb.conf >/dev/null
-            if test $status -eq 0
-                printf "  $G✓$N  Default smb.conf created\n"
-            else
-                printf "  $Y⚠$N  Could not create smb.conf — smbpasswd may fail\n"
+        for required in testparm pdbedit smbpasswd python3 restorecon
+            type -q "$required"; or begin
+                printf '  Required command missing: %s\n' "$required"
+                return 1
             end
-        else
-            printf "  $G✓$N  smb.conf OK\n"
         end
         # Install libsecret for password storage
         if not type -q secret-tool
@@ -439,9 +812,9 @@ function smb --description 'Samba file sharing manager'
                 printf "  $G✓$N  Secure storage installed\n"
             else
                 if not ping -c1 -W2 8.8.8.8 >/dev/null 2>&1
-                    printf "  $Y⚠$N  Secure storage install failed (no internet) — using encrypted fallback\n"
+                    printf '  Keyring install failed; fallback is private plaintext, not encrypted.\n'
                 else
-                    printf "  $Y⚠$N  Secure storage not available — using encrypted fallback\n"
+                    printf '  Keyring unavailable; fallback is private plaintext, not encrypted.\n'
                 end
             end
         end
@@ -468,17 +841,16 @@ function smb --description 'Samba file sharing manager'
         end
         printf "\n"
         printf "  $G✓$N  Using: $W$smb_user$N\n"
+        if not string match -qr '^[a-z_][a-z0-9_-]*[$]?$' -- "$smb_user"; or not id -- "$smb_user" >/dev/null 2>&1
+            printf '  Select an existing Linux account with a simple local username.\n'
+            return 1
+        end
+        set -l selected_home (getent passwd "$smb_user" | cut -d: -f6)
+        test -d "$selected_home"; or return 1
         printf "\n"
 
         # ── Step 3: Set password ──
         printf "  $BOLD Step 3/9$N   Setting SMB password...\n"
-
-        # Ensure samba private dir and secrets exist — needed by smbpasswd
-        sudo mkdir -p /var/lib/samba/private
-        sudo chmod 700 /var/lib/samba/private
-        # Start smb briefly so secrets.tdb is created
-        sudo systemctl start smb 2>/dev/null
-        sudo systemctl stop smb 2>/dev/null
 
         # ── Ensure pwscore is available for password strength checking ──
         set -l has_pwscore 0
@@ -578,7 +950,7 @@ function smb --description 'Samba file sharing manager'
                 if test $is_weak -eq 1
                     printf "\n"
                     printf "  $R⚠$N  Weak password detected.\n"
-                    printf "     '%s' is one of the most commonly used passwords.\n" "$pass"
+                    printf '     This is one of the most commonly used passwords.\n'
                     printf "\n"
                     if not __confirm_yn "  Use this password anyway? [y/N]: " n
                         printf "\n"
@@ -592,28 +964,7 @@ function smb --description 'Samba file sharing manager'
 
             break
         end
-        if not __smb_set_password "$smb_user" "$pass"
-            if test "$smb_user" != "$detected_user"
-                printf "\n"
-                if __confirm_yn "  Continue with '$W$detected_user$N' instead? [Y/n]: " y
-                    set smb_user "$detected_user"
-                    if not __smb_set_password "$smb_user" "$pass"
-                        printf "  $R✗$N  Password setup failed for '$W$smb_user$N'.\n"
-                        return 1
-                    end
-                    __smb_save_password "$smb_user" "$pass"
-                else
-                    return 1
-                end
-            else
-                printf "  $R✗$N  Password setup failed. Is samba installed and running?\n"
-                return 1
-            end
-        else
-            __smb_save_password "$smb_user" "$pass"
-        end
-        printf "  $G✓$N  Password set for '$W$smb_user$N'\n"
-        printf "  $G✓$N  Password saved securely.\n"
+        printf '  Password collected; no Samba account changed yet.\n'
         printf "\n"
         printf "  $Y⚠$N  WARNING: Do NOT share this password with anyone.\n"
         printf "     Giving your SMB password to others gives them full access\n"
@@ -624,7 +975,7 @@ function smb --description 'Samba file sharing manager'
         printf "  $BOLD Step 4/9$N   Choosing share scope...\n"
         printf "\n"
         printf "  $NUM1  $BOLD Home directory$N  $D(recommended)$N\n"
-        printf "      Shares: $D$HOME$N\n"
+        printf '      Shares: %s\n' "$selected_home"
         printf "      $D Safe — only your personal files are visible.$N\n"
         printf "\n"
         printf "  $NUM2  $BOLD Root filesystem$N  $R(NOT recommended)$N\n"
@@ -658,7 +1009,7 @@ function smb --description 'Samba file sharing manager'
 
         # ── Confirmation ──
         set -l scope_type "HOME"
-        set -l scope_path "$HOME"
+        set -l scope_path "$selected_home"
         if test "$scope_choice" = "2"
             set scope_type "ROOT"
             set scope_path "/"
@@ -673,43 +1024,35 @@ function smb --description 'Samba file sharing manager'
         printf "\n"
         if not __confirm_yn "  Apply all changes? [Y/n]: " y
             printf "\n"
-            printf "  $Y Setup cancelled. No changes were made.$N\n"
+            printf '  Setup cancelled. Config/accounts unchanged; prerequisite packages may have been installed.\n'
             return 0
         end
         printf "\n"
 
         # ── Step 5: Configure smb.conf ──
         printf "  $BOLD Step 5/9$N   Configuring smb.conf...\n"
-        if test "$scope_choice" = "2"
-            # Root share
-            if __smb_share_exists "root_share"
-                printf "  $G✓$N  [root_share] section already exists in smb.conf\n"
-            else
-                printf '\n[root_share]\n    comment = Root Filesystem\n    path = /\n    browseable = yes\n    writable = yes\n    valid users = %s\n' "$smb_user" | sudo tee -a "$SMB_CONF" >/dev/null
-                printf "  $G✓$N  [root_share] section added to smb.conf\n"
-            end
-        else
-            # Home share
-            if grep -q '^\[homes\]' "$SMB_CONF" 2>/dev/null
-                printf "  $G✓$N  [homes] section already exists in smb.conf\n"
-            else
-                printf '\n[homes]\n    comment = Home Directories\n    browseable = yes\n    writable = yes\n    valid users = %%S\n    create mask = 0700\n    directory mask = 0700\n' | sudo tee -a "$SMB_CONF" >/dev/null
-                printf "  $G✓$N  [homes] section added to smb.conf\n"
-            end
+        __smb_reset_server "$smb_user" "$(test "$scope_choice" = 2; and echo 2; or echo 1)" "$selected_home" "$pass"; or return 1
+        if not __smb_save_password "$smb_user" "$pass"
+            printf '  Samba password was set, but saving its local copy failed. Samba remains stopped.\n'
+            return 1
         end
+        set -e pass pass2
         printf "\n"
 
         # ── Step 6: Start service ──
         printf "  $BOLD Step 6/9$N   Starting Samba service...\n"
-        sudo systemctl enable smb --now 2>/dev/null
+        sudo testparm -s "$SMB_CONF" >/dev/null; or return 1
+        sudo systemctl enable smb; or return 1
+        sudo systemctl restart smb; or return 1
+        systemctl is-active --quiet smb; or return 1
         printf "  $G✓$N  smb.service enabled and started\n"
         printf "\n"
 
         # ── Step 7: Firewall ──
         printf "  $BOLD Step 7/9$N   Configuring firewall...\n"
         if sudo systemctl is-active firewalld >/dev/null 2>&1
-            sudo firewall-cmd --add-service=samba --permanent 2>/dev/null
-            sudo firewall-cmd --reload 2>/dev/null
+            sudo firewall-cmd --add-service=samba --permanent; or return 1
+            sudo firewall-cmd --reload; or return 1
             printf "  $G✓$N  samba service added to firewall\n"
         else
             printf "  $D firewall not active — skipping$N\n"
@@ -719,11 +1062,11 @@ function smb --description 'Samba file sharing manager'
         # ── Step 8: SELinux ──
         printf "  $BOLD Step 8/9$N   Setting SELinux permissions...\n"
         if test "$scope_choice" = "2"
-            sudo setsebool -P samba_enable_home_dirs on 2>/dev/null
-            sudo setsebool -P samba_export_all_rw on 2>/dev/null
+            sudo setsebool -P samba_enable_home_dirs on; or return 1
+            sudo setsebool -P samba_export_all_rw on; or return 1
             printf "  $G✓$N  samba_enable_home_dirs + samba_export_all_rw enabled\n"
         else
-            sudo setsebool -P samba_enable_home_dirs on 2>/dev/null
+            sudo setsebool -P samba_enable_home_dirs on; or return 1
             printf "  $G✓$N  samba_enable_home_dirs enabled\n"
         end
         printf "\n"
@@ -736,10 +1079,11 @@ function smb --description 'Samba file sharing manager'
         end
         printf "  $G✓$N  Samba version: $W$samba_ver$N\n"
         if type -q testparm
-            if command testparm -s 2>/dev/null | head -1 | read -l tp_out
+            if sudo testparm -s "$SMB_CONF" >/dev/null
                 printf "  $G✓$N  Config test: OK\n"
             else
-                printf "  $Y⚠$N  Config test: failed\n"
+                printf '  Config test failed; setup incomplete.\n'
+                return 1
             end
         else
             printf "  $D  Config test: skipped (testparm not installed)$N\n"
@@ -749,8 +1093,10 @@ function smb --description 'Samba file sharing manager'
 
         # ── Complete ──
         set -l local_ip (__smb_ip)
-        set -l smb_url "smb://$local_ip/$smb_user"
-        set -l win_url (printf '%s%s%s%s' '\\\\' "$local_ip" '\\' "$smb_user")
+        set -l share_name "$smb_user"
+        test "$scope_choice" = 2; and set share_name root_share
+        set -l smb_url "smb://$local_ip/$share_name"
+        set -l win_url (printf '%s%s%s%s' '\\\\' "$local_ip" '\\' "$share_name")
         set -l sep (printf '%*s' 62 '' | tr ' ' '─')
 
         printf "  $C╭$sep╮$N\n"
@@ -766,7 +1112,7 @@ function smb --description 'Samba file sharing manager'
         if __smb_has_keyring
             printf "  $C║$N    Storage:  $BOLDG Encrypted$N\n"
         else
-            printf "  $C║$N    Storage:  $BOLDY Encrypted$N\n"
+            printf '  Storage: private plaintext fallback (not encrypted)\n'
         end
         printf "  $C╠$sep╣$N\n"
         printf "  $C║$N  SHARED DIRECTORIES\n"
@@ -820,7 +1166,7 @@ function smb --description 'Samba file sharing manager'
             case list
                 set -l users ()
                 if type -q pdbedit
-                    set users (sudo pdbedit -L 2>/dev/null)
+                    set users (__smb_users); or return 1
                 end
                 if test (count $users) -eq 0
                     printf "  No SMB users found.\n"
@@ -884,7 +1230,10 @@ function smb --description 'Samba file sharing manager'
                 if not __smb_set_password "$newuser" "$pass"
                     return 1
                 end
-                __smb_save_password "$newuser" "$pass"
+                __smb_save_password "$newuser" "$pass"; or begin
+                    printf '  Samba account created, but saving the local password copy failed.\n'
+                    return 1
+                end
                 printf "  $G✓$N  User '$W$newuser$N' created\n"
                 printf "  $G✓$N  Password saved securely.\n"
                 printf "\n"
@@ -914,7 +1263,7 @@ function smb --description 'Samba file sharing manager'
                         printf "  Authentication failed — opening system authentication dialog...\n"
                         if __smb_pkexec
                             printf "  $G✓$N  System authentication successful\n"
-                            sudo smbpasswd -x "$extra" 2>/dev/null
+                            sudo smbpasswd -x "$extra"; or return 1
                             printf "  $G✓$N  User '$W$extra$N' removed\n"
                             __smb_delete_password "$extra"
                             return 0
@@ -928,9 +1277,9 @@ function smb --description 'Samba file sharing manager'
                     read -s -P "  > " -l try_pass
                     __smb_stop_check; or return 1
                     printf "\n"
-                    printf '%s' "$try_pass" | smbclient -L localhost -U "$extra%$try_pass" >/dev/null 2>&1
+                    __smb_client "$extra" "$try_pass" -L localhost >/dev/null 2>&1
                     if test $status -eq 0
-                        sudo smbpasswd -x "$extra" 2>/dev/null
+                        sudo smbpasswd -x "$extra"; or return 1
                         printf "  $G✓$N  User '$W$extra$N' removed\n"
                         printf "  $G✓$N  Password removed securely.\n"
                         printf "\n"
@@ -961,7 +1310,7 @@ function smb --description 'Samba file sharing manager'
                 # Check old user exists
                 set -l users ()
                 if type -q pdbedit
-                    set users (sudo pdbedit -L 2>/dev/null | cut -d: -f1)
+                    set users (__smb_users names); or return 1
                 end
                 set -l found 0
                 for u in $users
@@ -998,16 +1347,16 @@ function smb --description 'Samba file sharing manager'
                 printf "\n"
                 if __smb_pkexec
                     printf "  $G✓$N  System authentication successful\n"
-                    # Remove old user
-                    sudo smbpasswd -x "$old_name" 2>/dev/null
-                    printf "  $G✓$N  Removed old user '$W$old_name$N'\n"
-                    # Add new user with same password
+                    # Create the replacement before removing the old account.
                     if not __smb_set_password "$new_name" "$old_pass"
-                        printf "  $R✗$N  Failed to create new user. Old user was already deleted.\n"
-                        printf "  Run 'smb user add $new_name' to recreate.\n"
+                        printf '  Failed to create replacement; old Samba account retained.\n'
                         return 1
                     end
-                    __smb_save_password "$new_name" "$old_pass"
+                    __smb_save_password "$new_name" "$old_pass"; or return 1
+                    sudo smbpasswd -x "$old_name"; or begin
+                        printf '  Old account removal failed; both Samba accounts may remain.\n'
+                        return 1
+                    end
                     # Remove old keyring entry
                     __smb_delete_password "$old_name"
                     printf "\n"
@@ -1028,7 +1377,7 @@ function smb --description 'Samba file sharing manager'
                     # No username — list users
                     set -l users ()
                     if type -q pdbedit
-                        set users (sudo pdbedit -L 2>/dev/null)
+                        set users (__smb_users); or return 1
                     end
                     if test (count $users) -eq 0
                         printf "  No SMB users found.\n"
@@ -1079,7 +1428,10 @@ function smb --description 'Samba file sharing manager'
                 if not __smb_set_password "$extra" "$pass"
                     return 1
                 end
-                __smb_save_password "$extra" "$pass"
+                __smb_save_password "$extra" "$pass"; or begin
+                    printf '  Samba password changed, but saving the local copy failed.\n'
+                    return 1
+                end
                 printf "  $G✓$N  Password changed for '$W$extra$N'\n"
                 printf "  $G✓$N  Password updated.\n"
                 printf "\n"
@@ -1232,20 +1584,9 @@ function smb --description 'Samba file sharing manager'
                 return 1
             end
             # Rename in smb.conf: replace [old] with [new] and update comment
-            set -l SMB_TMP (mktemp)
-            while read -l line
-                set -l sec (string match -r '^\[([^\]]+)\]' "$line" | tail -1)
-                if test -n "$sec"; and test "$sec" = "$dir"
-                    printf '[%s]\n' "$name" >> "$SMB_TMP"
-                else if string match -qr "^\s*comment\s*=\s*$(string escape --style=regex "$dir")\$" "$line"
-                    printf '    comment = %s\n' "$name" >> "$SMB_TMP"
-                else
-                    printf '%s\n' "$line" >> "$SMB_TMP"
-                end
-            end < "$SMB_CONF"
-            sudo mv "$SMB_TMP" "$SMB_CONF"
+            __smb_edit_share rename "$dir" "$name"; or return 1
             printf "  $G✓$N  Share '$W$dir$N' renamed to '$W$name$N'\n"
-            sudo systemctl restart smb 2>/dev/null
+            __smb_activate restart; or return 1
             printf "  $G✓$N  Samba service restarted\n"
 
         # ── smb share (no args) or smb share <dir> [name] ──
@@ -1292,26 +1633,11 @@ function smb --description 'Samba file sharing manager'
                 printf "  Cancelled.\n"
                 return 0
             end
-            # Replace old share on same path (after confirmation)
-            set -l existing_name (__smb_find_share_by_path "$dir")
-            if test -n "$existing_name"; and test "$existing_name" != "$name"
-                __smb_remove_share_section "$existing_name"
-                printf "  $G✓$N  Replaced old share '$W$existing_name$N' → '$W$name$N'\n"
-            end
-            # Add share to smb.conf
-            # Ensure directory is traversable and SELinux allows Samba access
-            chmod 755 "$dir" 2>/dev/null
-            sudo setsebool -P samba_enable_home_dirs on 2>/dev/null
-            sudo chcon -t samba_share_t "$dir" 2>/dev/null
-            # Non-home paths (e.g. /mnt/*, /media/*) need samba_export_all_rw
-            # because chcon silently fails on FUSE/NTFS/exFAT filesystems
-            set -l real_dir (realpath "$dir" 2>/dev/null; or echo "$dir")
-            if not string match -qr "^$HOME" "$real_dir"
-                sudo setsebool -P samba_export_all_rw on 2>/dev/null
-            end
-            printf '\n[%s]\n    comment = %s\n    path = %s\n    browseable = yes\n    writable = yes\n    valid users = %s\n' "$name" "$name" "$dir" (whoami) | sudo tee -a "$SMB_CONF" >/dev/null
+            # Preserve existing shares, data permissions and global SELinux policy.
+            __smb_edit_share add "$name" "$dir"; or return 1
+            printf '  File permissions and SELinux policy preserved. Use smb fix <path> if needed.\n'
             printf "  $G✓$N  Share '$W$name$N' added → $D$dir$N\n"
-            sudo systemctl restart smb 2>/dev/null
+            __smb_activate restart; or return 1
             printf "  $G✓$N  Samba service restarted\n"
             printf "\n"
 
@@ -1403,15 +1729,8 @@ function smb --description 'Samba file sharing manager'
             printf "  Cancelled.\n"
             return 0
         end
-        # Remove share section from smb.conf using awk
-        sudo awk -v sec="[$target]" '
-            BEGIN { skip=0 }
-            /^\[/ { if ($0 == sec) { skip=1; next } else { skip=0 } }
-            skip && /^$/ { skip=0; next }
-            !skip { print }
-        ' "$SMB_CONF" | sudo tee "$SMB_CONF.tmp" >/dev/null
-        sudo mv "$SMB_CONF.tmp" "$SMB_CONF"
-        sudo systemctl restart smb 2>/dev/null
+        __smb_remove_share_section "$target"; or return 1
+        __smb_activate restart; or return 1
         printf "  $G✓$N  Share '$W$target$N' removed\n"
         printf "  $G✓$N  Samba service restarted\n"
         printf "\n"
@@ -1423,12 +1742,16 @@ function smb --description 'Samba file sharing manager'
     # ════════════════════════════════════════════════════════════
 
     if test "$argv[1]" = "on"
-        if systemctl is-active smb >/dev/null 2>&1
+        set -l state (__smb_service_state); or begin
+            printf '  Could not query Samba service state.\n'
+            return 1
+        end
+        if test "$state" = active
             printf "  $G✓$N  Samba service is already running\n"
             printf "  $G✓$N  Status: $BOLDG active$N\n"
         else
             printf "  Starting Samba service...\n"
-            sudo systemctl start smb 2>/dev/null
+            __smb_activate start; or return 1
             printf "  $G✓$N  smb.service started\n"
             printf "  $G✓$N  Status: $BOLDG active$N\n"
         end
@@ -1436,7 +1759,11 @@ function smb --description 'Samba file sharing manager'
     end
 
     if test "$argv[1]" = "off"
-        if not systemctl is-active smb >/dev/null 2>&1
+        set -l state (__smb_service_state); or begin
+            printf '  Could not query Samba service state.\n'
+            return 1
+        end
+        if contains -- "$state" inactive failed
             printf "  $G✓$N  Samba service is already stopped\n"
             return 0
         end
@@ -1444,7 +1771,7 @@ function smb --description 'Samba file sharing manager'
             printf "  Cancelled.\n"
             return 0
         end
-        sudo systemctl stop smb 2>/dev/null
+        sudo systemctl stop smb; or return 1
         printf "  $G✓$N  smb.service stopped\n"
         printf "  $G✓$N  Status: $BOLDR inactive$N\n"
         return 0
@@ -1458,7 +1785,7 @@ function smb --description 'Samba file sharing manager'
         end
         printf "\n"
         printf "  Restarting Samba service...\n"
-        sudo systemctl restart smb 2>/dev/null
+        __smb_activate restart; or return 1
         printf "  $G✓$N  smb.service restarted\n"
         printf "  $G✓$N  Status: $BOLDG active$N\n"
         return 0
@@ -1470,6 +1797,18 @@ function smb --description 'Samba file sharing manager'
 
     if test "$argv[1]" = "fix"
         set -l target "$argv[2]"
+        # Global export booleans and inferred path parsing are intentionally not
+        # changed: they can expose unrelated shares. Relabel only an explicit path.
+        if not string match -qr '^/[^\r\n%]*$' -- "$target"; or not test -d "$target"; or test -L "$target"
+            printf '  Use smb fix /absolute/existing/directory. Automatic all-share policy changes are disabled.\n'
+            return 1
+        end
+        if not __confirm_yn "  Label only this directory for Samba (no recursive or global policy changes)? [y/N]: " n
+            return 1
+        end
+        sudo chcon -t samba_share_t -- "$target"; or return 1
+        printf '  Directory label updated: %s\n' "$target"
+        return 0
         printf "\n"
         printf "  $BOLD Fixing SELinux permissions...$N\n"
         printf "\n"
@@ -1619,7 +1958,7 @@ function smb --description 'Samba file sharing manager'
         printf "\n"
         set -l users ()
         if type -q pdbedit
-            set users (sudo pdbedit -L 2>/dev/null | cut -d: -f1)
+            set users (__smb_users names); or return 1
         end
         if test (count $users) -eq 0
             printf "  No SMB users found.\n"
@@ -1629,7 +1968,7 @@ function smb --description 'Samba file sharing manager'
         if test (count $users) -eq 1
             set -l upass (__smb_get_password "$users[1]")
             printf "  SMB User: $W$users[1]$N\n"
-            printf "  Password: $W$upass$N\n"
+            printf '  Password: %s%s%s\n' "$W" "$upass" "$N"
             printf "\n"
             printf "  To change your password:\n"
             printf "    smb user password $users[1]\n"
@@ -1684,25 +2023,38 @@ function smb --description 'Samba file sharing manager'
         # ── Gather info ──
         set -l local_ip (__smb_ip)
         set -l smb_user (whoami)
-        set -l svc_active "active"
-        if not systemctl is-active smb >/dev/null 2>&1
-            set svc_active "INACTIVE"
+        set -l svc_active (__smb_service_state); or begin
+            printf '  Could not query Samba service state; status is unknown.\n'
+            return 1
         end
-        set -l fw_status "inactive"
+        set -l fw_status "unknown or not running"
         if sudo systemctl is-active firewalld >/dev/null 2>&1
-            if sudo firewall-cmd --query-service=samba >/dev/null 2>&1
+            sudo firewall-cmd --query-service=samba >/dev/null 2>&1
+            set -l fw_rc $status
+            if test $fw_rc -eq 0
                 set fw_status "active (samba allowed)"
-            else
+            else if test $fw_rc -eq 1
                 set fw_status "active (samba NOT allowed)"
+            else
+                printf '  Firewall query failed; access policy is unknown.\n'
+                return 1
             end
         end
-        set -l selinux_status "Disabled"
+        set -l selinux_status "unknown (tools unavailable)"
         if type -q getenforce
             set selinux_status (getenforce 2>/dev/null)
+            if test $status -ne 0; or test -z "$selinux_status"
+                set selinux_status unknown
+            end
         end
-        set -l home_dirs "disabled"
-        if getsebool samba_enable_home_dirs 2>/dev/null | grep -q 'on$'
-            set home_dirs "enabled"
+        set -l home_dirs "unknown"
+        set -l home_policy (getsebool samba_enable_home_dirs 2>/dev/null)
+        if test $status -eq 0
+            if string match -qr 'on$' -- "$home_policy"
+                set home_dirs enabled
+            else if string match -qr 'off$' -- "$home_policy"
+                set home_dirs disabled
+            end
         end
 
         # ── Render ──
@@ -1715,7 +2067,7 @@ function smb --description 'Samba file sharing manager'
         if test "$svc_active" = "active"
             printf "  $C║$N  Service:     $BOLDG active$N\n"
         else
-            printf "  $C║$N  Service:     $BOLDR INACTIVE$N\n"
+            printf '  Service: %s\n' "$svc_active"
         end
         printf "  $C║$N  IP:          $W$local_ip$N\n"
         printf "  $C║$N  Firewall:    $W$fw_status$N\n"
@@ -1727,7 +2079,7 @@ function smb --description 'Samba file sharing manager'
         printf "  $C║$N  $BOLDG SMB USERS$N\n"
         set -l users ()
         if type -q pdbedit
-            set users (sudo pdbedit -L 2>/dev/null)
+            set users (__smb_users); or return 1
         end
         if test (count $users) -gt 0
             for u in $users
@@ -1735,7 +2087,7 @@ function smb --description 'Samba file sharing manager'
                 set -l uid (printf '%s\n' "$u" | cut -d: -f2)
                 if test $show_pass -eq 1
                     set -l pass (__smb_get_password "$uname")
-                    printf "  $C║$N    $W$uname$N  (uid=$uid)  $D$pass$N\n"
+                    printf '  %s║%s    %s%s%s  (uid=%s)  %s%s%s\n' "$C" "$N" "$W" "$uname" "$N" "$uid" "$D" "$pass" "$N"
                 else
                     printf "  $C║$N    $W$uname$N  ••••••••••••  (uid=$uid)\n"
                 end
@@ -1746,7 +2098,7 @@ function smb --description 'Samba file sharing manager'
         if __smb_has_keyring
             printf "  $C║$N  Storage:     $BOLDG Encrypted$N\n"
         else
-            printf "  $C║$N  Storage:     $BOLDY Encrypted$N\n"
+            printf '  Storage: private plaintext fallback (not encrypted)\n'
         end
 
         # ── Share scope ──
@@ -1762,7 +2114,7 @@ function smb --description 'Samba file sharing manager'
         else
             printf "  $C║$N    Type:    $D none$N\n"
         end
-        printf "  $C║$N    Status:  $BOLDG active$N\n"
+        printf '  Configured definitions only; not a share reachability check.\n'
 
         # ── Shared directories ──
         printf "  $C╠$sep╣$N\n"
@@ -1853,6 +2205,11 @@ function smb --description 'Samba file sharing manager'
         if test (count $argv) -ge 2
             set data_subcmd $argv[2]
         end
+        if not contains -- "$data_subcmd" list clean
+            printf '%s\n' '  Password-bearing export is disabled: legacy ZIP encryption is unsafe.' \
+                '  No export or plaintext report was created. Reset recovery backups remain root-private.'
+            return 1
+        end
 
         switch $data_subcmd
             # ── smb data list ──
@@ -1922,12 +2279,18 @@ function smb --description 'Samba file sharing manager'
                     printf "  Cancelled.\n"
                     return 0
                 end
-                rm -f "$HOME/Documents/smb-data-"*.zip
-                for f in $folders
-                    rm -rf "$f"
+                for f in $exports
+                    test -L "$f"; and begin
+                        printf '  Refusing a linked export target.\n'
+                        return 1
+                    end
+                    gio trash -- "$f"; or return 1
+                    if test -e "$f"; or test -L "$f"
+                        printf '  Trash did not remove the export; cleanup incomplete.\n'
+                        return 1
+                    end
                 end
-                printf "  $G✓$N  Deleted %d zip(s) and %d folder(s)\n" $total $ftotal
-                printf "  $G✓$N  $D~/Documents/$N cleaned\n"
+                printf '  Sent %d export zip(s) to Trash. Extracted folders were kept.\n' $total
                 printf "\n"
 
             # ── smb data (export) ──
@@ -2062,7 +2425,7 @@ function smb --description 'Samba file sharing manager'
                 set -l zippath "$HOME/Documents/$zipname"
                 printf "  $G✓$N  Wrapping in encrypted zip...\n"
                 pushd "$tmpdir" >/dev/null 2>&1
-                zip -P "$zip_pass" "$zippath" smb-data.txt >/dev/null 2>&1
+                return 1 # Password-bearing exports are disabled before this legacy branch.
                 popd >/dev/null 2>&1
                 chmod 600 "$zippath"
                 rm -rf "$tmpdir"
@@ -2109,6 +2472,10 @@ function smb --description 'Samba file sharing manager'
     # ════════════════════════════════════════════════════════════
 
     if test "$argv[1]" = "nuke"
+        printf '%s\n' '  smb nuke is disabled: a safe backed-up removal plan cannot be inferred.' \
+            '  No packages, accounts, configuration, services or files were changed.' \
+            '  Use smb setup for the consent-gated, backed-up Samba-only reset.'
+        return 1
         set -l sep (printf '%*s' 62 '' | tr ' ' '─')
         printf "\n"
         printf "  $R╔$sep╗$N\n" 2>/dev/null
@@ -2194,7 +2561,7 @@ function smb --description 'Samba file sharing manager'
         # ── 3. Remove password storage ──
         printf "  Removing password storage...\n"
         if test -d "$HOME/.config/smb"
-            rm -rf "$HOME/.config/smb"
+            return 1 # Legacy purge disabled above; never delete user storage.
             printf "  $G✓$N  $D~/.config/smb/$N deleted\n"
         else
             printf "  $D  No password storage found$N\n"
@@ -2227,8 +2594,7 @@ function smb --description 'Samba file sharing manager'
 
         # ── 7. Wipe cache ──
         printf "  Wiping Samba cache...\n"
-        sudo rm -rf /var/cache/samba 2>/dev/null
-        sudo rm -rf /var/lib/samba 2>/dev/null
+        return 1 # Legacy purge disabled above; never recursively delete Samba state.
         printf "  $G✓$N  Cache wiped\n"
 
         # ── 8. Uninstall packages ──
@@ -2281,7 +2647,7 @@ function smb --description 'Samba file sharing manager'
             printf "\n"
             if not __confirm_yn "  Install secure storage (libsecret)? [Y/n]: " y
                 printf "\n"
-                printf "  Cancelled. Using encrypted file fallback.\n"
+                        printf '  Cancelled. File fallback is private plaintext, not encrypted.\n'
                 printf "\n"
                 return 0
             end
@@ -2322,7 +2688,7 @@ function smb --description 'Samba file sharing manager'
             # ── Check if passwords are stored in keyring ──
             set -l users ()
             if type -q pdbedit
-                set users (sudo pdbedit -L 2>/dev/null | cut -d: -f1)
+                set users (__smb_users names); or return 1
             end
             set -l keyring_count 0
             set -l file_count 0
@@ -2346,15 +2712,16 @@ function smb --description 'Samba file sharing manager'
                         for u in $users
                             set -l fpass (grep "^$u:" "$PASS_FILE" 2>/dev/null | head -1 | cut -d: -f2-)
                             if test -n "$fpass"
-                                __smb_keyring_delete "$u" 2>/dev/null
-                                __smb_keyring_save "$u" "$fpass"
+                                __smb_keyring_save "$u" "$fpass"; or begin
+                                    printf '  Migration failed; original file retained.\n'
+                                    return 1
+                                end
                                 printf "  $G✓$N  $W$u$N migrated to keyring\n"
                             end
                         end
-                        # Remove file fallback
-                        rm -f "$PASS_FILE"
+                        # Keep the source: it may also contain unlisted accounts.
                         printf "\n"
-                        printf "  $G✓$N  All passwords migrated. File fallback removed.\n"
+                        printf '  Current account passwords copied. Original fallback file retained for recovery.\n'
                     end
                 else
                     printf "  $G✓$N  All passwords stored securely in keyring\n"
@@ -2363,7 +2730,7 @@ function smb --description 'Samba file sharing manager'
         else
             printf "  $Y⚠$N  Keyring is locked or unavailable\n"
             printf "  $Y→$N  Log out and back in to unlock, then run 'smb secure' again\n"
-            printf "  $D  Passwords are using encrypted file fallback for now.$N\n"
+            printf '  File fallback is private plaintext, not encrypted.\n'
         end
         printf "\n"
         return 0
@@ -2374,6 +2741,9 @@ function smb --description 'Samba file sharing manager'
     # ════════════════════════════════════════════════════════════
 
     if test "$argv[1]" = "connect"
+        set -l server ''
+        set -l remote_user ''
+        set -l remote_pass ''
         printf "\n"
         printf "  $BOLDG Connect to Remote SMB Share$N\n"
         printf "\n"
@@ -2388,8 +2758,10 @@ function smb --description 'Samba file sharing manager'
             for line in (grep '^smb://' "$bookmark_file" 2>/dev/null)
                 set -l match (string match -r 'smb://([^@]+)@([^/]+)' "$line" 2>/dev/null)
                 if test (count $match) -ge 3
-                    set -l u $match[2]
+                    set -l u (string unescape --style=url -- "$match[2]")
                     set -l ip $match[3]
+                    string match -qr '^[A-Za-z0-9_.@-]+$' -- "$u"; or continue
+                    string match -qr '^[A-Za-z0-9][A-Za-z0-9.-]{0,252}$' -- "$ip"; or continue
                     set -l already_have 0
                     for i in (seq (count $saved_servers))
                         if test "$saved_servers[$i]" = "$ip"; and test "$saved_users[$i]" = "$u"
@@ -2419,11 +2791,11 @@ function smb --description 'Samba file sharing manager'
                     __smb_stop_check; or return 1
                     if string match -q -r '^[0-9]+$' "$pick"
                         if test "$pick" -ge 1 -a "$pick" -le (count $saved_servers)
-                            set -g server "$saved_servers[$pick]"
-                            set -g remote_user "$saved_users[$pick]"
-                            set -g remote_pass ""
+                            set server "$saved_servers[$pick]"
+                            set remote_user "$saved_users[$pick]"
+                            set remote_pass ""
                             if __smb_has_keyring
-                                set -g remote_pass (secret-tool lookup smb-connect-server "$server" smb-connect-user "$remote_user" 2>/dev/null)
+                                set remote_pass (secret-tool lookup smb-connect-server "$server" smb-connect-user "$remote_user" 2>/dev/null)
                             end
                             printf "\n"
                             printf "  $G✓$N  Using saved: $W$remote_user$N@$W$server$N\n"
@@ -2592,6 +2964,10 @@ function smb --description 'Samba file sharing manager'
         end
 
         # 2. Get username
+        if not string match -qr '^[A-Za-z0-9][A-Za-z0-9.-]{0,252}$' -- "$server"
+            printf '  Unsupported server address; use an IPv4 address or DNS hostname.\n'
+            return 1
+        end
         if not set -q remote_user; or test -z "$remote_user"
             set remote_user ""
         end
@@ -2602,6 +2978,10 @@ function smb --description 'Samba file sharing manager'
         end
 
         # 3. Get password (silent)
+        if not string match -qr '^[A-Za-z0-9_.@-]+$' -- "$remote_user"
+            printf '  Unsupported username; use a simple username or user@domain.\n'
+            return 1
+        end
         if not set -q remote_pass; or test -z "$remote_pass"
             set remote_pass ""
         end
@@ -2650,17 +3030,24 @@ function smb --description 'Samba file sharing manager'
         # Try default first, then SMB2 if that fails
         for attempt in 1 2
             if test $attempt -eq 1
-                set smb_out (timeout 10 smbclient -L "//$server" -U "$remote_user%$remote_pass" 2>&1)
+                set smb_out (__smb_client "$remote_user" "$remote_pass" -L "//$server" 2>&1)
             else
                 printf "  $Y⚠$N  Default failed. Retrying with SMB2 protocol...\n"
                 printf "\n"
-                set smb_out (timeout 10 smbclient -L "//$server" --option="client min protocol=SMB2" -U "$remote_user%$remote_pass" 2>&1)
-                set smb_used_protocol "SMB2"
+                set smb_out (__smb_client "$remote_user" "$remote_pass" -L "//$server" --option="client min protocol=SMB2" 2>&1)
             end
 
-            if test $status -eq 124
+            set -l client_rc $status
+            if test $client_rc -eq 124
                 printf "  $R✗$N  Connection timed out. Is the IP correct and the server online?\n"
                 printf "\n"
+                return 1
+            end
+            if test $client_rc -ne 0
+                if test $attempt -eq 1
+                    continue
+                end
+                printf '  Share query failed (exit %s); no bookmarks were added.\n' "$client_rc"
                 return 1
             end
 
@@ -2717,7 +3104,7 @@ function smb --description 'Samba file sharing manager'
         # Filter out hidden/system shares (ending with $)
         set -l visible_shares ()
         for s in $shares
-            if not string match -q '*$' "$s"
+            if string match -qr '^[A-Za-z0-9_.-]+$' -- "$s"
                 set -a visible_shares "$s"
             end
         end
@@ -2762,27 +3149,28 @@ function smb --description 'Samba file sharing manager'
         printf "\n"
         if __smb_has_keyring
             # Use different attributes than smb-user to avoid conflicts
-            printf '%s' "$remote_pass" | secret-tool store --label="SMB Connect: $remote_user@$server" smb-connect-server "$server" smb-connect-user "$remote_user" >/dev/null 2>&1
+            printf '%s' "$remote_pass" | secret-tool store --label="SMB Connect: $remote_user@$server" smb-connect-server "$server" smb-connect-user "$remote_user" >/dev/null 2>&1; or begin
+                printf '  Keyring save failed; no bookmarks were added.\n'
+                return 1
+            end
             printf "  $G✓$N  Password saved securely.\n"
         else
-            # Fallback — store in smb config dir with server-specific file
-            mkdir -p "$CONF_DIR/connect"
-            set -l connect_file "$CONF_DIR/connect/$server-$remote_user.pass"
-            printf '%s\n' "$remote_pass" > "$connect_file"
-            chmod 600 "$connect_file"
-            printf "  $Y⚠$N  Password saved to file (keyring unavailable).\n"
-            printf "  $Y→$N  Run $W smb secure$N to set up keyring storage.\n"
+            printf '  Keyring unavailable; password was not saved. Connection bookmarks can still be added.\n'
         end
         printf "\n"
 
         # 9. For each selected share, add Nautilus bookmark
         set -l bookmark_file "$HOME/.config/gtk-3.0/bookmarks"
-        mkdir -p (dirname "$bookmark_file")
+        mkdir -p (dirname "$bookmark_file"); or return 1
+        if test -L "$bookmark_file"; or begin; test -e "$bookmark_file"; and not test -f "$bookmark_file"; end
+            printf '  Unsafe bookmark target; refusing to write.\n'
+            return 1
+        end
 
         set -l bookmarks_added 0
         set -l bookmarks_skipped 0
             for share in $selected_shares
-                set -l smb_url "smb://$remote_user@$server/$share"
+                set -l smb_url "smb://$(string escape --style=url -- "$remote_user")@$server/$share"
 
             # Check if bookmark already exists
             set -l existing (grep -F "$smb_url" "$bookmark_file" 2>/dev/null)
@@ -2790,7 +3178,7 @@ function smb --description 'Samba file sharing manager'
             if test -n "$existing"
                 # Extract existing name from bookmark (format: "url name")
                 set -l existing_name (printf '%s\n' "$existing" | awk '{$1=""; print $0}' | string trim)
-                printf "  $Y⚠$N  Already bookmarked '$W$share$N' as '$existing_name'\n"
+                printf '  Already bookmarked %s as %s\n' "$share" "$existing_name"
                 set bookmarks_skipped (math $bookmarks_skipped + 1)
                 continue
             end
@@ -2806,9 +3194,10 @@ function smb --description 'Samba file sharing manager'
             end
 
             # Add bookmark (format: "url name")
-            printf '%s %s\n' "$smb_url" "$bookmark_name" >> "$bookmark_file"
+            string match -qr '[\r\n]' -- "$bookmark_name"; and return 1
+            printf '%s %s\n' "$smb_url" "$bookmark_name" >> "$bookmark_file"; or return 1
             set bookmarks_added (math $bookmarks_added + 1)
-            printf "  $G✓$N  Bookmark added: $W$bookmark_name$N\n"
+            printf '  Bookmark added: %s\n' "$bookmark_name"
         end
 
         printf "\n"
@@ -2826,7 +3215,7 @@ function smb --description 'Samba file sharing manager'
         if __confirm_yn "  Open in Nautilus? [Y/n]: " y
             if type -q nautilus
                 set -l first_share $selected_shares[1]
-                nautilus "smb://$remote_user@$server/$first_share" &
+                nautilus "smb://$(string escape --style=url -- "$remote_user")@$server/$first_share" &
                 printf "  $G✓$N  Nautilus opened.\n"
             else
                 printf "  $Y⚠$N  Nautilus not found.\n"
@@ -2838,7 +3227,7 @@ function smb --description 'Samba file sharing manager'
                         printf "\n"
                         printf "  $G✓$N  Nautilus installed.\n"
                         set -l first_share $selected_shares[1]
-                        nautilus "smb://$remote_user@$server/$first_share" &
+                        nautilus "smb://$(string escape --style=url -- "$remote_user")@$server/$first_share" &
                         printf "  $G✓$N  Nautilus opened.\n"
                     else
                         if not ping -c1 -W2 8.8.8.8 >/dev/null 2>&1
@@ -2927,7 +3316,6 @@ function smb --description 'Samba file sharing manager'
 
     printf "  Run '$Y smb help$N' to see all commands.\n"
     printf "\n"
-    trap - SIGINT
     set -e __smb_ctrl_c
     set -e CONF_DIR PASS_FILE SMB_CONF __smb_keyring_available
     return 1
