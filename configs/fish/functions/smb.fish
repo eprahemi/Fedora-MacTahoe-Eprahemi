@@ -287,11 +287,24 @@ except Exception as e:
     end
 
     function __smb_reset_consent
-        printf '%s\n' '  Setup replaces ALL Samba config/share definitions and Samba accounts.' \
-            '  Existing connections will be disconnected. Recovery backups are root-private.' \
-            '  Linux accounts and shared files are NEVER deleted.'
+        set -l title (set_color --bold cyan)
+        set -l warning (set_color --bold yellow)
+        set -l strong (set_color --bold)
+        set -l safe (set_color --bold green)
+        set -l normal (set_color normal)
         set -l answer ''
-        read -P '  Type RESET SAMBA to continue (anything else cancels): ' answer; or return 1
+        printf '\n  %s╭──────────────────────────────────────────────────────────╮%s\n' "$title" "$normal"
+        printf '  %s│                   SAMBA SETUP — RESET                    │%s\n' "$title" "$normal"
+        printf '  %s╰──────────────────────────────────────────────────────────╯%s\n\n' "$title" "$normal"
+        printf '  %sREPLACED%s\n' "$warning" "$normal"
+        printf '    All Samba configuration, share definitions and accounts.\n'
+        printf '    Existing connections will be disconnected.\n\n'
+        printf '  %sPRESERVED%s\n' "$safe" "$normal"
+        printf '    Linux accounts and shared files are never deleted.\n'
+        printf '    Recovery backups are private to root.\n\n'
+        printf '  To continue, type %sRESET SAMBA%s exactly.\n' "$strong" "$normal"
+        printf '  Anything else cancels.\n\n'
+        read -P (printf '  Confirm [%sRESET SAMBA%s]: ' "$strong" "$normal") answer; or return 1
         test "$answer" = 'RESET SAMBA'
     end
 
