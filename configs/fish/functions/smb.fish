@@ -321,6 +321,17 @@ def query(name):
     return run("testparm", "-s", "--parameter-name=" + name, str(conf),
                stdout=subprocess.PIPE, text=True).stdout.strip()
 
+def validate_role():
+    # The parameter may remain "auto" even when Samba resolves standalone.
+    # Use Samba itself, not a partial reimplementation of its domain-role rules.
+    result = run("testparm", "-s", str(conf), stdout=subprocess.PIPE,
+                 stderr=subprocess.PIPE, text=True, env=dict(os.environ, LC_ALL="C"))
+    roles = re.findall(r"^Server role: (ROLE_[A-Z_]+)\s*$", result.stderr, re.MULTILINE)
+    if roles != ["ROLE_STANDALONE"]:
+        raise RuntimeError("Only standalone Samba servers can be reset")
+    if query("security").lower() != "user":
+        raise RuntimeError("Domain/ADS security is unsupported")
+
 def tree_entries(path, missing_ok=False):
     try:
         s = path.lstat()
@@ -387,11 +398,7 @@ try:
         text = original.decode("utf-8")
         if re.search(r"(?im)^\s*(include|config backend|registry shares|copy)\s*=", text) or re.search(r"\\\r?\n", text):
             raise RuntimeError("Includes/registry/copy/continued config is unsupported; nothing reset")
-        run("testparm", "-s", str(conf), stdout=subprocess.DEVNULL)
-        if query("server role").lower() != "standalone server":
-            raise RuntimeError("Only standalone Samba servers can be reset")
-        if query("security").lower() != "user":
-            raise RuntimeError("Domain/ADS security is unsupported")
+        validate_role()
         if query("passdb backend") not in ("tdbsam", "tdbsam:/var/lib/samba/private/passdb.tdb"):
             raise RuntimeError("Only the local default tdbsam backend is supported")
         for name, expected in (("private dir", "/var/lib/samba/private"), ("state directory", "/var/lib/samba")):
