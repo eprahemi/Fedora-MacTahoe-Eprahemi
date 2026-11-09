@@ -151,8 +151,17 @@ try:
         candidate += ("\n[" + name + "]\n    path = " + value + "\n    browseable = yes\n"
                       "    read only = no\n    guest ok = no\n    valid users = " + user + "\n")
     parent = pathlib.Path("/var/backups")
-    if parent.is_symlink() or not parent.is_dir() or parent.stat().st_uid != 0 or parent.stat().st_mode & 0o022:
+    ancestor = parent.parent.lstat()
+    if not stat.S_ISDIR(ancestor.st_mode) or ancestor.st_uid != 0 or ancestor.st_mode & 0o022:
+        raise ValueError("Unsafe backup ancestor")
+    try:
+        parent.mkdir(mode=0o700)
+    except FileExistsError:
+        pass  # Validate concurrent/existing paths; never repair their permissions.
+    info = parent.lstat()
+    if not stat.S_ISDIR(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o022:
         raise ValueError("Unsafe backup parent")
+    # Trusted root-only writers are required; pathname checks are not a race-proof snapshot.
     backup = pathlib.Path(tempfile.mkdtemp(prefix="mactahoe-smb-config-", dir=parent))
     os.chmod(backup, 0o700)
     saved = backup / "smb.conf"
@@ -425,8 +434,17 @@ try:
         if subprocess.run(("systemctl", "is-active", "--quiet", service)).returncode == 0:
             raise RuntimeError("Stop/review non-smb Samba service first: " + service)
     parent = pathlib.Path("/var/backups")
-    if parent.is_symlink() or not parent.is_dir() or parent.stat().st_uid != 0 or parent.stat().st_mode & 0o022:
+    ancestor = parent.parent.lstat()
+    if not stat.S_ISDIR(ancestor.st_mode) or ancestor.st_uid != 0 or ancestor.st_mode & 0o022:
+        raise RuntimeError("Unsafe backup ancestor")
+    try:
+        parent.mkdir(mode=0o700)
+    except FileExistsError:
+        pass  # Validate concurrent/existing paths; never repair their permissions.
+    info = parent.lstat()
+    if not stat.S_ISDIR(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o022:
         raise RuntimeError("Unsafe backup parent")
+    # Trusted root-only writers are required; pathname checks are not a race-proof snapshot.
     backup = pathlib.Path(tempfile.mkdtemp(prefix="mactahoe-smb-reset-", dir=parent))
     os.chmod(backup, 0o700)
     print("Recovery backup: " + str(backup), flush=True)
