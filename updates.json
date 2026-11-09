@@ -1,15 +1,23 @@
 {
-  "latest_version": "3.7.34",
+  "latest_version": "3.7.35",
   "bootstrap_sha256": "753ee03fdb172b3e45e0400bfa7b6177071bcde5b5b9dc4c1229d841433a1ff9",
-  "install_sha256": "43bce10969f54ffa2f2e5429878f346c69194a5eb14455cb4844056c30c429e0",
+  "install_sha256": "a778a4dccb72e8ce46a33ff86ffcbc93eb4ecd363ef763a28ae6957f10a4eb54",
   "update_sha256": "76c75bef34e49dfb39d1be1d6e3e3ac3ff6f41e27ddd7301d10171e309247399",
   "uninstall_sha256": "cceaeecce187adf5fb81afe72c3108dc23683141257227333312d929aa84f4cb",
   "asset_helper_sha256": "d66234cbf78b0d875828157623d0f49e8106e976a6fa8c0a276c39892288299e",
   "changelog": [
     {
+      "version": "3.7.35",
+      "changes": [
+        "Prevent strict-Bash startup aborts when incremental updates have missing saved prompt answers, including the app selection added after older installs. Load only nonempty saved choices and explicitly return success; retain caller environment priority and existing prompt-version and legacy step gates. Overall installed version remains written only by finalize.",
+        "Allow narrowly identified Samba runtime message sockets during setup recovery backups, while retaining credential database backups and rejecting unexpected sockets, links and special files. Native Fedora/Samba verification and broader test failures remain pending."
+      ]
+    },
+    {
       "version": "3.7.34",
       "changes": [
-        "Fix both SMB Windows connection instructions to print a literal UNC path with two leading backslashes and one share separator."
+        "Fix both SMB Windows connection instructions to print a literal UNC path with two leading backslashes and one share separator.",
+        "Also shipped in 3.7.34: harden Samba setup reset with fresh exact consent, checked private recovery backups and standalone-backend validation; validate share edits before atomic publication, protect credential handling and check account/service outcomes. Disable unsafe legacy nuke and password-bearing export routes; restrict fix to an explicit consented directory. Native Fedora/Samba runtime testing remains pending."
       ]
     },
     {

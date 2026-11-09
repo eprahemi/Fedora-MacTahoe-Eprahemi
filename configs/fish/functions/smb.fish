@@ -321,33 +321,51 @@ def query(name):
     return run("testparm", "-s", "--parameter-name=" + name, str(conf),
                stdout=subprocess.PIPE, text=True).stdout.strip()
 
-def plain_tree(path):
-    if not path.exists():
-        if path.is_symlink():
-            raise RuntimeError("Broken symlink: " + str(path))
+def tree_entries(path, missing_ok=False):
+    try:
+        s = path.lstat()
+    except FileNotFoundError:
+        if missing_ok:
+            return
+        raise
+    # Samba messaging uses private/msg.sock/<pid> AF_UNIX endpoints (see
+    # Samba lib/messaging/messages_dgm.c). They are transient IPC, not databases.
+    # Omit ONLY actual sockets with that exact parent/numeric basename; never
+    # skip the directory, regular files, links, FIFOs or other special types.
+    if (stat.S_ISSOCK(s.st_mode) and path.parent == state / "private/msg.sock"
+            and re.fullmatch(r"[0-9]+", path.name)):
         return
-    for base, dirs, files in os.walk(path, followlinks=False):
-        for p in [pathlib.Path(base)] + [pathlib.Path(base) / n for n in dirs + files]:
-            s = p.lstat()
-            if not (stat.S_ISDIR(s.st_mode) or stat.S_ISREG(s.st_mode)) or s.st_nlink > 1 and stat.S_ISREG(s.st_mode):
-                raise RuntimeError("Unsafe linked/special backup source: " + str(p))
+    if not (stat.S_ISDIR(s.st_mode) or stat.S_ISREG(s.st_mode)) or s.st_nlink > 1 and stat.S_ISREG(s.st_mode):
+        raise RuntimeError("Unsafe linked/special backup source: " + str(path))
+    yield path, s
+    if stat.S_ISDIR(s.st_mode):
+        for child in path.iterdir():
+            yield from tree_entries(child)
+
+def plain_tree(path):
+    for _ in tree_entries(path, missing_ok=True):
+        pass
 
 def snapshot(source, destination):
-    shutil.copytree(source, destination, copy_function=shutil.copy2)
-    for base, dirs, files in os.walk(source):
-        for name in files:
-            p = pathlib.Path(base) / name
-            copied = destination / p.relative_to(source)
+    for p, s in tree_entries(source):
+        copied = destination / p.relative_to(source)
+        if stat.S_ISDIR(s.st_mode):
+            copied.mkdir(mode=stat.S_IMODE(s.st_mode))
+            os.chmod(copied, stat.S_IMODE(s.st_mode))
+        else:
+            shutil.copy2(p, copied, follow_symlinks=False)
+            if not stat.S_ISREG(copied.lstat().st_mode):
+                raise RuntimeError("Backup source changed type: " + str(p))
             if p.read_bytes() != copied.read_bytes():
                 raise RuntimeError("Backup verification failed: " + str(p))
-            s = p.stat()
-            os.chown(copied, s.st_uid, s.st_gid)
+        os.chown(copied, s.st_uid, s.st_gid)
 
 user, scope, home = sys.argv[1:]
 conf = pathlib.Path("/etc/samba/smb.conf")
 state = pathlib.Path("/var/lib/samba")
 backup = None
 stopped = False
+stop_attempted = False
 try:
     if not re.fullmatch(r"[a-z_][a-z0-9_-]*[$]?", user) or scope not in ("1", "2"):
         raise RuntimeError("Unsupported username or scope")
@@ -393,10 +411,13 @@ try:
     os.chmod(backup, 0o700)
     print("Recovery backup: " + str(backup), flush=True)
     snapshot(conf.parent, backup / "etc-samba")
+    stop_attempted = True
     run("systemctl", "stop", "smb")
+    service_state = run("systemctl", "show", "--property=ActiveState", "--value", "smb",
+                        stdout=subprocess.PIPE, text=True).stdout.strip()
+    if service_state not in ("inactive", "failed"):
+        raise RuntimeError("smb stop not confirmed: " + service_state)
     stopped = True
-    if subprocess.run(("systemctl", "is-active", "--quiet", "smb")).returncode == 0:
-        raise RuntimeError("smb did not stop")
     # Stopped-server snapshot includes passdb, secrets, registry and account policy.
     # No Samba state directory or database is deleted by this reset.
     plain_tree(state)
@@ -410,6 +431,7 @@ try:
         f.write("Samba stopped for reset. Original config: etc-samba; original databases: var-lib-samba.\n"
                 "Keep services stopped when restoring. Review ownership and SELinux labels.\n"
                 "This backup contains password hashes/secrets; keep root-private.\n")
+        f.write("Transient Unix sockets private/msg.sock/<numeric pid> are omitted; regular files are retained.\n")
         f.flush()
         os.fsync(f.fileno())
     share = "root_share" if scope == "2" else user
@@ -462,7 +484,9 @@ except (Exception, KeyboardInterrupt) as e:
     if backup:
         print("Recovery files retained at " + str(backup), file=sys.stderr)
     if stopped:
-        print("Samba remains stopped; partial changes may exist. Review recovery backup before restarting.", file=sys.stderr)
+        print("Samba was confirmed stopped; no restart was attempted. Partial changes may exist. Review recovery backup before restarting.", file=sys.stderr)
+    elif stop_attempted:
+        print("Samba stop failed or could not be confirmed; service state is unknown. No config/account reset was attempted.", file=sys.stderr)
     sys.exit(1)
 ' "$argv[1]" "$argv[2]" "$argv[3]"
         return $status

@@ -1010,60 +1010,62 @@ _load_prompt_answers() {
   [ "${UPDATE_MODE:-}" = "incremental" ] && _incremental=true
   if [ -z "${INSTALL_DISCORD:-}" ]; then
     if $_incremental; then
-      ans="${PR_ANS['discord']:-}"; [ -n "$ans" ] && INSTALL_DISCORD="$ans"
+      ans="${PR_ANS['discord']:-}"; if [ -n "$ans" ]; then INSTALL_DISCORD="$ans"; fi
     elif ! _prompt_should_ask "discord"; then
-      ans="${PR_ANS['discord']:-}"; [ -n "$ans" ] && INSTALL_DISCORD="$ans"
+      ans="${PR_ANS['discord']:-}"; if [ -n "$ans" ]; then INSTALL_DISCORD="$ans"; fi
     fi
   fi
   if [ -z "${INSTALL_DESKTOP_WALLPAPER:-}" ]; then
     if $_incremental; then
-      ans="${PR_ANS['wallpaper_desktop']:-}"; [ -n "$ans" ] && INSTALL_DESKTOP_WALLPAPER="$ans"
+      ans="${PR_ANS['wallpaper_desktop']:-}"; if [ -n "$ans" ]; then INSTALL_DESKTOP_WALLPAPER="$ans"; fi
     elif ! _prompt_should_ask "wallpaper_desktop"; then
-      ans="${PR_ANS['wallpaper_desktop']:-}"; [ -n "$ans" ] && INSTALL_DESKTOP_WALLPAPER="$ans"
+      ans="${PR_ANS['wallpaper_desktop']:-}"; if [ -n "$ans" ]; then INSTALL_DESKTOP_WALLPAPER="$ans"; fi
     fi
   fi
   if [ -z "${INSTALL_LOGIN_WALLPAPER:-}" ]; then
     if $_incremental; then
-      ans="${PR_ANS['wallpaper_login']:-}"; [ -n "$ans" ] && INSTALL_LOGIN_WALLPAPER="$ans"
+      ans="${PR_ANS['wallpaper_login']:-}"; if [ -n "$ans" ]; then INSTALL_LOGIN_WALLPAPER="$ans"; fi
     elif ! _prompt_should_ask "wallpaper_login"; then
-      ans="${PR_ANS['wallpaper_login']:-}"; [ -n "$ans" ] && INSTALL_LOGIN_WALLPAPER="$ans"
+      ans="${PR_ANS['wallpaper_login']:-}"; if [ -n "$ans" ]; then INSTALL_LOGIN_WALLPAPER="$ans"; fi
     fi
   fi
   if [ -z "${INSTALL_WALLPAPER_18:-}" ]; then
     if $_incremental; then
-      ans="${PR_ANS['wallpaper_18']:-}"; [ -n "$ans" ] && INSTALL_WALLPAPER_18="$ans"
+      ans="${PR_ANS['wallpaper_18']:-}"; if [ -n "$ans" ]; then INSTALL_WALLPAPER_18="$ans"; fi
     elif ! _prompt_should_ask "wallpaper_18"; then
-      ans="${PR_ANS['wallpaper_18']:-}"; [ -n "$ans" ] && INSTALL_WALLPAPER_18="$ans"
+      ans="${PR_ANS['wallpaper_18']:-}"; if [ -n "$ans" ]; then INSTALL_WALLPAPER_18="$ans"; fi
     fi
   fi
   if [ -z "${INSTALL_BILLIE_VIDEOS:-}" ]; then
     if $_incremental; then
-      ans="${PR_ANS['billie_videos']:-}"; [ -n "$ans" ] && INSTALL_BILLIE_VIDEOS="$ans"
+      ans="${PR_ANS['billie_videos']:-}"; if [ -n "$ans" ]; then INSTALL_BILLIE_VIDEOS="$ans"; fi
     elif ! _prompt_should_ask "billie_videos"; then
-      ans="${PR_ANS['billie_videos']:-}"; [ -n "$ans" ] && INSTALL_BILLIE_VIDEOS="$ans"
+      ans="${PR_ANS['billie_videos']:-}"; if [ -n "$ans" ]; then INSTALL_BILLIE_VIDEOS="$ans"; fi
     fi
   fi
   if [ -z "${INSTALL_DISABLE_FIREWALLD:-}" ]; then
     if $_incremental; then
-      ans="${PR_ANS['firewalld']:-}"; [ -n "$ans" ] && INSTALL_DISABLE_FIREWALLD="$ans"
+      ans="${PR_ANS['firewalld']:-}"; if [ -n "$ans" ]; then INSTALL_DISABLE_FIREWALLD="$ans"; fi
     elif ! _prompt_should_ask "firewalld"; then
-      ans="${PR_ANS['firewalld']:-}"; [ -n "$ans" ] && INSTALL_DISABLE_FIREWALLD="$ans"
+      ans="${PR_ANS['firewalld']:-}"; if [ -n "$ans" ]; then INSTALL_DISABLE_FIREWALLD="$ans"; fi
     fi
   fi
   if [ -z "${INSTALL_REMOVE_OLD_TERMINAL:-}" ]; then
     if $_incremental; then
-      ans="${PR_ANS['old_terminal']:-}"; [ -n "$ans" ] && INSTALL_REMOVE_OLD_TERMINAL="$ans"
+      ans="${PR_ANS['old_terminal']:-}"; if [ -n "$ans" ]; then INSTALL_REMOVE_OLD_TERMINAL="$ans"; fi
     elif ! _prompt_should_ask "old_terminal"; then
-      ans="${PR_ANS['old_terminal']:-}"; [ -n "$ans" ] && INSTALL_REMOVE_OLD_TERMINAL="$ans"
+      ans="${PR_ANS['old_terminal']:-}"; if [ -n "$ans" ]; then INSTALL_REMOVE_OLD_TERMINAL="$ans"; fi
     fi
   fi
   if [ -z "${INSTALL_APPS:-}" ]; then
     if $_incremental; then
-      ans="${PR_ANS['apps']:-}"; [ -n "$ans" ] && INSTALL_APPS="$ans"
+      ans="${PR_ANS['apps']:-}"; if [ -n "$ans" ]; then INSTALL_APPS="$ans"; fi
     elif ! _prompt_should_ask "apps"; then
-      ans="${PR_ANS['apps']:-}"; [ -n "$ans" ] && INSTALL_APPS="$ans"
+      ans="${PR_ANS['apps']:-}"; if [ -n "$ans" ]; then INSTALL_APPS="$ans"; fi
     fi
   fi
+  # Missing saved answers are normal, not an installer failure under set -e.
+  return 0
 }
 
 # ── Save a single prompt answer to state ──
