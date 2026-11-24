@@ -1,11 +1,19 @@
 {
-  "latest_version": "3.7.35",
+  "latest_version": "3.7.36",
   "bootstrap_sha256": "753ee03fdb172b3e45e0400bfa7b6177071bcde5b5b9dc4c1229d841433a1ff9",
-  "install_sha256": "a778a4dccb72e8ce46a33ff86ffcbc93eb4ecd363ef763a28ae6957f10a4eb54",
+  "install_sha256": "d4f5a7fa78b641e6febe72c396eb8e4a7f0adbcb828165627f6b07362f85b379",
   "update_sha256": "76c75bef34e49dfb39d1be1d6e3e3ac3ff6f41e27ddd7301d10171e309247399",
   "uninstall_sha256": "cceaeecce187adf5fb81afe72c3108dc23683141257227333312d929aa84f4cb",
-  "asset_helper_sha256": "d66234cbf78b0d875828157623d0f49e8106e976a6fa8c0a276c39892288299e",
+  "asset_helper_sha256": "5791bdafc4cd77604c47aa530df4f4e31d6f23b2de3b48f08bb571b8059cfd78",
   "changelog": [
+    {
+      "version": "3.7.36",
+      "changes": [
+        "Allow asset validation to ignore metadata-only ImageMagick XMP parse warnings while still rejecting truncated or corrupt image data. ImageMagick 7.1.2-35 turned the malformed XMP packet in wallpapers/background-normal/1.jpg into a fatal identify warning, so step 17 aborted before touching any file and every install after that update failed the wallpaper collection.",
+        "Honour the recorded desktop-wallpaper answer even when a wallpaper collection is already installed. Previously the preserved-settings path silently ignored an explicit Yes (and update wallpaper), so the Himeno background was never applied.",
+        "No bootstrap, updater or uninstaller change: those three pins are unchanged. scripts/mactahoe_assets.py and install.sh pins were refreshed together; native Fedora wallpaper verification remains pending."
+      ]
+    },
     {
       "version": "3.7.35",
       "changes": [
@@ -641,7 +649,7 @@
     "apply_configs": "3.7.22",
     "apply_dconf": "3.7.22",
     "optimize_system_resources": "1.1",
-    "apply_wallpapers": "3.7.22",
+    "apply_wallpapers": "3.7.36",
     "install_custom_avatars": "3.7.22",
     "download_optional_videos": "3.7.9",
     "setup_gdm": "3.7.29",

@@ -467,7 +467,7 @@ _preserve_active_wallpaper() {
 }
 
 _install_asset_pack() {
-  local kind="$1" variant=normal mode=replace current stage legacy plan active_snapshot image preserve_settings=false choice
+  local kind="$1" variant=normal mode=replace current stage legacy plan active_snapshot image choice
   # Legacy clients (older update.fish) signalled `update pfp add` via
   # INSTALL_WALLPAPER_ADD instead of INSTALL_ASSET_FORCE/PURGE. For avatars
   # that now means "purge + install chosen", so treat it as force mode.
@@ -495,7 +495,7 @@ _install_asset_pack() {
   if [ "${INSTALL_ASSET_FORCE:-false}" = "true" ]; then
     : # Caller's explicit choice wins; env vars already set variant/mode.
   elif [ "$current" = both ]; then
-    variant=keep; mode=add; preserve_settings=true
+    variant=keep; mode=add
   elif [ "$current" = 18 ]; then
     _ui_stop
     if [ "${_UI_ACTIVE:-0}" = 1 ]; then printf '\033[2J\033[H\033[?25h' >&7; fi
@@ -508,10 +508,9 @@ _install_asset_pack() {
       2|add) variant=normal; mode=add ;;
       *) rm -rf -- "$stage"; _VISUAL_SKIP_REASON='existing collection kept by request'; return 0 ;;
     esac
-    preserve_settings=true
   elif [ "$current" = normal ]; then
     # A choice may add a pack, never silently remove the installed normal one.
-    mode=add; preserve_settings=true
+    mode=add
   fi
   local archives=()
   if [ "$variant" != normal ] && [ "$variant" != keep ]; then
@@ -552,7 +551,10 @@ _install_asset_pack() {
     if ! _asset_tool relocate "$active_snapshot" "$plan"; then
       _FED_ASSET_ROLLBACK=''; rm -rf -- "$stage"; return 1
     fi
-    if [ "$preserve_settings" = false ] && [ "${INSTALL_DESKTOP_WALLPAPER:-false}" = true ]; then
+    # Honour the recorded desktop-wallpaper answer even when a collection is
+    # already present: "update wallpaper" passes this explicitly, and a saved
+    # Yes means the user consented to the Himeno background.
+    if [ "${INSTALL_DESKTOP_WALLPAPER:-false}" = true ]; then
       if ! image=$(_asset_tool desktop "$BUNDLE/wallpapers/desktop/Himeno Fedora.jpg") ||
          ! _asset_tool activate "$active_snapshot" "$image"; then
         _asset_tool restore "$active_snapshot" || warn "Restore wallpaper settings from $active_snapshot"

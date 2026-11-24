@@ -428,8 +428,18 @@ def validate_image(path):
     limits = ['-limit', 'memory', '256MiB', '-limit', 'map', '512MiB',
               '-limit', 'disk', '1GiB', '-limit', 'time', '30']
     image = coder + ':' + str(path) + '[0]'
-    result = run(*args, *limits, '-regard-warnings', '-format', '%w %h', image, timeout=40)
-    dims = result.split()
+    # Reject corrupt payloads without rejecting harmless metadata complaints.
+    # ImageMagick reports malformed XMP as a warning/xml-tree.c diagnostic, and
+    # -regard-warnings promoted that to a hard failure, refusing valid
+    # photographs (Lightroom exports carry imperfect XMP packets). Pixel and
+    # coder warnings such as truncated or corrupt JPEG data stay fatal.
+    probe = subprocess.run(args + limits + ['-format', '%w %h', image],
+                           text=True, capture_output=True, timeout=40)
+    leftover = [line for line in probe.stderr.splitlines()
+                if line.strip() and 'warning/xml-tree.c' not in line]
+    if probe.returncode != 0 or leftover:
+        raise RuntimeError(probe.stderr.strip() or 'Image validation failed')
+    dims = probe.stdout.strip().split()
     if len(dims) != 2 or min(map(int, dims)) < 1 or int(dims[0]) * int(dims[1]) > 100000000:
         raise ValueError(f'Invalid image: {path.name}')
     decoder = shutil.which('magick') or shutil.which('convert')
